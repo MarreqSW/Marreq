@@ -55,6 +55,9 @@ impl CorsPolicy {
             .unwrap_or_else(|_| {
                 vec![
                     "http://localhost:8000".to_string(),
+                    "http://127.0.0.1:8000".to_string(),
+                    "http://localhost:8080".to_string(),
+                    "http://127.0.0.1:8080".to_string(),
                     "http://localhost:3000".to_string(),
                     "http://localhost:5173".to_string(),
                 ]
@@ -129,7 +132,7 @@ impl Fairing for CorsFairing {
             ));
             response.set_header(rocket::http::Header::new(
                 "Access-Control-Allow-Headers",
-                "Authorization, Content-Type, Accept, X-Requested-With",
+                "Authorization, Content-Type, Accept, X-Requested-With, X-CSRF-Token",
             ));
             // Cache the preflight result for 1 hour to reduce round-trips.
             response.set_header(rocket::http::Header::new("Access-Control-Max-Age", "3600"));

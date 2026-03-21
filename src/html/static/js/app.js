@@ -8,6 +8,7 @@ import { registerDeleteAction } from './modules/deleteActions.js';
 import { initStatusColorPickers } from './modules/statusColorPicker.js';
 
 const pageControllers = {
+  login: () => import('./pages/loginSpa.js'),
   requirements: () => import('./pages/requirements.js'),
   tests: () => import('./pages/verifications.js'),
   verifications: () => import('./pages/verifications.js'),

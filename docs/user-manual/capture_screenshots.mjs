@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Capture screenshots for the Marreq User Manual.
- * Run with the Marreq app and DB up: cargo run --bin marreq (and docker compose -f docker/docker-compose.yml up -d db, ./scripts/db_setup.sh --seed).
+ * Run with the Marreq app and DB up: cargo run -p marreq (and docker compose -f docker/docker-compose.yml up -d db, ./backend/scripts/db_setup.sh --seed).
  * Then: node docs/user-manual/capture_screenshots.mjs
  * Or: node capture_screenshots.mjs from docs/user-manual.
  *

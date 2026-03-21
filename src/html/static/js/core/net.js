@@ -29,13 +29,25 @@ export async function jsonFetch(url, options = {}) {
   const response = await fetch(url, init);
 
   let payload = null;
+  let rawText = '';
   if (parse) {
-    const text = await response.text();
-    payload = text ? JSON.parse(text) : null;
+    rawText = await response.text();
+    if (rawText) {
+      const trimmed = rawText.replace(/^\uFEFF/, '').trim();
+      try {
+        payload = JSON.parse(trimmed);
+      } catch {
+        // e.g. Rocket CSRF denial returns plain text "403 Forbidden – …" (starts with digits → JSON.parse throws).
+        payload = null;
+      }
+    }
   }
 
   if (!response.ok || (payload && payload.success === false)) {
-    const message = payload?.message || `Request to ${url} failed with status ${response.status}`;
+    const message =
+      payload?.message ||
+      (rawText && !payload ? rawText.trim().slice(0, 500) : null) ||
+      `Request to ${url} failed with status ${response.status}`;
     const error = new Error(message);
     error.response = response;
     error.payload = payload;

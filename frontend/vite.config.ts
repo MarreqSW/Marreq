@@ -21,7 +21,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@static': path.resolve(__dirname, '../src/html/static'),
+      '@static': path.resolve(__dirname, '../backend/src/html/static'),
     },
   },
   build: {

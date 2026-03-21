@@ -48,20 +48,27 @@ export function updateToggleMeta(theme) {
   });
 }
 
+function onThemeToggleClick() {
+  const current = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  setStoredTheme(next);
+  updateToggleMeta(next);
+}
+
+/** Call after SPA replaces DOM so new `[data-theme-toggle]` buttons work (avoids duplicating matchMedia listeners). */
+export function bindThemeToggles() {
+  document.querySelectorAll('[data-theme-toggle]').forEach((toggle) => {
+    toggle.addEventListener('click', onThemeToggleClick);
+  });
+}
+
 export function initThemeControls() {
   const startingTheme = root.getAttribute('data-theme') || resolvePreferredTheme();
   applyTheme(startingTheme);
   updateToggleMeta(startingTheme);
 
-  document.querySelectorAll('[data-theme-toggle]').forEach((toggle) => {
-    toggle.addEventListener('click', () => {
-      const current = root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
-      const next = current === 'dark' ? 'light' : 'dark';
-      applyTheme(next);
-      setStoredTheme(next);
-      updateToggleMeta(next);
-    });
-  });
+  bindThemeToggles();
 
   if (window.matchMedia) {
     const query = window.matchMedia('(prefers-color-scheme: dark)');

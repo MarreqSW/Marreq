@@ -15,6 +15,7 @@ pub type ApiResult<T> = Result<T, ApiError>;
 #[derive(Debug)]
 pub enum ApiError {
     BadRequest(String),
+    Unauthorized(String),
     NotFound(String),
     Forbidden(String),
     Conflict(String),
@@ -27,6 +28,7 @@ impl ApiError {
     pub fn message(&self) -> &str {
         match self {
             ApiError::BadRequest(msg)
+            | ApiError::Unauthorized(msg)
             | ApiError::NotFound(msg)
             | ApiError::Forbidden(msg)
             | ApiError::Conflict(msg)
@@ -38,6 +40,7 @@ impl ApiError {
     pub fn status(&self) -> Status {
         match self {
             ApiError::BadRequest(_) => Status::BadRequest,
+            ApiError::Unauthorized(_) => Status::Unauthorized,
             ApiError::NotFound(_) => Status::NotFound,
             ApiError::Forbidden(_) => Status::Forbidden,
             ApiError::Conflict(_) => Status::Conflict,

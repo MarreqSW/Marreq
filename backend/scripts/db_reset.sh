@@ -6,8 +6,8 @@ set -euo pipefail
 # ⚠  DESTRUCTIVE — permanently deletes all data.  Use for development resets.
 #
 # Typical workflow after this script:
-#   ./scripts/db_setup.sh        # re-apply schema via Diesel
-#   ./scripts/db_seed.sh         # optionally reload demo/test data
+#   ./backend/scripts/db_setup.sh        # re-apply schema via Diesel
+#   ./backend/scripts/db_seed.sh         # optionally reload demo/test data
 #
 # Prerequisites:
 #   • Docker running with the 'db' service up.
@@ -18,8 +18,9 @@ echo "=========================================="
 echo ""
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
-COMPOSE_FILE="${PROJECT_ROOT}/docker/docker-compose.yml"
+BACKEND_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${BACKEND_ROOT}/.." && pwd)"
+COMPOSE_FILE="${REPO_ROOT}/docker/docker-compose.yml"
 
 # Pick compose command (v2 'docker compose' or legacy 'docker-compose')
 if docker compose version >/dev/null 2>&1; then

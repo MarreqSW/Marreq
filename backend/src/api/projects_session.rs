@@ -5,8 +5,8 @@
 
 use rocket::serde::json::Json;
 
-use crate::api::prelude::*;
 use crate::api::guards::OptionalSessionUser;
+use crate::api::prelude::*;
 use crate::models::Project;
 use crate::services::project_service::ProjectService;
 

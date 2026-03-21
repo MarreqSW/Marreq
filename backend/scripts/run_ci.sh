@@ -4,9 +4,9 @@ set -euo pipefail
 # Shared CI/local quality tasks for Marreq.
 #
 # Usage:
-#   ./scripts/run_ci.sh checks
-#   ./scripts/run_ci.sh tests
-#   ./scripts/run_ci.sh local-ci [--jobs N]
+#   ./backend/scripts/run_ci.sh checks
+#   ./backend/scripts/run_ci.sh tests
+#   ./backend/scripts/run_ci.sh local-ci [--jobs N]
 
 MODE="${1:-}"
 if [[ -z "${MODE}" ]]; then
@@ -15,8 +15,10 @@ if [[ -z "${MODE}" ]]; then
 fi
 shift || true
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "${PROJECT_ROOT}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${BACKEND_ROOT}/.." && pwd)"
+cd "${REPO_ROOT}"
 
 run_local_ci() {
   local jobs=""
@@ -32,13 +34,13 @@ run_local_ci() {
         shift 2
         ;;
       -h|--help)
-        echo "Usage: scripts/run_ci.sh local-ci [OPTIONS]"
+        echo "Usage: backend/scripts/run_ci.sh local-ci [OPTIONS]"
         echo ""
         echo "Options:"
         echo "  -j, --jobs NUMBER    Limit the number of parallel jobs (CPUs) to use"
         echo "  -h, --help           Show this help message"
         echo ""
-        echo "Example: scripts/run_ci.sh local-ci --jobs 2"
+        echo "Example: backend/scripts/run_ci.sh local-ci --jobs 2"
         return 0
         ;;
       *)
@@ -58,10 +60,10 @@ run_local_ci() {
   echo "🔍 Running all CI checks locally..."
 
   echo "1️⃣ Checking Rust formatting..."
-  cargo +nightly fmt --all -- --check
+  cargo fmt --all -- --check
 
   echo "2️⃣ Linting CSS..."
-  npx stylelint "src/html/static/**/*.css" --config .stylelintrc.json
+  npx stylelint "backend/src/html/static/**/*.css" --config .stylelintrc.json
 
   echo "3️⃣ Checking for unused CSS..."
   npm run check:unused-css
@@ -71,17 +73,17 @@ run_local_ci() {
 
   echo "5️⃣ Running backend tests with coverage..."
   export DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/marreq
-  cargo +nightly llvm-cov "${cargo_args[@]}" --workspace --all-features --doctests --fail-under-lines 70
+  cargo llvm-cov "${cargo_args[@]}" -p marreq --all-features --doctests --fail-under-lines 70
 
   echo "✅ All checks passed!"
 }
 
 case "${MODE}" in
   checks)
-    exec bash "${PROJECT_ROOT}/scripts/run_checks.sh" "$@"
+    exec bash "${SCRIPT_DIR}/run_checks.sh" "$@"
     ;;
   tests)
-    exec bash "${PROJECT_ROOT}/scripts/run_tests.sh" "$@"
+    exec bash "${SCRIPT_DIR}/run_tests.sh" "$@"
     ;;
   local-ci)
     run_local_ci "$@"

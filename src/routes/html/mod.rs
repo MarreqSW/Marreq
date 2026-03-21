@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Marreq
 
 pub mod cache;
-mod helpers;
+pub(crate) mod helpers;
 
 pub mod admin;
 pub mod auth;

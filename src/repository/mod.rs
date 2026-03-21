@@ -235,6 +235,16 @@ pub trait ProjectsRepository {
     fn get_projects_all(&self) -> Result<Vec<Project>, RepoError>;
     fn get_project_by_id(&self, project_id: i32) -> Result<Project, RepoError>;
     fn get_project_by_slug(&self, slug: &str) -> Result<Project, RepoError>;
+    fn get_project_by_user_namespace_and_slug(
+        &self,
+        username: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError>;
+    fn get_project_by_group_namespace_and_slug(
+        &self,
+        group_slug: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError>;
 
     fn insert_new_project(&mut self, new: &NewProjectRow) -> Result<i32, RepoError>;
     fn edit_project(&mut self, project_id: i32, update: &UpdateProject) -> Result<bool, RepoError>;

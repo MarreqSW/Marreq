@@ -17,9 +17,9 @@
           <p class="marreq-group-hero__subtitle">Your role: {{group.current_role_label}}</p>
         </div>
         <div class="marreq-group-hero__actions">
-          <a href="/g/{{group.slug}}/members" class="btn btn-primary">View Members</a>
+          <a href="/{{group.slug}}/-/members" class="btn btn-primary">View Members</a>
           {{#if can_manage_members}}
-            <a href="/g/{{group.slug}}/edit" class="btn btn-outline">Settings</a>
+            <a href="/{{group.slug}}/-/settings" class="btn btn-outline">Settings</a>
           {{/if}}
         </div>
       </div>
@@ -76,12 +76,12 @@
                 </div>
                 <div class="marreq-group-project__actions">
                   {{#if can_open}}
-                    <a href="/p/{{slug}}" class="btn btn-primary btn-sm">Open Project</a>
+                    <a href="/{{slug}}" class="btn btn-primary btn-sm">Open Project</a>
                   {{else}}
                     <span class="badge bg-secondary-subtle text-secondary-emphasis">Access restricted</span>
                   {{/if}}
                   {{#if can_edit_project}}
-                    <a href="/p/{{slug}}/edit" class="btn btn-outline btn-sm">Edit Project</a>
+                    <a href="/{{slug}}/edit" class="btn btn-outline btn-sm">Edit Project</a>
                   {{/if}}
                 </div>
               </article>
@@ -101,9 +101,9 @@
         <div class="card-body c-card__body">
           <p class="text-muted small">Groups organize projects and membership, but they do not grant project access on their own.</p>
           <div class="d-grid gap-2">
-            <a href="/g/{{group.slug}}/members" class="btn btn-outline-primary">Manage Members</a>
+            <a href="/{{group.slug}}/-/members" class="btn btn-outline-primary">Manage Members</a>
             {{#if can_manage_members}}
-              <a href="/g/{{group.slug}}/edit" class="btn btn-outline-secondary">Edit Group</a>
+              <a href="/{{group.slug}}/-/settings" class="btn btn-outline-secondary">Edit Group</a>
             {{/if}}
             <a href="/groups" class="btn btn-link px-0">Back to all groups</a>
           </div>

@@ -58,7 +58,7 @@
           </td>
           <td class="marreq-requirements-row__cell marreq-requirements-row__cell--title">
             <a
-              href="/p/{{../project.slug}}/verifications/show/{{id}}"
+              href="/{{../project.slug}}/verifications/show/{{id}}"
               class="marreq-requirements-title"
               title="{{name}}"
               data-test-preview
@@ -95,7 +95,7 @@
           <td class="marreq-requirements-row__cell marreq-requirements-row__cell--parent">
             {{#if verification_parent_title}}
               <a
-                href="/p/{{../project.slug}}/verifications/show/{{verification_parent_id}}"
+                href="/{{../project.slug}}/verifications/show/{{verification_parent_id}}"
                 title="{{verification_parent_title}}"
                 data-test-preview
                 data-test-preview-project-id="{{../project.id}}"
@@ -114,7 +114,7 @@
           <td class="marreq-requirements-row__cell marreq-requirements-row__cell--actions">
             <div class="marreq-requirements-row__actions">
               <a 
-                href="/p/{{../project.slug}}/verifications/show/{{id}}" 
+                href="/{{../project.slug}}/verifications/show/{{id}}" 
                 class="marreq-requirements-row__action marreq-requirements-row__action--icon"
                 title="View test">
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
@@ -125,7 +125,7 @@
               </a>
               {{#if ../can_edit_requirements}}
               <a 
-                href="/p/{{../project.slug}}/verifications/edit/{{id}}" 
+                href="/{{../project.slug}}/verifications/edit/{{id}}" 
                 class="marreq-requirements-row__action marreq-requirements-row__action--icon"
                 data-action="open-edit-panel"
                 data-test-id="{{id}}"
@@ -181,7 +181,7 @@
                 <dt>Parent</dt>
                 <dd>
                   {{#if verification_parent_id}}
-                    <a href="/p/{{../project.slug}}/verifications/show/{{verification_parent_id}}">{{verification_parent_title}}</a>
+                    <a href="/{{../project.slug}}/verifications/show/{{verification_parent_id}}">{{verification_parent_title}}</a>
                   {{else}}
                     —
                   {{/if}}

@@ -816,6 +816,7 @@ mod tests {
                 description: Some("New Desc".to_string()),
                 owner_id: Some(2),
                 status: Some(ProjectStatus::Cancelled),
+                slug: None,
                 group_id: None,
             };
 

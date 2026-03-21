@@ -17,10 +17,11 @@ struct ClearSuspectForm {
     verification_id: i32,
 }
 
-#[get("/<project_id>/matrix?<sort_by>&<sort_order>&<verification_status_filter>&<req_status_filter>&<category_filter>&<applicability_filter>&<page>&<per_page>&<search>&<suspect_filter>")]
+#[get("/<namespace>/<project_id>/matrix?<sort_by>&<sort_order>&<verification_status_filter>&<req_status_filter>&<category_filter>&<applicability_filter>&<page>&<per_page>&<search>&<suspect_filter>")]
 #[allow(clippy::too_many_arguments)]
 async fn get_matrix(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     cookies: &CookieJar<'_>,
     sort_by: Option<String>,
@@ -37,7 +38,7 @@ async fn get_matrix(
 ) -> Result<Template, Redirect> {
     use serde_json::json;
 
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
 
@@ -271,12 +272,13 @@ fn build_pagination_context(
     }
 }
 
-#[get("/<project_id>/matrix.xls")]
+#[get("/<namespace>/<project_id>/matrix.xls")]
 async fn get_matrix_xls(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
 ) -> Result<(ContentType, NamedFile), Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
 
@@ -287,13 +289,13 @@ async fn get_matrix_xls(
 
     excel::create_matrix_workbook(project_id).map_err(|e| {
         eprintln!("Error creating matrix workbook: {e:?}");
-        Redirect::to(format!("/p/{project_slug}/matrix"))
+        Redirect::to(format!("/{project_slug}/matrix"))
     })?;
 
     let path = std::path::Path::new("target/matrix.xls");
     let file = NamedFile::open(path).await.map_err(|e| {
         eprintln!("Error opening matrix file: {e:?}");
-        Redirect::to(format!("/p/{project_slug}/matrix"))
+        Redirect::to(format!("/{project_slug}/matrix"))
     })?;
 
     let ct = ContentType::new(
@@ -304,14 +306,15 @@ async fn get_matrix_xls(
     Ok((ct, file))
 }
 
-#[get("/<project_id>/matrix.csv?<verification_status_filter>")]
+#[get("/<namespace>/<project_id>/matrix.csv?<verification_status_filter>")]
 async fn get_matrix_csv(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     verification_status_filter: Option<i32>,
     state: &State<AppState>,
 ) -> Result<(ContentType, String), Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
 
@@ -325,20 +328,21 @@ async fn get_matrix_csv(
         .export_matrix_csv(project_id, verification_status_filter)
         .map_err(|e| {
             eprintln!("Error generating CSV: {e:?}");
-            Redirect::to(format!("/p/{project_slug}/matrix"))
+            Redirect::to(format!("/{project_slug}/matrix"))
         })?;
 
     Ok((ContentType::new("text", "csv"), csv_data))
 }
 
-#[post("/<project_id>/matrix/clear_suspect", data = "<form>")]
+#[post("/<namespace>/<project_id>/matrix/clear_suspect", data = "<form>")]
 async fn post_clear_suspect(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     form: rocket::form::Form<ClearSuspectForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     let links = state
@@ -349,11 +353,11 @@ async fn post_clear_suspect(
         .iter()
         .any(|m| m.req_id == form.req_id && m.verification_id == form.verification_id);
     if !link_exists {
-        return Err(Redirect::to(format!("/p/{project_slug}/matrix")));
+        return Err(Redirect::to(format!("/{project_slug}/matrix")));
     }
     let service = MatrixService::new(state.inner());
     let _ = service.clear_suspect(&user, form.req_id, form.verification_id);
-    Ok(Redirect::to(format!("/p/{project_slug}/matrix")))
+    Ok(Redirect::to(format!("/{project_slug}/matrix")))
 }
 
 pub fn routes() -> Vec<Route> {
@@ -381,6 +385,7 @@ mod tests {
     use rocket::local::asynchronous::Client;
 
     const ADMIN_ID: i32 = 1;
+    const ADMIN_NAMESPACE: &str = "site-admin";
     const USER_ID: i32 = 2;
     const PRIMARY_PROJECT: i32 = 1;
 
@@ -481,7 +486,7 @@ mod tests {
     fn base_repo() -> DieselRepoMock {
         let mut repo = DieselRepoMock::default();
 
-        let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
+        let mut admin = DieselRepoMock::make_user(ADMIN_ID, ADMIN_NAMESPACE, "");
         admin.is_admin = true;
         repo.users.insert(ADMIN_ID, admin);
 
@@ -531,7 +536,7 @@ mod tests {
     #[rocket::async_test]
     async fn get_matrix_works_with_base_repo() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/orbiter/matrix", ADMIN_ID).await;
+        let response = get_with_session(&client, "/site-admin/orbiter/matrix", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
@@ -541,7 +546,7 @@ mod tests {
     #[rocket::async_test]
     async fn get_matrix_allows_project_member() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/orbiter/matrix", USER_ID).await;
+        let response = get_with_session(&client, "/site-admin/orbiter/matrix", USER_ID).await;
 
         // Non-admin user with project membership should be able to view matrix
         assert_eq!(response.status(), HttpStatus::Ok);
@@ -585,8 +590,12 @@ mod tests {
         let client = test_client(repo).await;
 
         // Request first page with 10 items per page (minimum allowed by clamp)
-        let response =
-            get_with_session(&client, "/p/orbiter/matrix?page=1&per_page=10", ADMIN_ID).await;
+        let response = get_with_session(
+            &client,
+            "/site-admin/orbiter/matrix?page=1&per_page=10",
+            ADMIN_ID,
+        )
+        .await;
         assert_eq!(response.status(), HttpStatus::Ok);
 
         let body = response.into_string().await.expect("response body");
@@ -597,8 +606,12 @@ mod tests {
         assert!(req_10_in_table, "Page 1 should contain requirement 10");
 
         // Test page 2 - should contain requirements 11-20
-        let response2 =
-            get_with_session(&client, "/p/orbiter/matrix?page=2&per_page=10", ADMIN_ID).await;
+        let response2 = get_with_session(
+            &client,
+            "/site-admin/orbiter/matrix?page=2&per_page=10",
+            ADMIN_ID,
+        )
+        .await;
         assert_eq!(response2.status(), HttpStatus::Ok);
         let body2 = response2.into_string().await.expect("response body");
 
@@ -670,7 +683,8 @@ mod tests {
         let client = test_client(repo).await;
 
         // Search for "auth" should only find the first requirement
-        let response = get_with_session(&client, "/p/orbiter/matrix?search=auth", ADMIN_ID).await;
+        let response =
+            get_with_session(&client, "/site-admin/orbiter/matrix?search=auth", ADMIN_ID).await;
         let body = response.into_string().await.expect("response body");
         // Check if Authentication requirement is present in the table
         let has_auth = body.contains("Authentication") || body.contains("AUTH-001");
@@ -734,7 +748,7 @@ mod tests {
         );
 
         let client = test_client(repo).await;
-        let response = get_with_session(&client, "/p/orbiter/matrix.csv", ADMIN_ID).await;
+        let response = get_with_session(&client, "/site-admin/orbiter/matrix.csv", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
 
@@ -776,7 +790,7 @@ mod tests {
         );
 
         let client = test_client(repo).await;
-        let response = get_with_session(&client, "/p/orbiter/matrix.csv", ADMIN_ID).await;
+        let response = get_with_session(&client, "/site-admin/orbiter/matrix.csv", ADMIN_ID).await;
 
         let body = response.into_string().await.expect("response body");
         // Should escape commas and quotes properly
@@ -790,7 +804,7 @@ mod tests {
         repo.requirements.clear();
 
         let client = test_client(repo).await;
-        let response = get_with_session(&client, "/p/orbiter/matrix", ADMIN_ID).await;
+        let response = get_with_session(&client, "/site-admin/orbiter/matrix", ADMIN_ID).await;
         assert_eq!(response.status(), HttpStatus::Ok);
 
         let body = response.into_string().await.expect("response body");
@@ -846,7 +860,7 @@ mod tests {
         );
 
         let client = test_client(repo).await;
-        let response = get_with_session(&client, "/p/orbiter/matrix", ADMIN_ID).await;
+        let response = get_with_session(&client, "/site-admin/orbiter/matrix", ADMIN_ID).await;
 
         let body = response.into_string().await.expect("response body");
         assert!(body.contains("Unlinked Requirement"));

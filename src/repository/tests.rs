@@ -962,8 +962,9 @@ mod tests {
         let update_project = UpdateProject {
             name: "Updated Project".to_string(),
             description: Some("Updated Project Description".to_string()),
-            status_id: "Active".to_string(),
+            status: Some(crate::status_enums::ProjectStatus::Active),
             owner_id: Some(1),
+            slug: None,
             group_id: None,
         };
 
@@ -2307,6 +2308,7 @@ mod tests {
             description: Some("".to_string()),
             status: Some(crate::status_enums::ProjectStatus::Active),
             owner_id: Some(1),
+            slug: None,
             group_id: None,
         };
 

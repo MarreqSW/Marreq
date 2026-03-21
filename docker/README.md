@@ -15,18 +15,20 @@ cp .env.example .env
 - `docker-compose.ci.yml`: CI-specific compose overrides
 - `Dockerfile`: **Backend** image (Rust binary; build context: repository root)
 - `frontend/Dockerfile`: **Frontend** image (multi-stage: `npm run build` + nginx)
-- `frontend/nginx.conf`: SPA `try_files` + `/api/` reverse proxy to `backend:8000`
+- `frontend/nginx.conf`: SPA on `/` only; `/api/` + legacy SSR paths (`/p/`, `/static/`, `/user/`, `/admin`, …) reverse-proxied to `backend:8000` when using hybrid mode (`MARREQ_DOCKER_SSR_PROXY=1`)
 - `Dockerfile.dockerignore`: Build context exclusions for `Dockerfile`
 - `docker-entrypoint.sh`: Backend container startup (wait for DB + migrations + start app)
 
 ## Split stack (default compose)
 
-The default `docker-compose.yml` runs the app in **API-only** mode plus a separate **frontend** container:
+The default `docker-compose.yml` uses a **hybrid split stack**: Vite SPA for **`/`** only; nginx proxies legacy SSR paths (`/p/…`, `/static/…`, `/projects`, …) to Rocket so links work on **:8080**.
 
 | Service   | Role |
 |-----------|------|
-| `backend` | Rocket on `:8000` **inside** the compose network (`expose`, not published to host by default). `MARREQ_UI_MODE=api_only`, `MARREQ_SERVE_STATIC=0`. |
-| `frontend` | Nginx serves the Vite-built SPA on host **http://localhost:8080** and proxies **`/api/`** → `http://backend:8000/api/`. |
+| `db` | PostgreSQL published on host **`127.0.0.1:5433`** → container `5432` (avoids conflict with a local Postgres on **5432**). From the host, use `DATABASE_URL=postgres://rust:rust@127.0.0.1:5433/marreq` for `diesel`/scripts. |
+| `ollama` | Published on host **`127.0.0.1:11435`** → container `11434` (avoids conflict with a local Ollama on **11434**). **`backend`** still uses `http://ollama:11434` on the Docker network. |
+| `backend` | Rocket on **`127.0.0.1:8000`**: **`/api`**, plus HTML + **`/static`** when **`MARREQ_DOCKER_SSR_PROXY=1`**. **`MARREQ_UI_MODE`** empty; **`MARREQ_SERVE_STATIC=1`**. **`GET /`** on :8000 is the classic dashboard; use **:8080/** for the SPA. **`ROCKET_SECRET_KEY`**: compose default if missing. |
+| `frontend` | Nginx: SPA for **`/`**; **`/api/`**, **`/static/`**, **`/p/`**, **`/user/`**, **`/admin`**, **`/projects`**, **`/logs`**, … → **`backend:8000`**. |
 | `adminer` | Database UI on host **http://localhost:8081** (avoids clashing with frontend **8080**). |
 
 Use the UI at **http://localhost:8080** so session cookies stay on the same origin as `/api`.
@@ -104,6 +106,26 @@ The DB helper scripts in `scripts/` already use `docker/docker-compose.yml` inte
 
 ## Troubleshooting
 
+### Port 5432 already in use
+
+Compose maps the DB to host **5433**, not 5432, so it should not collide with system PostgreSQL. If you still see bind errors, another service may be using **5433** — change the mapping in `docker-compose.yml` (e.g. `5434:5432`).
+
+### Port 11434 already in use
+
+Compose maps Ollama to host **11435**, not 11434, so it should not collide with a host-installed Ollama. To call the **container** Ollama from your machine (e.g. `curl`), use `http://localhost:11435`. If **11435** is taken, change the mapping (e.g. `11436:11434`).
+
+### `InsecureSecretKey` / backend exits after migrations
+
+The container runs a **release** binary; Rocket needs **`ROCKET_SECRET_KEY`** (256-bit, `openssl rand -base64 32`). `docker-compose.yml` injects a **development default** when the variable is unset. If you removed it or use a custom compose file, set `ROCKET_SECRET_KEY` in `.env`.
+
+### Orphan containers
+
+If Compose warns about orphan containers (old service names), run:
+
+```bash
+docker compose -f docker/docker-compose.yml up -d --remove-orphans
+```
+
 ### Database Connection Issues
 
 ```bash
@@ -141,3 +163,7 @@ docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq -c
 ### SPA cannot reach API
 
 Ensure you open the app on the **frontend** port (**8080**), not only the backend. The browser must call `/api/...` on the same host/port as the SPA so cookies are first-party.
+
+### nginx `502` / `connect() failed (111: Connection refused)` to upstream
+
+Usually means the **frontend** container started before Rocket was listening (migrations/seed) or nginx had a **stale IP** for `backend` after a recreate. The stack uses a **backend `healthcheck`** and **`depends_on: condition: service_healthy`** so nginx starts only after `GET /api/auth/csrf` succeeds on the backend; nginx is configured with **Docker DNS resolver** + variable `proxy_pass` so `backend` is re-resolved. Rebuild the backend image (it includes `curl` for the healthcheck) and recreate: `docker compose up -d --build backend frontend`.

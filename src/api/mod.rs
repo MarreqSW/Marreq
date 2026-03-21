@@ -8,9 +8,11 @@ pub mod cache;
 pub mod categories;
 pub mod comments;
 pub mod custom_fields;
+pub mod dashboard;
 pub mod error;
 pub mod guards;
 pub mod matrix;
+pub mod meta;
 pub mod mcp;
 pub mod members;
 pub mod prelude;
@@ -29,10 +31,12 @@ use rocket::Route;
 
 pub fn routes() -> Vec<Route> {
     routes![
+        meta::api_root,
         auth::auth_csrf,
         auth::auth_login,
         auth::auth_logout,
         auth::auth_me,
+        dashboard::dashboard_json,
         projects_session::list_for_session,
         baselines::list,
         baselines::get,

@@ -87,7 +87,8 @@ fn register_partials(hb: &mut Handlebars) {
     ];
 
     for (name, path) in entries {
-        let contents = fs::read_to_string(path).expect("read partial");
+        let full = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), path);
+        let contents = fs::read_to_string(&full).expect("read partial");
         hb.register_partial(name, contents)
             .unwrap_or_else(|err| panic!("register partial {}: {}", name, err));
     }
@@ -109,7 +110,8 @@ fn register_templates(hb: &mut Handlebars) {
     ];
 
     for (name, path) in entries {
-        let contents = fs::read_to_string(path).expect("read template");
+        let full = format!("{}/{}", env!("CARGO_MANIFEST_DIR"), path);
+        let contents = fs::read_to_string(&full).expect("read template");
         hb.register_template_string(name, contents)
             .unwrap_or_else(|err| panic!("register template {}: {}", name, err));
     }

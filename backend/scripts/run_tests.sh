@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "${PROJECT_ROOT}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BACKEND_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${BACKEND_ROOT}/.." && pwd)"
+cd "${REPO_ROOT}"
 
 log_file="test_output.log"
 
@@ -10,7 +12,7 @@ echo "🚀 Running all Marreq tests..."
 echo "----------------------------------------"
 
 set -o pipefail
-cargo test --features test-helpers --quiet 2>&1 | tee "${log_file}"
+cargo test -p marreq --features test-helpers --quiet 2>&1 | tee "${log_file}"
 
 echo ""
 echo "📊 Test Summary"

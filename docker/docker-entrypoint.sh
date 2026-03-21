@@ -1,6 +1,21 @@
 #!/bin/sh
 set -e
 
+# Split-stack backend (docker-compose `backend` service): default to API-only so a stale
+# `.env` cannot leave `GET /` without a handler — unless SSR paths are proxied from nginx
+# (`MARREQ_DOCKER_SSR_PROXY=1`), in which case Rocket must mount legacy HTML + `/static`.
+case "${MARREQ_DOCKER_SPLIT_BACKEND:-}" in
+  1|true|TRUE|yes|YES)
+    case "${MARREQ_DOCKER_SSR_PROXY:-}" in
+      1|true|TRUE|yes|YES)
+        ;;
+      *)
+        export MARREQ_UI_MODE=api_only
+        ;;
+    esac
+    ;;
+esac
+
 if [ -n "${DATABASE_URL}" ]; then
   echo "Waiting for database..."
   until psql "${DATABASE_URL}" -c "SELECT 1" >/dev/null 2>&1; do

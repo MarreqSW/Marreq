@@ -10,7 +10,6 @@ use crate::repository::{GroupsRepository, UserRepository};
 
 /// Top-level path segments that are reserved for system routes and cannot be used as namespaces.
 pub const RESERVED_NAMESPACE_SEGMENTS: &[&str] = &[
-    "admin",
     "api",
     "cache",
     "change_password",
@@ -29,6 +28,15 @@ pub const RESERVED_NAMESPACE_SEGMENTS: &[&str] = &[
     "status",
     "user",
 ];
+
+/// Generic collision message used when a user/group namespace is already claimed.
+pub const TAKEN_NAMESPACE_MESSAGE: &str = "This namespace is already taken.";
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct NamespaceAvailabilityOptions {
+    pub exclude_user_id: Option<i32>,
+    pub exclude_group_id: Option<i32>,
+}
 
 #[derive(Debug, Clone)]
 pub enum NamespaceEntity {
@@ -81,6 +89,38 @@ pub fn validate_namespace_segment(segment: &str, field: &str) -> Result<(), Vali
     Ok(())
 }
 
+pub fn ensure_namespace_segment_available<R>(
+    repo: &R,
+    segment: &str,
+    options: NamespaceAvailabilityOptions,
+) -> Result<(), RepoError>
+where
+    R: UserRepository + GroupsRepository,
+{
+    let normalized = normalize_namespace_segment(segment);
+
+    if is_reserved_namespace_segment(&normalized) {
+        return Err(RepoError::BadInput(format!(
+            "namespace '{}' is reserved for system routes",
+            normalized
+        )));
+    }
+
+    if let Some(user) = repo.get_user_by_username(&normalized)? {
+        if Some(user.id) != options.exclude_user_id {
+            return Err(RepoError::Duplicate(TAKEN_NAMESPACE_MESSAGE.into()));
+        }
+    }
+
+    match repo.get_group_by_slug(&normalized) {
+        Ok(group) if Some(group.id) != options.exclude_group_id => {
+            Err(RepoError::Duplicate(TAKEN_NAMESPACE_MESSAGE.into()))
+        }
+        Ok(_) | Err(RepoError::NotFound) => Ok(()),
+        Err(error) => Err(error),
+    }
+}
+
 pub fn resolve_namespace_entity<R>(repo: &R, segment: &str) -> Result<NamespaceEntity, RepoError>
 where
     R: UserRepository + GroupsRepository,
@@ -89,6 +129,26 @@ where
         return Err(RepoError::NotFound);
     }
 
+    resolve_namespace_entity_allow_reserved(repo, segment)
+}
+
+pub fn resolve_project_namespace_entity<R>(
+    repo: &R,
+    segment: &str,
+) -> Result<NamespaceEntity, RepoError>
+where
+    R: UserRepository + GroupsRepository,
+{
+    resolve_namespace_entity_allow_reserved(repo, segment)
+}
+
+fn resolve_namespace_entity_allow_reserved<R>(
+    repo: &R,
+    segment: &str,
+) -> Result<NamespaceEntity, RepoError>
+where
+    R: UserRepository + GroupsRepository,
+{
     let normalized = normalize_namespace_segment(segment);
     let user = repo.get_user_by_username(&normalized)?;
     let group = match repo.get_group_by_slug(&normalized) {
@@ -185,5 +245,82 @@ mod tests {
 
         let group_namespace = resolve_namespace_entity(&repo, "flight-systems").unwrap();
         assert!(matches!(group_namespace, NamespaceEntity::Group(_)));
+    }
+
+    #[test]
+    fn resolve_project_namespace_entity_allows_reserved_user_segment() {
+        let mut repo = DieselRepoMock::default();
+        let user = DieselRepoMock::make_user(1, "admin", "");
+        repo.users.insert(user.id, user);
+
+        let namespace = resolve_project_namespace_entity(&repo, "admin").unwrap();
+        assert!(matches!(namespace, NamespaceEntity::User(_)));
+    }
+
+    #[test]
+    fn resolve_namespace_entity_rejects_reserved_user_segment() {
+        let mut repo = DieselRepoMock::default();
+        let user = DieselRepoMock::make_user(1, "admin", "");
+        repo.users.insert(user.id, user);
+
+        let result = resolve_namespace_entity(&repo, "admin");
+        assert!(matches!(result, Err(RepoError::NotFound)));
+    }
+
+    #[test]
+    fn ensure_namespace_segment_available_rejects_taken_user_or_group() {
+        let mut repo = DieselRepoMock::default();
+        let user = DieselRepoMock::make_user(1, "alice", "");
+        repo.users.insert(user.id, user);
+        repo.groups.insert(
+            2,
+            Group {
+                id: 2,
+                name: "Flight Systems".into(),
+                slug: "flight-systems".into(),
+                description: None,
+                owner_id: Some(1),
+                created_at: timestamp(),
+                updated_at: timestamp(),
+            },
+        );
+
+        let user_result = ensure_namespace_segment_available(
+            &repo,
+            "alice",
+            NamespaceAvailabilityOptions::default(),
+        );
+        assert!(matches!(
+            user_result,
+            Err(RepoError::Duplicate(message)) if message == TAKEN_NAMESPACE_MESSAGE
+        ));
+
+        let group_result = ensure_namespace_segment_available(
+            &repo,
+            "flight-systems",
+            NamespaceAvailabilityOptions::default(),
+        );
+        assert!(matches!(
+            group_result,
+            Err(RepoError::Duplicate(message)) if message == TAKEN_NAMESPACE_MESSAGE
+        ));
+    }
+
+    #[test]
+    fn ensure_namespace_segment_available_allows_current_entity_when_excluded() {
+        let mut repo = DieselRepoMock::default();
+        let user = DieselRepoMock::make_user(1, "alice", "");
+        repo.users.insert(user.id, user);
+
+        let result = ensure_namespace_segment_available(
+            &repo,
+            "alice",
+            NamespaceAvailabilityOptions {
+                exclude_user_id: Some(1),
+                exclude_group_id: None,
+            },
+        );
+
+        assert!(result.is_ok());
     }
 }

@@ -263,3 +263,116 @@ pub async fn remove_member(
         })?;
     Ok(Status::NoContent)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::SESSION_COOKIE;
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use rocket::http::{ContentType, Cookie, SameSite};
+    use rocket::local::asynchronous::Client;
+    use serde_json::{json, Value};
+    use std::sync::{Arc, RwLock};
+
+    type TestState = AppState<CacheRepository<DieselRepoMock>>;
+
+    fn state_from_repo(repo: DieselRepoMock) -> TestState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    fn session_cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(SESSION_COOKIE, "1");
+        cookie.set_path("/");
+        cookie.set_http_only(true);
+        cookie.set_secure(true);
+        cookie.set_same_site(SameSite::Strict);
+        cookie
+    }
+
+    async fn client_with_repo(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build()
+            .manage(state_from_repo(repo))
+            .mount("/api", routes![create]);
+        Client::tracked(rocket).await.expect("client")
+    }
+
+    fn base_repo() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+        let mut user = DieselRepoMock::make_user(1, "alice", "");
+        user.email = "alice@example.com".into();
+        user.name = "Alice".into();
+        repo.users.insert(1, user);
+        repo
+    }
+
+    #[rocket::async_test]
+    async fn create_group_with_taken_namespace_returns_conflict() {
+        let mut repo = base_repo();
+        repo.groups.insert(
+            1,
+            crate::models::Group {
+                id: 1,
+                name: "Flight Systems".into(),
+                slug: "flight-systems".into(),
+                description: None,
+                owner_id: Some(1),
+                created_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+                updated_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+            },
+        );
+        let client = client_with_repo(repo).await;
+
+        let response = client
+            .post("/api/groups")
+            .header(ContentType::JSON)
+            .private_cookie(session_cookie())
+            .body(
+                json!({
+                    "name": "Flight Systems",
+                    "description": null,
+                    "owner_id": null
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Conflict);
+        let payload: Value = response.into_json().await.expect("json");
+        assert_eq!(
+            payload["message"],
+            Value::from(crate::namespaces::TAKEN_NAMESPACE_MESSAGE)
+        );
+    }
+
+    #[rocket::async_test]
+    async fn create_group_with_reserved_namespace_returns_bad_request() {
+        let client = client_with_repo(base_repo()).await;
+
+        let response = client
+            .post("/api/groups")
+            .header(ContentType::JSON)
+            .private_cookie(session_cookie())
+            .body(
+                json!({
+                    "name": "Admin",
+                    "description": null,
+                    "owner_id": null
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::BadRequest);
+    }
+}

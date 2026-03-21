@@ -7,7 +7,7 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::helper_functions::utils::slugify_project_name;
 use crate::logger::{LogCtx, Logger};
 use crate::models::{Group, GroupMember, NewGroup, NewGroupMember, NewGroupRow, UpdateGroup, User};
-use crate::namespaces::is_reserved_namespace_segment;
+use crate::namespaces::{ensure_namespace_segment_available, NamespaceAvailabilityOptions};
 use crate::repository::errors::RepoError;
 use crate::repository::{
     GroupMembersRepository, GroupsRepository, PooledConnectionWrapper, UserRepository,
@@ -217,40 +217,9 @@ impl<'a> GroupService<'a> {
 
     fn generate_slug(&self, name: &str) -> Result<String, RepoError> {
         let base = slugify_project_name(name);
-        if is_reserved_namespace_segment(&base) {
-            return Err(RepoError::BadInput(format!(
-                "group namespace '{}' is reserved for system routes",
-                base
-            )));
-        }
-
         let repo = self.state.repo_read();
-        if repo.get_user_by_username(&base)?.is_some() {
-            return Err(RepoError::BadInput(format!(
-                "group namespace '{}' is already used by a username",
-                base
-            )));
-        }
-
-        let existing_set: std::collections::HashSet<String> = repo
-            .get_groups_all()?
-            .into_iter()
-            .map(|group| group.slug)
-            .collect();
-
-        if !existing_set.contains(&base) {
-            return Ok(base);
-        }
-
-        let mut occurrence = 2;
-        loop {
-            let suffix = format!("-{occurrence}");
-            let candidate = format!("{}{}", &base[..base.len().min(255 - suffix.len())], suffix);
-            if !existing_set.contains(&candidate) {
-                return Ok(candidate);
-            }
-            occurrence += 1;
-        }
+        ensure_namespace_segment_available(&*repo, &base, NamespaceAvailabilityOptions::default())?;
+        Ok(base)
     }
 
     fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
@@ -461,7 +430,7 @@ mod tests {
     }
 
     #[test]
-    fn slug_collision_appends_suffix() {
+    fn create_rejects_taken_namespace() {
         let mut repo = DieselRepoMock::default();
         repo.groups.insert(1, group(1, "avionics"));
         let state = state_with_repo(repo);
@@ -473,9 +442,11 @@ mod tests {
             owner_id: Some(1),
         };
 
-        let id = service.create(&actor(), payload).unwrap();
-        let stored = service.get_by_id(id).unwrap();
-        assert_eq!(stored.slug, "avionics-2");
+        let err = service.create(&actor(), payload).unwrap_err();
+        assert!(matches!(
+            err,
+            RepoError::Duplicate(message) if message == crate::namespaces::TAKEN_NAMESPACE_MESSAGE
+        ));
     }
 
     #[test]

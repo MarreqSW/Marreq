@@ -102,7 +102,7 @@ docker compose \
 
 ## Script Compatibility
 
-The DB helper scripts in `scripts/` already use `docker/docker-compose.yml` internally, so existing commands like `./scripts/db_setup.sh` keep working.
+The DB helper scripts in `backend/scripts/` already use `docker/docker-compose.yml` internally, so existing commands like `./backend/scripts/db_setup.sh` keep working.
 
 ## Troubleshooting
 
@@ -144,7 +144,7 @@ docker compose -f docker/docker-compose.yml restart db
 ```bash
 # Complete database reset
 docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d postgres -c "DROP DATABASE IF EXISTS marreq;"
-./scripts/db_setup.sh --seed
+./backend/scripts/db_setup.sh --seed
 ```
 
 ### Verification Commands

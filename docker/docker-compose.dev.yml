@@ -13,8 +13,8 @@ services:
     working_dir: /workspace
     command: >
       bash -c
-      "diesel migration run &&
-      cargo run --bin marreq"
+      "cd /workspace/backend && diesel migration run &&
+      cd /workspace && cargo run -p marreq"
     environment:
       DATABASE_URL: 'postgres://rust:rust@db:5432/marreq'
       PATH: "/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"

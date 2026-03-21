@@ -10,9 +10,7 @@ use rocket::serde::json::{json, Json};
 use crate::api::guards::OptionalSessionUser;
 use crate::api::prelude::*;
 use crate::auth::csrf::get_or_create_csrf_token;
-use crate::routes::html::helpers::{
-    decorate_projects_for_listing, resolve_selected_project_slug,
-};
+use crate::routes::html::helpers::{decorate_projects_for_listing, resolve_selected_project_slug};
 use crate::services::ProjectService;
 
 /// Full dashboard context for the post-login SPA (same data shape as template `index`).
@@ -43,8 +41,7 @@ pub fn dashboard_json(
     }
 
     let decorated_projects = decorate_projects_for_listing(state, &user, &projects);
-    let selected_project_slug =
-        resolve_selected_project_slug(selected_project_id, &projects);
+    let selected_project_slug = resolve_selected_project_slug(selected_project_id, &projects);
     let csrf_token = get_or_create_csrf_token(cookies);
 
     Ok(Json(json!({

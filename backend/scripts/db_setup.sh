@@ -8,8 +8,8 @@ set -euo pipefail
 # manual DDL is executed by this script.
 #
 # Usage:
-#   ./scripts/db_setup.sh           # apply schema only
-#   ./scripts/db_setup.sh --seed    # apply schema, then load demo/test data
+#   ./backend/scripts/db_setup.sh           # apply schema only
+#   ./backend/scripts/db_setup.sh --seed    # apply schema, then load demo/test data
 #
 # Prerequisites:
 #   • Docker running with Compose (for the managed PostgreSQL container), OR
@@ -24,8 +24,9 @@ set -euo pipefail
 # Docker is in use.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
-COMPOSE_FILE="${PROJECT_ROOT}/docker/docker-compose.yml"
+BACKEND_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${BACKEND_ROOT}/.." && pwd)"
+COMPOSE_FILE="${REPO_ROOT}/docker/docker-compose.yml"
 SEED=false
 
 for arg in "$@"; do
@@ -50,9 +51,9 @@ echo "==========================================="
 echo -e "${NC}"
 
 # ── Load .env ────────────────────────────────────────────────────────────────
-if [[ -f "${PROJECT_ROOT}/.env" ]]; then
-  info "Loading ${PROJECT_ROOT}/.env"
-  set -a; source "${PROJECT_ROOT}/.env"; set +a
+if [[ -f "${REPO_ROOT}/.env" ]]; then
+  info "Loading ${REPO_ROOT}/.env"
+  set -a; source "${REPO_ROOT}/.env"; set +a
 fi
 
 # Default credentials — must match docker/docker-compose.yml
@@ -88,7 +89,7 @@ if [[ "${USE_DOCKER}" == "true" ]]; then
     error "Docker daemon is not running. Start Docker and retry, or set USE_DOCKER=false to target a bare-metal server."
   fi
   info "Starting PostgreSQL container (db service)..."
-  cd "${PROJECT_ROOT}"
+  cd "${REPO_ROOT}"
   ${DC} up -d db
   DB_CID=$(${DC} ps -q db || true)
   if [[ -z "${DB_CID}" ]]; then
@@ -143,7 +144,7 @@ fi
 # ── Apply migrations via Diesel ───────────────────────────────────────────────
 echo ""
 info "Applying migrations (diesel migration run)..."
-cd "${PROJECT_ROOT}"
+cd "${BACKEND_ROOT}"
 diesel migration run --database-url "${DATABASE_URL}"
 echo ""
 success "All migrations applied"
@@ -162,9 +163,9 @@ echo "  Connection : ${DATABASE_URL}"
 echo ""
 echo "Next steps:"
 if [[ "${SEED}" == "false" ]]; then
-  echo "  Load demo/test data : ./scripts/db_seed.sh"
+  echo "  Load demo/test data : ./backend/scripts/db_seed.sh"
 fi
-echo "  Start Marreq        : cargo run --bin marreq"
-echo "  Apply future updates: ./scripts/db_migrate.sh up"
-echo "  Backup database     : ./scripts/db_backup.sh"
+echo "  Start Marreq        : cargo run -p marreq (from repo root) or cd backend && cargo run --bin marreq"
+echo "  Apply future updates: ./backend/scripts/db_migrate.sh up"
+echo "  Backup database     : ./backend/scripts/db_backup.sh"
 echo -e "${BLUE}───────────────────────────────────────────────${NC}"

@@ -1,0 +1,62 @@
+[package]
+authors = [
+    "Màrius Montón <marius.monton@gmail.com>",
+    "Ramon Vallés <vallespuigramon@gmail.com>",
+]
+name = "marreq"
+version = "0.1.0"
+edition = "2021"
+description = "Requirements management"
+license = "AGPL-3.0-or-later"
+
+[features]
+# Enable test helpers for integration tests
+test-helpers = []
+
+[dependencies]
+diesel = { version = "2.3.6", features = [
+    "postgres",
+    "chrono",
+    "r2d2",
+    "serde_json",
+] }
+dotenvy = "0.15.7"
+chrono = { version = "0.4.44", features = ["serde"] }
+serde = "1.0"
+serde_json = "1.0"
+lazy_static = "1.5"
+rocket = { version = "0.5.1", features = ["json", "secrets"] }
+argon2 = "0.5"
+time = "0.3"
+xlsxwriter = "0.6.1"
+printpdf = "0.9.1"
+calamine = "0.33"
+anyhow = "1.0"
+regex = "1.12"
+thiserror = "2"
+csv = "1.4"
+pgvector = { version = "0.4.1", features = ["diesel"] }
+sha2 = "0.10"
+reqwest = { version = "0.13.2", features = ["json", "blocking"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
+quick-xml = { version = "0.39", features = ["serialize"] }
+similar = "2.7"
+urlencoding = "2.1"
+
+# [dependencies.rocket_db_pools]
+# version = "0.1.0-rc.2"
+# features = ["sqlx_postgres"]
+
+[dependencies.rocket_sync_db_pools]
+version = "0.1.0"
+features = ["diesel_postgres_pool"]
+
+[dependencies.rocket_dyn_templates]
+#version = "0.1.0-rc.2"
+version = "0.2.0"
+features = ["handlebars"]
+
+[dev-dependencies]
+handlebars = { version = "6.4", features = ["dir_source"] }
+serde_json = "1.0"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "macros"] }

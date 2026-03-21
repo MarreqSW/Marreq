@@ -52,9 +52,8 @@ pub fn auth_login(
     match login_user(&mut *repo, &form, cookies) {
         Ok(()) => {
             limiter.record_success(&form.username, ip);
-            let user_id = read_session_user_id(cookies).ok_or_else(|| {
-                ApiError::Internal("session not set after login".into())
-            })?;
+            let user_id = read_session_user_id(cookies)
+                .ok_or_else(|| ApiError::Internal("session not set after login".into()))?;
             let user = repo
                 .get_user_by_id(user_id)
                 .map_err(|_| ApiError::Internal("failed to load user".into()))?;
@@ -85,7 +84,10 @@ pub fn auth_login(
 
 /// End session and clear CSRF cookie (same as HTML logout).
 #[post("/auth/logout")]
-pub fn auth_logout(cookies: &CookieJar<'_>, state: &State<AppState>) -> ApiResult<Json<serde_json::Value>> {
+pub fn auth_logout(
+    cookies: &CookieJar<'_>,
+    state: &State<AppState>,
+) -> ApiResult<Json<serde_json::Value>> {
     let mut repo = state.repo_write();
     logout_user(cookies, &mut *repo);
     Ok(Json(json!({ "status": "ok" })))

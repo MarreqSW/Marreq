@@ -10,7 +10,8 @@ NC='\033[0m' # No Color
 
 # Script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
+BACKEND_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${BACKEND_ROOT}/.." && pwd)"
 
 echo -e "${BLUE}"
 echo "╔═════════════════════════════════════════════════════════════╗"
@@ -68,7 +69,7 @@ for arg in "$@"; do
             ;;
         *)
             print_error "Unknown argument: ${arg}"
-            echo "Usage: ./scripts/lazy_setup.sh [--fresh]"
+            echo "Usage: ./backend/scripts/lazy_setup.sh [--fresh]"
             exit 1
             ;;
     esac
@@ -84,8 +85,8 @@ generate_rocket_secret_key() {
 }
 
 ensure_env_files() {
-    local env_file="${PROJECT_ROOT}/.env"
-    local env_example="${PROJECT_ROOT}/.env.example"
+    local env_file="${REPO_ROOT}/.env"
+    local env_example="${REPO_ROOT}/.env.example"
 
     if [[ ! -f "${env_example}" ]]; then
         print_error "Missing .env.example template"
@@ -113,14 +114,14 @@ database_has_projects() {
         WHERE table_schema = 'public' AND table_name = 'projects'
     );"
     local projects_table_exists
-    projects_table_exists=$(cd "${PROJECT_ROOT}" && ${DC} exec -T db psql -U rust -d marreq -tAc "${query}" 2>/dev/null | tr -d '[:space:]' || echo "f")
+    projects_table_exists=$(cd "${REPO_ROOT}" && ${DC} exec -T db psql -U rust -d marreq -tAc "${query}" 2>/dev/null | tr -d '[:space:]' || echo "f")
 
     if [[ "${projects_table_exists}" != "t" ]]; then
         return 1
     fi
 
     local has_rows
-    has_rows=$(cd "${PROJECT_ROOT}" && ${DC} exec -T db psql -U rust -d marreq -tAc "SELECT EXISTS (SELECT 1 FROM projects LIMIT 1);" 2>/dev/null | tr -d '[:space:]' || echo "f")
+    has_rows=$(cd "${REPO_ROOT}" && ${DC} exec -T db psql -U rust -d marreq -tAc "SELECT EXISTS (SELECT 1 FROM projects LIMIT 1);" 2>/dev/null | tr -d '[:space:]' || echo "f")
     [[ "${has_rows}" == "t" ]]
 }
 
@@ -270,10 +271,10 @@ print_success "Docker daemon is running"
 
 # Check for Docker Compose
 if docker compose version &> /dev/null; then
-    DC="docker compose -f ${PROJECT_ROOT}/docker/docker-compose.yml"
+    DC="docker compose -f ${REPO_ROOT}/docker/docker-compose.yml"
     print_success "Docker Compose (v2) is available"
 elif docker-compose version &> /dev/null; then
-    DC="docker-compose -f ${PROJECT_ROOT}/docker/docker-compose.yml"
+    DC="docker-compose -f ${REPO_ROOT}/docker/docker-compose.yml"
     print_success "Docker Compose (v1) is available"
 else
     print_error "Docker Compose not found. Please install it."
@@ -462,7 +463,7 @@ fi
 
 print_step "Step 6/7: Setting up PostgreSQL database..."
 
-cd "${PROJECT_ROOT}"
+cd "${REPO_ROOT}"
 
 # db_setup.sh handles: starting the container, waiting for pg_isready,
 # creating the database if absent, and applying all migrations via Diesel.
@@ -476,7 +477,7 @@ bash "${SCRIPT_DIR}/db_setup.sh"
 # Load demo/test data for the development environment
 if database_has_projects; then
     print_error "Database already contains project data. lazy_setup.sh seeds demo data only into a fresh database.
-Run ./scripts/db_reset.sh && ./scripts/db_setup.sh --seed for a full reset, or skip lazy_setup.sh and start Marreq with the existing database."
+Run ./backend/scripts/db_reset.sh && ./backend/scripts/db_setup.sh --seed for a full reset, or skip lazy_setup.sh and start Marreq with the existing database."
     exit 1
 fi
 
@@ -490,7 +491,7 @@ print_success "Database setup complete"
 
 print_step "Step 7/7: Building Marreq..."
 
-cd "${PROJECT_ROOT}"
+cd "${REPO_ROOT}"
 
 if [[ "$SKIP_BUILD" == "false" ]]; then
     print_info "Compiling Marreq (this may take a few minutes)..."
@@ -551,8 +552,8 @@ echo ""
 echo -e "${BLUE}📖 Useful Commands:${NC}"
 echo "   • View logs:           $DC logs -f"
 echo "   • Stop database:       $DC down"
-echo "   • Reset database:      ./scripts/db_reset.sh && ./scripts/db_setup.sh --seed"
-echo "   • Fresh lazy setup:    ./scripts/lazy_setup.sh --fresh"
+echo "   • Reset database:      ./backend/scripts/db_reset.sh && ./backend/scripts/db_setup.sh --seed"
+echo "   • Fresh lazy setup:    ./backend/scripts/lazy_setup.sh --fresh"
 echo "   • Check Ollama:        ollama list"
 echo "   • Pull new model:      ollama pull <model_name>"
 echo ""

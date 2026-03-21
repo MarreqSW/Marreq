@@ -50,7 +50,7 @@
                       </td>
                       <td>
                         {{#if ../can_manage_members}}
-                          <form method="post" action="/g/{{../group_slug}}/members/{{id}}/role" class="marreq-group-role-form">
+                          <form method="post" action="/{{../group_slug}}/-/members/{{id}}/role" class="marreq-group-role-form">
                             <select name="role" class="form-select form-select-sm c-form-select c-form-control c-form-control--select" {{#unless can_change_role}}disabled{{/unless}}>
                               {{#each @root.role_options}}
                                 <option value="{{id}}" {{#if (eq id ../role_id)}}selected{{/if}}>{{label}}</option>
@@ -77,7 +77,7 @@
                               <span class="text-muted small">Last owner</span>
                             {{/unless}}
                             {{#if can_remove}}
-                              <form method="post" action="/g/{{../group_slug}}/members/{{id}}/remove" class="d-inline">
+                              <form method="post" action="/{{../group_slug}}/-/members/{{id}}/remove" class="d-inline">
                                 <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Remove this member from the group?">
                                   <i class="fas fa-user-minus me-1" aria-hidden="true"></i>Remove
                                 </button>
@@ -125,7 +125,7 @@
           </div>
           <div class="card-body c-card__body">
             {{#if has_available_users}}
-              <form method="post" action="/g/{{group_slug}}/members" class="vstack gap-3">
+              <form method="post" action="/{{group_slug}}/-/members" class="vstack gap-3">
                 <div>
                   <label for="member-user" class="form-label c-form-label">User</label>
                   <select id="member-user" name="user_id" class="form-select c-form-select c-form-control c-form-control--select" required>

@@ -445,6 +445,7 @@ pub struct UpdateProject {
     pub description: Option<String>,
     pub owner_id: Option<i32>,
     pub status: Option<ProjectStatus>,
+    pub slug: Option<String>,
     pub group_id: Option<i32>,
 }
 
@@ -684,6 +685,7 @@ mod forms_tests {
             description: None,
             owner_id: None,
             status: Some(ProjectStatus::Completed),
+            slug: None,
             group_id: None,
         };
         assert_eq!(upd.name, "N");

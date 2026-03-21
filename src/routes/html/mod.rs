@@ -80,6 +80,7 @@ pub fn routes() -> Vec<Route> {
         cache::warm_cache_route,
         dashboard::error_page,
     ];
+    routes.extend(project::routes());
     routes.extend(groups::routes());
     routes
 }

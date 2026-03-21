@@ -8,16 +8,20 @@ use super::helpers::*;
 use super::prelude::*;
 use crate::services::StatusService;
 
-#[get("/<project_id>/verification_statuses")]
+#[get("/<namespace>/<project_id>/verification_statuses")]
 async fn show_verification_statuses(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
-    let projects = get_accessible_projects(state, &user);
+    let projects: Vec<_> = get_accessible_projects(state, &user)
+        .iter()
+        .map(|project| project_to_template_value(state, project))
+        .collect();
     let service = StatusService::new(state.inner());
     let statuses = service
         .list_verification_statuses_by_project(project_id)
@@ -38,16 +42,20 @@ async fn show_verification_statuses(
     ))
 }
 
-#[get("/<project_id>/verification_statuses/new")]
+#[get("/<namespace>/<project_id>/verification_statuses/new")]
 async fn new_verification_status(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
-    let projects = get_accessible_projects(state, &user);
+    let projects: Vec<_> = get_accessible_projects(state, &user)
+        .iter()
+        .map(|project| project_to_template_value(state, project))
+        .collect();
 
     let ctx = json!({
         "user": user,
@@ -62,20 +70,21 @@ async fn new_verification_status(
     ))
 }
 
-#[post("/<project_id>/verification_statuses/new", data = "<form>")]
+#[post("/<namespace>/<project_id>/verification_statuses/new", data = "<form>")]
 async fn post_verification_status(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     form: Form<NewVerificationStatus>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let _user = project_access.into_user();
     let service = StatusService::new(state.inner());
 
-    let new_url = format!("/p/{project_slug}/verification_statuses/new");
-    let show_url = format!("/p/{project_slug}/verification_statuses");
+    let new_url = format!("/{project_slug}/verification_statuses/new");
+    let show_url = format!("/{project_slug}/verification_statuses");
 
     let mut payload = form.into_inner();
     payload.project_id = project_id;
@@ -90,36 +99,40 @@ async fn post_verification_status(
     Ok(Redirect::to(show_url))
 }
 
-#[get("/<project_id>/verification_statuses/edit/<status_id>")]
+#[get("/<namespace>/<project_id>/verification_statuses/edit/<status_id>")]
 async fn get_edit_verification_status(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     status_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     let service = StatusService::new(state.inner());
 
     let status = service
         .get_verification_status(status_id)
-        .map_err(|_| Redirect::to(format!("/p/{project_slug}/verification_statuses")))?;
+        .map_err(|_| Redirect::to(format!("/{project_slug}/verification_statuses")))?;
 
     if status.project_id != project_id {
         let status_project_slug = get_project_slug_by_id_pooled_safe(state, status.project_id);
         return Err(Redirect::to(format!(
-            "/p/{status_project_slug}/verification_statuses"
+            "/{status_project_slug}/verification_statuses"
         )));
     }
 
     if status.is_system {
         return Err(Redirect::to(format!(
-            "/p/{project_slug}/verification_statuses"
+            "/{project_slug}/verification_statuses"
         )));
     }
 
-    let projects = get_accessible_projects(state, &user);
+    let projects: Vec<_> = get_accessible_projects(state, &user)
+        .iter()
+        .map(|project| project_to_template_value(state, project))
+        .collect();
 
     let ctx = json!({
         "verification_status": status,
@@ -137,23 +150,24 @@ async fn get_edit_verification_status(
 }
 
 #[post(
-    "/<project_id>/verification_statuses/edit/<status_id>",
+    "/<namespace>/<project_id>/verification_statuses/edit/<status_id>",
     data = "<form>"
 )]
 async fn post_edit_verification_status(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     status_id: i32,
     form: Form<NewVerificationStatus>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let _user = project_access.into_user();
     let service = StatusService::new(state.inner());
 
-    let edit_url = format!("/p/{project_slug}/verification_statuses/edit/{status_id}");
-    let show_url = format!("/p/{project_slug}/verification_statuses");
+    let edit_url = format!("/{project_slug}/verification_statuses/edit/{status_id}");
+    let show_url = format!("/{project_slug}/verification_statuses");
 
     let mut payload = form.into_inner();
     payload.id = Some(status_id);
@@ -169,9 +183,10 @@ async fn post_edit_verification_status(
     Ok(Redirect::to(show_url))
 }
 
-#[delete("/<project_id>/verification_statuses/delete/<status_id>")]
+#[delete("/<namespace>/<project_id>/verification_statuses/delete/<status_id>")]
 async fn delete_verification_status_route(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     status_id: i32,
     state: &State<AppState>,
@@ -191,7 +206,7 @@ async fn delete_verification_status_route(
     if status.project_id != project_id {
         let status_project_slug = get_project_slug_by_id_pooled_safe(state, status.project_id);
         return Err(Redirect::to(format!(
-            "/p/{status_project_slug}/verification_statuses"
+            "/{status_project_slug}/verification_statuses"
         )));
     }
 

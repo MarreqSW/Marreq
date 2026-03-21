@@ -4,6 +4,7 @@
 use super::cache::keys::Keyspace;
 use super::cache::{keys, Cache};
 use crate::models::*;
+use crate::namespaces::project_namespace_segment;
 use crate::repository::errors::RepoError;
 use crate::repository::{
     ApiTokensRepository, BaselineRepository, CustomFieldRepository, LogRepository,
@@ -105,6 +106,25 @@ impl<R: Repository> CacheRepository<R> {
                     .set_with_ttl(keys::PROJECTS_NAV, json_data, Duration::from_secs(300));
             }
         }
+    }
+
+    fn invalidate_owned_project_namespace_keys(
+        &self,
+        user_id: i32,
+        namespaces: &[&str],
+    ) -> Result<(), RepoError> {
+        let projects = self.inner.get_projects_all()?;
+        for project in projects
+            .iter()
+            .filter(|project| project.group_id.is_none() && project.owner_id == Some(user_id))
+        {
+            for namespace in namespaces {
+                self.cache
+                    .invalidate_project_namespace_slug(namespace, &project.slug);
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -312,6 +332,13 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
         let res = self.inner.update_user(user_data)?;
         if let Some(id) = user_data.id {
             self.cache.invalidate_user(id);
+            let new_username = user_data.username.to_lowercase();
+            if let Some(ref old_username) = username {
+                self.invalidate_owned_project_namespace_keys(
+                    id,
+                    &[old_username.as_str(), new_username.as_str()],
+                )?;
+            }
         }
         if let Some(ref u) = username {
             self.cache.remove(&format!("user:username:{}", u));
@@ -329,6 +356,13 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
         let res = self.inner.update_user_without_password(user_data)?;
         if let Some(id) = user_data.id {
             self.cache.invalidate_user(id);
+            let new_username = user_data.username.to_lowercase();
+            if let Some(ref old_username) = username {
+                self.invalidate_owned_project_namespace_keys(
+                    id,
+                    &[old_username.as_str(), new_username.as_str()],
+                )?;
+            }
         }
         if let Some(ref u) = username {
             self.cache.remove(&format!("user:username:{}", u));
@@ -347,6 +381,7 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
         self.cache.invalidate_user(user_id);
         if let Some(ref u) = username {
             self.cache.remove(&format!("user:username:{}", u));
+            self.invalidate_owned_project_namespace_keys(user_id, &[u.as_str()])?;
         }
         for membership in memberships {
             self.cache
@@ -840,18 +875,57 @@ impl<R: Repository> ProjectsRepository for CacheRepository<R> {
         })
     }
 
+    fn get_project_by_user_namespace_and_slug(
+        &self,
+        username: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError> {
+        let key = keys::Projects::by_namespace_slug(username, slug);
+        self.get_or_fetch(&key, Duration::from_secs(900), || {
+            self.inner
+                .get_project_by_user_namespace_and_slug(username, slug)
+        })
+    }
+
+    fn get_project_by_group_namespace_and_slug(
+        &self,
+        group_slug: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError> {
+        let key = keys::Projects::by_namespace_slug(group_slug, slug);
+        self.get_or_fetch(&key, Duration::from_secs(900), || {
+            self.inner
+                .get_project_by_group_namespace_and_slug(group_slug, slug)
+        })
+    }
+
     fn insert_new_project(&mut self, new: &NewProjectRow) -> Result<i32, RepoError> {
         let id = self.inner.insert_new_project(new)?;
+        let project = self.inner.get_project_by_id(id)?;
         self.cache.invalidate_project(id);
         self.cache.invalidate_project_slug(&new.slug);
+        if let Ok(namespace) = project_namespace_segment(&self.inner, &project) {
+            self.cache
+                .invalidate_project_namespace_slug(&namespace, &project.slug);
+        }
         Ok(id)
     }
 
     fn edit_project(&mut self, project_id: i32, update: &UpdateProject) -> Result<bool, RepoError> {
-        let project_slug = self.inner.get_project_by_id(project_id)?.slug;
+        let before = self.inner.get_project_by_id(project_id)?;
         let res = self.inner.edit_project(project_id, update)?;
+        let after = self.inner.get_project_by_id(project_id)?;
         self.cache.invalidate_project(project_id);
-        self.cache.invalidate_project_slug(&project_slug);
+        self.cache.invalidate_project_slug(&before.slug);
+        self.cache.invalidate_project_slug(&after.slug);
+        if let Ok(namespace) = project_namespace_segment(&self.inner, &before) {
+            self.cache
+                .invalidate_project_namespace_slug(&namespace, &before.slug);
+        }
+        if let Ok(namespace) = project_namespace_segment(&self.inner, &after) {
+            self.cache
+                .invalidate_project_namespace_slug(&namespace, &after.slug);
+        }
         Ok(res)
     }
 
@@ -859,6 +933,10 @@ impl<R: Repository> ProjectsRepository for CacheRepository<R> {
         let proj = self.inner.delete_project(project_id)?;
         self.cache.invalidate_project(project_id);
         self.cache.invalidate_project_slug(&proj.slug);
+        if let Ok(namespace) = project_namespace_segment(&self.inner, &proj) {
+            self.cache
+                .invalidate_project_namespace_slug(&namespace, &proj.slug);
+        }
         Ok(proj)
     }
 }
@@ -1685,6 +1763,7 @@ mod tests {
             description: Some("".into()),
             status: Some(ProjectStatus::Active),
             owner_id: Some(1),
+            slug: None,
             group_id: None,
         };
         repo.edit_project(pid, &up).unwrap();

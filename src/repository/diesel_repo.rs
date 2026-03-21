@@ -62,6 +62,11 @@ fn map_db_error(e: diesel::result::Error) -> RepoError {
                     {
                         "tag is already used in this project".to_string()
                     }
+                    c if c.contains("idx_projects_owner_slug_unique")
+                        || c.contains("idx_projects_group_slug_unique") =>
+                    {
+                        "project slug is already used in this namespace".to_string()
+                    }
                     _ => "value is already taken".to_string(),
                 };
                 return RepoError::Duplicate(msg);
@@ -2013,8 +2018,56 @@ impl ProjectsRepository for DieselRepo {
     fn get_project_by_slug(&self, project_slug: &str) -> Result<Project, RepoError> {
         use schema::projects::dsl;
         let mut conn = self.get_conn()?;
-        dsl::projects
+        let projects = dsl::projects
             .filter(dsl::slug.eq(project_slug))
+            .load::<Project>(conn.as_mut())?;
+
+        match projects.len() {
+            0 => Err(RepoError::NotFound),
+            1 => Ok(projects.into_iter().next().expect("single project")),
+            _ => Err(RepoError::BadInput(format!(
+                "project slug '{project_slug}' is ambiguous across namespaces"
+            ))),
+        }
+    }
+
+    fn get_project_by_user_namespace_and_slug(
+        &self,
+        username: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError> {
+        use schema::projects::dsl;
+
+        let user = self
+            .get_user_by_username(username)?
+            .ok_or(RepoError::NotFound)?;
+        let mut conn = self.get_conn()?;
+        dsl::projects
+            .filter(dsl::group_id.is_null())
+            .filter(dsl::owner_id.eq(Some(user.id)))
+            .filter(dsl::slug.eq(slug))
+            .first::<Project>(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })
+    }
+
+    fn get_project_by_group_namespace_and_slug(
+        &self,
+        group_slug: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError> {
+        use schema::projects::dsl;
+
+        let group = self.get_group_by_slug(group_slug)?;
+        let mut conn = self.get_conn()?;
+        dsl::projects
+            .filter(dsl::group_id.eq(Some(group.id)))
+            .filter(dsl::slug.eq(slug))
             .first::<Project>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -2041,6 +2094,17 @@ impl ProjectsRepository for DieselRepo {
     ) -> Result<bool, RepoError> {
         use schema::projects::dsl;
         let mut conn = self.get_conn()?;
+        let existing = dsl::projects
+            .filter(dsl::id.eq(project_id_param))
+            .first::<Project>(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })?;
+        let slug_value = update.slug.as_deref().unwrap_or(&existing.slug);
 
         // Build update statement conditionally based on whether status is provided
         let updated = if let Some(status) = update.status {
@@ -2050,6 +2114,7 @@ impl ProjectsRepository for DieselRepo {
                     dsl::description.eq(&update.description),
                     dsl::status.eq(status),
                     dsl::owner_id.eq(&update.owner_id),
+                    dsl::slug.eq(slug_value),
                     dsl::group_id.eq(&update.group_id),
                     dsl::update_date.eq(chrono::Utc::now().naive_utc()),
                 ))
@@ -2060,6 +2125,7 @@ impl ProjectsRepository for DieselRepo {
                     dsl::name.eq(&update.name),
                     dsl::description.eq(&update.description),
                     dsl::owner_id.eq(&update.owner_id),
+                    dsl::slug.eq(slug_value),
                     dsl::group_id.eq(&update.group_id),
                     dsl::update_date.eq(chrono::Utc::now().naive_utc()),
                 ))

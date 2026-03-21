@@ -35,7 +35,7 @@ async fn test_client(repo: DieselRepoMock) -> Client {
                 projects::post_project,
             ],
         )
-        .mount("/p", project::routes())
+        .mount("/", project::routes())
         .register(
             "/",
             rocket::catchers![
@@ -112,7 +112,7 @@ async fn projects_page_lists_user_projects() {
 #[rocket::async_test]
 async fn create_project_success() {
     let mut repo = authenticated_repo(1);
-    let mut admin = DieselRepoMock::make_user(1, "admin", "pass");
+    let mut admin = DieselRepoMock::make_user(1, "site-admin", "pass");
     admin.is_admin = true;
     repo.users.insert(1, admin);
 
@@ -157,7 +157,7 @@ async fn access_project_details_as_owner() {
 
     let client = test_client(repo).await;
     let response = client
-        .get("/p/owner-project")
+        .get("/testuser/owner-project")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -170,6 +170,8 @@ async fn access_project_details_as_owner() {
 #[rocket::async_test]
 async fn access_project_details_forbidden_for_non_member() {
     let mut repo = authenticated_repo(2); // User 2
+    repo.users
+        .insert(1, DieselRepoMock::make_user(1, "owner", "password"));
     let project = Project {
         id: 40,
         name: "Private Project".into(),
@@ -186,7 +188,7 @@ async fn access_project_details_forbidden_for_non_member() {
 
     let client = test_client(repo).await;
     let response = client
-        .get("/p/private-project")
+        .get("/owner/private-project")
         .private_cookie(session_cookie(2))
         .dispatch()
         .await;

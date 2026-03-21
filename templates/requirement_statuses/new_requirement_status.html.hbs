@@ -17,7 +17,7 @@
       <h3>Status details</h3>
     </div>
     <div class="card-body c-card__body">
-      <form method="post" action="/p/{{selected_project_slug}}/requirement_statuses/new">
+      <form method="post" action="/{{selected_project_slug}}/requirement_statuses/new">
         <div class="form-group c-form-group">
           <label for="title" class="form-label c-form-label">Title</label>
           <input type="text" name="title" id="title" class="form-control c-form-control" required>
@@ -49,7 +49,7 @@
 
         <div class="mt-4">
           <button type="submit" class="btn btn-primary" {{#unless selected_project_id}}disabled{{/unless}}>Create</button>
-          <a href="/p/{{selected_project_slug}}/requirement_statuses" class="btn btn-outline">Cancel</a>
+          <a href="/{{selected_project_slug}}/requirement_statuses" class="btn btn-outline">Cancel</a>
         </div>
       </form>
     </div>

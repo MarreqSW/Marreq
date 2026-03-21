@@ -30,7 +30,7 @@
                                     <li class="c-project-info-list__item">
                                         <strong>Group:</strong>
                                         {{#if project.can_view_group}}
-                                            <a href="/g/{{project.group_slug}}">{{project.group_name}}</a>
+                                            <a href="/{{project.group_slug}}">{{project.group_name}}</a>
                                         {{else}}
                                             {{project.group_name}}
                                         {{/if}}
@@ -42,7 +42,7 @@
                 </div>
                 <div class="card-footer c-card__footer">
                     <div class="btn-group" role="group">
-                        <a href="/p/{{project.slug}}/edit" class="btn btn-outline-primary">
+                        <a href="/{{project.slug}}/edit" class="btn btn-outline-primary">
                             <i class="fas fa-edit"></i> Edit Project
                         </a>
                         <a href="/projects" class="btn btn-outline-secondary">
@@ -60,22 +60,22 @@
                 </div>
                 <div class="card-body c-card__body">
                     <div class="d-grid gap-2">
-                        <a href="/p/{{project.slug}}/requirements" class="btn btn-outline-primary">
+                        <a href="/{{project.slug}}/requirements" class="btn btn-outline-primary">
                             <i class="fas fa-list"></i> View Requirements
                         </a>
-                        <a href="/p/{{selected_project_slug}}/verifications" class="btn btn-outline-primary">
+                        <a href="/{{selected_project_slug}}/verifications" class="btn btn-outline-primary">
                             <i class="fas fa-vial"></i> View Verifications
                         </a>
-                        <a href="/p/{{selected_project_slug}}/matrix" class="btn btn-outline-primary">
+                        <a href="/{{selected_project_slug}}/matrix" class="btn btn-outline-primary">
                             <i class="fas fa-table"></i> View Matrix
                         </a>
-                        <a href="/p/{{selected_project_slug}}/baselines" class="btn btn-outline-primary">
+                        <a href="/{{selected_project_slug}}/baselines" class="btn btn-outline-primary">
                             <i class="fas fa-camera"></i> Baselines
                         </a>
-                        <a href="/p/{{selected_project_slug}}/reports" class="btn btn-outline-primary">
+                        <a href="/{{selected_project_slug}}/reports" class="btn btn-outline-primary">
                             <i class="fas fa-chart-bar"></i> View Reports
                         </a>
-                        <a href="/p/{{selected_project_slug}}/members" class="btn btn-outline-primary">
+                        <a href="/{{selected_project_slug}}/members" class="btn btn-outline-primary">
                             <i class="fas fa-users"></i> View Members
                         </a>
                     </div>

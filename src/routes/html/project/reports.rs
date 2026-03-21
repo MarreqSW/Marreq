@@ -105,13 +105,14 @@ fn compute_metrics(state: &State<AppState>, project_id: i32) -> (Metrics, String
 
 // --- routes (unchanged, but now types match) --------------------------------
 
-#[get("/<project_id>/reports")]
+#[get("/<namespace>/<project_id>/reports")]
 async fn show_reports(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user: User = project_access.into_user();
 
@@ -145,13 +146,14 @@ async fn show_reports(
     Ok(Template::render("reports", ctx))
 }
 
-#[get("/<project_id>/reports/requirements-pdf")]
+#[get("/<namespace>/<project_id>/reports/requirements-pdf")]
 async fn generate_requirements_pdf_route(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     state: &State<AppState>,
 ) -> Result<(rocket::http::ContentType, Vec<u8>), Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let _user: User = project_access.into_user();
     let project = ProjectService::new(state.inner()).get_by_id(project_id)?;
@@ -195,14 +197,15 @@ async fn generate_requirements_pdf_route(
         Err(_e) => {
             #[cfg(debug_assertions)]
             eprintln!("requirements PDF generation failed: {:?}", _e);
-            Err(Redirect::to(format!("/p/{project_slug}/reports")))
+            Err(Redirect::to(format!("/{project_slug}/reports")))
         }
     }
 }
 
-#[get("/<project_id>/reports/pdf")]
+#[get("/<namespace>/<project_id>/reports/pdf")]
 async fn generate_pdf_report(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     state: &State<AppState>,
 ) -> Result<(rocket::http::ContentType, Vec<u8>), Redirect> {
@@ -251,6 +254,7 @@ mod tests {
     use rocket::local::asynchronous::Client;
 
     const ADMIN_ID: i32 = 1;
+    const ADMIN_NAMESPACE: &str = "site-admin";
     const PROJECT_ID: i32 = 1;
 
     fn sample_project() -> Project {
@@ -332,7 +336,7 @@ mod tests {
     fn base_repo() -> DieselRepoMock {
         let mut repo = DieselRepoMock::default();
 
-        let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
+        let mut admin = DieselRepoMock::make_user(ADMIN_ID, ADMIN_NAMESPACE, "");
         admin.is_admin = true;
         repo.users.insert(ADMIN_ID, admin);
 
@@ -384,7 +388,7 @@ mod tests {
     #[rocket::async_test]
     async fn show_reports_renders_metrics() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/orbiter/reports", ADMIN_ID).await;
+        let response = get_with_session(&client, "/site-admin/orbiter/reports", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let body = response.into_string().await.expect("response body");
@@ -398,7 +402,7 @@ mod tests {
     #[rocket::async_test]
     async fn generate_pdf_report_returns_pdf_or_fallback_html() {
         let client = test_client(base_repo()).await;
-        let response = get_with_session(&client, "/p/orbiter/reports/pdf", ADMIN_ID).await;
+        let response = get_with_session(&client, "/site-admin/orbiter/reports/pdf", ADMIN_ID).await;
 
         assert_eq!(response.status(), HttpStatus::Ok);
         let content_type = response.content_type().expect("content type to be set");

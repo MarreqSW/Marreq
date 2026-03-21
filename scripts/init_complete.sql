@@ -137,6 +137,19 @@ SELECT 'admin', 'System Administrator', 'admin@marreq.com', true,
        '$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0'
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
 
+-- Project ownership for namespace-based project URLs
+UPDATE projects
+SET owner_id = (SELECT id FROM users WHERE username = 'dr_smith' ORDER BY id LIMIT 1)
+WHERE slug = 'space-project';
+
+UPDATE projects
+SET owner_id = (SELECT id FROM users WHERE username = 'alice' ORDER BY id LIMIT 1)
+WHERE slug = 'marreq-project';
+
+UPDATE projects
+SET owner_id = (SELECT id FROM users WHERE username = 'admin' ORDER BY id LIMIT 1)
+WHERE slug = 'empty-project';
+
 -- Project membership assignments (role: 1=Owner, 2=Manager, 3=Contributor, 4=Viewer)
 INSERT INTO project_members (project_id, user_id, role) VALUES
     ((SELECT id FROM projects WHERE name = 'Space Project'), (SELECT id FROM users WHERE username = 'dr_smith' ORDER BY id LIMIT 1), 1),

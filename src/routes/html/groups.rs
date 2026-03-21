@@ -7,12 +7,14 @@ use std::collections::{HashMap, HashSet};
 
 use super::helpers::*;
 use super::prelude::*;
+use crate::namespaces::{resolve_namespace_entity, NamespaceEntity};
 use crate::permissions::{group_role_label, has_group_permission, GroupPermission};
 use crate::repository::errors::RepoError;
 use crate::repository::{
     GroupMembersRepository, GroupsRepository, ProjectMembersRepository, UserRepository,
 };
 use crate::services::GroupService;
+use rocket::http::Status;
 use rocket::serde::json::Value;
 
 #[derive(FromForm)]
@@ -33,6 +35,18 @@ fn group_role_options() -> Vec<Value> {
         json!({ "id": 3, "label": group_role_label(3) }),
         json!({ "id": 4, "label": group_role_label(4) }),
     ]
+}
+
+fn group_namespace_path(group_slug: &str) -> String {
+    format!("/{group_slug}")
+}
+
+fn group_members_path(group_slug: &str) -> String {
+    format!("/{group_slug}/-/members")
+}
+
+fn group_settings_path(group_slug: &str) -> String {
+    format!("/{group_slug}/-/settings")
 }
 
 fn friendly_group_error(error: RepoError, fallback: &str) -> String {
@@ -300,8 +314,8 @@ fn post_group(
 
     match service.create(&user, submitted) {
         Ok(group_id) => match service.get_by_id(group_id) {
-            Ok(group) => Ok(Redirect::to(uri!(show_group(
-                group_slug = group.slug,
+            Ok(group) => Ok(Redirect::to(uri!(show_namespace(
+                namespace = group.slug,
                 success = Some("Group created successfully.".to_string()),
                 error = Option::<String>::None
             )))),
@@ -319,24 +333,20 @@ fn post_group(
     }
 }
 
-#[get("/g/<group_slug>?<success>&<error>")]
-fn show_group(
-    group_access: HtmlGroupAccess,
+fn render_group_namespace(
+    user: User,
+    group_id: i32,
+    group_slug: &str,
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
-    group_slug: &str,
     success: Option<String>,
     error: Option<String>,
-) -> Result<Template, Redirect> {
-    let (user, group_id, resolved_slug) = group_access.into_parts();
+) -> Result<Template, Status> {
     let mut ctx = build_context_with_projects(state, user.clone(), cookies);
     let repo = state.repo_read();
-    let group = repo.get_group_by_id(group_id).map_err(|_| {
-        Redirect::to(uri!(show_groups(
-            success = Option::<String>::None,
-            error = Option::<String>::None
-        )))
-    })?;
+    let group = repo
+        .get_group_by_id(group_id)
+        .map_err(|_| Status::InternalServerError)?;
     let members = repo.get_members_by_group(group_id).unwrap_or_default();
     let projects = repo.get_projects_by_group(group_id).unwrap_or_default();
     let users = repo.get_users_all().unwrap_or_default();
@@ -375,16 +385,20 @@ fn show_group(
             let owner_name = project
                 .owner_id
                 .and_then(|owner_id| user_lookup.get(&owner_id).map(|owner| owner.name.clone()));
+            let project_slug = project_route_slug_safe(state, &project);
+            let project_base_path = project_base_path_safe(state, &project);
 
             json!({
                 "id": project.id,
-                "slug": project.slug,
+                "slug": project_slug,
+                "base_path": project_base_path.clone(),
                 "name": project.name,
                 "description": project.description,
                 "status_label": project.status.title(),
                 "owner_name": owner_name,
                 "can_open": can_open,
                 "can_edit_project": user.is_admin,
+                "edit_path": format!("{project_base_path}/edit"),
                 "restricted_message": if can_open {
                     Option::<String>::None
                 } else {
@@ -411,7 +425,10 @@ fn show_group(
             json!({
                 "id": group.id,
                 "name": group.name.clone(),
-                "slug": resolved_slug,
+                "slug": group_slug,
+                "path": group_namespace_path(group_slug),
+                "members_path": group_members_path(group_slug),
+                "settings_path": group_settings_path(group_slug),
                 "description": group.description.clone(),
                 "member_count": members.len(),
                 "project_count": related_projects.len(),
@@ -434,7 +451,86 @@ fn show_group(
     Ok(Template::render("group", ctx))
 }
 
-#[get("/g/<group_slug>/members?<success>&<error>")]
+fn render_user_namespace(
+    viewer: User,
+    namespace_user: User,
+    cookies: &CookieJar<'_>,
+    state: &State<AppState>,
+    success: Option<String>,
+    error: Option<String>,
+) -> Template {
+    let mut ctx = build_context_with_projects(state, viewer.clone(), cookies);
+    let owned_projects: Vec<Project> = get_accessible_projects(state, &viewer)
+        .into_iter()
+        .filter(|project| project.group_id.is_none() && project.owner_id == Some(namespace_user.id))
+        .collect();
+    let decorated_projects = decorate_projects_for_listing(state, &viewer, &owned_projects);
+
+    if let Some(ctx_obj) = ctx.as_object_mut() {
+        ctx_obj.insert(
+            "namespace".to_string(),
+            json!({
+                "kind": "user",
+                "label": namespace_user.name,
+                "slug": namespace_user.username.clone(),
+                "path": format!("/{}", namespace_user.username),
+                "is_current_user": viewer.id == namespace_user.id,
+            }),
+        );
+        ctx_obj.insert("namespace_projects".to_string(), json!(decorated_projects));
+        ctx_obj.insert("project_count".to_string(), json!(owned_projects.len()));
+        ctx_obj.insert(
+            "page_title".to_string(),
+            json!(format!("{} - Projects", namespace_user.username)),
+        );
+        ctx_obj.insert("success".to_string(), json!(success));
+        ctx_obj.insert("error".to_string(), json!(error));
+    }
+
+    Template::render("namespace", ctx)
+}
+
+#[get("/<namespace>?<success>&<error>", rank = 50)]
+fn show_namespace(
+    session_user: SessionUser,
+    namespace: &str,
+    cookies: &CookieJar<'_>,
+    state: &State<AppState>,
+    success: Option<String>,
+    error: Option<String>,
+) -> Result<Template, Status> {
+    let user = session_user.into_inner();
+    let repo = state
+        .try_repo_read()
+        .map_err(|_| Status::InternalServerError)?;
+    let namespace_entity =
+        resolve_namespace_entity(&*repo, namespace).map_err(|error| match error {
+            RepoError::NotFound => Status::NotFound,
+            RepoError::BadInput(_) => Status::InternalServerError,
+            _ => Status::InternalServerError,
+        })?;
+    drop(repo);
+
+    match namespace_entity {
+        NamespaceEntity::Group(group) => {
+            if !can_user_view_group(state, &user, group.id) {
+                return Err(Status::Forbidden);
+            }
+
+            render_group_namespace(user, group.id, &group.slug, cookies, state, success, error)
+        }
+        NamespaceEntity::User(namespace_user) => Ok(render_user_namespace(
+            user,
+            namespace_user,
+            cookies,
+            state,
+            success,
+            error,
+        )),
+    }
+}
+
+#[get("/<group_slug>/-/members?<success>&<error>", rank = 10)]
 fn show_group_members(
     group_access: HtmlGroupAccess,
     group_slug: &str,
@@ -457,7 +553,7 @@ fn show_group_members(
     Ok(Template::render("group_members", ctx))
 }
 
-#[get("/g/<group_slug>/edit?<success>&<error>")]
+#[get("/<group_slug>/-/settings?<success>&<error>", rank = 10)]
 fn edit_group(
     manage_access: HtmlGroupManageAccess,
     group_slug: &str,
@@ -507,7 +603,7 @@ fn edit_group(
     Ok(Template::render("edit_group", ctx))
 }
 
-#[post("/g/<group_slug>/edit", data = "<group_form>")]
+#[post("/<group_slug>/-/settings", data = "<group_form>", rank = 10)]
 fn post_edit_group(
     manage_access: HtmlGroupManageAccess,
     group_slug: &str,
@@ -520,8 +616,8 @@ fn post_edit_group(
 
     let service = GroupService::new(state);
     match service.update(&user, group_id, payload) {
-        Ok(_) => Ok(Redirect::to(uri!(show_group(
-            group_slug = group_slug,
+        Ok(_) => Ok(Redirect::to(uri!(show_namespace(
+            namespace = group_slug,
             success = Some("Group updated successfully.".to_string()),
             error = Option::<String>::None
         )))),
@@ -536,7 +632,7 @@ fn post_edit_group(
     }
 }
 
-#[post("/g/<group_slug>/delete")]
+#[post("/<group_slug>/-/delete", rank = 10)]
 fn delete_group(
     manage_access: HtmlGroupManageAccess,
     group_slug: &str,
@@ -561,7 +657,7 @@ fn delete_group(
     }
 }
 
-#[post("/g/<group_slug>/members", data = "<member_form>")]
+#[post("/<group_slug>/-/members", data = "<member_form>", rank = 10)]
 fn add_group_member(
     manage_access: HtmlGroupManageAccess,
     group_slug: &str,
@@ -589,7 +685,11 @@ fn add_group_member(
     }
 }
 
-#[post("/g/<group_slug>/members/<member_id>/role", data = "<role_form>")]
+#[post(
+    "/<group_slug>/-/members/<member_id>/role",
+    data = "<role_form>",
+    rank = 10
+)]
 fn update_group_member_role(
     manage_access: HtmlGroupManageAccess,
     group_slug: &str,
@@ -618,7 +718,7 @@ fn update_group_member_role(
     }
 }
 
-#[post("/g/<group_slug>/members/<member_id>/remove")]
+#[post("/<group_slug>/-/members/<member_id>/remove", rank = 10)]
 fn remove_group_member(
     manage_access: HtmlGroupManageAccess,
     group_slug: &str,
@@ -650,7 +750,7 @@ pub fn routes() -> Vec<Route> {
         show_groups,
         new_group,
         post_group,
-        show_group,
+        show_namespace,
         show_group_members,
         edit_group,
         post_edit_group,
@@ -857,21 +957,21 @@ mod tests {
 
         assert_eq!(response.status(), Status::SeeOther);
         let location = response.headers().get_one("Location").unwrap_or_default();
-        assert!(location.contains("/g/new-org"));
+        assert!(location.contains("/new-org"));
     }
 
     #[rocket::async_test]
     async fn non_member_cannot_view_group_pages() {
         let client = test_client(base_repo()).await;
         let detail = client
-            .get("/g/flight-systems")
+            .get("/flight-systems")
             .private_cookie(session_cookie(OUTSIDER_ID))
             .dispatch()
             .await;
         assert_eq!(detail.status(), Status::Forbidden);
 
         let members = client
-            .get("/g/flight-systems/members")
+            .get("/flight-systems/-/members")
             .private_cookie(session_cookie(OUTSIDER_ID))
             .dispatch()
             .await;
@@ -883,7 +983,7 @@ mod tests {
         let client = test_client(base_repo()).await;
 
         let add_response = client
-            .post("/g/flight-systems/members")
+            .post("/flight-systems/-/members")
             .private_cookie(session_cookie(OWNER_ID))
             .header(ContentType::Form)
             .body(format!("user_id={OUTSIDER_ID}&role=4"))
@@ -892,7 +992,7 @@ mod tests {
         assert_eq!(add_response.status(), Status::SeeOther);
 
         let settings_response = client
-            .get("/g/flight-systems/edit")
+            .get("/flight-systems/-/settings")
             .private_cookie(session_cookie(MEMBER_ID))
             .dispatch()
             .await;
@@ -904,7 +1004,7 @@ mod tests {
         let client = test_client(base_repo()).await;
 
         let blocked = client
-            .post("/g/flight-systems/members/2/role")
+            .post("/flight-systems/-/members/2/role")
             .private_cookie(session_cookie(OWNER_ID))
             .header(ContentType::Form)
             .body("role=2")
@@ -915,7 +1015,7 @@ mod tests {
         assert!(blocked_location.contains("error="));
 
         let promote = client
-            .post("/g/flight-systems/members/3/role")
+            .post("/flight-systems/-/members/3/role")
             .private_cookie(session_cookie(OWNER_ID))
             .header(ContentType::Form)
             .body("role=1")
@@ -924,7 +1024,7 @@ mod tests {
         assert_eq!(promote.status(), Status::SeeOther);
 
         let demote = client
-            .post("/g/flight-systems/members/2/role")
+            .post("/flight-systems/-/members/2/role")
             .private_cookie(session_cookie(OWNER_ID))
             .header(ContentType::Form)
             .body("role=2")
@@ -939,7 +1039,7 @@ mod tests {
     async fn group_detail_lists_restricted_projects_without_open_links() {
         let client = test_client(base_repo()).await;
         let response = client
-            .get("/g/flight-systems")
+            .get("/flight-systems")
             .private_cookie(session_cookie(MEMBER_ID))
             .dispatch()
             .await;
@@ -948,7 +1048,7 @@ mod tests {
         let body = response.into_string().await.expect("body");
         assert!(body.contains("Flight Deck"));
         assert!(body.contains("Telemetry"));
-        assert!(body.contains("/p/flight-deck"));
+        assert!(body.contains("/flight-systems/flight-deck"));
         assert!(body.contains("do not have direct access"));
     }
 
@@ -956,14 +1056,14 @@ mod tests {
     async fn deleting_group_with_projects_is_rejected() {
         let client = test_client(base_repo()).await;
         let response = client
-            .post("/g/flight-systems/delete")
+            .post("/flight-systems/-/delete")
             .private_cookie(session_cookie(OWNER_ID))
             .dispatch()
             .await;
 
         assert_eq!(response.status(), Status::SeeOther);
         let location = response.headers().get_one("Location").unwrap_or_default();
-        assert!(location.contains("/g/flight-systems/edit"));
+        assert!(location.contains("/flight-systems/-/settings"));
         assert!(location.contains("error="));
     }
 }

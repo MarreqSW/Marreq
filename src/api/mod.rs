@@ -2,16 +2,19 @@
 // Copyright (C) 2026 Marreq
 
 pub mod applicability;
+pub mod auth;
 pub mod baselines;
 pub mod cache;
 pub mod categories;
 pub mod comments;
 pub mod custom_fields;
 pub mod error;
+pub mod guards;
 pub mod matrix;
 pub mod mcp;
 pub mod members;
 pub mod prelude;
+pub mod projects_session;
 pub mod requirement_diff;
 pub mod requirement_version_links;
 pub mod requirements;
@@ -26,6 +29,11 @@ use rocket::Route;
 
 pub fn routes() -> Vec<Route> {
     routes![
+        auth::auth_csrf,
+        auth::auth_login,
+        auth::auth_logout,
+        auth::auth_me,
+        projects_session::list_for_session,
         baselines::list,
         baselines::get,
         baselines::create,

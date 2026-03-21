@@ -10,12 +10,26 @@ cp .env.example .env
 
 ## Files
 
-- `docker-compose.yml`: Primary local stack (`db`, `ollama`, `marreq`, `adminer`)
-- `docker-compose.dev.yml`: Developer override for running Marreq via `cargo run` inside Docker
+- `docker-compose.yml`: Primary local stack — **`db`**, **`ollama`**, **`backend`** (Rocket API), **`frontend`** (nginx + SPA), **`adminer`**
+- `docker-compose.dev.yml`: Developer override for running Marreq via `cargo run` inside Docker (`marreq-dev` on host port **8000**)
 - `docker-compose.ci.yml`: CI-specific compose overrides
-- `Dockerfile`: Application image build definition
+- `Dockerfile`: **Backend** image (Rust binary; build context: repository root)
+- `frontend/Dockerfile`: **Frontend** image (multi-stage: `npm run build` + nginx)
+- `frontend/nginx.conf`: SPA `try_files` + `/api/` reverse proxy to `backend:8000`
 - `Dockerfile.dockerignore`: Build context exclusions for `Dockerfile`
-- `docker-entrypoint.sh`: Container startup script (wait for DB + run migrations + start app)
+- `docker-entrypoint.sh`: Backend container startup (wait for DB + migrations + start app)
+
+## Split stack (default compose)
+
+The default `docker-compose.yml` runs the app in **API-only** mode plus a separate **frontend** container:
+
+| Service   | Role |
+|-----------|------|
+| `backend` | Rocket on `:8000` **inside** the compose network (`expose`, not published to host by default). `MARREQ_UI_MODE=api_only`, `MARREQ_SERVE_STATIC=0`. |
+| `frontend` | Nginx serves the Vite-built SPA on host **http://localhost:8080** and proxies **`/api/`** → `http://backend:8000/api/`. |
+| `adminer` | Database UI on host **http://localhost:8081** (avoids clashing with frontend **8080**). |
+
+Use the UI at **http://localhost:8080** so session cookies stay on the same origin as `/api`.
 
 ## Common Commands (from repo root)
 
@@ -25,7 +39,7 @@ Start only the database:
 docker compose -f docker/docker-compose.yml up -d db
 ```
 
-Start the full stack:
+Start the full stack (db, ollama, backend, frontend, adminer):
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d
@@ -36,7 +50,7 @@ Docker-specific connection values such as the in-container `DATABASE_URL` and
 `OLLAMA_URL` stay in the Compose files so they do not duplicate host-local
 values in `.env`.
 
-Start a Docker-only developer loop:
+Start a Docker-only developer loop (Rocket **with** classic HTML UI on port 8000 — not the split SPA stack):
 
 ```bash
 docker compose \
@@ -45,13 +59,7 @@ docker compose \
   up --build db marreq-dev
 ```
 
-This override adds a dedicated `marreq-dev` service that runs Marreq with
-`cargo run` in a container using a bind-mounted checkout plus persistent Cargo
-caches. It avoids requiring a local Rust or Diesel installation while keeping
-the inner loop faster than rebuilding the release image for each change. By
-starting `db marreq-dev` explicitly, the Docker dev loop skips the release
-`marreq` service and does not pull in `ollama` by default. The app is exposed
-to the host on `http://localhost:8000`.
+This override adds `marreq-dev` (bind-mounted checkout + Cargo caches). The app is exposed at **http://localhost:8000**. To work on the SPA locally, run `npm run dev` in `frontend/` against a Rocket instance (e.g. `marreq-dev` or `cargo run`) with CORS configured; see [doc/API.md](../doc/API.md).
 
 View logs:
 
@@ -65,10 +73,18 @@ Stop the stack:
 docker compose -f docker/docker-compose.yml down
 ```
 
-## Build the app image directly
+## Build images directly
+
+Backend:
 
 ```bash
-docker build -f docker/Dockerfile -t marreq:local .
+docker build -f docker/Dockerfile -t marreq-backend:local ..
+```
+
+Frontend (from repo root):
+
+```bash
+docker build -f docker/frontend/Dockerfile -t marreq-frontend:local ..
 ```
 
 ## CI Compose Overrides
@@ -121,3 +137,7 @@ docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq -c
 # Verify sample data
 docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq -c "SELECT COUNT(*) as requirements FROM requirements;"
 ```
+
+### SPA cannot reach API
+
+Ensure you open the app on the **frontend** port (**8080**), not only the backend. The browser must call `/api/...` on the same host/port as the SPA so cookies are first-party.

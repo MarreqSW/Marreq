@@ -59,6 +59,7 @@ test_output.html
 
 # nodejs
 node_modules
+frontend/dist
 
 # Export files
 exports/

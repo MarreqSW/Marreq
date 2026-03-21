@@ -1,0 +1,144 @@
+openapi: 3.0.3
+info:
+  title: Marreq API (partial contract)
+  description: |
+    Subset of the Marreq JSON API for interchangeable frontends.
+    All application routes are under `/api`. Many more paths exist; see `src/api/mod.rs` and README.
+  version: 0.1.0
+servers:
+  - url: /api
+    description: Same-origin (nginx proxy or Vite dev proxy)
+  - url: http://localhost:8000/api
+    description: Direct Rocket (local)
+
+paths:
+  /auth/csrf:
+    get:
+      summary: Get or mint CSRF token
+      operationId: authCsrf
+      responses:
+        '200':
+          description: CSRF token for X-CSRF-Token header
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [csrf_token]
+                properties:
+                  csrf_token:
+                    type: string
+  /auth/login:
+    post:
+      summary: Session login (JSON)
+      operationId: authLogin
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Logged in; Set-Cookie session + csrf
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  user:
+                    type: object
+        '400':
+          $ref: '#/components/responses/ApiError'
+  /auth/logout:
+    post:
+      summary: End session
+      operationId: authLogout
+      parameters:
+        - in: header
+          name: X-CSRF-Token
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+  /auth/me:
+    get:
+      summary: Current user (session)
+      operationId: authMe
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/ApiError'
+  /projects:
+    get:
+      summary: List projects for session user
+      operationId: listProjectsSession
+      security:
+        - cookieAuth: []
+      responses:
+        '200':
+          description: Project list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          $ref: '#/components/responses/ApiError'
+
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: |
+        Rocket private session cookie: typically `session` on HTTP (localhost) or
+        `__Host-session` when `MARREQ_SECURE_SESSION_COOKIE=1` over HTTPS.
+        Use `fetch(..., { credentials: 'include' })`.
+  responses:
+    ApiError:
+      description: Structured error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              status:
+                type: integer
+              error:
+                type: string
+              message:
+                type: string

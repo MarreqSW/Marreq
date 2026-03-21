@@ -56,6 +56,7 @@ impl CorsPolicy {
                 vec![
                     "http://localhost:8000".to_string(),
                     "http://localhost:3000".to_string(),
+                    "http://localhost:5173".to_string(),
                 ]
             });
 

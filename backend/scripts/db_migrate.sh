@@ -18,7 +18,8 @@ set -euo pipefail
 #   • DATABASE_URL in .env or environment
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
+BACKEND_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${BACKEND_ROOT}/.." && pwd)"
 
 # ── Colors ───────────────────────────────────────────────────────────────────
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'
@@ -32,8 +33,8 @@ SUBCOMMAND="${1:-up}"
 N="${2:-1}"
 
 # ── Load .env ────────────────────────────────────────────────────────────────
-if [[ -f "${PROJECT_ROOT}/.env" ]]; then
-  set -a; source "${PROJECT_ROOT}/.env"; set +a
+if [[ -f "${REPO_ROOT}/.env" ]]; then
+  set -a; source "${REPO_ROOT}/.env"; set +a
 fi
 
 DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5432/marreq}"
@@ -45,7 +46,7 @@ if ! command -v diesel &>/dev/null; then
     cargo install diesel_cli --no-default-features --features postgres"
 fi
 
-cd "${PROJECT_ROOT}"
+cd "${BACKEND_ROOT}"
 
 case "${SUBCOMMAND}" in
   up)

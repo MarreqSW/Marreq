@@ -12,15 +12,16 @@ set -euo pipefail
 # ⚠  FOR TESTING AND DEMO ENVIRONMENTS ONLY — do not run against production data.
 #
 # Usage:
-#   ./scripts/db_seed.sh
+#   ./backend/scripts/db_seed.sh
 #
 # Prerequisites:
-#   • Database schema already applied (./scripts/db_setup.sh)
+#   • Database schema already applied (./backend/scripts/db_setup.sh)
 #   • DATABASE_URL in .env or environment
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
-COMPOSE_FILE="${PROJECT_ROOT}/docker/docker-compose.yml"
+BACKEND_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${BACKEND_ROOT}/.." && pwd)"
+COMPOSE_FILE="${REPO_ROOT}/docker/docker-compose.yml"
 
 # ── Colors ───────────────────────────────────────────────────────────────────
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'
@@ -38,9 +39,9 @@ echo "==========================================="
 echo -e "${NC}"
 
 # ── Load .env ────────────────────────────────────────────────────────────────
-if [[ -f "${PROJECT_ROOT}/.env" ]]; then
-  info "Loading ${PROJECT_ROOT}/.env"
-  set -a; source "${PROJECT_ROOT}/.env"; set +a
+if [[ -f "${REPO_ROOT}/.env" ]]; then
+  info "Loading ${REPO_ROOT}/.env"
+  set -a; source "${REPO_ROOT}/.env"; set +a
 fi
 
 DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5432/marreq}"
@@ -65,7 +66,7 @@ fi
 info "Running ${SEED_SQL}..."
 echo ""
 if [[ "${USE_DOCKER}" == "true" ]]; then
-  DB_CID=$(cd "${PROJECT_ROOT}" && ${DC} ps -q db || true)
+  DB_CID=$(cd "${REPO_ROOT}" && ${DC} ps -q db || true)
   [[ -z "${DB_CID}" ]] && error "The 'db' Docker service is not running. Start it with: ${DC} up -d db"
   docker exec -i "${DB_CID}" psql -U "${DB_USER}" -d "${DB_NAME}" \
     -v ON_ERROR_STOP=1 < "${SEED_SQL}"

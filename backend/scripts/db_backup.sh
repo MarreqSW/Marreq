@@ -8,18 +8,19 @@ set -euo pipefail
 # never overwrite each other.
 #
 # Usage:
-#   ./scripts/db_backup.sh                      # saves to ./backups/
-#   ./scripts/db_backup.sh /path/to/output.sql.gz  # custom output path
+#   ./backend/scripts/db_backup.sh                      # saves to ./backups/
+#   ./backend/scripts/db_backup.sh /path/to/output.sql.gz  # custom output path
 #
 # Prerequisites:
 #   • Docker running with the 'db' service up, OR pg_dump available locally.
 #   • DATABASE_URL in .env or environment.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "${SCRIPT_DIR}")"
-COMPOSE_FILE="${PROJECT_ROOT}/docker/docker-compose.yml"
+BACKEND_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+REPO_ROOT="$(cd "${BACKEND_ROOT}/.." && pwd)"
+COMPOSE_FILE="${REPO_ROOT}/docker/docker-compose.yml"
 TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-DEFAULT_BACKUP_DIR="${PROJECT_ROOT}/backups"
+DEFAULT_BACKUP_DIR="${REPO_ROOT}/backups"
 OUTPUT="${1:-${DEFAULT_BACKUP_DIR}/marreq_${TIMESTAMP}.sql.gz}"
 
 # ── Colors ───────────────────────────────────────────────────────────────────
@@ -36,9 +37,9 @@ echo "==========================================="
 echo -e "${NC}"
 
 # ── Load .env ────────────────────────────────────────────────────────────────
-if [[ -f "${PROJECT_ROOT}/.env" ]]; then
-  info "Loading ${PROJECT_ROOT}/.env"
-  set -a; source "${PROJECT_ROOT}/.env"; set +a
+if [[ -f "${REPO_ROOT}/.env" ]]; then
+  info "Loading ${REPO_ROOT}/.env"
+  set -a; source "${REPO_ROOT}/.env"; set +a
 fi
 
 DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5432/marreq}"
@@ -64,7 +65,7 @@ info "Backing up '${DB_NAME}' → ${OUTPUT}"
 echo ""
 
 if [[ "${USE_DOCKER}" == "true" ]]; then
-  DB_CID=$(cd "${PROJECT_ROOT}" && ${DC} ps -q db || true)
+  DB_CID=$(cd "${REPO_ROOT}" && ${DC} ps -q db || true)
   [[ -z "${DB_CID}" ]] && error "The 'db' Docker service is not running. Start it with: ${DC} up -d db"
   docker exec "${DB_CID}" pg_dump -U "${DB_USER}" -d "${DB_NAME}" --no-password | gzip > "${OUTPUT}"
 else

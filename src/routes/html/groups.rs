@@ -541,13 +541,7 @@ fn show_group_members(
 ) -> Result<Template, Redirect> {
     let (user, group_id, _) = group_access.into_parts();
     let ctx = build_group_members_page_context(
-        state,
-        user,
-        group_id,
-        group_slug,
-        cookies,
-        error,
-        success,
+        state, user, group_id, group_slug, cookies, error, success,
     )?;
 
     Ok(Template::render("group_members", ctx))

@@ -95,10 +95,24 @@ impl<'a> RequirementService<'a> {
         Ok(reqs)
     }
 
+    /// Set `parent_id` from the first upstream requirement_version_link when the DB column is unset.
+    pub fn enrich_parent_id_from_version_links(&self, requirement: &mut Requirement) {
+        if requirement.parent_id.is_some() {
+            return;
+        }
+        if let Some(vid) = requirement.current_version_id {
+            let parents = self.get_parent_requirement_ids_for_version(vid);
+            if let Some(&first) = parents.first() {
+                requirement.parent_id = Some(first);
+            }
+        }
+    }
+
     /// Retrieve requirements scoped to a project (with custom fields attached).
     pub fn list_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError> {
         let mut reqs = self.repo_read().get_requirements_by_project(project_id)?;
         for r in &mut reqs {
+            self.enrich_parent_id_from_version_links(r);
             let _ = self.attach_custom_fields(r);
         }
         Ok(reqs)
@@ -185,6 +199,7 @@ impl<'a> RequirementService<'a> {
                 offset,
             )?;
         for r in &mut reqs {
+            self.enrich_parent_id_from_version_links(r);
             let _ = self.attach_custom_fields(r);
         }
         Ok(reqs)
@@ -193,6 +208,7 @@ impl<'a> RequirementService<'a> {
     /// Retrieve a single requirement by identifier (with custom fields attached).
     pub fn get_by_id(&self, id: i32) -> Result<Requirement, RepoError> {
         let mut req = self.repo_read().get_requirement_by_id(id)?;
+        self.enrich_parent_id_from_version_links(&mut req);
         self.attach_custom_fields(&mut req)?;
         Ok(req)
     }

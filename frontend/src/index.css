@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Theme tokens (light default; html.dark overrides) ── */
+:root {
+  color-scheme: light;
+  --stitch-canvas: #eef0f4;
+  --stitch-surface: #ffffff;
+  --stitch-elevated: #e4e6ec;
+  --stitch-higher: #d8dae2;
+  --stitch-muted: #5f6368;
+  --stitch-subtle: rgba(0, 0, 0, 0.45);
+  --stitch-border: rgba(0, 0, 0, 0.12);
+  --stitch-accent: #1a237e;
+  --stitch-accent-dim: #3949ab;
+  --stitch-danger: #c5221f;
+  --stitch-fg: #1c1b1f;
+  --stitch-fg-secondary: rgba(28, 27, 31, 0.78);
+  --stitch-on-accent: #ffffff;
+}
+
+html.dark {
+  color-scheme: dark;
+  --stitch-canvas: #191a1f;
+  --stitch-surface: #22232a;
+  --stitch-elevated: #2a2b35;
+  --stitch-higher: #32333f;
+  --stitch-muted: #9aa0a6;
+  --stitch-subtle: rgba(255, 255, 255, 0.52);
+  --stitch-border: rgba(255, 255, 255, 0.08);
+  --stitch-accent: #8ab4f8;
+  --stitch-accent-dim: #669df6;
+  --stitch-danger: #f28b82;
+  --stitch-fg: #ffffff;
+  --stitch-fg-secondary: rgba(255, 255, 255, 0.82);
+  --stitch-on-accent: #0d1117;
+}
+
+body {
+  @apply antialiased bg-stitch-canvas text-stitch-fg;
+}
+
+/* Stitch dark shell: React Flow chrome (always dark controls for contrast on graph) */
+.stitch-flow {
+  color-scheme: dark;
+}
+
+.stitch-flow .react-flow__controls {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.stitch-flow .react-flow__controls-button {
+  @apply bg-stitch-elevated border-stitch-border text-stitch-fg;
+  border-bottom-width: 1px;
+}
+
+.stitch-flow .react-flow__controls-button:last-child {
+  border-bottom-width: 0;
+}
+
+.stitch-flow .react-flow__controls-button:hover {
+  @apply bg-stitch-higher;
+}
+
+.stitch-flow .react-flow__controls-button svg {
+  fill: currentColor;
+}
+
+.stitch-flow .react-flow__attribution {
+  @apply opacity-40 text-[10px];
+}
+
+.stitch-flow .react-flow__attribution a {
+  @apply text-stitch-accent;
+}

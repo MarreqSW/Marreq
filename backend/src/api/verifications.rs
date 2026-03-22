@@ -104,6 +104,16 @@ pub async fn update_field(
                 )
             };
         }
+        "verification_method_id" => {
+            verification.verification_method_id =
+                if update.value.is_empty() || update.value == "0" {
+                    None
+                } else {
+                    Some(update.value.parse().map_err(|_| {
+                        RepoError::BadInput("invalid verification_method_id".into())
+                    })?)
+                };
+        }
         other => {
             return Err(ApiError::from(RepoError::BadInput(format!(
                 "unsupported field '{other}'"

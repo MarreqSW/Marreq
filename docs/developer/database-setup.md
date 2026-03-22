@@ -24,7 +24,7 @@ cp .env.example .env
 
 | Variable | Required | Default in `.env.example` | Description |
 |---|---|---|---|
-| `DATABASE_URL` | Yes | `postgres://rust:rust@127.0.0.1:5432/marreq` | PostgreSQL connection string |
+| `DATABASE_URL` | Yes | `postgres://rust:rust@127.0.0.1:5433/marreq` | PostgreSQL connection string (host port from `docker-compose.yml`) |
 | `ROCKET_SECRET_KEY` | Production | _(auto-generated in dev)_ | 256-bit base64 key for cookie signing. Generate with `openssl rand -base64 32`. |
 | `EMBEDDINGS_ENABLED` | No | `false` | Enable pgvector semantic search |
 | `EMBEDDING_PROVIDER` | No | `ollama` | `ollama` or `openai` |

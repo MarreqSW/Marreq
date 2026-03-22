@@ -17,6 +17,8 @@ import CreateVerificationPage from '@/pages/CreateVerificationPage';
 import DashboardPage from '@/pages/DashboardPage';
 import EditRequirementPage from '@/pages/EditRequirementPage';
 import EditVerificationPage from '@/pages/EditVerificationPage';
+import ViewRequirementPage from '@/pages/ViewRequirementPage';
+import ViewVerificationPage from '@/pages/ViewVerificationPage';
 import HelpPage from '@/pages/HelpPage';
 import ProjectSettingsPage from '@/pages/ProjectSettingsPage';
 import ReportsPage from '@/pages/ReportsPage';
@@ -90,10 +92,12 @@ export default function App() {
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="requirements/new" element={<CreateRequirementPage />} />
-          <Route path="requirements" element={<RequirementsPage />} />
           <Route path="requirements/:requirementId/edit" element={<EditRequirementPage />} />
+          <Route path="requirements/:requirementId" element={<ViewRequirementPage />} />
+          <Route path="requirements" element={<RequirementsPage />} />
           <Route path="verifications/new" element={<CreateVerificationPage />} />
           <Route path="verifications/:verificationId/edit" element={<EditVerificationPage />} />
+          <Route path="verifications/:verificationId" element={<ViewVerificationPage />} />
           <Route path="verifications" element={<VerificationsPage />} />
           <Route path="traceability" element={<TraceabilityPage />} />
           <Route path="matrix" element={<MatrixPage />} />

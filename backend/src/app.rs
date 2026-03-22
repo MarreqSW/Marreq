@@ -55,20 +55,6 @@ impl AppState<DieselCachedRepo> {
 #[rocket_sync_db_pools::database("my_db")]
 pub struct MyDbConn(rocket_sync_db_pools::diesel::PgConnection);
 
-/// When `MARREQ_UI_MODE=api_only`, HTML routes (`/`, `/p/...`, `/user/...`) are not mounted; use the SPA + `/api`.
-fn marreq_ui_api_only() -> bool {
-    std::env::var("MARREQ_UI_MODE")
-        .map(|v| v.trim().eq_ignore_ascii_case("api_only"))
-        .unwrap_or(false)
-}
-
-/// Serve `/static` from the Rust binary. Default: on unless `api_only` (SPA container serves static). Override with `MARREQ_SERVE_STATIC=1|0`.
-fn marreq_serve_static() -> bool {
-    std::env::var("MARREQ_SERVE_STATIC")
-        .map(|v| matches!(v.to_lowercase().as_str(), "1" | "true" | "yes"))
-        .unwrap_or(!marreq_ui_api_only())
-}
-
 pub fn build() -> Rocket<Build> {
     #[cfg(not(any(test, feature = "test-helpers")))]
     let inner = {
@@ -92,22 +78,16 @@ pub fn build() -> Rocket<Build> {
         repo_guard.cache().start_cache_maintenance();
     }
 
-    let api_only = marreq_ui_api_only();
-    let serve_static = marreq_serve_static();
-
-    let root_routes = if api_only {
-        routes![
-            crate::fairings::csrf_denied,
-            crate::routes::api_info::api_only_index,
-        ]
-    } else {
-        routes![crate::fairings::csrf_denied]
-    };
-
-    let mut rocket = rocket::build()
+    rocket::build()
         .manage(AppState { repo })
         .manage(crate::auth::rate_limiter::LoginRateLimiter::new())
-        .mount("/", root_routes)
+        .mount(
+            "/",
+            routes![
+                crate::fairings::csrf_denied,
+                crate::routes::api_info::root_index,
+            ],
+        )
         .mount("/api", crate::api::routes())
         .register(
             "/",
@@ -118,29 +98,10 @@ pub fn build() -> Rocket<Build> {
         )
         .attach(crate::fairings::SecurityHeadersFairing)
         .attach(crate::fairings::CsrfFairing::new())
-        .attach(crate::html::cors::CorsFairing(
-            crate::html::cors::CorsPolicy::from_env(),
-        ))
+        .attach(crate::cors::CorsFairing(crate::cors::CorsPolicy::from_env()))
         .attach(crate::fairings::AntiCacheFairing)
         .attach(crate::fairings::SemanticIndexFairing)
-        .attach(rocket_dyn_templates::Template::fairing())
-        .attach(crate::app::MyDbConn::fairing());
-
-    if !api_only {
-        rocket = rocket
-            .mount("/", crate::routes::html::routes())
-            .mount("/p", crate::routes::html::project::routes())
-            .mount("/user", crate::routes::html::user::routes());
-    }
-
-    if serve_static {
-        rocket = rocket.mount(
-            "/static",
-            rocket::fs::FileServer::from(rocket::fs::relative!("src/html/static")),
-        );
-    }
-
-    rocket
+        .attach(crate::app::MyDbConn::fairing())
 }
 
 #[cfg(not(any(test, feature = "test-helpers")))]

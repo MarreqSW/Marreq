@@ -50,7 +50,7 @@
                                         {{#if ../can_manage_members}}
                                             <td class="text-end">
                                                 {{#if can_remove}}
-                                                    <form method="post" action="/p/{{../project_slug}}/members/{{id}}/remove" class="d-inline">
+                                                    <form method="post" action="/{{../project_slug}}/members/{{id}}/remove" class="d-inline">
                                                         <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Remove this member from the project?">
                                                             <i class="fas fa-user-minus me-1"></i>Remove
                                                         </button>
@@ -99,7 +99,7 @@
                 </div>
                 <div class="card-body c-card__body">
                     {{#if has_available_users}}
-                        <form method="post" action="/p/{{project_slug}}/members" class="vstack gap-3">
+                        <form method="post" action="/{{project_slug}}/members" class="vstack gap-3">
                             <div>
                                 <label for="member-user" class="form-label c-form-label">User</label>
                                 <select id="member-user" name="id" class="form-select c-form-select c-form-control c-form-control--select" required>

@@ -83,7 +83,6 @@ pub fn build() -> Rocket<Build> {
         .manage(crate::auth::rate_limiter::LoginRateLimiter::new())
         .mount("/", crate::routes::html::routes())
         .mount("/", routes![crate::fairings::csrf_denied])
-        .mount("/p", crate::routes::html::project::routes())
         .mount("/user", crate::routes::html::user::routes())
         .mount("/api", crate::api::routes())
         .register(

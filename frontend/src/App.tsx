@@ -55,7 +55,7 @@ function ProtectedShell() {
 
   if (loading && !dashboard) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-500 text-sm">
+      <div className="min-h-screen flex items-center justify-center bg-stitch-canvas text-stitch-muted text-sm">
         Loading…
       </div>
     );
@@ -67,7 +67,7 @@ function ProtectedShell() {
 
   if (dashboard && (dashboard.projects?.length ?? 0) === 0) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 text-slate-600">
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-stitch-canvas text-stitch-muted">
         <p>No projects available for your account.</p>
       </div>
     );

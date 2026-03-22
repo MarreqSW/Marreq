@@ -18,7 +18,7 @@ export default function RequirementsViewSwitcher() {
   const seg =
     'flex items-center gap-2 px-4 py-1.5 text-xs font-bold rounded-md transition-colors';
   const inactive =
-    'text-stitch-muted hover:bg-white/[0.06] hover:text-white';
+    'text-stitch-muted hover:bg-stitch-higher hover:text-stitch-fg';
   const active = 'bg-stitch-elevated text-stitch-accent shadow-stitch-inset border border-stitch-border';
 
   return (

@@ -33,6 +33,7 @@ mod test_support {
     pub async fn test_client() -> Client {
         let rocket = rocket::build()
             .manage(managed_state(DieselRepoMock::default()))
+            .manage(marreq::auth::rate_limiter::LoginRateLimiter::new())
             .mount("/api", marreq::api::routes());
 
         Client::tracked(rocket).await.expect("rocket instance")

@@ -15,6 +15,7 @@ const pageControllers = {
   'requirements-tree': () => import('./pages/requirementsTree.js'),
   categories: () => import('./pages/categories.js'),
   applicability: () => import('./pages/applicability.js'),
+  groups: () => import('./pages/groups.js'),
   verification: () => import('./pages/verification.js'),
   new_verification: () => Promise.resolve({}),
   edit_verification: () => Promise.resolve({}),
@@ -44,7 +45,7 @@ function initGlobalDeleteHandlers() {
     getUrl: (button) => {
       const projectSlug = getProjectRouteKey(button);
       const requirementId = button.getAttribute('data-requirement-id');
-      return `/p/${projectSlug}/requirements/delete/${requirementId}`;
+      return `/${projectSlug}/requirements/delete/${requirementId}`;
     },
     getMessage: (button) => {
       const title = button.getAttribute('data-requirement-title') || 'Requirement';
@@ -52,7 +53,7 @@ function initGlobalDeleteHandlers() {
     },
     onSuccess: (button) => {
       const projectSlug = getProjectRouteKey(button);
-      window.location.href = `/p/${projectSlug}/requirements`;
+      window.location.href = `/${projectSlug}/requirements`;
     },
   });
 
@@ -61,7 +62,7 @@ function initGlobalDeleteHandlers() {
     getUrl: (button) => {
       const projectSlug = getProjectRouteKey(button);
       const testId = button.getAttribute('data-test-id');
-      return `/p/${projectSlug}/verifications/delete/${testId}`;
+      return `/${projectSlug}/verifications/delete/${testId}`;
     },
     getMessage: (button) => {
       const name = button.getAttribute('data-test-name') || 'Test';
@@ -69,7 +70,7 @@ function initGlobalDeleteHandlers() {
     },
     onSuccess: (button) => {
       const projectSlug = getProjectRouteKey(button);
-      window.location.href = `/p/${projectSlug}/verifications`;
+      window.location.href = `/${projectSlug}/verifications`;
     },
   });
 
@@ -77,7 +78,7 @@ function initGlobalDeleteHandlers() {
     selector: '[data-action="delete-project"]',
     getUrl: (button) => {
       const projectSlug = getProjectRouteKey(button);
-      return `/p/${projectSlug}/delete`;
+      return `/${projectSlug}/delete`;
     },
     getMessage: (button) => {
       const name = button.getAttribute('data-project-name') || 'this project';
@@ -90,7 +91,7 @@ function initGlobalDeleteHandlers() {
     getUrl: (button) => {
       const projectSlug = getProjectRouteKey(button);
       const categoryId = button.getAttribute('data-category-id');
-      return `/p/${projectSlug}/categories/delete/${categoryId}`;
+      return `/${projectSlug}/categories/delete/${categoryId}`;
     },
     getMessage: (button) => {
       const title = button.getAttribute('data-category-title') || 'this category';
@@ -103,7 +104,7 @@ function initGlobalDeleteHandlers() {
     getUrl: (button) => {
       const projectSlug = getProjectRouteKey(button);
       const fieldId = button.getAttribute('data-field-id');
-      return `/p/${projectSlug}/custom_fields/delete/${fieldId}`;
+      return `/${projectSlug}/custom_fields/delete/${fieldId}`;
     },
     getMessage: (button) => {
       const title = button.getAttribute('data-field-label') || 'this custom field';
@@ -111,7 +112,7 @@ function initGlobalDeleteHandlers() {
     },
     onSuccess: (button) => {
       const projectSlug = getProjectRouteKey(button);
-      window.location.href = `/p/${projectSlug}/custom_fields`;
+      window.location.href = `/${projectSlug}/custom_fields`;
     },
   });
 
@@ -120,7 +121,7 @@ function initGlobalDeleteHandlers() {
     getUrl: (button) => {
       const projectSlug = getProjectRouteKey(button);
       const applicabilityId = button.getAttribute('data-applicability-id');
-      return `/p/${projectSlug}/applicability/delete/${applicabilityId}`;
+      return `/${projectSlug}/applicability/delete/${applicabilityId}`;
     },
     getMessage: (button) => {
       const title = button.getAttribute('data-applicability-title') || 'this applicability';
@@ -133,7 +134,7 @@ function initGlobalDeleteHandlers() {
     getUrl: (button) => {
       const projectSlug = getProjectRouteKey(button);
       const statusId = button.getAttribute('data-status-id');
-      return `/p/${projectSlug}/requirement_statuses/delete/${statusId}`;
+      return `/${projectSlug}/requirement_statuses/delete/${statusId}`;
     },
     getMessage: (button) => {
       const title = button.getAttribute('data-status-title') || 'this requirement status';
@@ -146,7 +147,7 @@ function initGlobalDeleteHandlers() {
     getUrl: (button) => {
       const projectSlug = getProjectRouteKey(button);
       const statusId = button.getAttribute('data-status-id');
-      return `/p/${projectSlug}/verification_statuses/delete/${statusId}`;
+      return `/${projectSlug}/verification_statuses/delete/${statusId}`;
     },
     getMessage: (button) => {
       const title = button.getAttribute('data-status-title') || 'this verification status';
@@ -159,7 +160,7 @@ function initGlobalDeleteHandlers() {
     getUrl: (button) => {
       const projectSlug = getProjectRouteKey(button);
       const verificationId = button.getAttribute('data-verification-id');
-      return `/p/${projectSlug}/verification/delete/${verificationId}`;
+      return `/${projectSlug}/verification/delete/${verificationId}`;
     },
     getMessage: (button) => {
       const title = button.getAttribute('data-verification-title') || 'this verification method';
@@ -167,7 +168,7 @@ function initGlobalDeleteHandlers() {
     },
     onSuccess: (button) => {
       const projectSlug = getProjectRouteKey(button);
-      window.location.href = `/p/${projectSlug}/verification`;
+      window.location.href = `/${projectSlug}/verification`;
     },
   });
 
@@ -182,7 +183,7 @@ function initGlobalDeleteHandlers() {
       return `Are you sure you want to delete user "${name}"? This action cannot be undone.`;
     },
     onSuccess: () => {
-      window.location.href = '/admin/users';
+      window.location.href = '/-/admin/users';
     },
   });
 }

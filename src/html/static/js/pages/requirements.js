@@ -1446,7 +1446,7 @@ function initPanelInlineVerificationForm(panelEl) {
     try {
       if (submitBtn) submitBtn.setAttribute('disabled', 'disabled');
       const data = await postJson(
-        `/p/${projectSlug}/requirements/inline/verification`,
+        `/${projectSlug}/requirements/inline/verification`,
         payload
       );
 
@@ -1509,7 +1509,7 @@ function syncPanelCustomFieldValues(form) {
 }
 
 function openEditPanel(panelEl, projectSlug, requirementId) {
-  const url = `/p/${projectSlug}/requirements/edit-panel/${requirementId}`;
+  const url = `/${projectSlug}/requirements/edit-panel/${requirementId}`;
   panelEl.innerHTML = '<p class="marreq-requirements-edit-panel__loading">Loading…</p>';
   panelEl.removeAttribute('hidden');
   panelEl.setAttribute('aria-hidden', 'false');

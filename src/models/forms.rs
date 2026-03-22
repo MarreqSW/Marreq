@@ -371,6 +371,45 @@ pub struct UserCreateRequest {
     pub is_admin: bool,
 }
 
+/// Data required to create a new [`Group`].
+#[derive(Serialize, Deserialize, FromForm, Clone, Debug)]
+#[serde(crate = "rocket::serde")]
+pub struct NewGroup {
+    pub name: String,
+    pub description: Option<String>,
+    pub owner_id: Option<i32>,
+}
+
+/// Internal insertable row for creating a group with a persisted slug.
+#[derive(Insertable, Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = crate::schema::groups)]
+pub struct NewGroupRow {
+    pub name: String,
+    pub slug: String,
+    pub description: Option<String>,
+    pub owner_id: Option<i32>,
+}
+
+/// Form used to update a group's metadata.
+#[derive(Serialize, Deserialize, FromForm, Clone, Debug)]
+#[serde(crate = "rocket::serde")]
+pub struct UpdateGroup {
+    pub name: String,
+    pub description: Option<String>,
+    pub owner_id: Option<i32>,
+}
+
+/// Data required to create or update a group membership entry.
+#[derive(Insertable, Serialize, Deserialize, Debug, Clone)]
+#[serde(crate = "rocket::serde")]
+#[diesel(table_name = crate::schema::group_members)]
+pub struct NewGroupMember {
+    pub group_id: i32,
+    pub user_id: i32,
+    pub role: i32,
+}
+
 /// Data required to create a new [`Project`].
 #[derive(Insertable, Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
@@ -382,6 +421,7 @@ pub struct NewProject {
     #[serde(default)]
     #[field(default = ProjectStatus::Active)]
     pub status: ProjectStatus,
+    pub group_id: Option<i32>,
 }
 
 /// Internal insertable row for creating a project with a persisted slug.
@@ -394,6 +434,7 @@ pub struct NewProjectRow {
     pub description: Option<String>,
     pub owner_id: Option<i32>,
     pub status: ProjectStatus,
+    pub group_id: Option<i32>,
 }
 
 /// Form used to update a project's metadata.
@@ -404,6 +445,8 @@ pub struct UpdateProject {
     pub description: Option<String>,
     pub owner_id: Option<i32>,
     pub status: Option<ProjectStatus>,
+    pub slug: Option<String>,
+    pub group_id: Option<i32>,
 }
 
 /// Data required to create or update a project membership entry.
@@ -627,6 +670,7 @@ mod forms_tests {
             description: Some("Desc".into()),
             owner_id: Some(1),
             status: ProjectStatus::Active,
+            group_id: None,
         };
         let json = serde_json::to_string(&project).unwrap();
         let parsed: NewProject = serde_json::from_str(&json).unwrap();
@@ -641,6 +685,8 @@ mod forms_tests {
             description: None,
             owner_id: None,
             status: Some(ProjectStatus::Completed),
+            slug: None,
+            group_id: None,
         };
         assert_eq!(upd.name, "N");
         assert_eq!(upd.status, Some(ProjectStatus::Completed));

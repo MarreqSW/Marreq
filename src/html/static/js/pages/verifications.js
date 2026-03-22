@@ -195,7 +195,7 @@ function openInlineEditForTest(cell, row, config) {
     if (select.parentNode) select.remove();
     displayEl.hidden = false;
     try {
-      await postJson(`/p/${projectSlug}/verifications/update-status/${testId}`, {
+      await postJson(`/${projectSlug}/verifications/update-status/${testId}`, {
         status_id: v,
       });
       const variant = testStatusVariant(displayText);
@@ -426,7 +426,7 @@ function initDeleteButtons() {
     }
 
     try {
-      const response = await fetch(`/p/${projectSlug}/verifications/delete/${testId}`, {
+      const response = await fetch(`/${projectSlug}/verifications/delete/${testId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -564,7 +564,7 @@ function initEditPanel() {
 }
 
 function openEditPanel(panelEl, projectSlug, testId) {
-  const url = `/p/${projectSlug}/verifications/edit-panel/${testId}`;
+  const url = `/${projectSlug}/verifications/edit-panel/${testId}`;
   panelEl.innerHTML = '<p class="marreq-requirements-edit-panel__loading">Loading…</p>';
   panelEl.removeAttribute('hidden');
   panelEl.setAttribute('aria-hidden', 'false');

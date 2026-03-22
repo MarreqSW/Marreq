@@ -80,6 +80,7 @@ mod test_support {
                 status: ProjectStatus::Active,
                 owner_id: Some(1),
                 slug: "project-1".into(),
+                group_id: None,
             },
         );
 
@@ -95,6 +96,7 @@ mod test_support {
                 status: ProjectStatus::Active,
                 owner_id: Some(2),
                 slug: "project-2".into(),
+                group_id: None,
             },
         );
 

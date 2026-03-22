@@ -10,7 +10,7 @@ use rocket::State;
 use rocket_dyn_templates::Template;
 
 /// Show cache statistics page
-#[get("/admin/cache")]
+#[get("/-/admin/cache")]
 pub fn cache_stats_page(state: &State<AppState>) -> Template {
     let service = CacheService::new(state);
 
@@ -26,7 +26,7 @@ pub fn cache_stats_page(state: &State<AppState>) -> Template {
 }
 
 /// Clear all cache entries
-#[post("/admin/cache/clear")]
+#[post("/-/admin/cache/clear")]
 pub fn clear_cache(state: &State<AppState>) -> Template {
     let service = CacheService::new(state);
     service.clear();
@@ -42,7 +42,7 @@ pub fn clear_cache(state: &State<AppState>) -> Template {
 }
 
 /// Clean up expired cache entries
-#[post("/admin/cache/cleanup")]
+#[post("/-/admin/cache/cleanup")]
 pub fn cleanup_cache(state: &State<AppState>) -> Template {
     let service = CacheService::new(state);
     let cleaned = service.cleanup();
@@ -72,7 +72,7 @@ pub fn cache_health_page(admin: AdminOnly, state: &State<AppState>) -> Template 
 #[get("/cache/warm")]
 pub fn warm_cache_route(_admin: AdminOnly, state: &State<AppState>) -> Redirect {
     CacheService::new(state).warm_cache();
-    Redirect::to("/admin/cache")
+    Redirect::to("/-/admin/cache")
 }
 
 #[cfg(test)]
@@ -166,7 +166,7 @@ mod tests {
         let redirect = warm_cache_route(AdminOnly(admin_user()), state_guard(&state));
         let description = format!("{:?}", redirect);
 
-        assert!(description.contains("/admin/cache"));
+        assert!(description.contains("/-/admin/cache"));
     }
 
     #[test]

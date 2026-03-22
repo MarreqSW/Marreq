@@ -33,7 +33,7 @@ function renderCard(link) {
   const id = link.getAttribute('data-project-preview-id');
   const name = link.getAttribute('data-project-preview-name') || 'Project';
   const description = link.getAttribute('data-project-preview-description') || '';
-  const href = link.getAttribute('href') || `/p/${id}`;
+  const href = link.getAttribute('href') || `/${id}`;
 
   const descSnippet = description.length > 120 ? description.slice(0, 117) + '…' : description;
   const card = getOrCreateTooltip();

@@ -8,6 +8,7 @@
 
 use crate::errors::ValidationError;
 use crate::models::*;
+use crate::namespaces::validate_namespace_segment;
 use regex::Regex;
 
 /// Validate a requirement before creation or update
@@ -345,6 +346,8 @@ pub fn validate_user(user: &NewUser) -> Result<(), ValidationError> {
         });
     }
 
+    validate_namespace_segment(&user.username, "username")?;
+
     // Validate name
     if user.name.trim().is_empty() {
         return Err(ValidationError::Required {
@@ -375,6 +378,46 @@ pub fn validate_user(user: &NewUser) -> Result<(), ValidationError> {
                 message: "Email must be in valid format".to_string(),
             });
         }
+    }
+
+    Ok(())
+}
+
+/// Validate a group before creation or update
+pub fn validate_group(group: &crate::models::NewGroup) -> Result<(), ValidationError> {
+    if group.name.trim().is_empty() {
+        return Err(ValidationError::Required {
+            field: "name".to_string(),
+        });
+    }
+
+    if group.name.len() > 100 {
+        return Err(ValidationError::TooLong {
+            field: "name".to_string(),
+            max: 100,
+        });
+    }
+
+    if group.name.len() < 2 {
+        return Err(ValidationError::TooShort {
+            field: "name".to_string(),
+            min: 2,
+        });
+    }
+
+    if let Some(description) = &group.description {
+        if !description.trim().is_empty() && description.len() > 1000 {
+            return Err(ValidationError::TooLong {
+                field: "description".to_string(),
+                max: 1000,
+            });
+        }
+    }
+
+    if group.owner_id.is_none() {
+        return Err(ValidationError::Required {
+            field: "owner_id".to_string(),
+        });
     }
 
     Ok(())

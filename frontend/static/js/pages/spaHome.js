@@ -1,9 +1,10 @@
 /**
  * Post-login dashboard: parity with templates/index.html.hbs + layout (sidebar, cards, footer, diff modal shell).
  */
+import { normalizeSpaPathname } from '../core/paths.js';
+import { postJson } from '../core/net.js';
 import { bindThemeToggles, updateToggleMeta } from '../modules/theme.js';
 import { initSidebar } from '../modules/sidebar.js';
-import { postJson } from '../core/net.js';
 
 function escapeHtml(s) {
   if (s == null) {
@@ -21,7 +22,7 @@ function escapeAttr(s) {
 }
 
 async function fetchCsrfToken() {
-  const res = await fetch('/api/auth/csrf', { credentials: 'same-origin' });
+  const res = await fetch('/api/auth/csrf', { credentials: 'include' });
   if (!res.ok) {
     throw new Error(`CSRF request failed (${res.status})`);
   }
@@ -62,8 +63,16 @@ function renderQuickActionCard({ href, icon, label, modifier, disabled, title })
   }<span>${escapeHtml(label)}</span></a>`;
 }
 
-function renderSidebar(user) {
+function renderSidebar(user, pathname = '/') {
   const admin = user.is_admin;
+  const p = normalizeSpaPathname(pathname || '/');
+  const dashActive = p === '/' || p === '/index.html';
+  const projActive = p === '/projects';
+  const adminPanelActive = p === '/admin';
+  const adminUsersActive = p.startsWith('/admin/users');
+  const logsActive = p === '/logs';
+  const navCls = (active) => `marreq-nav-link${active ? ' marreq-nav-link--active' : ''}`;
+  const currentAttr = (active) => (active ? ' aria-current="page"' : '');
   return `<aside class="marreq-sidebar" id="mainSidebar">
   <div class="marreq-sidebar__header">
     <a href="/" class="marreq-sidebar__brand">
@@ -84,7 +93,7 @@ function renderSidebar(user) {
       <h3 class="marreq-nav-section__title">Overview</h3>
       <ul class="marreq-nav-list">
         <li>
-          <a href="/" class="marreq-nav-link marreq-nav-link--active" aria-current="page">
+          <a href="/" class="${navCls(dashActive)}"${currentAttr(dashActive)}>
             <i class="fas fa-chart-line" aria-hidden="true"></i>
             <span class="marreq-nav-link__label">Dashboard</span>
           </a>
@@ -102,7 +111,7 @@ function renderSidebar(user) {
       <h3 class="marreq-nav-section__title">Projects</h3>
       <ul class="marreq-nav-list">
         <li>
-          <a href="/projects" class="marreq-nav-link">
+          <a href="/projects" class="${navCls(projActive)}"${currentAttr(projActive)}>
             <i class="fas fa-folder-tree" aria-hidden="true"></i>
             <span class="marreq-nav-link__label">All Projects</span>
           </a>
@@ -144,19 +153,19 @@ function renderSidebar(user) {
       <h3 class="marreq-nav-section__title">Administration</h3>
       <ul class="marreq-nav-list">
         <li>
-          <a href="/admin" class="marreq-nav-link">
+          <a href="/admin" class="${navCls(adminPanelActive)}"${currentAttr(adminPanelActive)}>
             <i class="fas fa-shield-alt" aria-hidden="true"></i>
             <span class="marreq-nav-link__label">Admin Panel</span>
           </a>
         </li>
         <li>
-          <a href="/admin/users" class="marreq-nav-link">
+          <a href="/admin/users" class="${navCls(adminUsersActive)}"${currentAttr(adminUsersActive)}>
             <i class="fas fa-users-cog" aria-hidden="true"></i>
             <span class="marreq-nav-link__label">User Management</span>
           </a>
         </li>
         <li>
-          <a href="/logs" class="marreq-nav-link">
+          <a href="/logs" class="${navCls(logsActive)}"${currentAttr(logsActive)}>
             <i class="fas fa-list-alt" aria-hidden="true"></i>
             <span class="marreq-nav-link__label">System Logs</span>
           </a>
@@ -278,11 +287,11 @@ function renderProjectCard(p) {
       ${dateMeta}
     </div>
     <div class="marreq-project-card__actions">
-      <a href="/p/${slug}" class="marreq-btn marreq-btn--primary">
+      <a href="/${slug}" class="marreq-btn marreq-btn--primary">
         <i class="fas fa-eye" aria-hidden="true"></i>
         Open
       </a>
-      <a href="/p/${slug}/requirements" class="marreq-btn marreq-btn--outline">
+      <a href="/${slug}/requirements" class="marreq-btn marreq-btn--outline">
         <i class="fas fa-clipboard-list" aria-hidden="true"></i>
         Requirements
       </a>
@@ -291,7 +300,26 @@ function renderProjectCard(p) {
 </article>`;
 }
 
-function renderPortal(user, projects) {
+function renderProjectsGrid(user, projects) {
+  if (projects && projects.length > 0) {
+    return `<div class="marreq-projects-grid">${projects.map((p) => renderProjectCard(p)).join('')}</div>`;
+  }
+  return `<div class="marreq-empty-state">
+          <i class="fas fa-folder-open" aria-hidden="true"></i>
+          <h3>No Projects Yet</h3>
+          <p>Create your first project to start managing requirements and tests</p>
+          ${
+            user.is_admin
+              ? `<a href="/new_project" class="marreq-btn marreq-btn--primary">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            Create Project
+          </a>`
+              : ''
+          }
+        </div>`;
+}
+
+function renderDashboardMain(user, projects) {
   const quick = [
     renderQuickActionCard({
       href: '/projects',
@@ -321,27 +349,9 @@ function renderPortal(user, projects) {
     );
   }
 
-  const grid =
-    projects && projects.length > 0
-      ? `<div class="marreq-projects-grid">${projects.map((p) => renderProjectCard(p)).join('')}</div>`
-      : `<div class="marreq-empty-state">
-          <i class="fas fa-folder-open" aria-hidden="true"></i>
-          <h3>No Projects Yet</h3>
-          <p>Create your first project to start managing requirements and tests</p>
-          ${
-            user.is_admin
-              ? `<a href="/new_project" class="marreq-btn marreq-btn--primary">
-            <i class="fas fa-plus" aria-hidden="true"></i>
-            Create Project
-          </a>`
-              : ''
-          }
-        </div>`;
+  const grid = renderProjectsGrid(user, projects);
 
-  return `<div class="marreq-portal">
-  ${renderSidebar(user)}
-  <main class="marreq-main" id="mainContent">
-    ${renderHeader(user)}
+  return `${renderHeader(user)}
     <section class="marreq-section">
       <h2 class="marreq-section__title">Quick Actions</h2>
       <div class="marreq-quick-actions">${quick.join('')}</div>
@@ -363,14 +373,59 @@ function renderPortal(user, projects) {
         <h3>Activity Feed Coming Soon</h3>
         <p>Track project updates, requirement changes, and team activities in real-time</p>
       </div>
-    </section>
+    </section>`;
+}
+
+function renderMainHeader(title, subtitle) {
+  return `<header class="marreq-main__header">
+  <button type="button" class="marreq-mobile-toggle" id="mobileToggle" aria-label="Toggle navigation">
+    <i class="fas fa-bars" aria-hidden="true"></i>
+  </button>
+  <div class="marreq-main__title">
+    <h1>${escapeHtml(title)}</h1>
+    <p class="marreq-main__subtitle">${escapeHtml(subtitle)}</p>
+  </div>
+</header>`;
+}
+
+function renderProjectsMain(user, projects) {
+  const grid = renderProjectsGrid(user, projects);
+  return `${renderMainHeader('All projects', 'Every project you can access')}
+    <section class="marreq-section">
+      <div class="marreq-section__header">
+        <h2 class="marreq-section__title">Projects</h2>
+        <a href="/" class="marreq-link-arrow">
+          Back to dashboard
+          <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </a>
+      </div>
+      ${grid}
+    </section>`;
+}
+
+function renderStubMain(title, messageText) {
+  return `${renderMainHeader(title, 'Marreq')}
+    <section class="marreq-section">
+      <p class="text-muted">${escapeHtml(messageText)}</p>
+      <p class="marreq-section__actions mt-3">
+        <a href="/" class="marreq-btn marreq-btn--primary">Dashboard</a>
+        <a href="/projects" class="marreq-btn marreq-btn--outline ms-2">All projects</a>
+      </p>
+    </section>`;
+}
+
+function renderPortal(user, projects, pathname, mainInnerHtml) {
+  return `<div class="marreq-portal">
+  ${renderSidebar(user, pathname)}
+  <main class="marreq-main" id="mainContent">
+    ${mainInnerHtml}
   </main>
 </div>`;
 }
 
-function renderLayoutBody(user, projects) {
+function renderLayoutBody(user, projects, pathname, mainInnerHtml) {
   return `<main class="o-main-content">
-${renderPortal(user, projects)}
+${renderPortal(user, projects, pathname, mainInnerHtml)}
 </main>
 <footer class="footer c-footer">
   <p>&copy; 2026 Marreq - Requirements Management System</p>
@@ -395,20 +450,23 @@ ${renderPortal(user, projects)}
 </div>`;
 }
 
-/**
- * @param {object} data - JSON from `GET /api/dashboard`
- */
-export async function show(data) {
-  const { user, projects, csrf_token: csrfToken } = data;
+function applyCsrfFromDashboard(data) {
+  const csrfToken = data.csrf_token;
   if (csrfToken) {
     setCsrfMeta(csrfToken);
   }
+}
 
-  document.title = 'Dashboard - Marreq';
+/**
+ * @param {object} data - JSON from `GET /api/dashboard`
+ */
+async function mountLayout(data, pathname, mainInnerHtml, title, datasetPage) {
+  const { user, projects } = data;
+  document.title = title;
   document.body.classList.remove('login-page');
-  document.body.dataset.page = 'index';
+  document.body.dataset.page = datasetPage;
 
-  document.body.innerHTML = renderLayoutBody(user, projects || []);
+  document.body.innerHTML = renderLayoutBody(user, projects || [], pathname, mainInnerHtml);
 
   const theme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
   updateToggleMeta(theme);
@@ -422,7 +480,7 @@ export async function show(data) {
         '/api/auth/logout',
         {},
         {
-          credentials: 'same-origin',
+          credentials: 'include',
           headers: { 'X-CSRF-Token': token },
         },
       );
@@ -431,4 +489,61 @@ export async function show(data) {
     }
     window.location.reload();
   });
+}
+
+/**
+ * @param {object} data - JSON from `GET /api/dashboard`
+ */
+export async function show(data) {
+  applyCsrfFromDashboard(data);
+  const { user, projects } = data;
+  const p = normalizeSpaPathname(window.location.pathname);
+  await mountLayout(
+    data,
+    p,
+    renderDashboardMain(user, projects || []),
+    'Dashboard - Marreq',
+    'index',
+  );
+}
+
+/**
+ * @param {object} data - JSON from `GET /api/dashboard`
+ */
+export async function showProjects(data) {
+  applyCsrfFromDashboard(data);
+  const { user, projects } = data;
+  await mountLayout(
+    data,
+    '/projects',
+    renderProjectsMain(user, projects || []),
+    'Projects - Marreq',
+    'projects',
+  );
+}
+
+/**
+ * @param {object} data - JSON from `GET /api/dashboard`
+ * @param {{ pathname: string, title: string, message: string }} route
+ */
+export async function showStub(data, route) {
+  applyCsrfFromDashboard(data);
+  const pathname = normalizeSpaPathname(route.pathname);
+  await mountLayout(
+    data,
+    pathname,
+    renderStubMain(route.title, route.message),
+    `${route.title} - Marreq`,
+    'spa-stub',
+  );
+}
+
+/**
+ * Mount dashboard chrome (sidebar, footer, modals) with arbitrary main-column HTML.
+ * Used by project workspace and other SPA shells.
+ * @param {object} data - `GET /api/dashboard` payload (user, projects, csrf_token)
+ */
+export async function mountAppShell(data, pathname, mainInnerHtml, title, datasetPage) {
+  applyCsrfFromDashboard(data);
+  await mountLayout(data, normalizeSpaPathname(pathname), mainInnerHtml, title, datasetPage);
 }

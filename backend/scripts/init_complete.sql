@@ -133,9 +133,9 @@ SELECT 'qa_wilson', 'QA Specialist Tom Wilson', 'tom.wilson@spacecorp.com', fals
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'qa_wilson');
 
 INSERT INTO users (username, name, email, is_admin, password_hash)
-SELECT 'admin', 'System Administrator', 'admin@marreq.com', true,
+SELECT 'sysadmin', 'System Administrator', 'admin@marreq.com', true,
        '$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'sysadmin');
 
 -- Project ownership for namespace-based project URLs
 UPDATE projects
@@ -147,7 +147,7 @@ SET owner_id = (SELECT id FROM users WHERE username = 'alice' ORDER BY id LIMIT 
 WHERE slug = 'marreq-project';
 
 UPDATE projects
-SET owner_id = (SELECT id FROM users WHERE username = 'admin' ORDER BY id LIMIT 1)
+SET owner_id = (SELECT id FROM users WHERE username = 'sysadmin' ORDER BY id LIMIT 1)
 WHERE slug = 'empty-project';
 
 -- Project membership assignments (role: 1=Owner, 2=Manager, 3=Contributor, 4=Viewer)
@@ -157,9 +157,9 @@ INSERT INTO project_members (project_id, user_id, role) VALUES
     ((SELECT id FROM projects WHERE name = 'Space Project'), (SELECT id FROM users WHERE username = 'tech_lee' ORDER BY id LIMIT 1), 3),
     ((SELECT id FROM projects WHERE name = 'Space Project'), (SELECT id FROM users WHERE username = 'qa_wilson' ORDER BY id LIMIT 1), 4),
     ((SELECT id FROM projects WHERE name = 'Marreq Project'), (SELECT id FROM users WHERE username = 'alice' ORDER BY id LIMIT 1), 1),
-    ((SELECT id FROM projects WHERE name = 'Marreq Project'), (SELECT id FROM users WHERE username = 'admin' ORDER BY id LIMIT 1), 2),
+    ((SELECT id FROM projects WHERE name = 'Marreq Project'), (SELECT id FROM users WHERE username = 'sysadmin' ORDER BY id LIMIT 1), 2),
     ((SELECT id FROM projects WHERE name = 'Marreq Project'), (SELECT id FROM users WHERE username = 'qa_wilson' ORDER BY id LIMIT 1), 3),
-    ((SELECT id FROM projects WHERE name = 'Empty Project'), (SELECT id FROM users WHERE username = 'admin' ORDER BY id LIMIT 1), 1),
+    ((SELECT id FROM projects WHERE name = 'Empty Project'), (SELECT id FROM users WHERE username = 'sysadmin' ORDER BY id LIMIT 1), 1),
     ((SELECT id FROM projects WHERE name = 'Empty Project'), (SELECT id FROM users WHERE username = 'alice' ORDER BY id LIMIT 1), 2);
 
 -- Categories for Space Project
@@ -545,7 +545,7 @@ BEGIN
     RAISE NOTICE '- Username: eng_jones, Password: ChangeMe123!';
     RAISE NOTICE '- Username: tech_lee, Password: ChangeMe123!';
     RAISE NOTICE '- Username: qa_wilson, Password: ChangeMe123!';
-    RAISE NOTICE '- Username: admin, Password: ChangeMe123! (Admin)';
+    RAISE NOTICE '- Username: sysadmin, Password: ChangeMe123! (Admin)';
     RAISE NOTICE '';
     RAISE NOTICE 'The database is ready for use!';
     RAISE NOTICE '========================================';

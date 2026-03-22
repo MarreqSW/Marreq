@@ -41,7 +41,8 @@ pub fn dashboard_json(
     }
 
     let decorated_projects = decorate_projects_for_listing(state, &user, &projects);
-    let selected_project_slug = resolve_selected_project_slug(selected_project_id, &projects);
+    let selected_project_slug =
+        resolve_selected_project_slug(state.inner(), selected_project_id, &projects);
     let csrf_token = get_or_create_csrf_token(cookies);
 
     Ok(Json(json!({

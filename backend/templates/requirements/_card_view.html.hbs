@@ -33,7 +33,7 @@
       <div class="marreq-requirement-card__body">
         <h3 class="marreq-requirement-card__title">
           <a 
-            href="/p/{{../project.slug}}/requirements/show/{{id}}"
+            href="/{{../project.slug}}/requirements/show/{{id}}"
             class="marreq-requirement-card__title-link"
             data-requirement-preview
             data-requirement-preview-project-id="{{../project.id}}"
@@ -81,7 +81,7 @@
           </span>
           {{/if}}
           {{#each req_parents}}
-          <a href="/p/{{../../project.slug}}/requirements/show/{{id}}" class="marreq-requirement-card__badge marreq-requirement-card__badge--parent" data-badge data-requirement-preview data-requirement-preview-project-id="{{../../project.id}}" data-requirement-preview-id="{{id}}" data-requirement-preview-ref="{{reference_code}}" data-requirement-preview-title="{{title}}" title="Parent: {{#if reference_code}}{{reference_code}} — {{/if}}{{title}}">
+          <a href="/{{../../project.slug}}/requirements/show/{{id}}" class="marreq-requirement-card__badge marreq-requirement-card__badge--parent" data-badge data-requirement-preview data-requirement-preview-project-id="{{../../project.id}}" data-requirement-preview-id="{{id}}" data-requirement-preview-ref="{{reference_code}}" data-requirement-preview-title="{{title}}" title="Parent: {{#if reference_code}}{{reference_code}} — {{/if}}{{title}}">
             <svg class="marreq-requirement-card__badge-icon" width="10" height="10" fill="currentColor" viewBox="0 0 16 16">
               <path d="M1 0a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5v-1H2v-1h4v-9H2V2h4v3h9a1 1 0 0 0 1-1V1a1 1 0 0 0-1-1H1z"/>
             </svg>
@@ -117,7 +117,7 @@
         
         <div class="marreq-requirement-card__actions">
           <a 
-            href="/p/{{../project.slug}}/requirements/show/{{id}}" 
+            href="/{{../project.slug}}/requirements/show/{{id}}" 
             class="marreq-requirement-card__action marreq-requirement-card__action--primary"
             title="View details">
             <svg width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
@@ -128,7 +128,7 @@
           </a>
           {{#if ../can_edit_requirements}}
           <a 
-            href="/p/{{../project.slug}}/requirements/edit/{{id}}" 
+            href="/{{../project.slug}}/requirements/edit/{{id}}" 
             class="marreq-requirement-card__action"
             data-action="open-edit-panel"
             data-requirement-id="{{id}}"

@@ -40,6 +40,19 @@
           {{/if}}
         </span>
       </div>
+      {{#if group_name}}
+        <div class="marreq-project-card__meta-item">
+          <i class="fas fa-users" aria-hidden="true"></i>
+          <span>
+            Group:
+            {{#if can_view_group}}
+              <a href="/{{group_slug}}">{{group_name}}</a>
+            {{else}}
+              {{group_name}}
+            {{/if}}
+          </span>
+        </div>
+      {{/if}}
       {{#if update_date}}
         <div class="marreq-project-card__meta-item">
           <i class="fas fa-clock-rotate-left" aria-hidden="true"></i>
@@ -55,17 +68,17 @@
       {{/if}}
     </div>
     <div class="marreq-project-card__actions">
-      <a href="/p/{{project_slug}}" class="marreq-btn marreq-btn--primary">
+      <a href="/{{project_slug}}" class="marreq-btn marreq-btn--primary">
         <i class="fas fa-eye" aria-hidden="true"></i>
         Open
       </a>
-      <a href="/p/{{project_slug}}/requirements" class="marreq-btn marreq-btn--outline">
+      <a href="/{{project_slug}}/requirements" class="marreq-btn marreq-btn--outline">
         <i class="fas fa-clipboard-list" aria-hidden="true"></i>
         Requirements
       </a>
       {{#if show_admin_actions}}
       {{#if user.is_admin}}
-      <a href="/p/{{project_slug}}/edit" class="marreq-btn marreq-btn--outline">
+      <a href="/{{project_slug}}/edit" class="marreq-btn marreq-btn--outline">
         <i class="fas fa-edit" aria-hidden="true"></i>
         Edit
       </a>

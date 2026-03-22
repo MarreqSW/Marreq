@@ -58,6 +58,7 @@ mod test_support {
             status: ProjectStatus::Active,
             owner_id: Some(1),
             slug: "workflow-project".into(),
+            group_id: None,
         };
         repo.projects.insert(1, project);
 
@@ -226,6 +227,7 @@ async fn workflow_project_isolation() {
             status: ProjectStatus::Active,
             owner_id: Some(2), // Different owner
             slug: "secret-project".into(),
+            group_id: None,
         },
     );
 

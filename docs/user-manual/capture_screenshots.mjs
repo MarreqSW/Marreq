@@ -18,6 +18,8 @@ const OUT_DIR = path.join(__dirname, 'screenshots');
 const BASE_URL = process.env.MARREQ_URL || 'http://localhost:8000';
 const USER = process.env.MARREQ_USER || 'alice';
 const PASS = process.env.MARREQ_PASS || 'ChangeMe123!';
+const PROJECT_BASE_PATH =
+  process.env.MARREQ_PROJECT_BASE_PATH || '/dr_smith/space-project';
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
@@ -57,38 +59,38 @@ async function main() {
     await page.waitForTimeout(500);
     await shot('projects');
 
-    // Project detail (assume project 1 exists in demo data)
-    await page.goto(`${BASE_URL}/p/1`, { waitUntil: 'networkidle' });
+    // Project detail
+    await page.goto(`${BASE_URL}${PROJECT_BASE_PATH}`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
     await shot('project-detail');
 
     // Requirements list
-    await page.goto(`${BASE_URL}/p/1/requirements`, { waitUntil: 'networkidle' });
+    await page.goto(`${BASE_URL}${PROJECT_BASE_PATH}/requirements`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     await shot('requirements-list');
 
-    // Requirement detail (assume requirement 1 exists)
-    await page.goto(`${BASE_URL}/p/1/requirements/show/1`, { waitUntil: 'networkidle' });
+    // Requirement detail (assume requirement 1 exists in the selected project)
+    await page.goto(`${BASE_URL}${PROJECT_BASE_PATH}/requirements/show/1`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
     await shot('requirement-detail');
 
     // Verifications list
-    await page.goto(`${BASE_URL}/p/1/verifications`, { waitUntil: 'networkidle' });
+    await page.goto(`${BASE_URL}${PROJECT_BASE_PATH}/verifications`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
     await shot('tests-list');
 
     // Matrix
-    await page.goto(`${BASE_URL}/p/1/matrix`, { waitUntil: 'networkidle' });
+    await page.goto(`${BASE_URL}${PROJECT_BASE_PATH}/matrix`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(800);
     await shot('matrix');
 
     // Baselines list
-    await page.goto(`${BASE_URL}/p/1/baselines`, { waitUntil: 'networkidle' });
+    await page.goto(`${BASE_URL}${PROJECT_BASE_PATH}/baselines`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
     await shot('baselines-list');
 
     // Reports
-    await page.goto(`${BASE_URL}/p/1/reports`, { waitUntil: 'networkidle' });
+    await page.goto(`${BASE_URL}${PROJECT_BASE_PATH}/reports`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(500);
     await shot('reports');
   } catch (e) {

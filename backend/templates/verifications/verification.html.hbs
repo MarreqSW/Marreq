@@ -2,7 +2,7 @@
 {{#*inline "page"}}
 <div class="marreq-requirement-detail-page" aria-live="polite">
   {{#if baseline_view}}
-  <div class="alert alert-info mb-3" role="status">Viewing as at baseline: <a href="/p/{{selected_project_slug}}/baselines/{{baseline_id}}">{{baseline_name}}</a></div>
+  <div class="alert alert-info mb-3" role="status">Viewing as at baseline: <a href="/{{selected_project_slug}}/baselines/{{baseline_id}}">{{baseline_name}}</a></div>
   {{/if}}
   <header class="marreq-requirement-header card shadow-sm border-0">
     <div class="marreq-requirement-header__body">
@@ -15,7 +15,7 @@
           <nav class="ms-lg-auto" aria-label="Test actions">
             <div class="btn-toolbar gap-2 justify-content-lg-end flex-wrap">
               {{#if can_edit_requirements}}
-              <a href="/p/{{selected_project_slug}}/verifications/edit/{{id}}" class="btn btn-primary btn-sm"
+              <a href="/{{selected_project_slug}}/verifications/edit/{{id}}" class="btn btn-primary btn-sm"
                 aria-label="Edit test">
                 <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                   <use href="#icon-pencil" />
@@ -37,7 +37,7 @@
                 <ul class="dropdown-menu dropdown-menu-end">
                   <li>
                     <button class="dropdown-item" type="button" data-action="copy-requirement-link"
-                      data-requirement-url="/p/{{selected_project_slug}}/verifications/show/{{id}}{{#if baseline_view}}/version/{{baseline_id}}{{/if}}">
+                      data-requirement-url="/{{selected_project_slug}}/verifications/show/{{id}}{{#if baseline_view}}/version/{{baseline_id}}{{/if}}">
                       <svg width="16" height="16" fill="currentColor" aria-hidden="true">
                         <use href="#icon-link" />
                       </svg>
@@ -129,7 +129,7 @@
           <h5 class="mb-3">Linked Requirements</h5>
           <div class="list-group list-group-flush">
             {{#each linked_requirements}}
-            <a href="/p/{{project_slug}}/requirements/show/{{id}}"
+            <a href="/{{project_slug}}/requirements/show/{{id}}"
               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
               <div class="me-3">
                 <span class="fw-semibold">REQ-{{id}}</span>
@@ -211,7 +211,7 @@
               <dd class="col-6 fw-semibold text-end text-lg-start">{{status_id}}</dd>
               <dt class="col-6 text-uppercase small text-muted">Parent</dt>
               <dd class="col-6 fw-semibold text-end text-lg-start">{{#if verification_parent_id}}<a
-                  href="/p/{{selected_project_slug}}/verifications/show/{{verification_parent_id}}">{{verification_parent_title}}</a>{{else}}—{{/if}}
+                  href="/{{selected_project_slug}}/verifications/show/{{verification_parent_id}}">{{verification_parent_title}}</a>{{else}}—{{/if}}
               </dd>
               <dt class="col-6 text-uppercase small text-muted">Verification type</dt>
               <dd class="col-6 fw-semibold text-end text-lg-start">{{#if verification_type_title}}{{verification_type_title}}{{else}}—{{/if}}</dd>

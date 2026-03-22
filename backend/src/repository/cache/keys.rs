@@ -78,6 +78,15 @@ impl Projects {
     pub fn by_slug(slug: &str) -> String {
         format!("{}:slug:{}", Self::PREFIX, slug)
     }
+
+    pub fn by_namespace_slug(namespace: &str, slug: &str) -> String {
+        format!(
+            "{}:namespace:{}:slug:{}",
+            Self::PREFIX,
+            namespace.to_lowercase(),
+            slug
+        )
+    }
 }
 impl Keyspace for Status {
     const PREFIX: &'static str = "status";

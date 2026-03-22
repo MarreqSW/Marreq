@@ -11,6 +11,7 @@ pub mod custom_fields;
 pub mod dashboard;
 pub mod error;
 pub mod guards;
+pub mod groups;
 pub mod matrix;
 pub mod mcp;
 pub mod members;
@@ -128,5 +129,15 @@ pub fn routes() -> Vec<Route> {
         semantic_search::index_status,
         semantic_search::search_status,
         mcp::audit,
+        // Group endpoints
+        groups::list,
+        groups::get,
+        groups::create,
+        groups::update,
+        groups::delete,
+        groups::list_projects,
+        groups::list_members,
+        groups::set_member_role,
+        groups::remove_member,
     ]
 }

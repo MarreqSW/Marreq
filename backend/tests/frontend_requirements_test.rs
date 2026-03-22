@@ -52,7 +52,7 @@ mod test_support {
         let rocket = rocket::build()
             .manage(managed_state(repo))
             .attach(Template::fairing())
-            .mount("/p", routes);
+            .mount("/", routes);
 
         Client::tracked(rocket).await.expect("rocket instance")
     }
@@ -66,7 +66,7 @@ mod test_support {
     pub fn base_repo() -> DieselRepoMock {
         let mut repo = DieselRepoMock::default();
 
-        let mut admin = DieselRepoMock::make_user(1, "admin", "password");
+        let mut admin = DieselRepoMock::make_user(1, "site-admin", "password");
         admin.is_admin = true;
         repo.users.insert(1, admin);
 
@@ -81,6 +81,7 @@ mod test_support {
                 status: ProjectStatus::Active,
                 owner_id: Some(1),
                 slug: "test-project".into(),
+                group_id: None,
             },
         );
 
@@ -194,7 +195,7 @@ async fn requirements_page_renders_correct_html_structure() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements")
+        .get("/site-admin/test-project/requirements")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -232,7 +233,7 @@ async fn requirements_page_displays_metrics_section() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements")
+        .get("/site-admin/test-project/requirements")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -256,7 +257,7 @@ async fn requirements_table_contains_sortable_headers() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements")
+        .get("/site-admin/test-project/requirements")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -290,7 +291,7 @@ async fn requirement_row_has_correct_data_attributes() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements")
+        .get("/site-admin/test-project/requirements")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -326,7 +327,7 @@ async fn new_requirement_form_has_required_fields() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/p/test-project/requirements/new")
+        .get("/site-admin/test-project/requirements/new")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -374,7 +375,7 @@ async fn edit_requirement_form_populates_existing_data() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements/edit/1")
+        .get("/site-admin/test-project/requirements/edit/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -409,7 +410,7 @@ async fn edit_panel_fragment_returns_form_and_full_edit_link() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements/edit-panel/1")
+        .get("/site-admin/test-project/requirements/edit-panel/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -444,7 +445,7 @@ async fn requirement_detail_page_shows_relationships() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements/show/1")
+        .get("/site-admin/test-project/requirements/show/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -472,7 +473,7 @@ async fn create_requirement_redirects_to_detail_page() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .post("/p/test-project/requirements/new")
+        .post("/site-admin/test-project/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
@@ -489,7 +490,7 @@ async fn create_requirement_redirects_to_detail_page() {
         .get_one("Location")
         .expect("redirect location");
     assert!(
-        location.contains("/p/test-project/requirements/show/"),
+        location.contains("/site-admin/test-project/requirements/show/"),
         "Should redirect to detail page"
     );
 }
@@ -499,7 +500,7 @@ async fn create_requirement_with_add_another_redirects_to_form() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .post("/p/test-project/requirements/new")
+        .post("/site-admin/test-project/requirements/new")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
@@ -516,7 +517,7 @@ async fn create_requirement_with_add_another_redirects_to_form() {
         .get_one("Location")
         .expect("redirect location");
     assert!(
-        location.contains("/p/test-project/requirements/new"),
+        location.contains("/site-admin/test-project/requirements/new"),
         "Should redirect to new form"
     );
     assert!(
@@ -532,7 +533,7 @@ async fn edit_requirement_redirects_to_detail_page() {
     let client = test_client(repo).await;
 
     let response = client
-        .post("/p/test-project/requirements/edit/1")
+        .post("/site-admin/test-project/requirements/edit/1")
         .header(ContentType::Form)
         .private_cookie(session_cookie(1))
         .body(
@@ -550,7 +551,7 @@ async fn edit_requirement_redirects_to_detail_page() {
         .get_one("Location")
         .expect("redirect location");
     assert!(
-        location.contains("/p/test-project/requirements/show/1"),
+        location.contains("/site-admin/test-project/requirements/show/1"),
         "Should redirect to detail page"
     );
 }
@@ -562,7 +563,7 @@ async fn delete_requirement_redirects_to_list() {
     let client = test_client(repo).await;
 
     let response = client
-        .delete("/p/test-project/requirements/delete/1")
+        .delete("/site-admin/test-project/requirements/delete/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -573,7 +574,7 @@ async fn delete_requirement_redirects_to_list() {
         .get_one("Location")
         .expect("redirect location");
     assert!(
-        location.contains("/p/test-project/requirements"),
+        location.contains("/site-admin/test-project/requirements"),
         "Should redirect to requirements list"
     );
 }
@@ -585,7 +586,7 @@ async fn filter_form_submission_updates_url_parameters() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements?status_filter=1&category_filter=1")
+        .get("/site-admin/test-project/requirements?status_filter=1&category_filter=1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -595,7 +596,7 @@ async fn filter_form_submission_updates_url_parameters() {
 
     // Verify filter form has correct action
     assert!(
-        html.contains("action=\"/p/test-project/requirements\""),
+        html.contains("action=\"/site-admin/test-project/requirements\""),
         "Filter form action incorrect"
     );
     // Verify selected options are marked
@@ -616,7 +617,7 @@ async fn requirements_page_includes_filter_controls() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements")
+        .get("/site-admin/test-project/requirements")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -650,7 +651,7 @@ async fn requirements_table_has_search_input() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements")
+        .get("/site-admin/test-project/requirements")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -674,7 +675,7 @@ async fn requirement_form_has_reference_validation_markers() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/p/test-project/requirements/new")
+        .get("/site-admin/test-project/requirements/new")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -703,7 +704,7 @@ async fn edit_form_has_autosave_configuration() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements/edit/1")
+        .get("/site-admin/test-project/requirements/edit/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -727,7 +728,7 @@ async fn accessing_nonexistent_requirement_returns_error() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/p/test-project/requirements/show/999")
+        .get("/site-admin/test-project/requirements/show/999")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -745,7 +746,7 @@ async fn editing_nonexistent_requirement_returns_error() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/p/test-project/requirements/edit/999")
+        .get("/site-admin/test-project/requirements/edit/999")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -763,7 +764,7 @@ async fn requirements_page_handles_empty_state() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/p/test-project/requirements")
+        .get("/site-admin/test-project/requirements")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -789,7 +790,7 @@ async fn requirements_page_displays_breadcrumb() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements")
+        .get("/site-admin/test-project/requirements")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -816,7 +817,7 @@ async fn new_requirement_form_displays_breadcrumb() {
     let client = test_client(base_repo()).await;
 
     let response = client
-        .get("/p/test-project/requirements/new")
+        .get("/site-admin/test-project/requirements/new")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -826,7 +827,7 @@ async fn new_requirement_form_displays_breadcrumb() {
 
     assert!(html.contains("breadcrumb"), "Missing breadcrumb");
     assert!(
-        html.contains("/p/test-project/requirements"),
+        html.contains("/site-admin/test-project/requirements"),
         "Missing back link to requirements"
     );
 }
@@ -838,7 +839,7 @@ async fn edit_requirement_form_displays_breadcrumb() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements/edit/1")
+        .get("/site-admin/test-project/requirements/edit/1")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -848,7 +849,7 @@ async fn edit_requirement_form_displays_breadcrumb() {
 
     assert!(html.contains("breadcrumb"), "Missing breadcrumb");
     assert!(
-        html.contains("/p/test-project/requirements"),
+        html.contains("/site-admin/test-project/requirements"),
         "Missing requirements link"
     );
     assert!(
@@ -868,7 +869,7 @@ async fn requirements_page_shows_action_buttons() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements")
+        .get("/site-admin/test-project/requirements")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -892,7 +893,7 @@ async fn requirement_row_actions_have_correct_links() {
     let client = test_client(repo).await;
 
     let response = client
-        .get("/p/test-project/requirements")
+        .get("/site-admin/test-project/requirements")
         .private_cookie(session_cookie(1))
         .dispatch()
         .await;
@@ -901,7 +902,7 @@ async fn requirement_row_actions_have_correct_links() {
     let html = response.into_string().await.expect("body");
 
     assert!(
-        html.contains("/p/test-project/requirements/edit/1"),
+        html.contains("/site-admin/test-project/requirements/edit/1"),
         "Missing edit link"
     );
     assert!(
@@ -913,7 +914,7 @@ async fn requirement_row_actions_have_correct_links() {
         "Page should contain edit panel container"
     );
     assert!(
-        html.contains("/p/test-project/requirements/show/1"),
+        html.contains("/site-admin/test-project/requirements/show/1"),
         "Missing detail link"
     );
     assert!(

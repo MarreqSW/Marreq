@@ -367,6 +367,7 @@ mod tests {
                 status: ProjectStatus::Active,
                 owner_id: Some(1),
                 slug: "test-project".to_string(),
+                group_id: None,
             };
 
             assert_eq!(Project::entity_type(), EntityType::Project);
@@ -438,6 +439,7 @@ mod tests {
                 status: ProjectStatus::Active,
                 owner_id: Some(10),
                 slug: "project".to_string(),
+                group_id: None,
             };
 
             assert_eq!(project.id, 1);
@@ -569,6 +571,7 @@ mod tests {
                 status: ProjectStatus::Active,
                 owner_id: Some(1),
                 slug: "project".to_string(),
+                group_id: None,
             };
 
             let json = serde_json::to_string(&project).unwrap();
@@ -798,6 +801,7 @@ mod tests {
                 description: Some("Desc".to_string()),
                 owner_id: Some(1),
                 status: ProjectStatus::Active,
+                group_id: None,
             };
 
             assert_eq!(new_project.name, "Project");
@@ -812,6 +816,8 @@ mod tests {
                 description: Some("New Desc".to_string()),
                 owner_id: Some(2),
                 status: Some(ProjectStatus::Cancelled),
+                slug: None,
+                group_id: None,
             };
 
             assert_eq!(update.name, "Updated");
@@ -1405,6 +1411,7 @@ mod tests {
                 status: ProjectStatus::Active,
                 owner_id: Some(1),
                 slug: "project".to_string(),
+                group_id: None,
             };
 
             assert_eq!(project.description, Some("Description".to_string()));
@@ -1422,6 +1429,7 @@ mod tests {
                 status: ProjectStatus::OnHold,
                 owner_id: None,
                 slug: "project".to_string(),
+                group_id: None,
             };
 
             assert_eq!(project.description, None);

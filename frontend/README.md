@@ -1,6 +1,6 @@
-# Marreq frontend (Vite SPA)
+# Marreq frontend (React + Vite)
 
-Bundled SPA that **reuses** legacy scripts and styles from `src/html/static/` via the Vite alias `@static` (see `vite.config.ts`).
+SPA built with **React 19**, **TypeScript**, **Tailwind CSS**, and **React Flow** for the traceability graph. API calls use same-origin **`/api`** (Vite dev proxy → `http://127.0.0.1:8000`).
 
 ## Scripts
 
@@ -9,12 +9,32 @@ Bundled SPA that **reuses** legacy scripts and styles from `src/html/static/` vi
 - `npm run build` — typecheck + production build to `dist/`
 - `npm run preview` — serve `dist/` locally (default `http://localhost:4173`); **`/api` is proxied to `http://127.0.0.1:8000` like dev** — start the backend first
 
-## Environment
+## Routes (MVP)
 
-- `VITE_API_BASE` — optional prefix for API calls (default empty: use same-origin `/api` when behind nginx, or rely on dev proxy).
+- `/login` — JSON login (`POST /api/auth/login` with CSRF)
+- `/` — redirects to `/p/{selectedOrFirstProjectId}/requirements`
+- `/p/:projectId/requirements` — requirements table (row opens editor)
+- `/p/:projectId/requirements/:requirementId/edit` — edit requirement (Stitch / Axiom-style layout)
+- `/p/:projectId/traceability` — matrix graph (requirement ↔ verification)
+
+`projectId` is the **numeric** project id (same as `selected_project_id` from `GET /api/dashboard`), not the slug.
+
+## API mapping (vs generic `/api/v1/…` guides)
+
+| Guide / placeholder | Marreq endpoint |
+|---------------------|-----------------|
+| `GET /api/v1/projects/{id}/requirements` | `GET /api/projects/{project_id}/requirements` |
+| Matrix / trace links | `GET /api/projects/{project_id}/matrix` |
+| Requirement status labels | `GET /api/status` (join `status_id` on each requirement) |
+| Verifications (for coverage denominator) | `GET /api/verifications` (filter by `project_id` client-side) |
+| Session + CSRF | `GET /api/dashboard`, `GET /api/auth/csrf`; mutating calls need `X-CSRF-Token` |
+
+See [doc/API.md](../doc/API.md) for the full HTTP contract.
 
 ## Docker
 
-The image is built from `docker/frontend/Dockerfile` (context: repository root). Nginx serves `dist/` and proxies `/api/` to the `backend` service.
+Built from `docker/frontend/Dockerfile` (build context: repository root). Nginx serves `dist/` and proxies `/api/` to the `backend` service. Run `npm install` + `npm run build` inside the image as today; no Dockerfile change required for this stack.
 
-See [doc/API.md](../doc/API.md) for the HTTP contract (auth, CSRF, cookies).
+## Legacy static (optional)
+
+`vite.config.ts` keeps a `@static` alias to `frontend/static` (legacy JS/CSS from the pre-React SPA) for gradual migration. The React shell does not import those assets by default.

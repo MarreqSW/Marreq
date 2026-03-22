@@ -47,12 +47,7 @@ services:
       # Release binary requires a real key; override via .env for non-local deploys.
       ROCKET_SECRET_KEY: ${ROCKET_SECRET_KEY:-UT5jxByH2kV2h9j/620KVP2w5NwZUEGVREFBbIKHVZk=}
       OLLAMA_URL: 'http://ollama:11434'
-      # Empty = not api_only: nginx proxies /p/, /static/, etc. here for SSR; SPA stays on :8080 / only.
-      MARREQ_UI_MODE: ''
       MARREQ_DOCKER_SPLIT_BACKEND: '1'
-      # With this set, the entrypoint does not force api_only (Rocket serves HTML + static for proxied routes).
-      MARREQ_DOCKER_SSR_PROXY: '1'
-      MARREQ_SERVE_STATIC: '1'
       # Must include the SPA origin so POST /api/* passes CSRF Origin check when header/cookie mismatch.
       CSRF_ALLOWED_ORIGINS: 'http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:8000,http://localhost:8000'
     ports:

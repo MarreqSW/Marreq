@@ -10,6 +10,7 @@ use crate::repository::{GroupsRepository, UserRepository};
 
 /// Top-level path segments that are reserved for system routes and cannot be used as namespaces.
 pub const RESERVED_NAMESPACE_SEGMENTS: &[&str] = &[
+    "admin",
     "api",
     "cache",
     "change_password",
@@ -218,6 +219,7 @@ mod tests {
 
     #[test]
     fn reserved_namespace_segments_are_case_insensitive() {
+        assert!(is_reserved_namespace_segment("Admin"));
         assert!(is_reserved_namespace_segment("Projects"));
         assert!(is_reserved_namespace_segment("LOGIN"));
         assert!(!is_reserved_namespace_segment("mission_team"));

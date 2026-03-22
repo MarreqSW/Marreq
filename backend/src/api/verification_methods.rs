@@ -50,7 +50,10 @@ pub async fn create_by_project(
     Ok(json!({ "status": "ok", "id": id }))
 }
 
-#[put("/projects/<project_id>/verification-methods/<method_id>", data = "<payload>")]
+#[put(
+    "/projects/<project_id>/verification-methods/<method_id>",
+    data = "<payload>"
+)]
 pub async fn update_by_project(
     access: ProjectAccessOrBearer,
     project_id: i32,
@@ -69,7 +72,9 @@ pub async fn update_by_project(
         .get_verification_method_by_id(method_id)
         .map_err(ApiError::from)?;
     if vm.project_id != project_id {
-        return Err(ApiError::NotFound("verification method not in project".into()));
+        return Err(ApiError::NotFound(
+            "verification method not in project".into(),
+        ));
     }
     let mut body = payload.into_inner();
     body.id = Some(method_id);
@@ -100,7 +105,9 @@ pub async fn delete_by_project(
         .get_verification_method_by_id(method_id)
         .map_err(ApiError::from)?;
     if vm.project_id != project_id {
-        return Err(ApiError::NotFound("verification method not in project".into()));
+        return Err(ApiError::NotFound(
+            "verification method not in project".into(),
+        ));
     }
     let mut repo = state.repo_write();
     repo.delete_verification_method(method_id)?;

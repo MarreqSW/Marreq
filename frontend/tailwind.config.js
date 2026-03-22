@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
-/** Light tokens (forms) + Stitch preview dark shell (stitch.withgoogle.com Nemo) */
+/** Semantic stitch palette via CSS variables (see index.css :root / html.dark) */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
@@ -24,18 +25,21 @@ export default {
         'error-container': '#ffdad6',
         'on-error-container': '#93000a',
         'on-tertiary-container': '#e17c5a',
-        /** Google Stitch-style dark UI */
+        /** Theme-aware UI (variables switch with html.dark) */
         stitch: {
-          canvas: '#191a1f',
-          surface: '#22232a',
-          elevated: '#2a2b35',
-          higher: '#32333f',
-          muted: '#9aa0a6',
-          subtle: 'rgba(255,255,255,0.52)',
-          border: 'rgba(255,255,255,0.08)',
-          accent: '#8ab4f8',
-          'accent-dim': '#669df6',
-          danger: '#f28b82',
+          canvas: 'var(--stitch-canvas)',
+          surface: 'var(--stitch-surface)',
+          elevated: 'var(--stitch-elevated)',
+          higher: 'var(--stitch-higher)',
+          muted: 'var(--stitch-muted)',
+          subtle: 'var(--stitch-subtle)',
+          border: 'var(--stitch-border)',
+          accent: 'var(--stitch-accent)',
+          'accent-dim': 'var(--stitch-accent-dim)',
+          danger: 'var(--stitch-danger)',
+          fg: 'var(--stitch-fg)',
+          'fg-secondary': 'var(--stitch-fg-secondary)',
+          'on-accent': 'var(--stitch-on-accent)',
         },
       },
       fontFamily: {

@@ -28,7 +28,7 @@ describe('Network Utilities', () => {
           headers: expect.objectContaining({
             Accept: 'application/json',
           }),
-          credentials: 'same-origin',
+          credentials: 'include',
         }),
       );
       expect(result).toEqual({ success: true, data: 'test' });
@@ -184,13 +184,13 @@ describe('Network Utilities', () => {
       });
 
       await jsonFetch('/api/test', {
-        credentials: 'include',
+        credentials: 'omit',
       });
 
       expect(global.fetch).toHaveBeenCalledWith(
         '/api/test',
         expect.objectContaining({
-          credentials: 'include',
+          credentials: 'omit',
         }),
       );
     });

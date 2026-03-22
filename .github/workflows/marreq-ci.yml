@@ -41,7 +41,7 @@ jobs:
         run: npm install --no-save stylelint stylelint-config-standard
 
       - name: Stylelint CSS files
-        run: npx stylelint "backend/src/html/static/**/*.css" --config .stylelintrc.json
+        run: npx stylelint "frontend/static/**/*.css" --config .stylelintrc.json
 
       - name: Install PurgeCSS
         run: npm install --no-save purgecss

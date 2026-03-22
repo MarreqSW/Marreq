@@ -28,7 +28,7 @@ echo "Running checks..."
 )
 (
   cd "${REPO_ROOT}"
-  run_step "stylelint" npx stylelint "backend/src/html/static/**/*.css" --config .stylelintrc.json
+  run_step "stylelint" npx stylelint "frontend/static/**/*.css" --config .stylelintrc.json
   run_step "purgecss" node .github/workflows/purgecss-ci.mjs
   run_step "npm ci" npm ci
   run_step "npm test" npm test

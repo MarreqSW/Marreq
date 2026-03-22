@@ -49,7 +49,7 @@ use rocket::response::status;
 use rocket::{Build, Data, Request, Rocket};
 
 use crate::auth::csrf::{CSRF_COOKIE, CSRF_HEADER};
-use crate::auth::session::SESSION_COOKIE;
+use crate::auth::session::read_session_user_id;
 
 // ---------------------------------------------------------------------------
 // Public helpers for tests
@@ -180,8 +180,16 @@ impl Fairing for CsrfFairing {
             for extra in [
                 "http://127.0.0.1:8080",
                 "http://localhost:8080",
+                "http://[::1]:8080",
                 "http://127.0.0.1:8000",
                 "http://localhost:8000",
+                "http://[::1]:8000",
+                "http://127.0.0.1:5173",
+                "http://localhost:5173",
+                "http://[::1]:5173",
+                "http://127.0.0.1:4173",
+                "http://localhost:4173",
+                "http://[::1]:4173",
             ] {
                 origins.insert(extra.to_string());
             }
@@ -280,7 +288,8 @@ impl Fairing for CsrfFairing {
         // Only reject when the request is authenticated via session cookie to
         // avoid breaking unauthenticated API / health-check calls that
         // legitimately lack an Origin header.
-        let has_session = req.cookies().get_private(SESSION_COOKIE).is_some();
+        // Match both `session` and `__Host-session` private cookies (see `session.rs`).
+        let has_session = read_session_user_id(req.cookies()).is_some();
         if has_session {
             reject_request(req);
         }

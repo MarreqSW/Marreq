@@ -24,9 +24,13 @@ pub fn dashboard_json(
         .0
         .ok_or_else(|| ApiError::Unauthorized("not authenticated".into()))?;
 
-    let projects = ProjectService::new(state.inner())
-        .get_by_user_id(user.id)
-        .unwrap_or_default();
+    // Match `GET /api/projects`: admins see every project; others only memberships.
+    let service = ProjectService::new(state.inner());
+    let projects = if user.is_admin {
+        service.list_all().unwrap_or_default()
+    } else {
+        service.get_by_user_id(user.id).unwrap_or_default()
+    };
 
     let mut selected_project_id = cookies
         .get("selected_project_id")

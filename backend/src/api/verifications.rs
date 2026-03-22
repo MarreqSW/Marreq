@@ -4,6 +4,7 @@
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
+use crate::auth::guards::ProjectAccessOrBearer;
 use crate::models::{NewVerification, Verification};
 use crate::repository::errors::RepoError;
 use crate::services::VerificationService;
@@ -20,6 +21,23 @@ pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec
     let service = VerificationService::new(state.inner());
     let verifications = service.list_all()?;
     Ok(Json(verifications))
+}
+
+/// Project-scoped verifications (tests). Session or Bearer; requires `ViewRequirements`.
+#[get("/projects/<project_id>/verifications")]
+pub async fn list_by_project(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<Vec<Verification>>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let service = VerificationService::new(state.inner());
+    Ok(Json(service.list_by_project(project_id)?))
 }
 
 #[get("/verifications/<id>")]

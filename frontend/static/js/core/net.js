@@ -16,7 +16,8 @@ export async function jsonFetch(url, options = {}) {
       Accept: 'application/json',
       ...headers,
     },
-    credentials: options.credentials || 'same-origin',
+    // Use include so credentialed API calls behave consistently via Vite/nginx proxies (same as doc/API.md).
+    credentials: options.credentials ?? 'include',
   };
 
   if (isJson(body)) {

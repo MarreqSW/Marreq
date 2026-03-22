@@ -56,6 +56,8 @@ Errors from API handlers use JSON (see below). Failed login typically returns **
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/projects` | Projects visible to the logged-in user (admins: all projects; others: memberships). **401** if not authenticated. |
+| `GET` | `/api/project-from-path/<namespace>/<slug>` | Resolve a browser path `/{namespace}/{slug}` to project metadata (`id`, `name`, `slug`, `route_slug`). **401** if not authenticated; **403** if not a member (non-admin); **404** if unknown. (Not under `/api/projects/…` to avoid Rocket route collisions.) |
+| `GET` | `/api/projects/{project_id}/verifications` | Verifications (tests) in the project. Session or Bearer; requires `ViewRequirements`. |
 
 Project-scoped CRUD and resources under `/api/projects/{project_id}/...` follow existing routes (Bearer token or session, per handler).
 

@@ -25,6 +25,7 @@ pub mod semantic_search;
 pub mod status;
 pub mod traceability;
 pub mod users;
+pub mod verification_methods;
 pub mod verification_status;
 pub mod verifications;
 
@@ -71,6 +72,7 @@ pub fn routes() -> Vec<Route> {
         verifications::list,
         verifications::list_by_project,
         verifications::get,
+        verification_methods::list_by_project,
         verifications::create,
         verifications::delete,
         verifications::update_field,

@@ -61,7 +61,7 @@ export default function HelpPage() {
         ))}
 
         <div className="rounded-xl border border-stitch-border bg-stitch-elevated p-5">
-          <h3 className="text-sm font-bold text-white uppercase tracking-wide mb-3">Shortcuts</h3>
+          <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-wide mb-3">Shortcuts</h3>
           <ul className="text-sm text-stitch-muted space-y-2">
             <li>
               <Link to={`/p/${pid}/dashboard`} className="text-stitch-accent font-semibold hover:underline">

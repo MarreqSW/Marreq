@@ -85,7 +85,7 @@ export default function ReportsPage() {
         <button
           type="button"
           onClick={() => void load()}
-          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-white/[0.06]"
+          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
         >
           Refresh
         </button>
@@ -94,13 +94,13 @@ export default function ReportsPage() {
       {summary ? (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <div className="rounded-xl border border-stitch-border bg-stitch-surface p-4 text-center">
-            <p className="text-3xl font-extrabold text-white">{summary.r}</p>
+            <p className="text-3xl font-extrabold text-stitch-fg">{summary.r}</p>
             <p className="text-[10px] text-stitch-muted uppercase tracking-widest mt-1">
               Req. without tests
             </p>
           </div>
           <div className="rounded-xl border border-stitch-border bg-stitch-surface p-4 text-center">
-            <p className="text-3xl font-extrabold text-white">{summary.v}</p>
+            <p className="text-3xl font-extrabold text-stitch-fg">{summary.v}</p>
             <p className="text-[10px] text-stitch-muted uppercase tracking-widest mt-1">
               Tests without req.
             </p>
@@ -117,7 +117,7 @@ export default function ReportsPage() {
       <div className="space-y-8">
         <section className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch">
           <div className="px-4 py-3 border-b border-stitch-border bg-stitch-elevated">
-            <h3 className="text-sm font-bold text-white">Requirements without linked tests</h3>
+            <h3 className="text-sm font-bold text-stitch-fg">Requirements without linked tests</h3>
           </div>
           <div className="max-h-72 overflow-auto">
             <table className="w-full text-left text-sm">
@@ -149,7 +149,7 @@ export default function ReportsPage() {
 
         <section className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch">
           <div className="px-4 py-3 border-b border-stitch-border bg-stitch-elevated">
-            <h3 className="text-sm font-bold text-white">Verifications without requirements</h3>
+            <h3 className="text-sm font-bold text-stitch-fg">Verifications without requirements</h3>
           </div>
           <div className="max-h-72 overflow-auto">
             <table className="w-full text-left text-sm">
@@ -181,7 +181,7 @@ export default function ReportsPage() {
 
         <section className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch">
           <div className="px-4 py-3 border-b border-stitch-border bg-stitch-elevated">
-            <h3 className="text-sm font-bold text-white">Suspect matrix links</h3>
+            <h3 className="text-sm font-bold text-stitch-fg">Suspect matrix links</h3>
           </div>
           <div className="max-h-72 overflow-auto">
             <table className="w-full text-left text-sm">
@@ -227,7 +227,7 @@ export default function ReportsPage() {
         {projectSlug ? (
           <section className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch">
             <div className="px-4 py-3 border-b border-stitch-border bg-stitch-elevated">
-              <h3 className="text-sm font-bold text-white">Classic exports (same session)</h3>
+              <h3 className="text-sm font-bold text-stitch-fg">Classic exports (same session)</h3>
               <p className="text-[10px] text-stitch-muted mt-1 uppercase tracking-wide">
                 Excel / PDF downloads served by the legacy HTML routes
               </p>

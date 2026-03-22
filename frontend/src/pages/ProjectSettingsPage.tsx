@@ -168,7 +168,7 @@ export default function ProjectSettingsPage() {
       />
 
       <section className="mb-10">
-        <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4">
+        <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-widest mb-4">
           Your permissions
         </h3>
         {perms ? (
@@ -183,7 +183,7 @@ export default function ProjectSettingsPage() {
       </section>
 
       <section className="mb-10">
-        <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4">
+        <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-widest mb-4">
           Project members
         </h3>
         {memberErr && (
@@ -201,7 +201,7 @@ export default function ProjectSettingsPage() {
               <select
                 value={addUserId}
                 onChange={(e) => setAddUserId(e.target.value)}
-                className="text-sm bg-stitch-surface border border-stitch-border rounded-md px-2 py-2 text-white min-w-[200px]"
+                className="text-sm bg-stitch-surface border border-stitch-border rounded-md px-2 py-2 text-stitch-fg min-w-[200px]"
                 required
               >
                 <option value="">Select account…</option>
@@ -219,7 +219,7 @@ export default function ProjectSettingsPage() {
               <select
                 value={addRole}
                 onChange={(e) => setAddRole(Number(e.target.value))}
-                className="text-sm bg-stitch-surface border border-stitch-border rounded-md px-2 py-2 text-white"
+                className="text-sm bg-stitch-surface border border-stitch-border rounded-md px-2 py-2 text-stitch-fg"
               >
                 {ROLES.map((r) => (
                   <option key={r.id} value={r.id} className="bg-stitch-surface">
@@ -258,14 +258,14 @@ export default function ProjectSettingsPage() {
             <tbody className="divide-y divide-stitch-border">
               {members.map((m) => (
                 <tr key={m.user_id} className="hover:bg-white/[0.03]">
-                  <td className="px-4 py-3 text-white">{userLabel(m.user_id)}</td>
+                  <td className="px-4 py-3 text-stitch-fg">{userLabel(m.user_id)}</td>
                   <td className="px-4 py-3">
                     {canManage ? (
                       <select
                         value={m.role}
                         disabled={memberBusy === m.user_id}
                         onChange={(e) => void updateRole(m.user_id, Number(e.target.value))}
-                        className="text-xs bg-stitch-elevated border border-stitch-border rounded-md px-2 py-1.5 text-white"
+                        className="text-xs bg-stitch-elevated border border-stitch-border rounded-md px-2 py-1.5 text-stitch-fg"
                       >
                         {ROLES.map((r) => (
                           <option key={r.id} value={r.id} className="bg-stitch-surface">
@@ -308,7 +308,7 @@ export default function ProjectSettingsPage() {
       </section>
 
       <section>
-        <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4">
+        <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-widest mb-4">
           Custom fields
         </h3>
         <div className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch">
@@ -330,7 +330,7 @@ export default function ProjectSettingsPage() {
               ) : (
                 fields.map((f) => (
                   <tr key={f.id} className="hover:bg-white/[0.03]">
-                    <td className="px-4 py-3 text-white font-medium">{f.label}</td>
+                    <td className="px-4 py-3 text-stitch-fg font-medium">{f.label}</td>
                     <td className="px-4 py-3 text-stitch-muted font-mono text-xs">{f.field_type}</td>
                     <td className="px-4 py-3 text-stitch-muted tabular-nums">{f.sort_order}</td>
                   </tr>

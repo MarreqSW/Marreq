@@ -15,14 +15,14 @@ CSV_PATH = os.path.join(REPO_ROOT, "doc", "requirements.csv")
 
 # Trace paths in CSV that map to different filenames in the repo
 PATH_ALIASES = {
-    "src/api/tests.rs": "backend/src/api/test_cases.rs",
-    "src/routes/html/project/tests.rs": "backend/src/routes/html/project/test_cases.rs",
+    "src/api/tests.rs": "backend/src/api/verifications.rs",
+    "src/routes/html/project/tests.rs": "backend/src/api/verifications.rs",
     "src/logger": "backend/src/logger.rs",
-    "templates/index.hbs": "backend/templates/index.html.hbs",
-    "templates/requirements/requirements.hbs": "backend/templates/requirements/requirements.html.hbs",
-    "templates/tests/tests.hbs": "backend/templates/tests/tests.html.hbs",
-    "templates/matrix/matrix.hbs": "backend/templates/matrix/matrix.html.hbs",
-    "src/routes/html/project/project.rs": "backend/src/routes/html/project/project_routes.rs",
+    "templates/index.hbs": "frontend/src/main.ts",
+    "templates/requirements/requirements.hbs": "frontend/src/main.ts",
+    "templates/tests/tests.hbs": "frontend/src/main.ts",
+    "templates/matrix/matrix.hbs": "frontend/src/main.ts",
+    "src/routes/html/project/project.rs": "backend/src/api/projects_session.rs",
     "src/repository/cache/cache.rs": "backend/src/repository/cache/repository.rs",
     "src/services/project_member_service.rs": "backend/src/services/project_service.rs",
     "src/services/semantic_search/semantic_search_service.rs": "backend/src/services/semantic_search/search_service.rs",

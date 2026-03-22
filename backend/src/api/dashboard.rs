@@ -10,7 +10,7 @@ use rocket::serde::json::{json, Json};
 use crate::api::guards::OptionalSessionUser;
 use crate::api::prelude::*;
 use crate::auth::csrf::get_or_create_csrf_token;
-use crate::routes::html::helpers::{decorate_projects_for_listing, resolve_selected_project_slug};
+use crate::routes::helpers::{decorate_projects_for_listing, resolve_selected_project_slug};
 use crate::services::ProjectService;
 
 /// Full dashboard context for the post-login SPA (same data shape as template `index`).

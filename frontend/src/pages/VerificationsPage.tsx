@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
 import {
   getMyPermissions,
@@ -7,6 +7,7 @@ import {
   listVerifications,
   updateVerificationField,
 } from '@/api/client';
+import { StatusBadge } from '@/components/StatusBadge';
 import { useDashboard } from '@/context/DashboardContext';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import type {
@@ -15,6 +16,17 @@ import type {
   VerificationMethod,
   VerificationStatus,
 } from '@/api/types';
+
+type VerificationTableEditCell = {
+  verId: number;
+  kind:
+    | 'reference_code'
+    | 'name'
+    | 'status'
+    | 'verification_method'
+    | 'source'
+    | 'parent';
+};
 
 export default function VerificationsPage() {
   const { globalSearch } = useOutletContext<ProjectOutletContext>();
@@ -30,6 +42,8 @@ export default function VerificationsPage() {
   const [err, setErr] = useState<string | null>(null);
   const [saveErr, setSaveErr] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [editCell, setEditCell] = useState<VerificationTableEditCell | null>(null);
+  const inlineEditRef = useRef<HTMLDivElement | null>(null);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid)) return;
@@ -79,11 +93,46 @@ export default function VerificationsPage() {
 
   const canEdit = Boolean(perms?.edit_requirements && (csrfToken ?? '').length);
 
+  useEffect(() => {
+    if (editCell === null) return;
+    const onDown = (e: MouseEvent) => {
+      if (inlineEditRef.current?.contains(e.target as Node)) return;
+      setEditCell(null);
+    };
+    const t = window.setTimeout(() => document.addEventListener('mousedown', onDown), 0);
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener('mousedown', onDown);
+    };
+  }, [editCell]);
+
+  useEffect(() => {
+    if (editCell === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setEditCell(null);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [editCell]);
+
+  useEffect(() => {
+    if (editCell === null) return;
+    const id = requestAnimationFrame(() => {
+      inlineEditRef.current
+        ?.querySelector<HTMLElement>('input:not([type="checkbox"]), select, textarea')
+        ?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [editCell]);
+
+  const closeCellEdit = () => setEditCell(null);
+
   const saveField = useCallback(
     async (id: number, field: string, value: string) => {
       const token = csrfToken ?? '';
       if (!token || !perms?.edit_requirements) return;
       setSaveErr(null);
+      setEditCell((prev) => (prev?.verId === id ? null : prev));
       setSavingId(id);
       try {
         await updateVerificationField(id, field, value, token);
@@ -100,6 +149,14 @@ export default function VerificationsPage() {
   const cellInput =
     'w-full min-w-[90px] max-w-[min(100%,280px)] text-xs bg-stitch-elevated border border-stitch-border rounded px-2 py-1.5 text-white focus:border-stitch-accent outline-none disabled:opacity-50';
   const cellSelect = `${cellInput} cursor-pointer`;
+  const displayCellBtn =
+    'w-full text-left text-xs text-white/90 leading-snug rounded-md px-1.5 py-1 hover:bg-white/[0.06] border border-transparent hover:border-stitch-border/40 transition-colors min-h-[1.75rem]';
+
+  const statusById = useMemo(() => {
+    const m = new Map<number, VerificationStatus>();
+    for (const s of statuses) m.set(s.id, s);
+    return m;
+  }, [statuses]);
 
   if (loading) {
     return (
@@ -130,8 +187,8 @@ export default function VerificationsPage() {
             Verification registry
           </h2>
           <p className="text-stitch-muted text-sm mt-2 max-w-2xl">
-            Same columns as the classic tests table. Edit cells inline (needs edit permission + CSRF
-            session).
+            Click any field to edit inline. Escape or click outside closes the editor (needs edit
+            permission + CSRF session).
           </p>
         </div>
         <Link
@@ -164,7 +221,7 @@ export default function VerificationsPage() {
       ) : null}
 
       <div className="bg-stitch-surface overflow-x-auto rounded-xl border border-stitch-border shadow-stitch">
-        <table className="w-full text-left border-collapse min-w-[1100px]">
+        <table className="w-full text-left border-collapse min-w-[900px]">
           <thead>
             <tr className="border-b border-stitch-border bg-stitch-elevated">
               <th className="px-3 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider whitespace-nowrap">
@@ -172,9 +229,6 @@ export default function VerificationsPage() {
               </th>
               <th className="px-3 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[140px]">
                 Name
-              </th>
-              <th className="px-3 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[200px]">
-                Description
               </th>
               <th className="px-3 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[120px]">
                 Status
@@ -197,145 +251,251 @@ export default function VerificationsPage() {
             {filtered.map((v) => {
               const busy = savingId === v.id;
               const parentCandidates = rows.filter((x) => x.id !== v.id);
+              const stRow = statusById.get(v.status_id);
+              const statusTitle = stRow?.title ?? `Status #${v.status_id}`;
+              const methodTitle =
+                v.verification_method_id == null
+                  ? '—'
+                  : methods.find((m) => m.id === v.verification_method_id)?.title ??
+                    `ID ${v.verification_method_id}`;
+              const parentRow = v.parent_id != null ? rows.find((x) => x.id === v.parent_id) : null;
+              const parentText = parentRow
+                ? `${parentRow.reference_code || `#${parentRow.id}`} — ${parentRow.name}`
+                : v.parent_id != null
+                  ? `Parent #${v.parent_id}`
+                  : '—';
               return (
                 <tr key={v.id} className="hover:bg-white/[0.03]">
-                  <td className="px-3 py-2 align-top">
-                    <input
-                      className={cellInput}
-                      value={v.reference_code}
-                      disabled={!canEdit || busy}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setRows((prev) =>
-                          prev.map((r) => (r.id === v.id ? { ...r, reference_code: val } : r)),
-                        );
-                      }}
-                      onBlur={(e) => void saveField(v.id, 'reference_code', e.target.value.trim())}
-                    />
+                  <td className="px-3 py-2 align-top max-w-[140px]">
+                    {editCell?.verId === v.id &&
+                    editCell.kind === 'reference_code' &&
+                    canEdit &&
+                    !busy ? (
+                      <div ref={inlineEditRef}>
+                        <input
+                          className={cellInput}
+                          value={v.reference_code}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setRows((prev) =>
+                              prev.map((r) => (r.id === v.id ? { ...r, reference_code: val } : r)),
+                            );
+                          }}
+                          onBlur={(e) => {
+                            void saveField(v.id, 'reference_code', e.target.value.trim());
+                            closeCellEdit();
+                          }}
+                        />
+                      </div>
+                    ) : canEdit && !busy ? (
+                      <button
+                        type="button"
+                        title="Click to edit reference"
+                        className={`${displayCellBtn} font-mono text-stitch-accent font-semibold`}
+                        onClick={() => setEditCell({ verId: v.id, kind: 'reference_code' })}
+                      >
+                        {v.reference_code || `#${v.id}`}
+                      </button>
+                    ) : (
+                      <span className="text-xs font-mono text-stitch-accent font-semibold px-1.5 py-1 block">
+                        {v.reference_code || `#${v.id}`}
+                      </span>
+                    )}
                   </td>
-                  <td className="px-3 py-2 align-top">
-                    <input
-                      className={cellInput}
-                      value={v.name}
-                      disabled={!canEdit || busy}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setRows((prev) =>
-                          prev.map((r) => (r.id === v.id ? { ...r, name: val } : r)),
-                        );
-                      }}
-                      onBlur={(e) => void saveField(v.id, 'name', e.target.value.trim())}
-                    />
+                  <td className="px-3 py-2 align-top max-w-[200px]">
+                    {editCell?.verId === v.id && editCell.kind === 'name' && canEdit && !busy ? (
+                      <div ref={inlineEditRef}>
+                        <input
+                          className={cellInput}
+                          value={v.name}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setRows((prev) =>
+                              prev.map((r) => (r.id === v.id ? { ...r, name: val } : r)),
+                            );
+                          }}
+                          onBlur={(e) => {
+                            void saveField(v.id, 'name', e.target.value.trim());
+                            closeCellEdit();
+                          }}
+                        />
+                      </div>
+                    ) : canEdit && !busy ? (
+                      <button
+                        type="button"
+                        title="Click to edit name"
+                        className={`${displayCellBtn} line-clamp-2`}
+                        onClick={() => setEditCell({ verId: v.id, kind: 'name' })}
+                      >
+                        {v.name.trim() ? v.name : '—'}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-white/90 px-1.5 py-1 block line-clamp-2">
+                        {v.name.trim() ? v.name : '—'}
+                      </span>
+                    )}
                   </td>
-                  <td className="px-3 py-2 align-top">
-                    <textarea
-                      className={`${cellInput} min-h-[56px] resize-y`}
-                      rows={2}
-                      value={v.description}
-                      disabled={!canEdit || busy}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setRows((prev) =>
-                          prev.map((r) => (r.id === v.id ? { ...r, description: val } : r)),
-                        );
-                      }}
-                      onBlur={(e) => void saveField(v.id, 'description', e.target.value.trim())}
-                    />
+                  <td className="px-3 py-2 align-top min-w-[120px]">
+                    {editCell?.verId === v.id && editCell.kind === 'status' && canEdit && !busy ? (
+                      <div ref={inlineEditRef}>
+                        <select
+                          className={cellSelect}
+                          value={v.status_id}
+                          onChange={(e) => {
+                            const n = Number(e.target.value);
+                            setRows((prev) =>
+                              prev.map((r) => (r.id === v.id ? { ...r, status_id: n } : r)),
+                            );
+                            void saveField(v.id, 'status_id', String(n));
+                            closeCellEdit();
+                          }}
+                        >
+                          {statusOptions.map((s) => (
+                            <option key={s.id} value={s.id} className="bg-stitch-surface">
+                              {s.title}
+                            </option>
+                          ))}
+                          {!statusOptions.some((s) => s.id === v.status_id) && (
+                            <option value={v.status_id} className="bg-stitch-surface">
+                              Status #{v.status_id}
+                            </option>
+                          )}
+                        </select>
+                      </div>
+                    ) : canEdit && !busy ? (
+                      <button
+                        type="button"
+                        title="Click to edit status"
+                        className={`${displayCellBtn} inline-flex items-center`}
+                        onClick={() => setEditCell({ verId: v.id, kind: 'status' })}
+                      >
+                        <StatusBadge title={statusTitle} tagColor={stRow?.tag_color} />
+                      </button>
+                    ) : (
+                      <span className="text-xs px-1.5 py-1 block inline-flex">
+                        <StatusBadge title={statusTitle} tagColor={stRow?.tag_color} />
+                      </span>
+                    )}
                   </td>
-                  <td className="px-3 py-2 align-top">
-                    <select
-                      className={cellSelect}
-                      value={v.status_id}
-                      disabled={!canEdit || busy}
-                      onChange={(e) => {
-                        const n = Number(e.target.value);
-                        setRows((prev) =>
-                          prev.map((r) => (r.id === v.id ? { ...r, status_id: n } : r)),
-                        );
-                        void saveField(v.id, 'status_id', String(n));
-                      }}
-                    >
-                      {statusOptions.map((s) => (
-                        <option key={s.id} value={s.id} className="bg-stitch-surface">
-                          {s.title}
-                        </option>
-                      ))}
-                      {!statusOptions.some((s) => s.id === v.status_id) && (
-                        <option value={v.status_id} className="bg-stitch-surface">
-                          Status #{v.status_id}
-                        </option>
-                      )}
-                    </select>
+                  <td className="px-3 py-2 align-top min-w-[140px]">
+                    {editCell?.verId === v.id &&
+                    editCell.kind === 'verification_method' &&
+                    canEdit &&
+                    !busy ? (
+                      <div ref={inlineEditRef} className="space-y-1">
+                        <select
+                          className={cellSelect}
+                          value={v.verification_method_id ?? ''}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            const n = raw === '' ? null : Number(raw);
+                            setRows((prev) =>
+                              prev.map((r) =>
+                                r.id === v.id ? { ...r, verification_method_id: n } : r,
+                              ),
+                            );
+                            void saveField(v.id, 'verification_method_id', raw === '' ? '' : raw);
+                            closeCellEdit();
+                          }}
+                        >
+                          <option value="" className="bg-stitch-surface">
+                            —
+                          </option>
+                          {methods.map((m) => (
+                            <option key={m.id} value={m.id} className="bg-stitch-surface">
+                              {m.title}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : canEdit && !busy ? (
+                      <button
+                        type="button"
+                        title="Click to edit verification type"
+                        className={`${displayCellBtn} line-clamp-2`}
+                        onClick={() => setEditCell({ verId: v.id, kind: 'verification_method' })}
+                      >
+                        {methodTitle}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-white/90 px-1.5 py-1 block line-clamp-2">
+                        {methodTitle}
+                      </span>
+                    )}
                   </td>
-                  <td className="px-3 py-2 align-top">
-                    <select
-                      className={cellSelect}
-                      value={v.verification_method_id ?? ''}
-                      disabled={!canEdit || busy}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        const n = raw === '' ? null : Number(raw);
-                        setRows((prev) =>
-                          prev.map((r) =>
-                            r.id === v.id ? { ...r, verification_method_id: n } : r,
-                          ),
-                        );
-                        void saveField(v.id, 'verification_method_id', raw === '' ? '' : raw);
-                      }}
-                    >
-                      <option value="" className="bg-stitch-surface">
-                        —
-                      </option>
-                      {methods.map((m) => (
-                        <option key={m.id} value={m.id} className="bg-stitch-surface">
-                          {m.title}
-                        </option>
-                      ))}
-                    </select>
-                    {v.verification_method_id != null &&
-                    !methods.some((m) => m.id === v.verification_method_id) ? (
-                      <p className="text-[10px] text-stitch-muted mt-0.5">
-                        ID {v.verification_method_id}
-                      </p>
-                    ) : null}
+                  <td className="px-3 py-2 align-top max-w-[160px]">
+                    {editCell?.verId === v.id && editCell.kind === 'source' && canEdit && !busy ? (
+                      <div ref={inlineEditRef}>
+                        <input
+                          className={cellInput}
+                          value={v.source}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setRows((prev) =>
+                              prev.map((r) => (r.id === v.id ? { ...r, source: val } : r)),
+                            );
+                          }}
+                          onBlur={(e) => {
+                            void saveField(v.id, 'source', e.target.value.trim());
+                            closeCellEdit();
+                          }}
+                        />
+                      </div>
+                    ) : canEdit && !busy ? (
+                      <button
+                        type="button"
+                        title="Click to edit source"
+                        className={`${displayCellBtn} line-clamp-2`}
+                        onClick={() => setEditCell({ verId: v.id, kind: 'source' })}
+                      >
+                        {v.source.trim() ? v.source : '—'}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-white/90 px-1.5 py-1 block line-clamp-2">
+                        {v.source.trim() ? v.source : '—'}
+                      </span>
+                    )}
                   </td>
-                  <td className="px-3 py-2 align-top">
-                    <input
-                      className={cellInput}
-                      value={v.source}
-                      disabled={!canEdit || busy}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setRows((prev) =>
-                          prev.map((r) => (r.id === v.id ? { ...r, source: val } : r)),
-                        );
-                      }}
-                      onBlur={(e) => void saveField(v.id, 'source', e.target.value.trim())}
-                    />
-                  </td>
-                  <td className="px-3 py-2 align-top">
-                    <select
-                      className={cellSelect}
-                      value={v.parent_id ?? ''}
-                      disabled={!canEdit || busy}
-                      onChange={(e) => {
-                        const raw = e.target.value;
-                        const n = raw === '' ? null : Number(raw);
-                        setRows((prev) =>
-                          prev.map((r) => (r.id === v.id ? { ...r, parent_id: n } : r)),
-                        );
-                        void saveField(v.id, 'parent_id', raw === '' ? '' : raw);
-                      }}
-                    >
-                      <option value="" className="bg-stitch-surface">
-                        —
-                      </option>
-                      {parentCandidates.map((p) => (
-                        <option key={p.id} value={p.id} className="bg-stitch-surface">
-                          {p.reference_code || `#${p.id}`} — {p.name}
-                        </option>
-                      ))}
-                    </select>
+                  <td className="px-3 py-2 align-top min-w-[160px]">
+                    {editCell?.verId === v.id && editCell.kind === 'parent' && canEdit && !busy ? (
+                      <div ref={inlineEditRef}>
+                        <select
+                          className={cellSelect}
+                          value={v.parent_id ?? ''}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            const n = raw === '' ? null : Number(raw);
+                            setRows((prev) =>
+                              prev.map((r) => (r.id === v.id ? { ...r, parent_id: n } : r)),
+                            );
+                            void saveField(v.id, 'parent_id', raw === '' ? '' : raw);
+                            closeCellEdit();
+                          }}
+                        >
+                          <option value="" className="bg-stitch-surface">
+                            —
+                          </option>
+                          {parentCandidates.map((p) => (
+                            <option key={p.id} value={p.id} className="bg-stitch-surface">
+                              {p.reference_code || `#${p.id}`} — {p.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : canEdit && !busy ? (
+                      <button
+                        type="button"
+                        title="Click to edit parent"
+                        className={`${displayCellBtn} line-clamp-2`}
+                        onClick={() => setEditCell({ verId: v.id, kind: 'parent' })}
+                      >
+                        {parentText}
+                      </button>
+                    ) : (
+                      <span className="text-xs text-white/90 px-1.5 py-1 block line-clamp-2">
+                        {parentText}
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-2 align-top sticky right-0 z-[1] bg-stitch-surface border-l border-stitch-border/60">
                     <div className="flex items-center gap-1">

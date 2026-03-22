@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Marreq
 
 #![allow(clippy::result_large_err)]
+#![allow(unused_variables)]
 
 use super::helpers::*;
 use super::prelude::*;

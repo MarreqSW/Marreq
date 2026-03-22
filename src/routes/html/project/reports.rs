@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+#![allow(unused_variables)]
+
 use super::helpers::*;
 use super::prelude::*;
 use crate::app::DieselCachedRepo;
@@ -209,10 +211,7 @@ async fn generate_pdf_report(
     project_id: String,
     state: &State<AppState>,
 ) -> Result<(rocket::http::ContentType, Vec<u8>), Redirect> {
-    let project_id = {
-        let _project_slug = project_id;
-        project_access.project_id()
-    };
+    let project_id = project_access.project_id();
     let _user: User = project_access.into_user();
 
     let (m, _project_name) = compute_metrics(state, project_id);

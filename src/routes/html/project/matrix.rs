@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+#![allow(unused_variables)]
+
 use rocket::form::FromForm;
 
 use super::helpers::*;

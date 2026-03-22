@@ -544,7 +544,7 @@ fn show_group_members(
         state,
         user,
         group_id,
-        &group_slug,
+        group_slug,
         cookies,
         error,
         success,

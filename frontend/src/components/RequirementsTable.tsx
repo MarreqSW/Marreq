@@ -1,43 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import {
   getMyPermissions,
-  listApplicability,
   listCategories,
-  listCustomFieldsByProject,
-  listMatrix,
   listProjectMembers,
   listRequirementStatuses,
   listRequirements,
   listUsersOptional,
   listVerificationMethodsByProject,
-  listVerifications,
   patchRequirementByProject,
 } from '@/api/client';
 import type {
-  Applicability,
   Category,
-  CustomFieldDefinition,
   EffectivePermissions,
-  MatrixLink,
   ProjectMember,
   Requirement,
   RequirementPatchBody,
   RequirementStatus,
   User,
-  Verification,
   VerificationMethod,
 } from '@/api/types';
-import PriorityBadge from './PriorityBadge';
 import { StatusBadge } from './StatusBadge';
-
-function priorityFromCustomFields(req: Requirement): string {
-  const fields = req.custom_fields;
-  if (!fields?.length) return '—';
-  const p = fields.find((f) => f.label && /priority/i.test(f.label));
-  return p?.value?.trim() || '—';
-}
 
 function formatModified(iso: string): string {
   try {
@@ -54,14 +38,6 @@ function formatModified(iso: string): string {
   }
 }
 
-function ownerInitials(name: string): string {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return (parts[0]!.slice(0, 1) + parts[parts.length - 1]!.slice(0, 1)).toUpperCase();
-  }
-  return name.slice(0, 2).toUpperCase() || '?';
-}
-
 function escapeCsv(s: string): string {
   if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
@@ -70,6 +46,22 @@ function escapeCsv(s: string): string {
 function approvalLabel(state: string): string {
   return state.replace(/_/g, ' ').toUpperCase();
 }
+
+/** Comma-separated verification method titles for table display. */
+function verificationMethodsText(ids: number[], methods: VerificationMethod[]): string {
+  if (!ids.length) return '—';
+  return ids
+    .map((id) => methods.find((m) => m.id === id)?.title?.trim() || `#${id}`)
+    .join(', ');
+}
+
+/** Single open inline editor in the requirements table. */
+type RequirementTableEditCell =
+  | { reqId: number; kind: 'title' }
+  | { reqId: number; kind: 'category' }
+  | { reqId: number; kind: 'status' }
+  | { reqId: number; kind: 'verification_methods' }
+  | { reqId: number; kind: 'author' };
 
 function mergeRequirementAfterPatch(req: Requirement, patch: RequirementPatchBody): Requirement {
   const next: Requirement = { ...req };
@@ -119,19 +111,14 @@ export default function RequirementsTable({
   globalSearch: string;
   viewMode: ViewMode;
 }) {
-  const navigate = useNavigate();
   const { dashboard, csrfToken } = useDashboard();
   const projectSlug = dashboard?.projects?.find((p) => p.id === projectId)?.slug;
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [statuses, setStatuses] = useState<RequirementStatus[]>([]);
-  const [matrix, setMatrix] = useState<MatrixLink[]>([]);
-  const [verifications, setVerifications] = useState<Verification[]>([]);
   const [users, setUsers] = useState<User[] | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [applicability, setApplicability] = useState<Applicability[]>([]);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [verificationMethods, setVerificationMethods] = useState<VerificationMethod[]>([]);
-  const [customFieldDefs, setCustomFieldDefs] = useState<CustomFieldDefinition[]>([]);
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -141,10 +128,10 @@ export default function RequirementsTable({
   const baselineRef = useRef<Map<number, Requirement>>(new Map());
 
   const [statusFilter, setStatusFilter] = useState<'all' | number>('all');
-  const [priorityFilter, setPriorityFilter] = useState<'all' | 'P1' | 'P2' | 'P3'>('all');
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [editCell, setEditCell] = useState<RequirementTableEditCell | null>(null);
+  const inlineEditRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -152,43 +139,23 @@ export default function RequirementsTable({
       setLoading(true);
       setErr(null);
       try {
-        const [
-          reqs,
-          st,
-          mx,
-          ver,
-          u,
-          cat,
-          app,
-          mem,
-          methods,
-          fields,
-          permRes,
-        ] = await Promise.all([
+        const [reqs, st, u, cat, mem, methods, permRes] = await Promise.all([
           listRequirements(projectId),
           listRequirementStatuses(),
-          listMatrix(projectId),
-          listVerifications(),
           listUsersOptional(),
           listCategories(),
-          listApplicability(),
           listProjectMembers(projectId),
           listVerificationMethodsByProject(projectId),
-          listCustomFieldsByProject(projectId),
           getMyPermissions(projectId).catch(() => null),
         ]);
         if (cancelled) return;
         baselineRef.current = new Map(reqs.map((r) => [r.id, { ...r }]));
         setRequirements(reqs);
         setStatuses(st);
-        setMatrix(mx);
-        setVerifications(ver.filter((v) => v.project_id === projectId));
         setUsers(u);
         setCategories(cat.filter((c) => c.project_id === projectId));
-        setApplicability(app.filter((a) => a.project_id === projectId));
         setMembers(mem);
         setVerificationMethods(methods);
-        setCustomFieldDefs([...fields].sort((a, b) => a.sort_order - b.sort_order));
         setPerms(permRes);
       } catch (e) {
         if (!cancelled) setErr(e instanceof Error ? e.message : 'Load failed');
@@ -228,12 +195,6 @@ export default function RequirementsTable({
     return m;
   }, [categories]);
 
-  const applicabilityById = useMemo(() => {
-    const m = new Map<number, string>();
-    for (const a of applicability) m.set(a.id, a.title);
-    return m;
-  }, [applicability]);
-
   const memberUserIds = useMemo(
     () => [...new Set(members.map((m) => m.user_id))].sort((a, b) => a - b),
     [members],
@@ -252,6 +213,7 @@ export default function RequirementsTable({
       const token = csrfToken ?? '';
       if (!token || !perms?.edit_requirements) return;
       setSaveErr(null);
+      setEditCell((prev) => (prev?.reqId === id ? null : prev));
       setSavingId(id);
       try {
         await patchRequirementByProject(projectId, id, patch, token);
@@ -276,27 +238,11 @@ export default function RequirementsTable({
     return forProject.length > 0 ? forProject : statuses;
   }, [statuses, projectId]);
 
-  const linksPerReq = useMemo(() => {
-    const m = new Map<number, number>();
-    for (const row of matrix) {
-      if (row.project_id !== projectId) continue;
-      m.set(row.req_id, (m.get(row.req_id) ?? 0) + 1);
-    }
-    return m;
-  }, [matrix, projectId]);
-
-  const totalVerifications = Math.max(verifications.length, 1);
-
   const q = globalSearch.trim().toLowerCase();
 
   const filtered = useMemo(() => {
     return requirements.filter((req) => {
       if (statusFilter !== 'all' && req.status_id !== statusFilter) return false;
-      const pr = priorityFromCustomFields(req);
-      if (priorityFilter !== 'all') {
-        const up = pr.toUpperCase();
-        if (!up.includes(priorityFilter)) return false;
-      }
       if (!q) return true;
       const blob = [
         req.reference_code,
@@ -308,11 +254,11 @@ export default function RequirementsTable({
         .toLowerCase();
       return blob.includes(q);
     });
-  }, [requirements, statusFilter, priorityFilter, q]);
+  }, [requirements, statusFilter, q]);
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, priorityFilter, q, pageSize]);
+  }, [statusFilter, q, pageSize]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pageCount);
@@ -322,21 +268,50 @@ export default function RequirementsTable({
     [filtered, sliceStart, pageSize],
   );
 
+  useEffect(() => {
+    setEditCell(null);
+  }, [safePage, pageSize]);
+
+  useEffect(() => {
+    setEditCell(null);
+  }, [viewMode]);
+
+  useEffect(() => {
+    if (editCell === null) return;
+    const onDown = (e: MouseEvent) => {
+      if (inlineEditRef.current?.contains(e.target as Node)) return;
+      setEditCell(null);
+    };
+    const t = window.setTimeout(() => document.addEventListener('mousedown', onDown), 0);
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener('mousedown', onDown);
+    };
+  }, [editCell]);
+
+  useEffect(() => {
+    if (editCell === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setEditCell(null);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [editCell]);
+
+  useEffect(() => {
+    if (editCell === null) return;
+    const id = requestAnimationFrame(() => {
+      const el = inlineEditRef.current?.querySelector<HTMLElement>(
+        'input:not([type="checkbox"]), select, textarea',
+      );
+      el?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [editCell]);
+
   const resetFilters = useCallback(() => {
     setStatusFilter('all');
-    setPriorityFilter('all');
   }, []);
-
-  const toggleAllPage = useCallback(() => {
-    const ids = pageRows.map((r) => r.id);
-    const allOn = ids.length > 0 && ids.every((id) => selected.has(id));
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (allOn) for (const id of ids) next.delete(id);
-      else for (const id of ids) next.add(id);
-      return next;
-    });
-  }, [pageRows, selected]);
 
   const exportCsv = useCallback(() => {
     const headers = [
@@ -349,17 +324,10 @@ export default function RequirementsTable({
       'Verification method ids',
       'Modified',
       'Author',
-      'Reviewer',
-      'Applicability',
-      'Description',
-      'Priority',
-      'Coverage %',
     ];
     const lines = [headers.join(',')];
     for (const req of filtered) {
       const st = statusById.get(req.status_id);
-      const linked = linksPerReq.get(req.id) ?? 0;
-      const coverage = Math.min(100, Math.round((linked / totalVerifications) * 100));
       lines.push(
         [
           escapeCsv(req.reference_code || `#${req.id}`),
@@ -371,11 +339,6 @@ export default function RequirementsTable({
           escapeCsv((req.verification_method_ids ?? []).join(';')),
           escapeCsv(formatModified(req.update_date)),
           escapeCsv(userLabel(req.author_id)),
-          escapeCsv(userLabel(req.reviewer_id)),
-          escapeCsv(applicabilityById.get(req.applicability_id) ?? ''),
-          escapeCsv(req.description?.replace(/\s+/g, ' ').slice(0, 500) ?? ''),
-          escapeCsv(priorityFromCustomFields(req)),
-          escapeCsv(String(coverage)),
         ].join(','),
       );
     }
@@ -386,16 +349,7 @@ export default function RequirementsTable({
     a.download = `requirements-project-${projectId}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [
-    filtered,
-    statusById,
-    categoryById,
-    applicabilityById,
-    userLabel,
-    linksPerReq,
-    totalVerifications,
-    projectId,
-  ]);
+  }, [filtered, statusById, categoryById, userLabel, projectId]);
 
   if (loading) {
     return (
@@ -413,13 +367,13 @@ export default function RequirementsTable({
     );
   }
 
-  const pageIds = pageRows.map((r) => r.id);
-  const allPageSelected =
-    pageIds.length > 0 && pageIds.every((id) => selected.has(id));
-
   const cellInput =
     'w-full min-w-[90px] max-w-[min(100%,280px)] text-xs bg-stitch-elevated border border-stitch-border rounded px-2 py-1.5 text-white focus:border-stitch-accent outline-none disabled:opacity-50';
   const cellSelect = `${cellInput} cursor-pointer`;
+  /** Collapsed cell: click to open editor */
+  const displayCellBtn =
+    'w-full text-left text-xs text-white/90 leading-snug rounded-md px-1.5 py-1 hover:bg-white/[0.06] border border-transparent hover:border-stitch-border/40 transition-colors min-h-[1.75rem]';
+  const closeCellEdit = () => setEditCell(null);
 
   return (
     <div className="space-y-6">
@@ -448,19 +402,6 @@ export default function RequirementsTable({
                   {s.title}
                 </option>
               ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
-            <span>Priority:</span>
-            <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value as typeof priorityFilter)}
-              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-none cursor-pointer"
-            >
-              <option value="all">All</option>
-              <option value="P1">P1</option>
-              <option value="P2">P2</option>
-              <option value="P3">P3</option>
             </select>
           </div>
           <div className="hidden sm:block h-4 w-px bg-stitch-border mx-1" />
@@ -497,87 +438,270 @@ export default function RequirementsTable({
         </div>
       </div>
 
-      {selected.size > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 bg-[#1a237e]/90 text-white px-4 py-3 rounded-lg border border-stitch-accent/30 shadow-xl">
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="font-bold">{selected.size} selected</span>
-            <div className="h-4 w-px bg-white/20 hidden sm:block" />
-            <span className="text-xs text-white/70">Bulk actions coming soon</span>
-          </div>
-          <button
-            type="button"
-            className="text-xs opacity-80 hover:opacity-100"
-            onClick={() => setSelected(new Set())}
-            aria-label="Clear selection"
-          >
-            <span className="material-symbols-outlined">close</span>
-          </button>
-        </div>
-      )}
-
       {viewMode === 'list' ? (
         <ul className="space-y-3">
           {pageRows.map((req) => {
             const st = statusById.get(req.status_id);
             const statusTitle = st?.title ?? `Status #${req.status_id}`;
-            const u = userById.get(req.author_id);
-            const ownerName = u?.name ?? u?.username ?? `User #${req.author_id}`;
-            const linked = linksPerReq.get(req.id) ?? 0;
-            const coverage = Math.min(100, Math.round((linked / totalVerifications) * 100));
+            const methodIds = req.verification_method_ids ?? [];
+            const busy = savingId === req.id;
             return (
               <li
                 key={req.id}
                 className="rounded-xl border border-stitch-border bg-stitch-surface p-4 shadow-stitch hover:bg-white/[0.03] transition-colors"
               >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    className="rounded border-stitch-border mt-1 w-4 h-4 text-stitch-accent focus:ring-stitch-accent"
-                    checked={selected.has(req.id)}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      setSelected((prev) => {
-                        const next = new Set(prev);
-                        if (e.target.checked) next.add(req.id);
-                        else next.delete(req.id);
-                        return next;
-                      });
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0 flex-1 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="font-mono text-sm text-stitch-accent font-semibold">
                         {req.reference_code || `#${req.id}`}
                       </span>
-                      <StatusBadge title={statusTitle} />
-                      <PriorityBadge value={priorityFromCustomFields(req)} />
-                      <span className="text-[10px] uppercase text-stitch-muted border border-stitch-border rounded px-1.5 py-0.5">
+                      {editCell?.reqId === req.id && editCell.kind === 'status' && canEdit && !busy ? (
+                        <div ref={inlineEditRef} className="min-w-[160px]">
+                          <select
+                            className={cellSelect}
+                            value={req.status_id}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              setRequirements((prev) =>
+                                prev.map((r) => (r.id === req.id ? { ...r, status_id: v } : r)),
+                              );
+                              void saveReq(req.id, { status_id: v });
+                              closeCellEdit();
+                            }}
+                          >
+                            {statusOptions.map((s) => (
+                              <option key={s.id} value={s.id} className="bg-stitch-surface">
+                                {s.title}
+                              </option>
+                            ))}
+                            {!statusOptions.some((s) => s.id === req.status_id) && (
+                              <option value={req.status_id} className="bg-stitch-surface">
+                                Status #{req.status_id}
+                              </option>
+                            )}
+                          </select>
+                        </div>
+                      ) : canEdit && !busy ? (
+                        <button
+                          type="button"
+                          title="Click to edit status"
+                          className="inline-flex"
+                          onClick={() => setEditCell({ reqId: req.id, kind: 'status' })}
+                        >
+                          <StatusBadge title={statusTitle} tagColor={st?.tag_color} />
+                        </button>
+                      ) : (
+                        <StatusBadge title={statusTitle} tagColor={st?.tag_color} />
+                      )}
+                      <span className="text-[10px] font-bold uppercase text-stitch-muted border border-stitch-border rounded px-1.5 py-0.5">
                         {approvalLabel(req.approval_state)}
                       </span>
-                      <span className="text-[10px] text-stitch-muted">
-                        {categoryById.get(req.category_id) ?? `Cat #${req.category_id}`}
-                      </span>
                     </div>
-                    <p className="text-sm font-semibold text-white">{req.title}</p>
-                    <p className="text-xs text-stitch-muted mt-0.5 line-clamp-2">{req.description}</p>
-                    <div className="flex flex-wrap items-center gap-4 mt-3 text-xs text-stitch-muted">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-stitch-elevated flex items-center justify-center text-[10px] font-bold text-white border border-stitch-border">
-                          {ownerInitials(ownerName)}
+                    <div>
+                      <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">Title</p>
+                      {editCell?.reqId === req.id && editCell.kind === 'title' && canEdit && !busy ? (
+                        <div ref={inlineEditRef}>
+                          <input
+                            className={cellInput}
+                            value={req.title}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setRequirements((prev) =>
+                                prev.map((r) => (r.id === req.id ? { ...r, title: v } : r)),
+                              );
+                            }}
+                            onBlur={(e) => {
+                              const v = e.target.value.trim();
+                              const b = baselineRef.current.get(req.id);
+                              if (b && v === b.title) {
+                                closeCellEdit();
+                                return;
+                              }
+                              void saveReq(req.id, { title: v });
+                              closeCellEdit();
+                            }}
+                          />
                         </div>
-                        <span className="text-white/90 font-medium">{ownerName}</span>
-                      </div>
-                      <span className="font-mono">{formatModified(req.update_date)}</span>
-                      <span>Coverage {coverage}%</span>
-                      <button
-                        type="button"
-                        className="text-stitch-accent font-bold hover:underline"
-                        onClick={() => navigate(`/p/${projectId}/requirements/${req.id}/edit`)}
-                      >
-                        Open editor
-                      </button>
+                      ) : canEdit && !busy ? (
+                        <button
+                          type="button"
+                          title="Click to edit title"
+                          className={`${displayCellBtn} text-left`}
+                          onClick={() => setEditCell({ reqId: req.id, kind: 'title' })}
+                        >
+                          {req.title.trim() ? req.title : '—'}
+                        </button>
+                      ) : (
+                        <p className="text-sm text-white/90">{req.title.trim() ? req.title : '—'}</p>
+                      )}
                     </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">Category</p>
+                        {editCell?.reqId === req.id && editCell.kind === 'category' && canEdit && !busy ? (
+                          <div ref={inlineEditRef}>
+                            <select
+                              className={cellSelect}
+                              value={req.category_id}
+                              onChange={(e) => {
+                                const v = Number(e.target.value);
+                                setRequirements((prev) =>
+                                  prev.map((r) => (r.id === req.id ? { ...r, category_id: v } : r)),
+                                );
+                                void saveReq(req.id, { category_id: v });
+                                closeCellEdit();
+                              }}
+                            >
+                              {categories.map((c) => (
+                                <option key={c.id} value={c.id} className="bg-stitch-surface">
+                                  {c.title}
+                                </option>
+                              ))}
+                              {!categories.some((c) => c.id === req.category_id) && (
+                                <option value={req.category_id} className="bg-stitch-surface">
+                                  Category #{req.category_id}
+                                </option>
+                              )}
+                            </select>
+                          </div>
+                        ) : canEdit && !busy ? (
+                          <button
+                            type="button"
+                            className={displayCellBtn}
+                            onClick={() => setEditCell({ reqId: req.id, kind: 'category' })}
+                          >
+                            {categoryById.get(req.category_id) ?? `Category #${req.category_id}`}
+                          </button>
+                        ) : (
+                          <span className="text-white/90">
+                            {categoryById.get(req.category_id) ?? `Category #${req.category_id}`}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">Parent</p>
+                        {req.parent_id != null ? (
+                          <Link
+                            to={`/p/${projectId}/requirements/${req.parent_id}/edit`}
+                            className="text-stitch-accent hover:underline"
+                          >
+                            {reqTitleById.get(req.parent_id) ?? `REQ #${req.parent_id}`}
+                          </Link>
+                        ) : (
+                          <span className="text-stitch-muted">—</span>
+                        )}
+                      </div>
+                      <div className="sm:col-span-2">
+                        <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">Verification</p>
+                        {editCell?.reqId === req.id &&
+                        editCell.kind === 'verification_methods' &&
+                        canEdit &&
+                        !busy ? (
+                          <div ref={inlineEditRef} className="space-y-2">
+                            <select
+                              multiple
+                              size={Math.min(8, Math.max(3, verificationMethods.length || 3))}
+                              className={`${cellInput} min-h-[72px]`}
+                              value={methodIds.map(String)}
+                              aria-label="Verification methods"
+                              onChange={(e) => {
+                                const sel = [...e.target.selectedOptions].map((o) => Number(o.value));
+                                setRequirements((prev) =>
+                                  prev.map((r) =>
+                                    r.id === req.id ? { ...r, verification_method_ids: sel } : r,
+                                  ),
+                                );
+                                void saveReq(req.id, { verification_method_ids: sel });
+                              }}
+                            >
+                              {verificationMethods.map((m) => (
+                                <option key={m.id} value={m.id} className="bg-stitch-surface">
+                                  {m.title}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              className="text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline"
+                              onClick={closeCellEdit}
+                            >
+                              Done
+                            </button>
+                          </div>
+                        ) : canEdit && !busy ? (
+                          <button
+                            type="button"
+                            className={displayCellBtn}
+                            onClick={() => setEditCell({ reqId: req.id, kind: 'verification_methods' })}
+                          >
+                            {verificationMethodsText(methodIds, verificationMethods)}
+                          </button>
+                        ) : (
+                          <span className="text-white/90">
+                            {verificationMethodsText(methodIds, verificationMethods)}
+                          </span>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">Modified</p>
+                        <span className="font-mono text-stitch-muted">{formatModified(req.update_date)}</span>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">Author</p>
+                        {editCell?.reqId === req.id && editCell.kind === 'author' && canEdit && !busy ? (
+                          <div ref={inlineEditRef}>
+                            <select
+                              className={cellSelect}
+                              value={req.author_id}
+                              onChange={(e) => {
+                                const v = Number(e.target.value);
+                                setRequirements((prev) =>
+                                  prev.map((r) => (r.id === req.id ? { ...r, author_id: v } : r)),
+                                );
+                                void saveReq(req.id, { author_id: v });
+                                closeCellEdit();
+                              }}
+                            >
+                              {memberUserIds.map((id) => (
+                                <option key={id} value={id} className="bg-stitch-surface">
+                                  {userLabel(id)}
+                                </option>
+                              ))}
+                              {!memberUserIds.includes(req.author_id) && (
+                                <option value={req.author_id} className="bg-stitch-surface">
+                                  {userLabel(req.author_id)}
+                                </option>
+                              )}
+                            </select>
+                          </div>
+                        ) : canEdit && !busy ? (
+                          <button type="button" className={displayCellBtn} onClick={() => setEditCell({ reqId: req.id, kind: 'author' })}>
+                            {userLabel(req.author_id)}
+                          </button>
+                        ) : (
+                          <span className="text-white/90">{userLabel(req.author_id)}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 border-t sm:border-t-0 sm:border-l border-stitch-border/40 pt-3 sm:pt-0 sm:pl-3">
+                    {projectSlug ? (
+                      <a
+                        href={`/p/${projectSlug}/requirements/show/${req.id}`}
+                        className="p-1.5 text-stitch-muted hover:text-stitch-accent"
+                        title="View"
+                      >
+                        <span className="material-symbols-outlined text-lg">visibility</span>
+                      </a>
+                    ) : null}
+                    <Link
+                      to={`/p/${projectId}/requirements/${req.id}/edit`}
+                      className="p-1.5 text-stitch-muted hover:text-stitch-accent"
+                      title="Edit"
+                    >
+                      <span className="material-symbols-outlined text-lg">edit</span>
+                    </Link>
                   </div>
                 </div>
               </li>
@@ -586,19 +710,10 @@ export default function RequirementsTable({
         </ul>
       ) : (
         <div className="bg-stitch-surface overflow-x-auto rounded-xl border border-stitch-border shadow-stitch">
-          <table className="w-full text-left border-collapse min-w-[1400px]">
+          <table className="w-full text-left border-collapse min-w-[960px]">
             <thead>
               <tr className="border-b border-stitch-border bg-stitch-elevated">
-                <th className="p-3 w-10 sticky left-0 z-10 bg-stitch-elevated">
-                  <input
-                    type="checkbox"
-                    className="rounded border-stitch-border w-4 h-4 text-stitch-accent focus:ring-stitch-accent"
-                    checked={allPageSelected}
-                    onChange={toggleAllPage}
-                    aria-label="Select page"
-                  />
-                </th>
-                <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider whitespace-nowrap">
+                <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider whitespace-nowrap sticky left-0 z-10 bg-stitch-elevated border-r border-stitch-border/60">
                   Key
                 </th>
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[140px]">
@@ -617,36 +732,13 @@ export default function RequirementsTable({
                   Approval
                 </th>
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[140px]">
-                  Verification methods
+                  Verification
                 </th>
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider whitespace-nowrap">
                   Modified
                 </th>
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[120px]">
                   Author
-                </th>
-                <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[120px]">
-                  Reviewer
-                </th>
-                <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[120px]">
-                  Applicability
-                </th>
-                {customFieldDefs.map((def) => (
-                  <th
-                    key={def.id}
-                    className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[100px] max-w-[160px]"
-                  >
-                    {def.label}
-                  </th>
-                ))}
-                <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[180px]">
-                  Statement
-                </th>
-                <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider text-center">
-                  Pri.
-                </th>
-                <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[100px]">
-                  Coverage
                 </th>
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider sticky right-0 bg-stitch-elevated min-w-[88px]">
                   Actions
@@ -655,75 +747,95 @@ export default function RequirementsTable({
             </thead>
             <tbody className="divide-y divide-stitch-border">
               {pageRows.map((req) => {
-                const linked = linksPerReq.get(req.id) ?? 0;
-                const coverage = Math.min(100, Math.round((linked / totalVerifications) * 100));
                 const methodIds = req.verification_method_ids ?? [];
                 const busy = savingId === req.id;
                 return (
                   <tr key={req.id} className="hover:bg-white/[0.03] transition-colors">
-                    <td className="p-3 sticky left-0 z-[1] bg-stitch-surface border-r border-stitch-border/60">
-                      <input
-                        type="checkbox"
-                        className="rounded border-stitch-border w-4 h-4 text-stitch-accent focus:ring-stitch-accent"
-                        checked={selected.has(req.id)}
-                        onChange={(e) => {
-                          setSelected((prev) => {
-                            const next = new Set(prev);
-                            if (e.target.checked) next.add(req.id);
-                            else next.delete(req.id);
-                            return next;
-                          });
-                        }}
-                      />
-                    </td>
-                    <td className="px-2 py-2 align-top">
+                    <td className="px-2 py-2 align-top sticky left-0 z-[1] bg-stitch-surface border-r border-stitch-border/60">
                       <span className="text-xs font-mono text-stitch-accent font-semibold whitespace-nowrap">
                         {req.reference_code || `REQ-${req.id}`}
                       </span>
                     </td>
-                    <td className="px-2 py-2 align-top">
-                      <input
-                        className={cellInput}
-                        value={req.title}
-                        disabled={!canEdit || busy}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setRequirements((prev) =>
-                            prev.map((r) => (r.id === req.id ? { ...r, title: v } : r)),
-                          );
-                        }}
-                        onBlur={(e) => {
-                          const v = e.target.value.trim();
-                          const b = baselineRef.current.get(req.id);
-                          if (b && v === b.title) return;
-                          void saveReq(req.id, { title: v });
-                        }}
-                      />
+                    <td className="px-2 py-2 align-top max-w-[min(280px,26vw)]">
+                      {editCell?.reqId === req.id && editCell.kind === 'title' && canEdit && !busy ? (
+                        <div ref={inlineEditRef}>
+                          <input
+                            className={cellInput}
+                            value={req.title}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setRequirements((prev) =>
+                                prev.map((r) => (r.id === req.id ? { ...r, title: v } : r)),
+                              );
+                            }}
+                            onBlur={(e) => {
+                              const v = e.target.value.trim();
+                              const b = baselineRef.current.get(req.id);
+                              if (b && v === b.title) {
+                                closeCellEdit();
+                                return;
+                              }
+                              void saveReq(req.id, { title: v });
+                              closeCellEdit();
+                            }}
+                          />
+                        </div>
+                      ) : canEdit && !busy ? (
+                        <button
+                          type="button"
+                          title="Click to edit title"
+                          className={`${displayCellBtn} line-clamp-3`}
+                          onClick={() => setEditCell({ reqId: req.id, kind: 'title' })}
+                        >
+                          {req.title.trim() ? req.title : '—'}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-white/90 px-1.5 py-1 block line-clamp-3">
+                          {req.title.trim() ? req.title : '—'}
+                        </span>
+                      )}
                     </td>
                     <td className="px-2 py-2 align-top">
-                      <select
-                        className={cellSelect}
-                        value={req.category_id}
-                        disabled={!canEdit || busy}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          setRequirements((prev) =>
-                            prev.map((r) => (r.id === req.id ? { ...r, category_id: v } : r)),
-                          );
-                          void saveReq(req.id, { category_id: v });
-                        }}
-                      >
-                        {categories.map((c) => (
-                          <option key={c.id} value={c.id} className="bg-stitch-surface">
-                            {c.title}
-                          </option>
-                        ))}
-                        {!categories.some((c) => c.id === req.category_id) && (
-                          <option value={req.category_id} className="bg-stitch-surface">
-                            Category #{req.category_id}
-                          </option>
-                        )}
-                      </select>
+                      {editCell?.reqId === req.id && editCell.kind === 'category' && canEdit && !busy ? (
+                        <div ref={inlineEditRef}>
+                          <select
+                            className={cellSelect}
+                            value={req.category_id}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              setRequirements((prev) =>
+                                prev.map((r) => (r.id === req.id ? { ...r, category_id: v } : r)),
+                              );
+                              void saveReq(req.id, { category_id: v });
+                              closeCellEdit();
+                            }}
+                          >
+                            {categories.map((c) => (
+                              <option key={c.id} value={c.id} className="bg-stitch-surface">
+                                {c.title}
+                              </option>
+                            ))}
+                            {!categories.some((c) => c.id === req.category_id) && (
+                              <option value={req.category_id} className="bg-stitch-surface">
+                                Category #{req.category_id}
+                              </option>
+                            )}
+                          </select>
+                        </div>
+                      ) : canEdit && !busy ? (
+                        <button
+                          type="button"
+                          title="Click to edit category"
+                          className={`${displayCellBtn} line-clamp-2`}
+                          onClick={() => setEditCell({ reqId: req.id, kind: 'category' })}
+                        >
+                          {categoryById.get(req.category_id) ?? `Category #${req.category_id}`}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-white/90 px-1.5 py-1 block line-clamp-2">
+                          {categoryById.get(req.category_id) ?? `Category #${req.category_id}`}
+                        </span>
+                      )}
                     </td>
                     <td className="px-2 py-2 align-top text-xs">
                       {req.parent_id != null ? (
@@ -738,208 +850,163 @@ export default function RequirementsTable({
                       )}
                     </td>
                     <td className="px-2 py-2 align-top">
-                      <select
-                        className={cellSelect}
-                        value={req.status_id}
-                        disabled={!canEdit || busy}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          setRequirements((prev) =>
-                            prev.map((r) => (r.id === req.id ? { ...r, status_id: v } : r)),
-                          );
-                          void saveReq(req.id, { status_id: v });
-                        }}
-                      >
-                        {statusOptions.map((s) => (
-                          <option key={s.id} value={s.id} className="bg-stitch-surface">
-                            {s.title}
-                          </option>
-                        ))}
-                        {!statusOptions.some((s) => s.id === req.status_id) && (
-                          <option value={req.status_id} className="bg-stitch-surface">
-                            Status #{req.status_id}
-                          </option>
-                        )}
-                      </select>
+                      {editCell?.reqId === req.id && editCell.kind === 'status' && canEdit && !busy ? (
+                        <div ref={inlineEditRef}>
+                          <select
+                            className={cellSelect}
+                            value={req.status_id}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              setRequirements((prev) =>
+                                prev.map((r) => (r.id === req.id ? { ...r, status_id: v } : r)),
+                              );
+                              void saveReq(req.id, { status_id: v });
+                              closeCellEdit();
+                            }}
+                          >
+                            {statusOptions.map((s) => (
+                              <option key={s.id} value={s.id} className="bg-stitch-surface">
+                                {s.title}
+                              </option>
+                            ))}
+                            {!statusOptions.some((s) => s.id === req.status_id) && (
+                              <option value={req.status_id} className="bg-stitch-surface">
+                                Status #{req.status_id}
+                              </option>
+                            )}
+                          </select>
+                        </div>
+                      ) : canEdit && !busy ? (
+                        <button
+                          type="button"
+                          title="Click to edit status"
+                          className={`${displayCellBtn} line-clamp-2 inline-flex items-center`}
+                          onClick={() => setEditCell({ reqId: req.id, kind: 'status' })}
+                        >
+                          <StatusBadge
+                            title={statusById.get(req.status_id)?.title ?? `Status #${req.status_id}`}
+                            tagColor={statusById.get(req.status_id)?.tag_color}
+                          />
+                        </button>
+                      ) : (
+                        <span className="text-xs px-1.5 py-1 block line-clamp-2 inline-flex">
+                          <StatusBadge
+                            title={statusById.get(req.status_id)?.title ?? `Status #${req.status_id}`}
+                            tagColor={statusById.get(req.status_id)?.tag_color}
+                          />
+                        </span>
+                      )}
                     </td>
                     <td className="px-2 py-2 align-top">
                       <span className="text-[10px] font-bold uppercase text-stitch-muted border border-stitch-border rounded px-1.5 py-1 inline-block max-w-[120px] truncate">
                         {approvalLabel(req.approval_state)}
                       </span>
                     </td>
-                    <td className="px-2 py-2 align-top">
-                      <select
-                        multiple
-                        size={Math.min(4, Math.max(2, verificationMethods.length || 2))}
-                        className={`${cellInput} min-h-[48px]`}
-                        value={methodIds.map(String)}
-                        disabled={!canEdit || busy}
-                        onChange={(e) => {
-                          const sel = [...e.target.selectedOptions].map((o) => Number(o.value));
-                          setRequirements((prev) =>
-                            prev.map((r) =>
-                              r.id === req.id ? { ...r, verification_method_ids: sel } : r,
-                            ),
-                          );
-                          void saveReq(req.id, { verification_method_ids: sel });
-                        }}
-                      >
-                        {verificationMethods.map((m) => (
-                          <option key={m.id} value={m.id} className="bg-stitch-surface">
-                            {m.title}
-                          </option>
-                        ))}
-                      </select>
+                    <td className="px-2 py-2 align-top min-w-[140px] max-w-[min(320px,28vw)]">
+                      {editCell?.reqId === req.id &&
+                      editCell.kind === 'verification_methods' &&
+                      canEdit &&
+                      !busy ? (
+                        <div ref={inlineEditRef} className="space-y-2">
+                          <select
+                            multiple
+                            size={Math.min(
+                              8,
+                              Math.max(3, verificationMethods.length || 3),
+                            )}
+                            className={`${cellInput} min-h-[72px]`}
+                            value={methodIds.map(String)}
+                            aria-label="Verification methods"
+                            onChange={(e) => {
+                              const sel = [...e.target.selectedOptions].map((o) =>
+                                Number(o.value),
+                              );
+                              setRequirements((prev) =>
+                                prev.map((r) =>
+                                  r.id === req.id ? { ...r, verification_method_ids: sel } : r,
+                                ),
+                              );
+                              void saveReq(req.id, { verification_method_ids: sel });
+                            }}
+                          >
+                            {verificationMethods.map((m) => (
+                              <option key={m.id} value={m.id} className="bg-stitch-surface">
+                                {m.title}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-[10px] text-stitch-muted leading-snug">
+                            Ctrl/Cmd+click to select several. Click outside or press Esc to close.
+                          </p>
+                          <button
+                            type="button"
+                            className="text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline"
+                            onClick={closeCellEdit}
+                          >
+                            Done
+                          </button>
+                        </div>
+                      ) : canEdit && !busy ? (
+                        <button
+                          type="button"
+                          title="Click to change verification methods"
+                          className={displayCellBtn}
+                          onClick={() =>
+                            setEditCell({ reqId: req.id, kind: 'verification_methods' })
+                          }
+                        >
+                          {verificationMethodsText(methodIds, verificationMethods)}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-white/90 leading-snug block px-1.5 py-1">
+                          {verificationMethodsText(methodIds, verificationMethods)}
+                        </span>
+                      )}
                     </td>
                     <td className="px-2 py-2 align-top text-[11px] text-stitch-muted font-mono whitespace-nowrap">
                       {formatModified(req.update_date)}
                     </td>
                     <td className="px-2 py-2 align-top">
-                      <select
-                        className={cellSelect}
-                        value={req.author_id}
-                        disabled={!canEdit || busy}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          setRequirements((prev) =>
-                            prev.map((r) => (r.id === req.id ? { ...r, author_id: v } : r)),
-                          );
-                          void saveReq(req.id, { author_id: v });
-                        }}
-                      >
-                        {memberUserIds.map((id) => (
-                          <option key={id} value={id} className="bg-stitch-surface">
-                            {userLabel(id)}
-                          </option>
-                        ))}
-                        {!memberUserIds.includes(req.author_id) && (
-                          <option value={req.author_id} className="bg-stitch-surface">
-                            {userLabel(req.author_id)}
-                          </option>
-                        )}
-                      </select>
-                    </td>
-                    <td className="px-2 py-2 align-top">
-                      <select
-                        className={cellSelect}
-                        value={req.reviewer_id}
-                        disabled={!canEdit || busy}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          setRequirements((prev) =>
-                            prev.map((r) => (r.id === req.id ? { ...r, reviewer_id: v } : r)),
-                          );
-                          void saveReq(req.id, { reviewer_id: v });
-                        }}
-                      >
-                        {memberUserIds.map((id) => (
-                          <option key={`rev-${id}`} value={id} className="bg-stitch-surface">
-                            {userLabel(id)}
-                          </option>
-                        ))}
-                        {!memberUserIds.includes(req.reviewer_id) && (
-                          <option value={req.reviewer_id} className="bg-stitch-surface">
-                            {userLabel(req.reviewer_id)}
-                          </option>
-                        )}
-                      </select>
-                    </td>
-                    <td className="px-2 py-2 align-top">
-                      <select
-                        className={cellSelect}
-                        value={req.applicability_id}
-                        disabled={!canEdit || busy}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          setRequirements((prev) =>
-                            prev.map((r) => (r.id === req.id ? { ...r, applicability_id: v } : r)),
-                          );
-                          void saveReq(req.id, { applicability_id: v });
-                        }}
-                      >
-                        {applicability.map((a) => (
-                          <option key={a.id} value={a.id} className="bg-stitch-surface">
-                            {a.title}
-                          </option>
-                        ))}
-                        {!applicability.some((a) => a.id === req.applicability_id) && (
-                          <option value={req.applicability_id} className="bg-stitch-surface">
-                            Applicability #{req.applicability_id}
-                          </option>
-                        )}
-                      </select>
-                    </td>
-                    {customFieldDefs.map((def) => {
-                      const val =
-                        req.custom_fields?.find((c) => c.field_id === def.id)?.value ?? '';
-                      return (
-                        <td key={def.id} className="px-2 py-2 align-top">
-                          <input
-                            className={cellInput}
-                            value={val}
-                            disabled={!canEdit || busy}
+                      {editCell?.reqId === req.id && editCell.kind === 'author' && canEdit && !busy ? (
+                        <div ref={inlineEditRef}>
+                          <select
+                            className={cellSelect}
+                            value={req.author_id}
                             onChange={(e) => {
-                              const v = e.target.value;
+                              const v = Number(e.target.value);
                               setRequirements((prev) =>
-                                prev.map((r) => {
-                                  if (r.id !== req.id) return r;
-                                  const cfs = [...(r.custom_fields ?? [])];
-                                  const ix = cfs.findIndex((c) => c.field_id === def.id);
-                                  if (ix >= 0) cfs[ix] = { ...cfs[ix]!, value: v };
-                                  else cfs.push({ field_id: def.id, label: def.label, value: v });
-                                  return { ...r, custom_fields: cfs };
-                                }),
+                                prev.map((r) => (r.id === req.id ? { ...r, author_id: v } : r)),
                               );
+                              void saveReq(req.id, { author_id: v });
+                              closeCellEdit();
                             }}
-                            onBlur={(e) => {
-                              const v = e.target.value.trim() || null;
-                              const b = baselineRef.current.get(req.id);
-                              const prev =
-                                b?.custom_fields?.find((c) => c.field_id === def.id)?.value ?? null;
-                              if (prev === v || (prev === '' && v === null)) return;
-                              void saveReq(req.id, {
-                                custom_fields: [{ field_id: def.id, value: v }],
-                              });
-                            }}
-                          />
-                        </td>
-                      );
-                    })}
-                    <td className="px-2 py-2 align-top">
-                      <textarea
-                        className={`${cellInput} min-h-[64px] resize-y max-w-[320px]`}
-                        rows={3}
-                        value={req.description}
-                        disabled={!canEdit || busy}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setRequirements((prev) =>
-                            prev.map((r) => (r.id === req.id ? { ...r, description: v } : r)),
-                          );
-                        }}
-                        onBlur={(e) => {
-                          const v = e.target.value.trim();
-                          const b = baselineRef.current.get(req.id);
-                          if (b && v === b.description) return;
-                          void saveReq(req.id, { description: v });
-                        }}
-                      />
-                    </td>
-                    <td className="px-2 py-2 align-top text-center">
-                      <PriorityBadge value={priorityFromCustomFields(req)} />
-                    </td>
-                    <td className="px-2 py-2 align-top">
-                      <div className="flex items-center gap-2">
-                        <div className="w-14 bg-white/10 h-1.5 rounded-full overflow-hidden shrink-0">
-                          <div
-                            className="bg-stitch-accent h-full transition-all rounded-full"
-                            style={{ width: `${coverage}%` }}
-                          />
+                          >
+                            {memberUserIds.map((id) => (
+                              <option key={id} value={id} className="bg-stitch-surface">
+                                {userLabel(id)}
+                              </option>
+                            ))}
+                            {!memberUserIds.includes(req.author_id) && (
+                              <option value={req.author_id} className="bg-stitch-surface">
+                                {userLabel(req.author_id)}
+                              </option>
+                            )}
+                          </select>
                         </div>
-                        <span className="text-[11px] text-stitch-muted font-mono tabular-nums">
-                          {coverage}%
+                      ) : canEdit && !busy ? (
+                        <button
+                          type="button"
+                          title="Click to edit author"
+                          className={`${displayCellBtn} line-clamp-2`}
+                          onClick={() => setEditCell({ reqId: req.id, kind: 'author' })}
+                        >
+                          {userLabel(req.author_id)}
+                        </button>
+                      ) : (
+                        <span className="text-xs text-white/90 px-1.5 py-1 block line-clamp-2">
+                          {userLabel(req.author_id)}
                         </span>
-                      </div>
+                      )}
                     </td>
                     <td className="px-2 py-2 align-top sticky right-0 z-[1] bg-stitch-surface border-l border-stitch-border/60">
                       <div className="flex items-center gap-1">
@@ -947,7 +1014,7 @@ export default function RequirementsTable({
                           <a
                             href={`/p/${projectSlug}/requirements/show/${req.id}`}
                             className="p-1.5 text-stitch-muted hover:text-stitch-accent"
-                            title="Classic view"
+                            title="View"
                           >
                             <span className="material-symbols-outlined text-lg">visibility</span>
                           </a>
@@ -955,7 +1022,7 @@ export default function RequirementsTable({
                         <Link
                           to={`/p/${projectId}/requirements/${req.id}/edit`}
                           className="p-1.5 text-stitch-muted hover:text-stitch-accent"
-                          title="SPA editor"
+                          title="Edit"
                         >
                           <span className="material-symbols-outlined text-lg">edit</span>
                         </Link>

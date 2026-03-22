@@ -1,9 +1,0 @@
-[default.databases.my_db]
-url = "postgres://rust:rust@127.0.0.1:5432/marreq"
-pool_size = 2
-
-[release]
-# Set ROCKET_SECRET_KEY in your environment (or .env) for production.
-# Generate a new key with: openssl rand -base64 32
-# Never commit a real key here.
-# secret_key is intentionally absent — Rocket reads ROCKET_SECRET_KEY from the environment.

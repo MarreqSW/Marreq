@@ -91,7 +91,7 @@ All checks must pass before a pull request can be merged.
 **Requirement:** No unused CSS selectors should remain in the codebase.
 
 **Acceptance Criteria:**
-- PurgeCSS analysis finds zero unused selectors (tolerance: 0)
+- PurgeCSS analysis reports unused selectors; tolerance allows legacy pre-SPA CSS still in the tree (see `purgecss-ci.mjs`)
 - All CSS classes are referenced in templates (`templates/**/*.hbs`) or JavaScript files
 - Dynamic classes are properly safelisted in `purgecss.config.cjs`
 - CI fails if unused selectors are detected
@@ -188,7 +188,7 @@ Before running checks locally, ensure you have:
 
 3. **Initialize the database**
    ```bash
-   ./scripts/db_setup.sh --seed
+   ./backend/scripts/db_setup.sh --seed
    ```
 
 4. **Verify database is ready**
@@ -271,7 +271,7 @@ npm run test:coverage
 
 ```bash
 # Set database URL (or use .env file)
-export DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/marreq
+export DATABASE_URL=postgres://rust:rust@127.0.0.1:5433/marreq
 
 # Run tests with coverage
 cargo llvm-cov --workspace --all-features --doctests
@@ -364,7 +364,7 @@ docker compose -f docker/docker-compose.yml exec db pg_isready -U rust
 docker compose -f docker/docker-compose.yml restart db
 
 # Reinitialize database
-./scripts/db_setup.sh --seed
+./backend/scripts/db_setup.sh --seed
 ```
 
 ---
@@ -472,7 +472,7 @@ Common issues:
    ```
 3. **Database state:** CI uses fresh database, local might have stale data
    ```bash
-   ./scripts/db_setup.sh --seed  # Reinitialize
+   ./backend/scripts/db_setup.sh --seed  # Reinitialize
    ```
 
 ---

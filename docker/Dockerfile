@@ -51,11 +51,7 @@ COPY --from=builder /app/backend/migrations /app/migrations
 COPY --from=builder /app/backend/scripts /app/scripts
 COPY --from=builder /usr/local/cargo/bin/diesel /usr/local/bin/diesel
 
-# Rocket.toml at /app (cwd for entrypoint). template_dir defaults to templates/ relative to this file → /app/templates
 COPY backend/Rocket.toml ./
-
-COPY --from=builder /app/backend/src/html/static /app/backend/src/html/static
-COPY backend/templates /app/templates
 
 # diesel CLI uses /app/diesel.toml + /app/migrations (see docker-entrypoint.sh)
 COPY backend/diesel.toml ./diesel.toml

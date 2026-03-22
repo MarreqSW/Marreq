@@ -63,7 +63,7 @@ run_local_ci() {
   cargo fmt --all -- --check
 
   echo "2️⃣ Linting CSS..."
-  npx stylelint "backend/src/html/static/**/*.css" --config .stylelintrc.json
+  npx stylelint "frontend/static/**/*.css" --config .stylelintrc.json
 
   echo "3️⃣ Checking for unused CSS..."
   npm run check:unused-css

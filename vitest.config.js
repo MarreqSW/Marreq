@@ -8,18 +8,18 @@ export default defineConfig({
   root: __dirname,
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './backend/src/html/static/js'),
-      '@modules': path.resolve(__dirname, './backend/src/html/static/js/modules'),
-      '@pages': path.resolve(__dirname, './backend/src/html/static/js/pages'),
-      '@core': path.resolve(__dirname, './backend/src/html/static/js/core'),
-      '@presenters': path.resolve(__dirname, './backend/src/html/static/js/presenters'),
+      '@': path.resolve(__dirname, './frontend/static/js'),
+      '@modules': path.resolve(__dirname, './frontend/static/js/modules'),
+      '@pages': path.resolve(__dirname, './frontend/static/js/pages'),
+      '@core': path.resolve(__dirname, './frontend/static/js/core'),
+      '@presenters': path.resolve(__dirname, './frontend/static/js/presenters'),
     },
   },
   publicDir: false, // Disable special handling of 'public' directory
   server: {
     fs: {
       strict: false,
-      allow: [__dirname, path.resolve(__dirname, 'backend/src')],
+      allow: [__dirname, path.resolve(__dirname, 'frontend/static')],
     },
   },
   test: {
@@ -30,10 +30,10 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
-      include: ['backend/src/html/static/js/**/*.js'],
+      include: ['frontend/static/js/**/*.js'],
       exclude: [
-        'backend/src/html/static/js/**/*.test.js',
-        'backend/src/html/static/js/**/*.spec.js',
+        'frontend/static/js/**/*.test.js',
+        'frontend/static/js/**/*.spec.js',
       ],
     },
   },

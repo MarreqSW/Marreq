@@ -42,7 +42,7 @@ if [[ -f "${REPO_ROOT}/.env" ]]; then
   set -a; source "${REPO_ROOT}/.env"; set +a
 fi
 
-DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5432/marreq}"
+DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5433/marreq}"
 DB_USER="${DATABASE_URL#*://}"
 DB_USER="${DB_USER%%:*}"
 DB_NAME="${DATABASE_URL##*/}"

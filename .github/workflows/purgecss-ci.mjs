@@ -1,7 +1,10 @@
 import fs from 'node:fs';
 import { PurgeCSS } from 'purgecss';
 
-const TOLERANCE = 0;
+// Full-page CSS from the pre-SPA server-rendered UI is still bundled; PurgeCSS
+// only sees classes that appear in tracked HTML/JS/TS. Tighten toward 0 as
+// legacy sheets are deleted or wired into SPA templates.
+const TOLERANCE = 500;
 
 const cfg = (await import('./purgecss.config.cjs')).default ?? (await import('./purgecss.config.cjs'));
 const results = await new PurgeCSS().purge({

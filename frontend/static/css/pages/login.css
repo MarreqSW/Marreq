@@ -1,7 +1,7 @@
 /* Login Page Styles */
 
 /* Avoid flashing the sign-in card on every navigation while /api/auth/me runs. */
-html.marreq-bootstrapping #marreq-spa-root {
+.marreq-bootstrapping .marreq-spa-root {
   visibility: hidden;
 }
 

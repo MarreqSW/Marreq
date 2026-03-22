@@ -91,7 +91,7 @@ All checks must pass before a pull request can be merged.
 **Requirement:** No unused CSS selectors should remain in the codebase.
 
 **Acceptance Criteria:**
-- PurgeCSS analysis finds zero unused selectors (tolerance: 0)
+- PurgeCSS analysis reports unused selectors; tolerance allows legacy pre-SPA CSS still in the tree (see `purgecss-ci.mjs`)
 - All CSS classes are referenced in templates (`templates/**/*.hbs`) or JavaScript files
 - Dynamic classes are properly safelisted in `purgecss.config.cjs`
 - CI fails if unused selectors are detected

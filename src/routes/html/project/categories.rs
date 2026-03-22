@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+#![allow(unused_variables)]
+
 use super::helpers::*;
 use super::prelude::*;
 use crate::services::CategoryService;
@@ -176,10 +178,7 @@ async fn delete_category_route(
     category_id: i32,
     state: &State<AppState>,
 ) -> Result<rocket::http::Status, Redirect> {
-    let project_id = {
-        let _project_slug = project_id;
-        project_access.project_id()
-    };
+    let project_id = project_access.project_id();
     let user = project_access.into_user();
     let service = CategoryService::new(state.inner());
 

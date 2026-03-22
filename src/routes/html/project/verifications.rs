@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+#![allow(unused_variables)]
+
 use std::collections::HashMap;
 
 use rocket::serde::json::Json;
@@ -976,7 +978,6 @@ async fn update_test_status_route(
 ) -> Result<Json<Value>, (rocket::http::Status, String)> {
     use rocket::http::Status;
 
-    let _project_slug = project_id;
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     let service = VerificationService::new(state.inner());

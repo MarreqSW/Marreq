@@ -7,7 +7,7 @@ Bundled SPA that **reuses** legacy scripts and styles from `src/html/static/` vi
 - `npm install` — dependencies
 - `npm run dev` — Vite dev server (default `http://localhost:5173`), proxies `/api` → `http://127.0.0.1:8000`
 - `npm run build` — typecheck + production build to `dist/`
-- `npm run preview` — serve `dist/` locally
+- `npm run preview` — serve `dist/` locally (default `http://localhost:4173`); **`/api` is proxied to `http://127.0.0.1:8000` like dev** — start the backend first
 
 ## Environment
 

@@ -11,27 +11,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# Copy manifests and install dependencies (cached unless Cargo.toml/Cargo.lock change)
+# Workspace root + backend crate (cached unless manifests change)
 COPY Cargo.toml Cargo.lock ./
-COPY diesel.toml ./
+COPY backend/Cargo.toml backend/diesel.toml ./backend/
 
-# Create a dummy main to cache dependencies
-RUN mkdir src && echo "fn main() {}" > src/main.rs
+# Create dummy package source to cache dependencies
+RUN mkdir -p backend/src && echo "fn main() {}" > backend/src/main.rs
 
-# Build dependencies only
-RUN cargo build --release 2>/dev/null || true
+# Build dependencies only (workspace resolves from root)
+RUN cargo build --release -p marreq 2>/dev/null || true
 
 # Install diesel_cli for migrations (postgres only)
 RUN cargo install diesel_cli --no-default-features --features postgres
 
-# Remove dummy and copy real source
-RUN rm -rf src
-COPY src ./src
-COPY migrations ./migrations
-COPY scripts  ./scripts
+# Remove dummy and copy real backend source
+RUN rm -rf backend/src
+COPY backend/src ./backend/src
+COPY backend/migrations ./backend/migrations
+COPY backend/scripts ./backend/scripts
 
 # Build the application (overwrite the dummy binary)
-RUN touch src/main.rs && cargo build --release
+RUN touch backend/src/main.rs && cargo build --release -p marreq
 
 # Runtime stage
 FROM debian:bookworm-slim
@@ -40,22 +40,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     postgresql-client \
     ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 # Copy binary and migrations from builder
 COPY --from=builder /app/target/release/marreq /app/marreq
-COPY --from=builder /app/migrations /app/migrations 
-COPY --from=builder /app/scripts /app/scripts
+COPY --from=builder /app/backend/migrations /app/migrations
+COPY --from=builder /app/backend/scripts /app/scripts
 COPY --from=builder /usr/local/cargo/bin/diesel /usr/local/bin/diesel
 
-# Copy Rocket.toml for secret_key etc. (database url overridden by env in compose)
-COPY Rocket.toml ./
+COPY backend/Rocket.toml ./
 
-# Static assets and templates (app serves from relative path src/html/static and templates/)
-COPY --from=builder /app/src/html/static /app/src/html/static
-COPY templates /app/templates
+# diesel CLI uses /app/diesel.toml + /app/migrations (see docker-entrypoint.sh)
+COPY backend/diesel.toml ./diesel.toml
 
 EXPOSE 8000
 

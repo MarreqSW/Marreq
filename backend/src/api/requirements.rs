@@ -61,6 +61,15 @@ pub struct RequirementCreateRequest {
     pub parent_links: Vec<ParentLinkInput>,
 }
 
+/// One row in `GET /api/projects/:id/requirements`: full [`Requirement`] plus verification methods.
+#[derive(Debug, Serialize)]
+#[serde(crate = "rocket::serde", rename_all = "snake_case")]
+pub struct RequirementListRow {
+    #[serde(flatten)]
+    pub requirement: Requirement,
+    pub verification_method_ids: Vec<i32>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct RequirementPatch {
@@ -91,7 +100,7 @@ pub async fn list_by_project(
     approval_state: Option<String>,
     has_tests: Option<bool>,
     state: &State<AppState>,
-) -> ApiResult<Json<Vec<Requirement>>> {
+) -> ApiResult<Json<Vec<RequirementListRow>>> {
     require_project_permission(
         state,
         access.user(),
@@ -104,7 +113,19 @@ pub async fn list_by_project(
         approval_state.as_deref(),
         has_tests,
     )?;
-    Ok(Json(requirements))
+    let rows: Vec<RequirementListRow> = requirements
+        .into_iter()
+        .map(|requirement| {
+            let verification_method_ids = service
+                .get_verification_method_ids(requirement.id)
+                .unwrap_or_default();
+            RequirementListRow {
+                requirement,
+                verification_method_ids,
+            }
+        })
+        .collect();
+    Ok(Json(rows))
 }
 
 #[get("/requirements/<id>")]

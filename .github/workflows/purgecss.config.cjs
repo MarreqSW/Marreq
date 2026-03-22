@@ -1,12 +1,11 @@
 module.exports = {
   content: [
-    'backend/templates/**/*.hbs',
-    'backend/templates/**/*.html.hbs',
-    'backend/src/html/static/**/*.js',
+    'frontend/static/**/*.js',
+    'frontend/src/**/*.ts',
     'backend/tests/js/**/*.js',
   ],
   css: [
-    'backend/src/html/static/**/*.css',
+    'frontend/static/**/*.css',
   ],
   // Safelist patterns that should never be removed
   safelist: {

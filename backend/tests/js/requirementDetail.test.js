@@ -530,7 +530,7 @@ describe('Requirement Detail Page', () => {
           {"requirement": {"id": 1}, "project_id": 1}
         </script>
         <div data-requirement-root>
-          <button data-action="copy-requirement-link" data-requirement-url="/p/1/requirements/show/1">Copy Link</button>
+          <button data-action="copy-requirement-link" data-requirement-url="/1/requirements/show/1">Copy Link</button>
         </div>
       `;
 

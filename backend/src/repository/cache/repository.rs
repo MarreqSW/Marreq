@@ -227,6 +227,12 @@ impl Cache {
         self.remove(keys::PROJECTS_NAV);
     }
 
+    pub fn invalidate_project_namespace_slug(&self, namespace: &str, project_slug: &str) {
+        self.remove(&keys::Projects::by_namespace_slug(namespace, project_slug));
+        self.remove(keys::PROJECTS_ALL);
+        self.remove(keys::PROJECTS_NAV);
+    }
+
     /// Invalidate all user-related cache entries
     pub fn invalidate_user(&self, user_id: i32) {
         self.remove(&keys::Users::by_id(user_id));

@@ -51,7 +51,7 @@ function renderCard(link) {
   const description = link.getAttribute('data-requirement-preview-description') || '';
   const status = link.getAttribute('data-requirement-preview-status') || '';
   const category = link.getAttribute('data-requirement-preview-category') || '';
-  const href = link.getAttribute('href') || (projectId && id ? `/p/${projectId}/requirements/show/${id}` : '#');
+  const href = link.getAttribute('href') || (projectId && id ? `/${projectId}/requirements/show/${id}` : '#');
 
   const descSnippet = description.length > 120 ? description.slice(0, 117) + '…' : description;
   const displayRef = ref || `REQ-${id}`;

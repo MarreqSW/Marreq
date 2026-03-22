@@ -5,7 +5,7 @@ use super::helpers::get_db_connection;
 use super::prelude::*;
 use std::path::{Path, PathBuf};
 
-#[get("/admin")]
+#[get("/-/admin")]
 pub async fn admin_dashboard(admin: AdminOnly) -> Template {
     let user = admin.into_inner();
 
@@ -17,7 +17,7 @@ pub async fn admin_dashboard(admin: AdminOnly) -> Template {
     Template::render("admin/dashboard", context)
 }
 
-#[get("/admin/users")]
+#[get("/-/admin/users")]
 pub async fn admin_users_page(admin: AdminOnly, state: &State<AppState>) -> Template {
     let user = admin.into_inner();
 
@@ -32,7 +32,7 @@ pub async fn admin_users_page(admin: AdminOnly, state: &State<AppState>) -> Temp
     Template::render("admin/users", context)
 }
 
-#[get("/admin/backup")]
+#[get("/-/admin/backup")]
 pub async fn admin_backup_page(admin: AdminOnly) -> Template {
     let user = admin.into_inner();
 
@@ -44,7 +44,7 @@ pub async fn admin_backup_page(admin: AdminOnly) -> Template {
     Template::render("admin/backup", context)
 }
 
-#[post("/admin/backup/generate/<filename>")]
+#[post("/-/admin/backup/generate/<filename>")]
 pub async fn generate_backup(
     admin: AdminOnly,
     filename: String,
@@ -212,7 +212,7 @@ mod tests {
     async fn admin_dashboard_renders_dashboard_template() {
         let client = test_client().await;
         let response = client
-            .get("/admin")
+            .get("/-/admin")
             .private_cookie(admin_cookie())
             .dispatch()
             .await;
@@ -227,7 +227,7 @@ mod tests {
     async fn admin_users_page_lists_known_users() {
         let client = test_client().await;
         let response = client
-            .get("/admin/users")
+            .get("/-/admin/users")
             .private_cookie(admin_cookie())
             .dispatch()
             .await;
@@ -242,7 +242,7 @@ mod tests {
     async fn admin_backup_page_renders_backup_template() {
         let client = test_client().await;
         let response = client
-            .get("/admin/backup")
+            .get("/-/admin/backup")
             .private_cookie(admin_cookie())
             .dispatch()
             .await;
@@ -258,7 +258,7 @@ mod tests {
 
         let client = test_client().await;
         let response = client
-            .post("/admin/backup/generate/nightly")
+            .post("/-/admin/backup/generate/nightly")
             .private_cookie(admin_cookie())
             .dispatch()
             .await;
@@ -266,7 +266,7 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/admin/backup")
+            Some("/-/admin/backup")
         );
         assert_eq!(std::env::var("PGPASSWORD").ok().as_deref(), Some("rust"));
         assert!(std::path::Path::new("backups").exists());

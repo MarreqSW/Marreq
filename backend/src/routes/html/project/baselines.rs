@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+#![allow(unused_variables)]
+
 //! HTML routes for immutable project baselines.
 
 use super::helpers;
@@ -40,19 +42,20 @@ mod tests {
     }
 }
 
-#[get("/<project_id>/baselines")]
+#[get("/<namespace>/<project_id>/baselines")]
 pub async fn show_baselines(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
-    let projects = helpers::get_accessible_projects(state, &user);
-    if !projects.iter().any(|p| p.id == project_id) {
-        return Err(Redirect::to("/projects"));
-    }
+    let projects: Vec<_> = helpers::get_accessible_projects(state, &user)
+        .iter()
+        .map(|project| helpers::project_to_template_value(state, project))
+        .collect();
     let service = BaselineService::new(state.inner());
     let baselines = service.list_by_project(project_id).unwrap_or_default();
     let repo = state.repo_read();
@@ -77,19 +80,20 @@ pub async fn show_baselines(
     Ok(Template::render("baselines/baselines", ctx))
 }
 
-#[get("/<project_id>/baselines/new")]
+#[get("/<namespace>/<project_id>/baselines/new")]
 pub async fn new_baseline_form(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
-    let projects = helpers::get_accessible_projects(state, &user);
-    if !projects.iter().any(|p| p.id == project_id) {
-        return Err(Redirect::to("/projects"));
-    }
+    let projects: Vec<_> = helpers::get_accessible_projects(state, &user)
+        .iter()
+        .map(|project| helpers::project_to_template_value(state, project))
+        .collect();
 
     let ctx = json!({
         "user": user,
@@ -102,23 +106,19 @@ pub async fn new_baseline_form(
     Ok(Template::render("baselines/new_baseline", ctx))
 }
 
-#[post("/<project_id>/baselines/new", data = "<form>")]
+#[post("/<namespace>/<project_id>/baselines/new", data = "<form>")]
 pub async fn post_baseline(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     form: Form<CreateBaselineForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
-    let projects = helpers::get_accessible_projects(state, &user);
-    if !projects.iter().any(|p| p.id == project_id) {
-        return Err(Redirect::to("/projects"));
-    }
-
-    let list_url = format!("/p/{project_slug}/baselines");
-    let new_url = format!("/p/{project_slug}/baselines/new");
+    let list_url = format!("/{project_slug}/baselines");
+    let new_url = format!("/{project_slug}/baselines/new");
 
     let description = form.description.as_ref().and_then(|s| {
         if s.trim().is_empty() {
@@ -141,30 +141,29 @@ pub async fn post_baseline(
     Ok(Redirect::to(list_url))
 }
 
-#[get("/<project_id>/baselines/<baseline_id>", rank = 2)]
+#[get("/<namespace>/<project_id>/baselines/<baseline_id>", rank = 21)]
 pub async fn show_baseline(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     baseline_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
-    let projects = helpers::get_accessible_projects(state, &user);
-    if !projects.iter().any(|p| p.id == project_id) {
-        return Err(Redirect::to("/projects"));
-    }
+    let projects: Vec<_> = helpers::get_accessible_projects(state, &user)
+        .iter()
+        .map(|project| helpers::project_to_template_value(state, project))
+        .collect();
 
     let service = BaselineService::new(state.inner());
     let baseline = service
         .get_by_id(baseline_id)
-        .map_err(|_| Redirect::to(format!("/p/{project_slug}/baselines")))?;
+        .map_err(|_| Redirect::to(format!("/{project_slug}/baselines")))?;
     if baseline.project_id != project_id {
         let baseline_project_slug = get_project_slug_by_id_pooled_safe(state, baseline.project_id);
-        return Err(Redirect::to(format!(
-            "/p/{baseline_project_slug}/baselines"
-        )));
+        return Err(Redirect::to(format!("/{baseline_project_slug}/baselines")));
     }
 
     let requirements = service.get_requirements(baseline_id).unwrap_or_default();

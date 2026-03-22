@@ -27,6 +27,7 @@ fn state_from_repo(repo: DieselRepoMock) -> TestState {
 async fn client_with_repo(repo: DieselRepoMock) -> Client {
     let rocket = rocket::build()
         .manage(state_from_repo(repo.with_admin_user()))
+        .manage(marreq::auth::rate_limiter::LoginRateLimiter::new())
         .mount("/api", marreq::api::routes());
     Client::tracked(rocket).await.unwrap()
 }

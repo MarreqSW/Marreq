@@ -1,5 +1,6 @@
 module.exports = {
   content: [
+    'frontend/**/*.html',
     'frontend/static/**/*.js',
     'frontend/src/**/*.ts',
     'backend/tests/js/**/*.js',

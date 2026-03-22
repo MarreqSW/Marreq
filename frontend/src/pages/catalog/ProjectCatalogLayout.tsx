@@ -35,7 +35,7 @@ export default function ProjectCatalogLayout() {
               `px-3 py-2 rounded-md text-xs font-bold uppercase tracking-wide transition-colors ${
                 isActive
                   ? 'bg-stitch-accent text-stitch-canvas'
-                  : 'text-stitch-muted hover:text-white hover:bg-white/[0.06]'
+                  : 'text-stitch-muted hover:text-stitch-fg hover:bg-stitch-higher'
               }`
             }
           >

@@ -27,7 +27,7 @@ export default function TraceabilityPage() {
             <span className="mx-2">/</span>
             <span className="text-stitch-accent font-bold">Traceability</span>
           </nav>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight font-headline">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-stitch-fg tracking-tight font-headline">
             Traceability matrix
           </h2>
           <p className="text-stitch-muted text-sm mt-2 max-w-2xl">

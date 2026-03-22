@@ -87,7 +87,7 @@ export default function BaselinesPage() {
       >
         <a
           href={`/p/${pid}/baselines`}
-          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-white/[0.06]"
+          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
         >
           Classic baselines
         </a>
@@ -97,7 +97,7 @@ export default function BaselinesPage() {
         onSubmit={onCreate}
         className="mb-8 rounded-xl border border-stitch-border bg-stitch-surface p-5 shadow-stitch space-y-4 max-w-xl"
       >
-        <h3 className="text-sm font-bold text-white uppercase tracking-wide">Create baseline</h3>
+        <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-wide">Create baseline</h3>
         <div>
           <label className="block text-[10px] font-bold text-stitch-muted uppercase mb-1">
             Name
@@ -106,7 +106,7 @@ export default function BaselinesPage() {
             required
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full text-sm bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-white"
+            className="w-full text-sm bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg"
             placeholder="e.g. PDR freeze"
           />
         </div>
@@ -117,7 +117,7 @@ export default function BaselinesPage() {
           <input
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            className="w-full text-sm bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-white"
+            className="w-full text-sm bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg"
           />
         </div>
         {createErr && <p className="text-sm text-red-300">{createErr}</p>}
@@ -149,7 +149,7 @@ export default function BaselinesPage() {
             ) : (
               rows.map((b) => (
                 <tr key={b.id} className="hover:bg-white/[0.03]">
-                  <td className="px-4 py-3 text-white font-medium">{b.name}</td>
+                  <td className="px-4 py-3 text-stitch-fg font-medium">{b.name}</td>
                   <td className="px-4 py-3 text-stitch-muted text-xs font-mono">
                     {b.created_at?.replace('T', ' ').slice(0, 16) ?? '—'}
                   </td>

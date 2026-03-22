@@ -164,7 +164,7 @@ export default function CatalogCustomFieldsPage() {
         onSubmit={addRow}
         className="rounded-xl border border-stitch-border bg-stitch-surface p-4 space-y-3"
       >
-        <h3 className="text-sm font-bold text-white">New custom field</h3>
+        <h3 className="text-sm font-bold text-stitch-fg">New custom field</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <input
             className={inp}

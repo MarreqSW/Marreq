@@ -1,6 +1,7 @@
 import type { IncomingMessage } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
 type HttpProxyLike = {
@@ -42,6 +43,7 @@ export default defineConfig({
   publicDir: 'public',
   // Ensure `/projects`, `/user/...`, etc. serve `index.html` in dev so the SPA shell runs.
   appType: 'spa',
+  plugins: [react()],
   server: {
     port: 5173,
     proxy: apiProxy,
@@ -54,6 +56,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
+      '@': path.resolve(__dirname, 'src'),
       '@static': path.resolve(__dirname, 'static'),
     },
   },

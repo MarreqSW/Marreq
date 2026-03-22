@@ -79,30 +79,31 @@ INSERT INTO projects (name, slug, description, creation_date, status) VALUES
     ('Empty Project', 'empty-project', 'Empty project for testing and demonstration purposes', NOW(), 'active');
 
 -- Requirement status definitions (is_system = true: default set, not editable/deletable)
-INSERT INTO requirement_status (title, description, tag, project_id, is_system) VALUES
-    ('Draft', 'The requirement is still being edited and developed', 'Drf', (SELECT id FROM projects WHERE name = 'Space Project'), true),
-    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro', (SELECT id FROM projects WHERE name = 'Space Project'), true),
-    ('Accepted', 'The requirement is accepted and must be processed', 'Acc', (SELECT id FROM projects WHERE name = 'Space Project'), true),
-    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', (SELECT id FROM projects WHERE name = 'Space Project'), true),
-    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', (SELECT id FROM projects WHERE name = 'Space Project'), true),
-    ('Finished', 'The requirement is finished and completed', 'Fsh', (SELECT id FROM projects WHERE name = 'Space Project'), true),
-    ('Draft', 'The requirement is still being edited and developed', 'Drf', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
-    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
-    ('Accepted', 'The requirement is accepted and must be processed', 'Acc', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
-    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
-    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
-    ('Finished', 'The requirement is finished and completed', 'Fsh', (SELECT id FROM projects WHERE name = 'Marreq Project'), true);
+-- tag_color: #RRGGBB for SPA/classic UIs (must match frontend TagColorPicker / StatusBadge)
+INSERT INTO requirement_status (title, description, tag, project_id, is_system, tag_color) VALUES
+    ('Draft', 'The requirement is still being edited and developed', 'Drf', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#64748b'),
+    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#7c3aed'),
+    ('Accepted', 'The requirement is accepted and must be processed', 'Acc', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#15803d'),
+    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#b91c1c'),
+    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#57534e'),
+    ('Finished', 'The requirement is finished and completed', 'Fsh', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#0e7490'),
+    ('Draft', 'The requirement is still being edited and developed', 'Drf', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#64748b'),
+    ('Proposal', 'The requirement is proposed and awaiting approval', 'Pro', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#7c3aed'),
+    ('Accepted', 'The requirement is accepted and must be processed', 'Acc', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#15803d'),
+    ('Rejected', 'The requirement is not accepted and needs revision', 'Rej', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#b91c1c'),
+    ('Cancelled', 'The requirement is cancelled and will not be implemented', 'Can', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#57534e'),
+    ('Finished', 'The requirement is finished and completed', 'Fsh', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#0e7490');
 
 -- Verification status definitions (is_system = true: default set, not editable/deletable)
-INSERT INTO verification_status (title, description, tag, project_id, is_system) VALUES
-    ('Passed', 'The test has passed all criteria', 'Pass', (SELECT id FROM projects WHERE name = 'Space Project'), true),
-    ('Failed', 'The test has failed one or more criteria', 'Fail', (SELECT id FROM projects WHERE name = 'Space Project'), true),
-    ('Pending', 'The test is pending execution', 'Pend', (SELECT id FROM projects WHERE name = 'Space Project'), true),
-    ('In Progress', 'The test is currently being executed', 'Prog', (SELECT id FROM projects WHERE name = 'Space Project'), true),
-    ('Passed', 'The test has passed all criteria', 'Pass', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
-    ('Failed', 'The test has failed one or more criteria', 'Fail', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
-    ('Pending', 'The test is pending execution', 'Pend', (SELECT id FROM projects WHERE name = 'Marreq Project'), true),
-    ('In Progress', 'The test is currently being executed', 'Prog', (SELECT id FROM projects WHERE name = 'Marreq Project'), true);
+INSERT INTO verification_status (title, description, tag, project_id, is_system, tag_color) VALUES
+    ('Passed', 'The test has passed all criteria', 'Pass', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#15803d'),
+    ('Failed', 'The test has failed one or more criteria', 'Fail', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#b91c1c'),
+    ('Pending', 'The test is pending execution', 'Pend', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#b45309'),
+    ('In Progress', 'The test is currently being executed', 'Prog', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#1d4ed8'),
+    ('Passed', 'The test has passed all criteria', 'Pass', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#15803d'),
+    ('Failed', 'The test has failed one or more criteria', 'Fail', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#b91c1c'),
+    ('Pending', 'The test is pending execution', 'Pend', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#b45309'),
+    ('In Progress', 'The test is currently being executed', 'Prog', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#1d4ed8');
 
 -- Users with working passwords (all users have password: ChangeMe123!)
 -- Password hash (Argon2id):

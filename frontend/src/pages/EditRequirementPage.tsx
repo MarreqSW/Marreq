@@ -2,16 +2,20 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   createRequirementComment,
+  createRequirementVersionLink,
   deleteRequirementGlobally,
+  deleteRequirementVersionLink,
   getRequirementByProject,
   listApplicability,
   listCategories,
   listProjectMembers,
   listRequirementComments,
   listRequirementStatuses,
+  listRequirementVersionLinkTypes,
   listRequirementVersionsByProject,
   listRequirements,
   listUsersOptional,
+  listVerificationStatuses,
   listVerifications,
   patchRequirementByProject,
 } from '@/api/client';
@@ -25,12 +29,33 @@ import type {
   RequirementDetailPayload,
   RequirementStatus,
   RequirementVersion,
+  RequirementVersionLink,
   User,
   Verification,
+  VerificationStatus,
 } from '@/api/types';
+import { StatusBadge, statusTagColorSwatchStyle } from '@/components/StatusBadge';
 
 function approvalLabel(state: string): string {
   return state.replace(/_/g, ' ').toUpperCase();
+}
+
+function formatRelativeTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const ms = Date.now() - d.getTime();
+    if (Number.isNaN(d.getTime()) || ms < 0) return '';
+    const minutes = Math.floor(ms / 60000);
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return d.toLocaleDateString(undefined, { dateStyle: 'short' });
+  } catch {
+    return '';
+  }
 }
 
 export default function EditRequirementPage() {
@@ -48,12 +73,14 @@ export default function EditRequirementPage() {
   const [detail, setDetail] = useState<RequirementDetailPayload | null>(null);
   const [versions, setVersions] = useState<RequirementVersion[]>([]);
   const [statuses, setStatuses] = useState<RequirementStatus[]>([]);
+  const [verifStatuses, setVerifStatuses] = useState<VerificationStatus[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [applicability, setApplicability] = useState<Applicability[]>([]);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [users, setUsers] = useState<User[] | null>(null);
   const [projectReqs, setProjectReqs] = useState<Requirement[]>([]);
   const [verifications, setVerifications] = useState<Verification[]>([]);
+  const [linkTypes, setLinkTypes] = useState<string[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -61,6 +88,9 @@ export default function EditRequirementPage() {
   const [commentBody, setCommentBody] = useState('');
   const [commentPosting, setCommentPosting] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [linkBusy, setLinkBusy] = useState(false);
+  const [newParentId, setNewParentId] = useState<number | ''>('');
+  const [newLinkType, setNewLinkType] = useState('');
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -88,6 +118,7 @@ export default function EditRequirementPage() {
         d,
         v,
         st,
+        vst,
         cat,
         app,
         mem,
@@ -95,10 +126,12 @@ export default function EditRequirementPage() {
         ver,
         u,
         cmts,
+        lt,
       ] = await Promise.all([
         getRequirementByProject(pid, rid),
         listRequirementVersionsByProject(pid, rid),
         listRequirementStatuses(),
+        listVerificationStatuses(),
         listCategories(),
         listApplicability(),
         listProjectMembers(pid),
@@ -106,17 +139,20 @@ export default function EditRequirementPage() {
         listVerifications(),
         listUsersOptional(),
         listRequirementComments(rid),
+        listRequirementVersionLinkTypes(pid),
       ]);
       setDetail(d);
       setComments(cmts);
       setVersions(v);
       setStatuses(st);
+      setVerifStatuses(vst);
       setCategories(cat.filter((c) => c.project_id === pid));
       setApplicability(app.filter((a) => a.project_id === pid));
       setMembers(mem);
       setProjectReqs(reqs);
       setVerifications(ver.filter((x) => x.project_id === pid));
       setUsers(u);
+      setLinkTypes(lt);
 
       setTitle(d.title);
       setDescription(d.description);
@@ -134,6 +170,7 @@ export default function EditRequirementPage() {
         author_id: d.author_id,
         reviewer_id: d.reviewer_id,
       });
+      setNewLinkType((t) => (t && lt.includes(t) ? t : lt[0] ?? ''));
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load requirement');
     }
@@ -167,11 +204,59 @@ export default function EditRequirementPage() {
     return m;
   }, [verifications]);
 
+  const verifStatusById = useMemo(() => {
+    const m = new Map<number, VerificationStatus>();
+    for (const s of verifStatuses) m.set(s.id, s);
+    return m;
+  }, [verifStatuses]);
+
   const reqTitleById = useMemo(() => {
     const m = new Map<number, string>();
     for (const r of projectReqs) m.set(r.id, r.title);
     return m;
   }, [projectReqs]);
+
+  const reqById = useMemo(() => {
+    const m = new Map<number, Requirement>();
+    for (const r of projectReqs) m.set(r.id, r);
+    return m;
+  }, [projectReqs]);
+
+  const versionIdToReqId = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const r of projectReqs) {
+      if (r.current_version_id != null) {
+        m.set(r.current_version_id, r.id);
+      }
+    }
+    return m;
+  }, [projectReqs]);
+
+  const versionsNewestFirst = useMemo(
+    () =>
+      [...versions].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      ),
+    [versions],
+  );
+  const latestVersionCreatedAt = versionsNewestFirst[0]?.created_at;
+
+  const parentCandidates = useMemo(
+    () =>
+      projectReqs.filter(
+        (r) => r.id !== rid && r.current_version_id != null && r.current_version_id > 0,
+      ),
+    [projectReqs, rid],
+  );
+
+  const resolveParentReq = useCallback(
+    (link: RequirementVersionLink) => {
+      const prid = versionIdToReqId.get(link.target_version_id);
+      if (prid == null) return null;
+      return reqById.get(prid) ?? null;
+    },
+    [versionIdToReqId, reqById],
+  );
 
   const dirty = useMemo(() => {
     return (
@@ -269,21 +354,82 @@ export default function EditRequirementPage() {
     setSaveError(null);
     setSaving(true);
     try {
-      await patchRequirementByProject(pid, rid, {
-        title: title.trim(),
-        description: description.trim(),
-        status_id: statusId,
-        category_id: categoryId,
-        applicability_id: applicabilityId,
-        author_id: authorId,
-        reviewer_id: reviewerId,
-      }, token);
+      await patchRequirementByProject(
+        pid,
+        rid,
+        {
+          title: title.trim(),
+          description: description.trim(),
+          status_id: statusId,
+          category_id: categoryId,
+          applicability_id: applicabilityId,
+          author_id: authorId,
+          reviewer_id: reviewerId,
+        },
+        token,
+      );
       await refreshDashboard();
       await load();
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Save failed');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function removeParentLink(linkId: number) {
+    const token = csrfToken ?? '';
+    if (!token) {
+      setSaveError('Missing CSRF token; refresh the page.');
+      return;
+    }
+    setLinkBusy(true);
+    setSaveError(null);
+    try {
+      await deleteRequirementVersionLink(pid, linkId, token);
+      await load();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Failed to remove parent link');
+    } finally {
+      setLinkBusy(false);
+    }
+  }
+
+  async function addParentLink() {
+    const token = csrfToken ?? '';
+    if (!token || newParentId === '' || !newLinkType.trim()) {
+      setSaveError('Pick a parent requirement and link type.');
+      return;
+    }
+    const srcVid = detail?.current_version_id;
+    if (srcVid == null) {
+      setSaveError('This requirement has no current version; cannot add parent links.');
+      return;
+    }
+    const parentReq = reqById.get(Number(newParentId));
+    const tgtVid = parentReq?.current_version_id;
+    if (parentReq == null || tgtVid == null) {
+      setSaveError('Parent requirement must have a current version.');
+      return;
+    }
+    setLinkBusy(true);
+    setSaveError(null);
+    try {
+      await createRequirementVersionLink(
+        pid,
+        {
+          source_version_id: srcVid,
+          target_version_id: tgtVid,
+          link_type: newLinkType.trim(),
+        },
+        token,
+      );
+      setNewParentId('');
+      await load();
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Failed to add parent link');
+    } finally {
+      setLinkBusy(false);
     }
   }
 
@@ -304,15 +450,20 @@ export default function EditRequirementPage() {
     return s?.title ?? '—';
   }, [statuses, statusId]);
 
+  const statusMeta = useMemo(() => {
+    const s = statuses.find((x) => x.id === statusId);
+    return s;
+  }, [statuses, statusId]);
+
+  const selectLight =
+    'w-full text-sm font-medium bg-white border border-outline-variant/50 rounded-lg px-3 py-2 text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/25 outline-none transition-colors';
+
   if (loadError) {
     return (
-      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+      <div className="rounded-xl border border-error/40 bg-error-container/80 p-4 text-sm text-on-error-container">
         {loadError}
         <div className="mt-3">
-          <Link
-            to={`/p/${pid}/requirements`}
-            className="font-semibold text-stitch-accent underline"
-          >
+          <Link to={`/p/${pid}/requirements`} className="font-semibold text-primary underline">
             Back to requirements
           </Link>
         </div>
@@ -322,188 +473,195 @@ export default function EditRequirementPage() {
 
   if (!detail) {
     return (
-      <div className="text-stitch-muted text-sm py-12 text-center font-body">
+      <div className="text-on-surface-variant text-sm py-12 text-center font-body bg-surface-low -mx-6 md:-mx-8 px-6 rounded-lg">
         Loading requirement…
       </div>
     );
   }
 
   const { trace_summary: ts } = detail;
-  const latestVersionLabel =
-    versions.length > 0 ? `v${versions.length}` : '—';
-
-  const selectClass =
-    'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-white focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
+  const latestVersionLabel = versions.length > 0 ? `v${versions.length}` : '—';
+  const canEditParents = detail.current_version_id != null && detail.current_version_id > 0;
 
   return (
-    <div className="pb-28 font-body text-white text-stitch">
-      <nav className="flex items-center gap-2 text-[10px] font-semibold text-stitch-muted mb-6 uppercase tracking-widest">
-        <Link to={`/p/${pid}/requirements`} className="hover:text-stitch-accent transition-colors">
+    <div className="font-body text-on-surface -mx-6 md:-mx-8 -mt-6 md:-mt-8 px-6 md:px-8 pt-6 md:pt-8 pb-36 min-h-full bg-surface-low">
+      <nav className="flex items-center gap-2 text-xs font-semibold text-on-surface-variant mb-6 uppercase tracking-widest max-w-7xl mx-auto">
+        <Link to={`/p/${pid}/requirements`} className="hover:text-primary transition-colors">
           Requirements
         </Link>
-        <span className="material-symbols-outlined text-sm text-stitch-muted">chevron_right</span>
-        <span className="text-stitch-accent font-bold">
+        <span className="material-symbols-outlined text-sm text-outline">chevron_right</span>
+        <span className="text-primary font-bold font-headline">
           {detail.reference_code || `REQ-${detail.id}`}
         </span>
       </nav>
 
       <form onSubmit={onSave} className="max-w-7xl mx-auto">
         <div className="grid grid-cols-12 gap-8">
+          {/* Main editor */}
           <div className="col-span-12 lg:col-span-8 space-y-8">
-            <section className="bg-stitch-surface p-6 md:p-8 rounded-xl shadow-stitch border border-stitch-border">
+            <section className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-outline-variant/20">
               <div className="flex flex-col gap-2 mb-6">
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="font-mono text-xs font-bold text-stitch-accent bg-stitch-elevated px-2 py-1 rounded-md border border-stitch-border">
+                  <span className="font-mono text-xs font-bold text-on-surface-variant bg-surface-container px-2 py-1 rounded border border-outline-variant/30">
                     {detail.reference_code || `#${detail.id}`}
                   </span>
-                  <div className="h-1 w-1 bg-stitch-muted/50 rounded-full" />
-                  <span className="text-[10px] font-bold text-stitch-subtle bg-stitch-elevated px-2 py-1 rounded-md uppercase tracking-wide border border-stitch-border">
+                  <div className="h-1 w-1 bg-outline-variant rounded-full" />
+                  <span className="text-xs font-medium text-on-tertiary-fixed-variant bg-surface-container px-2 py-1 rounded border border-outline-variant/30 uppercase tracking-wide">
                     {approvalLabel(detail.approval_state)}
                   </span>
                 </div>
                 <input
-                  className="text-2xl md:text-3xl font-bold font-headline bg-transparent border-none focus:ring-2 focus:ring-stitch-accent/30 rounded-md w-full p-0 text-white placeholder:text-stitch-muted"
-                  placeholder="Requirement title"
+                  className="text-3xl font-bold font-headline bg-transparent border-none focus:ring-0 w-full p-0 text-primary placeholder:text-outline"
+                  placeholder="Enter requirement title…"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
                 />
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 p-4 bg-stitch-elevated rounded-lg border border-stitch-border">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-4 bg-surface-low rounded-lg border border-outline-variant/15">
                 <div>
-                  <span className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+                  <span className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
                     Priority
                   </span>
-                  <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                    <span className="material-symbols-outlined text-stitch-accent text-base">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-on-surface">
+                    <span className="material-symbols-outlined text-tertiary-container text-lg">
                       priority_high
                     </span>
                     {priorityLabel}
                   </div>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+                  <span className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
                     Status
                   </span>
-                  <select
-                    className={`mt-0.5 ${selectClass} font-semibold py-1.5`}
-                    value={statusId}
-                    onChange={(e) => setStatusId(Number(e.target.value))}
-                  >
-                    {statusOptions.map((s) => (
-                      <option key={s.id} value={s.id} className="bg-stitch-surface text-white">
-                        {s.title}
-                      </option>
-                    ))}
-                    {!statusOptions.some((s) => s.id === statusId) && (
-                      <option value={statusId} className="bg-stitch-surface text-white">
-                        Status #{statusId}
-                      </option>
-                    )}
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-2 h-2 rounded-full shrink-0 bg-secondary"
+                      style={statusTagColorSwatchStyle(statusMeta?.tag_color)}
+                    />
+                    <select
+                      className={`flex-1 min-w-0 ${selectLight} py-1.5 font-semibold text-sm border-0 bg-transparent pl-0 focus:ring-0`}
+                      value={statusId}
+                      onChange={(e) => setStatusId(Number(e.target.value))}
+                    >
+                      {statusOptions.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.title}
+                        </option>
+                      ))}
+                      {!statusOptions.some((s) => s.id === statusId) && (
+                        <option value={statusId}>Status #{statusId}</option>
+                      )}
+                    </select>
+                  </div>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
-                    Versions
+                  <span className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
+                    Version
                   </span>
-                  <span className="text-sm font-mono font-medium text-white">{latestVersionLabel}</span>
+                  <span className="text-sm font-mono font-medium text-on-surface">{latestVersionLabel}</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
-                    Display status
+                  <span className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
+                    Author
                   </span>
-                  <span className="text-sm font-semibold text-white">{statusTitle}</span>
+                  <span className="text-sm font-semibold text-on-surface line-clamp-2">
+                    {userLabel(authorId)}
+                  </span>
                 </div>
               </div>
 
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+                  <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
                     Category
                   </label>
-                  <select
-                    className={selectClass}
-                    value={categoryId}
-                    onChange={(e) => setCategoryId(Number(e.target.value))}
-                  >
+                  <select className={selectLight} value={categoryId} onChange={(e) => setCategoryId(Number(e.target.value))}>
                     {categories.map((c) => (
-                      <option key={c.id} value={c.id} className="bg-stitch-surface text-white">
+                      <option key={c.id} value={c.id}>
                         {c.title}
                       </option>
                     ))}
                     {!categories.some((c) => c.id === categoryId) && (
-                      <option value={categoryId} className="bg-stitch-surface text-white">
-                        Category #{categoryId}
-                      </option>
+                      <option value={categoryId}>Category #{categoryId}</option>
                     )}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+                  <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
                     Applicability
                   </label>
                   <select
-                    className={selectClass}
+                    className={selectLight}
                     value={applicabilityId}
                     onChange={(e) => setApplicabilityId(Number(e.target.value))}
                   >
                     {applicability.map((a) => (
-                      <option key={a.id} value={a.id} className="bg-stitch-surface text-white">
+                      <option key={a.id} value={a.id}>
                         {a.title}
                       </option>
                     ))}
                     {!applicability.some((a) => a.id === applicabilityId) && (
-                      <option value={applicabilityId} className="bg-stitch-surface text-white">
-                        Applicability #{applicabilityId}
-                      </option>
+                      <option value={applicabilityId}>Applicability #{applicabilityId}</option>
                     )}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
-                    Author
+                  <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
+                    Author (account)
                   </label>
-                  <select
-                    className={selectClass}
-                    value={authorId}
-                    onChange={(e) => setAuthorId(Number(e.target.value))}
-                  >
+                  <select className={selectLight} value={authorId} onChange={(e) => setAuthorId(Number(e.target.value))}>
                     {memberOptionIds.map((id) => (
-                      <option key={id} value={id} className="bg-stitch-surface text-white">
+                      <option key={id} value={id}>
                         {userLabel(id)}
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+                  <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
                     Reviewer
                   </label>
-                  <select
-                    className={selectClass}
-                    value={reviewerId}
-                    onChange={(e) => setReviewerId(Number(e.target.value))}
-                  >
+                  <select className={selectLight} value={reviewerId} onChange={(e) => setReviewerId(Number(e.target.value))}>
                     {memberOptionIds.map((id) => (
-                      <option key={`r-${id}`} value={id} className="bg-stitch-surface text-white">
+                      <option key={`r-${id}`} value={id}>
                         {userLabel(id)}
                       </option>
                     ))}
                   </select>
                 </div>
               </div>
+              <p className="mt-3 text-[10px] text-on-surface-variant flex flex-wrap items-center gap-2">
+                Displayed status:
+                <StatusBadge title={statusTitle} tagColor={statusMeta?.tag_color} />
+              </p>
             </section>
 
-            <section className="bg-stitch-surface rounded-xl shadow-stitch border border-stitch-border overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-3 border-b border-stitch-border bg-stitch-elevated">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-stitch-muted">
+            <section className="bg-white rounded-xl shadow-sm border border-outline-variant/20 overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-3 border-b border-outline-variant/20 bg-surface-low">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant font-headline">
                   Requirement statement
                 </h3>
+                <div className="flex gap-1 opacity-40 pointer-events-none" aria-hidden>
+                  <button type="button" className="p-1.5 hover:bg-surface-container rounded transition-colors">
+                    <span className="material-symbols-outlined text-lg text-on-surface-variant">format_bold</span>
+                  </button>
+                  <button type="button" className="p-1.5 hover:bg-surface-container rounded transition-colors">
+                    <span className="material-symbols-outlined text-lg text-on-surface-variant">format_italic</span>
+                  </button>
+                  <button type="button" className="p-1.5 hover:bg-surface-container rounded transition-colors">
+                    <span className="material-symbols-outlined text-lg text-on-surface-variant">format_list_bulleted</span>
+                  </button>
+                  <div className="w-px h-6 bg-outline-variant/30 mx-1 self-center" />
+                  <button type="button" className="p-1.5 hover:bg-surface-container rounded transition-colors">
+                    <span className="material-symbols-outlined text-lg text-on-surface-variant">link</span>
+                  </button>
+                </div>
               </div>
               <div className="p-6 md:p-8">
                 <textarea
-                  className="w-full min-h-[280px] text-sm leading-relaxed text-white bg-transparent border-none focus:ring-2 focus:ring-stitch-accent/25 rounded-md p-0 resize-y placeholder:text-stitch-muted"
+                  className="w-full min-h-[300px] text-sm leading-relaxed text-on-surface bg-transparent border-none focus:ring-0 rounded-md p-0 resize-y placeholder:text-outline"
                   placeholder="Describe the requirement…"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -513,228 +671,328 @@ export default function EditRequirementPage() {
             </section>
           </div>
 
+          {/* Sidebar */}
           <aside className="col-span-12 lg:col-span-4 space-y-6">
-            <div className="bg-stitch-surface rounded-xl shadow-stitch border border-stitch-border p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="material-symbols-outlined text-stitch-accent">account_tree</span>
-                <h3 className="text-sm font-bold font-headline text-white">Traceability</h3>
+            <div className="bg-white rounded-xl shadow-sm border border-outline-variant/20 p-6">
+              <div className="flex items-center gap-2 mb-6">
+                <span className="material-symbols-outlined text-primary text-xl">account_tree</span>
+                <h3 className="text-sm font-bold font-headline text-primary">Traceability matrix</h3>
               </div>
-              <div className="space-y-5">
+              <div className="space-y-6">
                 <div>
-                  <p className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-2">
-                    Parent links
+                  <p className="text-[10px] font-bold text-outline uppercase tracking-wider mb-3">
+                    Upstream links (parent)
                   </p>
-                  {ts.parent_links.length === 0 ? (
-                    <p className="text-xs text-stitch-muted">None</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {ts.parent_links.map((l) => (
-                        <li
-                          key={l.id}
-                          className="p-3 bg-stitch-elevated rounded-lg text-xs border-l-2 border-stitch-accent/60"
-                        >
-                          <span className="font-mono text-[10px] font-bold text-stitch-accent">
-                            {l.link_type}
-                          </span>
-                          <span className="block text-stitch-muted mt-0.5">
-                            Target version #{l.target_version_id}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-2">
-                    Child requirements
-                  </p>
-                  {ts.child_ids.length === 0 ? (
-                    <p className="text-xs text-stitch-muted">None</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {ts.child_ids.map((cid) => (
-                        <li key={cid} className="p-3 bg-stitch-elevated rounded-lg text-xs border border-stitch-border">
-                          <Link
-                            to={`/p/${pid}/requirements/${cid}/edit`}
-                            className="block hover:opacity-90 transition-opacity"
-                          >
-                            <span className="font-mono text-[10px] font-bold text-stitch-accent">#{cid}</span>
-                            <span className="block font-medium text-white">{reqTitleById.get(cid) ?? '—'}</span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-2">
-                    Linked verifications
-                  </p>
-                  {ts.linked_test_ids.length === 0 ? (
-                    <p className="text-xs text-stitch-muted">None</p>
-                  ) : (
-                    <ul className="space-y-2">
-                      {ts.linked_test_ids.map((vid) => {
-                        const v = verById.get(vid);
+                  <div className="space-y-2">
+                    {ts.parent_links.length === 0 ? (
+                      <p className="text-xs text-on-surface-variant py-1">None</p>
+                    ) : (
+                      ts.parent_links.map((l) => {
+                        const parentReq = resolveParentReq(l);
                         return (
-                          <li
-                            key={vid}
-                            className="flex items-center justify-between p-3 bg-stitch-elevated rounded-lg border-l-2 border-emerald-400/70"
+                          <div
+                            key={l.id}
+                            className="flex items-center justify-between gap-2 p-3 bg-surface-low rounded-lg border border-outline-variant/15 group"
                           >
-                            <Link
-                              to={`/p/${pid}/verifications/${vid}/edit`}
-                              className="min-w-0 flex-1 hover:opacity-90 transition-opacity"
-                            >
-                              <span className="font-mono text-[10px] font-bold text-emerald-300/90">
-                                {v?.reference_code ?? `#${vid}`}
-                              </span>
-                              <span className="block text-xs font-medium text-white">{v?.name ?? '—'}</span>
-                            </Link>
-                          </li>
+                            <div className="min-w-0 flex-1">
+                              {parentReq ? (
+                                <Link
+                                  to={`/p/${pid}/requirements/${parentReq.id}/edit`}
+                                  className="block hover:opacity-90 transition-opacity"
+                                >
+                                  <span className="font-mono text-[10px] font-bold text-primary">
+                                    {parentReq.reference_code || `#${parentReq.id}`}
+                                  </span>
+                                  <span className="block text-xs font-medium text-on-surface truncate">
+                                    {parentReq.title}
+                                  </span>
+                                  <span className="text-[10px] text-on-surface-variant">{l.link_type}</span>
+                                </Link>
+                              ) : (
+                                <div>
+                                  <span className="font-mono text-[10px] font-bold text-primary">
+                                    Version #{l.target_version_id}
+                                  </span>
+                                  <span className="block text-[10px] text-on-surface-variant">{l.link_type}</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              {parentReq ? (
+                                <Link
+                                  to={`/p/${pid}/requirements/${parentReq.id}/edit`}
+                                  className="p-1 text-outline hover:text-primary transition-colors"
+                                  title="Open parent"
+                                >
+                                  <span className="material-symbols-outlined text-lg">open_in_new</span>
+                                </Link>
+                              ) : null}
+                              <button
+                                type="button"
+                                title="Remove link"
+                                disabled={linkBusy || !(csrfToken ?? '').length}
+                                onClick={() => void removeParentLink(l.id)}
+                                className="p-1 text-outline hover:text-error transition-colors disabled:opacity-40"
+                              >
+                                <span className="material-symbols-outlined text-lg">link_off</span>
+                              </button>
+                            </div>
+                          </div>
                         );
-                      })}
-                    </ul>
+                      })
+                    )}
+                  </div>
+                  {canEditParents ? (
+                    <div className="mt-4 pt-4 border-t border-outline-variant/20 space-y-2">
+                      <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Add parent</p>
+                      <select
+                        className={selectLight}
+                        value={newParentId === '' ? '' : String(newParentId)}
+                        onChange={(e) => setNewParentId(e.target.value === '' ? '' : Number(e.target.value))}
+                      >
+                        <option value="">Select requirement…</option>
+                        {parentCandidates.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.reference_code || `#${r.id}`} — {r.title.slice(0, 48)}
+                            {r.title.length > 48 ? '…' : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        className={selectLight}
+                        value={newLinkType}
+                        onChange={(e) => setNewLinkType(e.target.value)}
+                      >
+                        {linkTypes.map((t) => (
+                          <option key={t} value={t}>
+                            {t}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        disabled={linkBusy || newParentId === '' || !(csrfToken ?? '').length}
+                        onClick={() => void addParentLink()}
+                        className="w-full text-xs font-bold uppercase tracking-wider bg-gradient-to-br from-primary to-primary-container text-white py-2 rounded-lg shadow-sm hover:opacity-95 disabled:opacity-40 transition-opacity"
+                      >
+                        {linkBusy ? 'Updating…' : 'Add upstream link'}
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="mt-3 text-[10px] text-on-surface-variant">
+                      Parent links need a current requirement version.
+                    </p>
                   )}
+                </div>
+
+                {ts.child_ids.length > 0 ? (
+                  <div>
+                    <p className="text-[10px] font-bold text-outline uppercase tracking-wider mb-3">
+                      Child requirements
+                    </p>
+                    <div className="space-y-2">
+                      {ts.child_ids.map((cid) => (
+                        <Link
+                          key={cid}
+                          to={`/p/${pid}/requirements/${cid}/edit`}
+                          className="flex items-center justify-between p-3 bg-surface-low rounded-lg hover:bg-surface-container transition-colors"
+                        >
+                          <div className="min-w-0">
+                            <span className="font-mono text-[10px] font-bold text-secondary">#{cid}</span>
+                            <span className="block text-xs font-medium text-on-surface truncate">
+                              {reqTitleById.get(cid) ?? '—'}
+                            </span>
+                          </div>
+                          <span className="material-symbols-outlined text-outline text-sm">chevron_right</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                <div>
+                  <p className="text-[10px] font-bold text-outline uppercase tracking-wider mb-3">
+                    Downstream links (verification)
+                  </p>
+                  <div className="space-y-2">
+                    {ts.linked_test_ids.length === 0 ? (
+                      <p className="text-xs text-on-surface-variant py-1">None</p>
+                    ) : (
+                      ts.linked_test_ids.map((vid) => {
+                        const v = verById.get(vid);
+                        const vst = v ? verifStatusById.get(v.status_id) : undefined;
+                        const borderColor = vst?.tag_color || undefined;
+                        return (
+                          <Link
+                            key={vid}
+                            to={`/p/${pid}/verifications/${vid}/edit`}
+                            className="flex items-center justify-between p-3 bg-surface-low rounded-lg border-l-2 border-secondary hover:bg-surface-container transition-colors gap-2"
+                            style={borderColor ? { borderLeftColor: borderColor } : undefined}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <span
+                                className="font-mono text-[10px] font-bold text-on-tertiary-fixed-variant block"
+                                style={borderColor ? { color: borderColor } : undefined}
+                              >
+                                {v?.reference_code ?? `TEST-${vid}`}
+                              </span>
+                              <span className="text-xs font-medium text-on-surface block truncate">
+                                {v?.name ?? '—'}
+                              </span>
+                            </div>
+                            <div className="shrink-0">
+                              {vst?.title ? (
+                                <StatusBadge title={vst.title} tagColor={vst.tag_color} />
+                              ) : (
+                                <span className="text-[10px] font-bold uppercase text-secondary">—</span>
+                              )}
+                            </div>
+                          </Link>
+                        );
+                      })
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="bg-stitch-surface rounded-xl shadow-stitch border border-stitch-border p-6 space-y-4">
-              <h3 className="text-sm font-bold font-headline text-white">Version history</h3>
-              {versions.length === 0 ? (
-                <p className="text-xs text-stitch-muted">No stored versions yet.</p>
-              ) : (
-                <ul className="space-y-2 max-h-52 overflow-y-auto">
-                  {[...versions]
-                    .sort(
-                      (a, b) =>
-                        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-                    )
-                    .map((ver, idx) => (
-                      <li
-                        key={ver.id}
-                        className="text-xs p-3 rounded-lg bg-stitch-elevated border border-stitch-border"
-                      >
-                        <div className="flex justify-between gap-2 items-start">
-                          <span className="font-mono font-bold text-stitch-accent shrink-0">
-                            v{versions.length - idx}
-                          </span>
-                          <span className="text-stitch-muted text-[10px]">{formatTs(ver.created_at)}</span>
+            <div className="bg-white rounded-xl shadow-sm border border-outline-variant/20 flex flex-col max-h-[400px]">
+              <div className="px-6 py-4 border-b border-outline-variant/20 flex items-center justify-between shrink-0">
+                <h3 className="text-sm font-bold font-headline text-primary">Change log &amp; discussion</h3>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {versions.length > 0 ? (
+                  <div className="flex gap-3 opacity-90">
+                    <span className="material-symbols-outlined text-outline text-lg shrink-0">history</span>
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-bold text-on-surface-variant">Version history</span>
+                        <span className="text-[10px] text-outline">{latestVersionLabel}</span>
+                      </div>
+                      <p className="text-xs text-on-surface-variant leading-relaxed">
+                        {versions.length} snapshot(s). Latest:{' '}
+                        {latestVersionCreatedAt ? formatTs(latestVersionCreatedAt) : '—'}.
+                      </p>
+                      {projectSlug ? (
+                        <a
+                          href={`/p/${projectSlug}/requirements/show/${rid}`}
+                          className="text-[10px] font-bold text-primary hover:underline mt-2 inline-block uppercase tracking-wide"
+                        >
+                          Full diffs in classic UI →
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+                {comments.length === 0 && versions.length === 0 ? (
+                  <p className="text-xs text-on-surface-variant">No activity yet.</p>
+                ) : null}
+                {[...comments]
+                  .sort(
+                    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+                  )
+                  .map((c) => (
+                    <div key={c.id} className="flex gap-3">
+                      <div className="h-6 w-6 rounded-full bg-primary-container flex items-center justify-center text-[10px] text-white font-bold shrink-0">
+                        {c.author_name
+                          ? c.author_name
+                              .split(/\s+/)
+                              .map((p) => p[0])
+                              .join('')
+                              .slice(0, 2)
+                              .toUpperCase()
+                          : '?'}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <span className="text-xs font-bold text-on-surface">{c.author_name}</span>
+                          <span className="text-[10px] text-outline">{formatRelativeTime(c.created_at) || formatTs(c.created_at)}</span>
                         </div>
-                        <p className="text-white/90 mt-1 line-clamp-2">{ver.title}</p>
-                        <span className="text-[10px] uppercase text-stitch-subtle">
-                          {approvalLabel(ver.approval_state)}
-                        </span>
-                      </li>
-                    ))}
-                </ul>
-              )}
-              {projectSlug ? (
-                <a
-                  href={`/p/${projectSlug}/requirements/show/${rid}`}
-                  className="text-xs font-bold text-stitch-accent hover:underline inline-block"
+                        <p className="text-xs text-on-surface-variant leading-relaxed whitespace-pre-wrap">{c.body}</p>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+              <div className="px-6 py-3 border-t border-outline-variant/15 bg-surface-low shrink-0">
+                <textarea
+                  className={`w-full min-h-[72px] text-sm resize-y ${selectLight}`}
+                  placeholder="Add a comment…"
+                  value={commentBody}
+                  onChange={(e) => setCommentBody(e.target.value)}
+                />
+                <button
+                  type="button"
+                  disabled={commentPosting || !commentBody.trim() || !(csrfToken ?? '').length}
+                  onClick={() => void postComment()}
+                  className="mt-2 text-primary text-[10px] font-bold uppercase tracking-wider hover:underline disabled:opacity-40"
                 >
-                  Full history &amp; diffs in classic UI →
-                </a>
-              ) : null}
+                  {commentPosting ? 'Posting…' : 'Add comment'}
+                </button>
+              </div>
             </div>
 
-            <div className="bg-stitch-surface rounded-xl shadow-stitch border border-stitch-border p-6 space-y-3">
-              <h3 className="text-sm font-bold font-headline text-white">Discussion</h3>
-              <textarea
-                className={`w-full min-h-[80px] text-sm resize-y ${selectClass}`}
-                placeholder="Add a comment…"
-                value={commentBody}
-                onChange={(e) => setCommentBody(e.target.value)}
-              />
-              <button
-                type="button"
-                disabled={
-                  commentPosting || !commentBody.trim() || !(csrfToken ?? '').length
-                }
-                onClick={() => void postComment()}
-                className="text-xs font-bold uppercase tracking-wider bg-stitch-accent text-stitch-canvas px-4 py-2 rounded-md disabled:opacity-40"
-              >
-                {commentPosting ? 'Posting…' : 'Post comment'}
-              </button>
-              <ul className="space-y-3 max-h-64 overflow-y-auto pt-3 border-t border-stitch-border">
-                {comments.length === 0 ? (
-                  <li className="text-xs text-stitch-muted">No comments yet.</li>
-                ) : (
-                  [...comments]
-                    .sort(
-                      (a, b) =>
-                        new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-                    )
-                    .map((c) => (
-                      <li key={c.id} className="text-xs border-l-2 border-stitch-accent/40 pl-3">
-                        <div className="flex justify-between gap-2 text-stitch-muted">
-                          <span className="font-semibold text-white">{c.author_name}</span>
-                          <span className="shrink-0">{formatTs(c.created_at)}</span>
-                        </div>
-                        <p className="text-stitch-muted mt-1 whitespace-pre-wrap">{c.body}</p>
-                      </li>
-                    ))
-                )}
-              </ul>
-            </div>
-
-            <div className="bg-stitch-surface rounded-xl shadow-stitch border border-stitch-border p-6">
-              <h3 className="text-sm font-bold font-headline text-white mb-2">Attachments</h3>
-              <p className="text-xs text-stitch-muted mb-2">
+            <div className="bg-white rounded-xl shadow-sm border border-outline-variant/20 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold font-headline text-primary">Attachments</h3>
+                <span className="material-symbols-outlined text-outline" title="Manage in classic UI">
+                  add_circle
+                </span>
+              </div>
+              <p className="text-xs text-on-surface-variant mb-2">
                 Upload and manage files on the classic requirement page.
               </p>
               {projectSlug ? (
                 <a
                   href={`/p/${projectSlug}/requirements/show/${rid}`}
-                  className="text-xs font-bold text-stitch-accent hover:underline"
+                  className="text-xs font-bold text-primary hover:underline"
                 >
                   Open classic requirement →
                 </a>
               ) : (
-                <p className="text-xs text-stitch-muted">Project slug unavailable.</p>
+                <p className="text-xs text-on-surface-variant">Project slug unavailable.</p>
               )}
             </div>
           </aside>
         </div>
 
         {saveError && (
-          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 max-w-lg w-[calc(100%-2rem)] rounded-lg bg-red-500/20 border border-red-500/30 text-red-100 text-sm px-4 py-2 shadow-stitch z-50">
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 max-w-lg w-[calc(100%-2rem)] rounded-lg bg-error-container border border-error/30 text-on-error-container text-sm px-4 py-2 shadow-lg z-[60]">
             {saveError}
           </div>
         )}
 
-        <footer className="fixed bottom-0 left-0 right-0 z-40 bg-stitch-surface/85 backdrop-blur-md border-t border-stitch-border px-4 md:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
+        <footer className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-outline-variant/30 px-4 md:px-8 py-4 flex flex-wrap items-center justify-between gap-3 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              className="text-xs font-bold uppercase tracking-wider text-red-400/90 hover:text-red-300 transition-colors px-2 py-2 disabled:opacity-40"
+              className="flex items-center gap-2 text-on-surface-variant hover:text-error transition-colors text-xs font-bold uppercase tracking-wider px-3 py-2 rounded disabled:opacity-40"
               disabled={deleteBusy || !(csrfToken ?? '').length}
               onClick={() => void deleteRequirement()}
             >
-              {deleteBusy ? 'Deleting…' : 'Delete requirement'}
+              <span className="material-symbols-outlined text-lg">archive</span>
+              Archive requirement
             </button>
             <button
               type="button"
-              className="text-xs font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-danger transition-colors px-2 py-2"
+              className="text-xs font-bold uppercase tracking-wider text-outline hover:text-on-surface px-3 py-2"
               onClick={() => navigate(`/p/${pid}/requirements`)}
             >
               Cancel
             </button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               type="button"
               disabled={!dirty}
               onClick={revert}
-              className="px-4 py-2 text-xs font-bold uppercase tracking-widest text-stitch-muted hover:bg-white/[0.06] rounded-md transition-colors disabled:opacity-40"
+              className="px-5 py-2 text-xs font-bold uppercase tracking-widest text-on-surface-variant hover:bg-surface-low transition-colors rounded-lg disabled:opacity-40"
             >
               Revert changes
             </button>
             <button
               type="submit"
               disabled={saving || !dirty}
-              className="bg-stitch-accent text-stitch-canvas px-6 py-2.5 rounded-md text-xs font-bold uppercase tracking-widest shadow-stitch disabled:opacity-50 transition-transform active:scale-[0.98] hover:bg-stitch-accent-dim"
+              className="bg-gradient-to-br from-primary to-primary-container text-white px-8 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-50"
             >
               {saving ? 'Saving…' : 'Save requirement'}
             </button>

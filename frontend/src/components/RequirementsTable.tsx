@@ -368,11 +368,11 @@ export default function RequirementsTable({
   }
 
   const cellInput =
-    'w-full min-w-[90px] max-w-[min(100%,280px)] text-xs bg-stitch-elevated border border-stitch-border rounded px-2 py-1.5 text-white focus:border-stitch-accent outline-none disabled:opacity-50';
+    'w-full min-w-[90px] max-w-[min(100%,280px)] text-xs bg-stitch-elevated border border-stitch-border rounded px-2 py-1.5 text-stitch-fg focus:border-stitch-accent outline-none disabled:opacity-50';
   const cellSelect = `${cellInput} cursor-pointer`;
   /** Collapsed cell: click to open editor */
   const displayCellBtn =
-    'w-full text-left text-xs text-white/90 leading-snug rounded-md px-1.5 py-1 hover:bg-white/[0.06] border border-transparent hover:border-stitch-border/40 transition-colors min-h-[1.75rem]';
+    'w-full text-left text-xs text-stitch-fg/90 leading-snug rounded-md px-1.5 py-1 hover:bg-stitch-higher border border-transparent hover:border-stitch-border/40 transition-colors min-h-[1.75rem]';
   const closeCellEdit = () => setEditCell(null);
 
   return (
@@ -533,7 +533,7 @@ export default function RequirementsTable({
                           {req.title.trim() ? req.title : '—'}
                         </button>
                       ) : (
-                        <p className="text-sm text-white/90">{req.title.trim() ? req.title : '—'}</p>
+                        <p className="text-sm text-stitch-fg/90">{req.title.trim() ? req.title : '—'}</p>
                       )}
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
@@ -574,7 +574,7 @@ export default function RequirementsTable({
                             {categoryById.get(req.category_id) ?? `Category #${req.category_id}`}
                           </button>
                         ) : (
-                          <span className="text-white/90">
+                          <span className="text-stitch-fg/90">
                             {categoryById.get(req.category_id) ?? `Category #${req.category_id}`}
                           </span>
                         )}
@@ -638,7 +638,7 @@ export default function RequirementsTable({
                             {verificationMethodsText(methodIds, verificationMethods)}
                           </button>
                         ) : (
-                          <span className="text-white/90">
+                          <span className="text-stitch-fg/90">
                             {verificationMethodsText(methodIds, verificationMethods)}
                           </span>
                         )}
@@ -680,7 +680,7 @@ export default function RequirementsTable({
                             {userLabel(req.author_id)}
                           </button>
                         ) : (
-                          <span className="text-white/90">{userLabel(req.author_id)}</span>
+                          <span className="text-stitch-fg/90">{userLabel(req.author_id)}</span>
                         )}
                       </div>
                     </div>
@@ -788,7 +788,7 @@ export default function RequirementsTable({
                           {req.title.trim() ? req.title : '—'}
                         </button>
                       ) : (
-                        <span className="text-xs text-white/90 px-1.5 py-1 block line-clamp-3">
+                        <span className="text-xs text-stitch-fg/90 px-1.5 py-1 block line-clamp-3">
                           {req.title.trim() ? req.title : '—'}
                         </span>
                       )}
@@ -830,7 +830,7 @@ export default function RequirementsTable({
                           {categoryById.get(req.category_id) ?? `Category #${req.category_id}`}
                         </button>
                       ) : (
-                        <span className="text-xs text-white/90 px-1.5 py-1 block line-clamp-2">
+                        <span className="text-xs text-stitch-fg/90 px-1.5 py-1 block line-clamp-2">
                           {categoryById.get(req.category_id) ?? `Category #${req.category_id}`}
                         </span>
                       )}
@@ -956,7 +956,7 @@ export default function RequirementsTable({
                           {verificationMethodsText(methodIds, verificationMethods)}
                         </button>
                       ) : (
-                        <span className="text-xs text-white/90 leading-snug block px-1.5 py-1">
+                        <span className="text-xs text-stitch-fg/90 leading-snug block px-1.5 py-1">
                           {verificationMethodsText(methodIds, verificationMethods)}
                         </span>
                       )}
@@ -1001,7 +1001,7 @@ export default function RequirementsTable({
                           {userLabel(req.author_id)}
                         </button>
                       ) : (
-                        <span className="text-xs text-white/90 px-1.5 py-1 block line-clamp-2">
+                        <span className="text-xs text-stitch-fg/90 px-1.5 py-1 block line-clamp-2">
                           {userLabel(req.author_id)}
                         </span>
                       )}
@@ -1042,7 +1042,7 @@ export default function RequirementsTable({
             <select
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
-              className="bg-stitch-elevated border border-stitch-border rounded text-xs py-1 px-2 text-white focus:ring-1 focus:ring-stitch-accent outline-none"
+              className="bg-stitch-elevated border border-stitch-border rounded text-xs py-1 px-2 text-stitch-fg focus:ring-1 focus:ring-stitch-accent outline-none"
             >
               <option value={25}>25</option>
               <option value={50}>50</option>
@@ -1052,10 +1052,10 @@ export default function RequirementsTable({
           <div className="flex flex-wrap items-center gap-4">
             <p className="text-xs text-stitch-muted font-medium">
               Showing{' '}
-              <span className="text-white font-bold">
+              <span className="text-stitch-fg font-bold">
                 {filtered.length === 0 ? 0 : sliceStart + 1}-{Math.min(sliceStart + pageSize, filtered.length)}
               </span>{' '}
-              of <span className="text-white font-bold">{filtered.length}</span>
+              of <span className="text-stitch-fg font-bold">{filtered.length}</span>
             </p>
             <div className="flex items-center gap-1">
               <button
@@ -1080,7 +1080,7 @@ export default function RequirementsTable({
                       className={`w-8 h-8 flex items-center justify-center rounded text-xs font-bold transition-colors ${
                         item === safePage
                           ? 'bg-stitch-accent text-stitch-canvas'
-                          : 'hover:bg-white/[0.08] text-white'
+                          : 'hover:bg-stitch-elevated text-stitch-fg'
                       }`}
                     >
                       {item}

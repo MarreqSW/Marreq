@@ -21,7 +21,7 @@ function StatCard({
   return (
     <div className="rounded-xl border border-stitch-border bg-stitch-surface p-5 shadow-stitch">
       <p className="text-[10px] font-bold text-stitch-muted uppercase tracking-widest">{label}</p>
-      <p className="text-3xl font-extrabold text-white mt-2 tabular-nums">{value}</p>
+      <p className="text-3xl font-extrabold text-stitch-fg mt-2 tabular-nums">{value}</p>
       {hint ? <p className="text-xs text-stitch-muted mt-2">{hint}</p> : null}
     </div>
   );
@@ -127,48 +127,48 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
           <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4">
             <p className="text-xs font-bold text-amber-200 uppercase tracking-wide">Gaps</p>
-            <p className="text-2xl font-bold text-white mt-1">{coverage.reqNoTest}</p>
+            <p className="text-2xl font-bold text-stitch-fg mt-1">{coverage.reqNoTest}</p>
             <p className="text-xs text-stitch-muted mt-1">Requirements without tests</p>
           </div>
           <div className="rounded-xl border border-stitch-accent/25 bg-stitch-accent/10 p-4">
             <p className="text-xs font-bold text-stitch-accent uppercase tracking-wide">Orphans</p>
-            <p className="text-2xl font-bold text-white mt-1">{coverage.verNoReq}</p>
+            <p className="text-2xl font-bold text-stitch-fg mt-1">{coverage.verNoReq}</p>
             <p className="text-xs text-stitch-muted mt-1">Tests without requirements</p>
           </div>
           <div className="rounded-xl border border-red-500/25 bg-red-500/10 p-4">
             <p className="text-xs font-bold text-red-200 uppercase tracking-wide">Suspect</p>
-            <p className="text-2xl font-bold text-white mt-1">{coverage.suspect}</p>
+            <p className="text-2xl font-bold text-stitch-fg mt-1">{coverage.suspect}</p>
             <p className="text-xs text-stitch-muted mt-1">Links flagged as suspect</p>
           </div>
         </div>
       ) : null}
 
-      <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4">Quick links</h3>
+      <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-widest mb-4">Quick links</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Link
           to={`/p/${pid}/requirements`}
-          className="rounded-xl border border-stitch-border bg-stitch-elevated px-4 py-4 text-sm font-semibold text-white hover:bg-white/[0.06] transition-colors flex items-center gap-2"
+          className="rounded-xl border border-stitch-border bg-stitch-elevated px-4 py-4 text-sm font-semibold text-stitch-fg hover:bg-stitch-higher transition-colors flex items-center gap-2"
         >
           <span className="material-symbols-outlined text-stitch-accent">list_alt</span>
           Requirements
         </Link>
         <Link
           to={`/p/${pid}/verifications`}
-          className="rounded-xl border border-stitch-border bg-stitch-elevated px-4 py-4 text-sm font-semibold text-white hover:bg-white/[0.06] transition-colors flex items-center gap-2"
+          className="rounded-xl border border-stitch-border bg-stitch-elevated px-4 py-4 text-sm font-semibold text-stitch-fg hover:bg-stitch-higher transition-colors flex items-center gap-2"
         >
           <span className="material-symbols-outlined text-stitch-accent">verified</span>
           Verifications
         </Link>
         <Link
           to={`/p/${pid}/traceability`}
-          className="rounded-xl border border-stitch-border bg-stitch-elevated px-4 py-4 text-sm font-semibold text-white hover:bg-white/[0.06] transition-colors flex items-center gap-2"
+          className="rounded-xl border border-stitch-border bg-stitch-elevated px-4 py-4 text-sm font-semibold text-stitch-fg hover:bg-stitch-higher transition-colors flex items-center gap-2"
         >
           <span className="material-symbols-outlined text-stitch-accent">account_tree</span>
           Traceability
         </Link>
         <Link
           to={`/p/${pid}/reports`}
-          className="rounded-xl border border-stitch-border bg-stitch-elevated px-4 py-4 text-sm font-semibold text-white hover:bg-white/[0.06] transition-colors flex items-center gap-2"
+          className="rounded-xl border border-stitch-border bg-stitch-elevated px-4 py-4 text-sm font-semibold text-stitch-fg hover:bg-stitch-higher transition-colors flex items-center gap-2"
         >
           <span className="material-symbols-outlined text-stitch-accent">description</span>
           Reports

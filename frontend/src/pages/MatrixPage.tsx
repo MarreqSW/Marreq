@@ -127,14 +127,14 @@ export default function MatrixPage() {
       >
         <a
           href={`/p/${pid}/matrix`}
-          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-white/[0.06]"
+          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
         >
           Classic matrix
         </a>
         <button
           type="button"
           onClick={() => void load()}
-          className="text-xs font-bold uppercase tracking-wider text-stitch-muted border border-stitch-border rounded-md px-3 py-2 hover:bg-white/[0.06]"
+          className="text-xs font-bold uppercase tracking-wider text-stitch-muted border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
         >
           Refresh
         </button>

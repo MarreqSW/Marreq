@@ -28,7 +28,7 @@ export default function RequirementsPage() {
             <span className="mx-2">/</span>
             <span className="text-stitch-accent font-bold">Requirements</span>
           </nav>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight font-headline">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-stitch-fg tracking-tight font-headline">
             System specifications
           </h2>
         </div>

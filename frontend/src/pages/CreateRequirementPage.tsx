@@ -20,7 +20,7 @@ import type {
 import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
 
 const selectClass =
-  'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-white focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
+  'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
 
 function parseUser(u: unknown): User | null {
   if (u && typeof u === 'object' && 'username' in u) return u as User;
@@ -176,7 +176,7 @@ export default function CreateRequirementPage() {
   }
 
   return (
-    <div className="pb-28 font-body text-white text-stitch max-w-4xl">
+    <div className="pb-28 font-body text-stitch-fg text-stitch max-w-4xl">
       <nav className="flex items-center gap-2 text-[10px] font-semibold text-stitch-muted mb-6 uppercase tracking-widest">
         <Link to={`/p/${pid}/requirements`} className="hover:text-stitch-accent transition-colors">
           Requirements
@@ -192,7 +192,7 @@ export default function CreateRequirementPage() {
             <span className="mx-2">/</span>
             <span className="text-stitch-accent font-bold">Create</span>
           </nav>
-          <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight font-headline">
+          <h1 className="text-2xl md:text-3xl font-extrabold text-stitch-fg tracking-tight font-headline">
             Create requirement
           </h1>
           <p className="text-stitch-muted text-sm mt-2">
@@ -261,7 +261,7 @@ export default function CreateRequirementPage() {
                 className={`${selectClass} min-h-[120px]`}
               >
                 {methods.map((m) => (
-                  <option key={m.id} value={m.id} className="bg-stitch-surface text-white">
+                  <option key={m.id} value={m.id} className="bg-stitch-surface text-stitch-fg">
                     {m.title} ({m.tag})
                   </option>
                 ))}
@@ -286,7 +286,7 @@ export default function CreateRequirementPage() {
                   onChange={(e) => setStatusId(Number(e.target.value))}
                 >
                   {statusOptions.map((s) => (
-                    <option key={s.id} value={s.id} className="bg-stitch-surface text-white">
+                    <option key={s.id} value={s.id} className="bg-stitch-surface text-stitch-fg">
                       {s.title}
                     </option>
                   ))}
@@ -303,7 +303,7 @@ export default function CreateRequirementPage() {
                 onChange={(e) => setCategoryId(Number(e.target.value))}
               >
                 {categories.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-stitch-surface text-white">
+                  <option key={c.id} value={c.id} className="bg-stitch-surface text-stitch-fg">
                     {c.title}
                   </option>
                 ))}
@@ -319,7 +319,7 @@ export default function CreateRequirementPage() {
                 onChange={(e) => setApplicabilityId(Number(e.target.value))}
               >
                 {applicability.map((a) => (
-                  <option key={a.id} value={a.id} className="bg-stitch-surface text-white">
+                  <option key={a.id} value={a.id} className="bg-stitch-surface text-stitch-fg">
                     {a.title}
                   </option>
                 ))}
@@ -346,7 +346,7 @@ export default function CreateRequirementPage() {
                 onChange={(e) => setAuthorId(Number(e.target.value))}
               >
                 {memberOptionIds.map((id) => (
-                  <option key={id} value={id} className="bg-stitch-surface text-white">
+                  <option key={id} value={id} className="bg-stitch-surface text-stitch-fg">
                     {userLabel(id)}
                   </option>
                 ))}
@@ -362,7 +362,7 @@ export default function CreateRequirementPage() {
                 onChange={(e) => setReviewerId(Number(e.target.value))}
               >
                 {memberOptionIds.map((id) => (
-                  <option key={`r-${id}`} value={id} className="bg-stitch-surface text-white">
+                  <option key={`r-${id}`} value={id} className="bg-stitch-surface text-stitch-fg">
                     {userLabel(id)}
                   </option>
                 ))}

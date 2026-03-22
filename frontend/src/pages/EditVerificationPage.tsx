@@ -12,7 +12,7 @@ import type { Verification, VerificationStatus } from '@/api/types';
 import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
 
 const selectClass =
-  'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-white focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
+  'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
 
 export default function EditVerificationPage() {
   const { projectId: projectIdParam, verificationId: verificationIdParam } = useParams();
@@ -180,7 +180,7 @@ export default function EditVerificationPage() {
   }
 
   return (
-    <div className="pb-28 font-body text-white text-stitch max-w-4xl">
+    <div className="pb-28 font-body text-stitch-fg text-stitch max-w-4xl">
       <nav className="flex items-center gap-2 text-[10px] font-semibold text-stitch-muted mb-6 uppercase tracking-widest">
         <Link to={`/p/${pid}/verifications`} className="hover:text-stitch-accent transition-colors">
           Verifications
@@ -195,7 +195,7 @@ export default function EditVerificationPage() {
           <span className="mx-2">/</span>
           <span className="text-stitch-accent font-bold">Edit verification</span>
         </nav>
-        <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight font-headline">
+        <h1 className="text-2xl md:text-3xl font-extrabold text-stitch-fg tracking-tight font-headline">
           {base.name}
         </h1>
         <p className="text-stitch-muted text-sm mt-2">
@@ -277,7 +277,7 @@ export default function EditVerificationPage() {
                   onChange={(e) => setStatusId(Number(e.target.value))}
                 >
                   {statusOptions.map((s) => (
-                    <option key={s.id} value={s.id} className="bg-stitch-surface text-white">
+                    <option key={s.id} value={s.id} className="bg-stitch-surface text-stitch-fg">
                       {s.title}
                     </option>
                   ))}
@@ -293,11 +293,11 @@ export default function EditVerificationPage() {
                 value={parentId}
                 onChange={(e) => setParentId(e.target.value)}
               >
-                <option value="" className="bg-stitch-surface text-white">
+                <option value="" className="bg-stitch-surface text-stitch-fg">
                   None
                 </option>
                 {siblings.map((v) => (
-                  <option key={v.id} value={v.id} className="bg-stitch-surface text-white">
+                  <option key={v.id} value={v.id} className="bg-stitch-surface text-stitch-fg">
                     {v.reference_code} — {v.name}
                   </option>
                 ))}

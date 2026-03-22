@@ -393,13 +393,6 @@ pub(crate) fn get_project_slug_by_id_pooled_safe(
         .unwrap_or_else(|_| "unknown-project".to_string())
 }
 
-pub(crate) fn get_project_base_path_by_id_pooled_safe(
-    state: &State<AppState>,
-    project_id: i32,
-) -> String {
-    project_base_path_from_route_slug(&get_project_slug_by_id_pooled_safe(state, project_id))
-}
-
 pub(crate) fn project_base_path_from_route_slug(route_slug: &str) -> String {
     format!("/{}", route_slug.trim_start_matches('/'))
 }

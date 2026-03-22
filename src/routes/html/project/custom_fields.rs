@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+#![allow(unused_variables)]
+
 //! HTML routes for project-scoped custom field definitions (admin UI).
 
 use super::helpers::*;
@@ -279,7 +281,6 @@ async fn delete_custom_field_route(
     field_id: i32,
     state: &State<AppState>,
 ) -> Result<rocket::http::Status, DeleteCustomFieldError> {
-    let _project_slug = project_id;
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     if !has_permission(

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+#![allow(unused_variables)]
+
 use std::collections::HashMap;
 
 use rocket::form::{Form, FromForm};
@@ -139,6 +141,14 @@ struct RequirementEditForm {
 struct ParentLinkEditInput {
     target_requirement_id: i32,
     link_type: String,
+}
+
+#[derive(FromForm)]
+struct NewRequirementQuery {
+    error: Option<String>,
+    created: Option<String>,
+    parent: Option<i32>,
+    template: Option<i32>,
 }
 
 impl RequirementEditForm {
@@ -1557,20 +1567,23 @@ async fn delete_requirement_route(
     Ok(requirements_list_redirect(&project_slug))
 }
 
-#[get("/<namespace>/<project_id>/requirements/new?<error>&<created>&<parent>&<template>")]
+#[get("/<namespace>/<project_id>/requirements/new?<query..>")]
 async fn new_requirement(
     project_access: HtmlProjectAccess,
     namespace: String,
     project_id: String,
     state: &State<AppState>,
-    error: Option<String>,
-    created: Option<String>,
-    parent: Option<i32>,
-    template: Option<i32>, // use this requirement as a template
+    query: NewRequirementQuery,
 ) -> Result<Template, Redirect> {
     let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
+    let NewRequirementQuery {
+        error,
+        created,
+        parent,
+        template,
+    } = query;
     if !has_permission(
         &*state.repo_read(),
         &user,
@@ -2008,7 +2021,6 @@ async fn create_category_inline(
     payload: Json<InlineCategoryPayload>,
     state: &State<AppState>,
 ) -> Result<Json<serde_json::Value>, rocket::http::Status> {
-    let _project_slug = project_id;
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     let data = payload.into_inner();
@@ -2046,7 +2058,6 @@ async fn create_applicability_inline(
     payload: Json<InlineApplicabilityPayload>,
     state: &State<AppState>,
 ) -> Result<Json<serde_json::Value>, rocket::http::Status> {
-    let _project_slug = project_id;
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     let data = payload.into_inner();
@@ -2086,7 +2097,6 @@ async fn create_verification_inline(
     payload: Json<InlineVerificationPayload>,
     state: &State<AppState>,
 ) -> Result<Json<serde_json::Value>, rocket::http::Status> {
-    let _project_slug = project_id;
     let project_id = project_access.project_id();
     let _user = project_access.into_user();
     let data = payload.into_inner();

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+#![allow(unused_variables)]
+
 //! HTML routes for immutable project baselines.
 
 use super::helpers;
@@ -115,11 +117,6 @@ pub async fn post_baseline(
     let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
-    let projects: Vec<_> = helpers::get_accessible_projects(state, &user)
-        .iter()
-        .map(|project| helpers::project_to_template_value(state, project))
-        .collect();
-
     let list_url = format!("/{project_slug}/baselines");
     let new_url = format!("/{project_slug}/baselines/new");
 

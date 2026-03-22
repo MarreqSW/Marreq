@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+#![allow(unused_variables)]
+
 //! ReqIF 1.2 export and import routes.
 
 use super::prelude::*;
@@ -14,44 +16,46 @@ use rocket::form::Form;
 use rocket::fs::TempFile;
 use rocket::response::content;
 
-#[get("/<project_id>/export_reqif?<baseline_id>")]
+#[get("/<namespace>/<project_id>/export_reqif?<baseline_id>")]
 pub async fn export_reqif(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     baseline_id: Option<i32>,
     state: &State<AppState>,
 ) -> Result<(ContentType, String), Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let _user = project_access.into_user();
     let service = ReqIFService::new(state.inner());
     let xml = match baseline_id {
         Some(bid) => service.export_baseline(project_id, bid).map_err(|e| {
             eprintln!("ReqIF baseline export error: {:?}", e);
-            Redirect::to(format!("/p/{project_slug}/requirements"))
+            Redirect::to(format!("/{project_slug}/requirements"))
         })?,
         None => service.export_project(project_id).map_err(|e| {
             eprintln!("ReqIF export error: {:?}", e);
-            Redirect::to(format!("/p/{project_slug}/requirements"))
+            Redirect::to(format!("/{project_slug}/requirements"))
         })?,
     };
     let ct = ContentType::new("application", "xml");
     Ok((ct, xml))
 }
 
-#[get("/<project_id>/import_reqif?<error>")]
+#[get("/<namespace>/<project_id>/import_reqif?<error>")]
 pub fn import_reqif_page(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     state: &State<AppState>,
     error: Option<String>,
 ) -> Result<content::RawHtml<String>, Box<Redirect>> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let _user = project_access.into_user();
     let project = crate::services::ProjectService::new(state.inner())
         .get_by_id(project_id)
-        .map_err(|_| Box::new(Redirect::to(format!("/p/{project_slug}"))))?;
+        .map_err(|_| Box::new(Redirect::to(format!("/{project_slug}"))))?;
     let html = format!(
         r#"<!doctype html>
 <html lang="en">
@@ -78,7 +82,7 @@ pub fn import_reqif_page(
                         </div>
                         {}
                         <p>Upload a ReqIF 1.2 file to import requirements into the selected project.</p>
-                        <form action="/p/{}/import_reqif/process" method="post" enctype="multipart/form-data">
+                        <form action="/{}/import_reqif/process" method="post" enctype="multipart/form-data">
                             <div class="mb-3">
                                 <label for="reqif_file" class="form-label">Select ReqIF file</label>
                                 <input type="file" class="form-control" id="reqif_file" name="file" accept=".reqif,.xml" required>
@@ -86,7 +90,7 @@ pub fn import_reqif_page(
                             </div>
                             <div class="mt-3">
                                 <button type="submit" class="btn btn-primary">Import</button>
-                                <a href="/p/{}/requirements" class="btn btn-secondary">Cancel</a>
+                                <a href="/{}/requirements" class="btn btn-secondary">Cancel</a>
                             </div>
                         </form>
                     </div>
@@ -113,26 +117,27 @@ pub struct ReqIFUpload<'r> {
     pub file: TempFile<'r>,
 }
 
-#[post("/<project_id>/import_reqif/process", data = "<upload>")]
+#[post("/<namespace>/<project_id>/import_reqif/process", data = "<upload>")]
 pub async fn process_reqif_import(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     upload: Form<ReqIFUpload<'_>>,
     state: &State<AppState>,
 ) -> Result<content::RawHtml<String>, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     let temp_path = upload.file.path().ok_or_else(|| {
         Redirect::to(format!(
-            "/p/{project_slug}/import_reqif?error=No%20file%20uploaded."
+            "/{project_slug}/import_reqif?error=No%20file%20uploaded."
         ))
     })?;
 
     let xml_bytes = std::fs::read(temp_path).map_err(|e| {
         eprintln!("ReqIF read error: {}", e);
         Redirect::to(format!(
-            "/p/{project_slug}/import_reqif?error=Could%20not%20read%20uploaded%20file."
+            "/{project_slug}/import_reqif?error=Could%20not%20read%20uploaded%20file."
         ))
     })?;
 
@@ -193,7 +198,7 @@ pub async fn process_reqif_import(
         ),
         Err(e) => {
             return Err(Redirect::to(format!(
-                "/p/{project_slug}/import_reqif?error={}",
+                "/{project_slug}/import_reqif?error={}",
                 urlencoding::encode(&e)
             )));
         }
@@ -240,8 +245,8 @@ pub async fn process_reqif_import(
                             <p class="mb-0"><strong>Records imported:</strong> {}</p>
                         </div>
                         {}
-                        <a href="/p/{}/requirements" class="btn btn-primary">View requirements</a>
-                        <a href="/p/{}/import_reqif" class="btn btn-outline-primary">Import another file</a>
+                        <a href="/{}/requirements" class="btn btn-primary">View requirements</a>
+                        <a href="/{}/import_reqif" class="btn btn-outline-primary">Import another file</a>
                     </div>
                 </div>
             </div>

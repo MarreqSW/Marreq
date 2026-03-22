@@ -12,7 +12,7 @@
   </div>
   <div class="marreq-requirements-pagination__links">
     {{#if pagination.has_prev}}
-    <a href="/p/{{project.slug}}/{{#if pagination_path}}{{pagination_path}}{{else}}requirements{{/if}}?{{#if pagination.query}}{{pagination.query}}&{{/if}}page={{pagination.prev_page}}"
+    <a href="/{{project.slug}}/{{#if pagination_path}}{{pagination_path}}{{else}}requirements{{/if}}?{{#if pagination.query}}{{pagination.query}}&{{/if}}page={{pagination.prev_page}}"
        class="marreq-requirements-pagination__link marreq-requirements-pagination__link--prev">
       Previous
     </a>
@@ -26,14 +26,14 @@
         {{#if this.is_current}}
         <span class="marreq-requirements-pagination__page marreq-requirements-pagination__page--current" aria-current="page">{{this.num}}</span>
         {{else}}
-        <a href="/p/{{../project.slug}}/{{#if ../pagination_path}}{{../pagination_path}}{{else}}requirements{{/if}}?{{#if ../pagination.query}}{{../pagination.query}}&{{/if}}page={{this.num}}" class="marreq-requirements-pagination__page">{{this.num}}</a>
+        <a href="/{{../project.slug}}/{{#if ../pagination_path}}{{../pagination_path}}{{else}}requirements{{/if}}?{{#if ../pagination.query}}{{../pagination.query}}&{{/if}}page={{this.num}}" class="marreq-requirements-pagination__page">{{this.num}}</a>
         {{/if}}
       </li>
       {{/each}}
     </ol>
 
     {{#if pagination.has_next}}
-    <a href="/p/{{project.slug}}/{{#if pagination_path}}{{pagination_path}}{{else}}requirements{{/if}}?{{#if pagination.query}}{{pagination.query}}&{{/if}}page={{pagination.next_page}}"
+    <a href="/{{project.slug}}/{{#if pagination_path}}{{pagination_path}}{{else}}requirements{{/if}}?{{#if pagination.query}}{{pagination.query}}&{{/if}}page={{pagination.next_page}}"
        class="marreq-requirements-pagination__link marreq-requirements-pagination__link--next">
       Next
     </a>

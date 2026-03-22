@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+#![allow(unused_variables)]
+
 use std::collections::HashMap;
 
 use rocket::form::{Form, FromForm};
@@ -141,6 +143,14 @@ struct ParentLinkEditInput {
     link_type: String,
 }
 
+#[derive(FromForm)]
+struct NewRequirementQuery {
+    error: Option<String>,
+    created: Option<String>,
+    parent: Option<i32>,
+    template: Option<i32>,
+}
+
 impl RequirementEditForm {
     fn to_new_requirement(&self) -> NewRequirement {
         NewRequirement {
@@ -186,7 +196,7 @@ fn map_repo_error(err: RepoError) -> rocket::http::Status {
 
 // TODO: This shall be an authorization check to enforce project ownership and return a redirect when mismatched
 fn requirements_list_path(project_slug: &str) -> String {
-    format!("/p/{project_slug}/requirements")
+    format!("/{project_slug}/requirements")
 }
 
 fn requirements_list_redirect(project_slug: &str) -> Redirect {
@@ -194,7 +204,7 @@ fn requirements_list_redirect(project_slug: &str) -> Redirect {
 }
 
 fn requirement_detail_path(project_slug: &str, requirement_id: i32) -> String {
-    format!("/p/{project_slug}/requirements/show/{requirement_id}")
+    format!("/{project_slug}/requirements/show/{requirement_id}")
 }
 
 fn new_requirement_path(
@@ -219,9 +229,9 @@ fn new_requirement_path(
     }
 
     if params.is_empty() {
-        format!("/p/{project_slug}/requirements/new")
+        format!("/{project_slug}/requirements/new")
     } else {
-        format!("/p/{project_slug}/requirements/new?{}", params.join("&"))
+        format!("/{project_slug}/requirements/new?{}", params.join("&"))
     }
 }
 
@@ -252,6 +262,7 @@ fn build_edit_requirement_context(
     state: &State<AppState>,
 ) -> Result<serde_json::Value, Redirect> {
     let project = ProjectService::new(state.inner()).get_by_id(project_id)?;
+    let project_slug = get_project_slug_by_id_pooled_safe(state, project.id);
     let name = project.name.clone();
     let service = DecoratedRequirementService::new(state.inner());
     let req = service.get_by_id(requirement_id)?;
@@ -419,12 +430,12 @@ fn build_edit_requirement_context(
         "project": {
             "id": project.id,
             "name": project.name,
-            "slug": project.slug,
+            "slug": project_slug,
         },
         "project_id": project_id,
-        "project_slug": project.slug,
+        "project_slug": project_slug,
         "selected_project_id": project_id,
-        "selected_project_slug": project.slug,
+        "selected_project_slug": project_slug,
         "categories": categories,
         "statuses": statuses,
         "parent": parent,
@@ -598,10 +609,11 @@ fn parse_custom_filters_param(s: Option<&str>) -> Option<Vec<(i32, String)>> {
     Some(items.into_iter().map(|i| (i.field_id, i.value)).collect())
 }
 
-#[get("/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>&<applicability_filter>&<approval_filter>&<custom_filters>&<view>&<page>")]
+#[get("/<namespace>/<project_id>/requirements?<status_filter>&<verification_filter>&<category_filter>&<applicability_filter>&<approval_filter>&<custom_filters>&<view>&<page>")]
 #[allow(clippy::too_many_arguments)]
 async fn show_requirements(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     status_filter: Option<i32>,
     verification_filter: Option<i32>,
@@ -613,7 +625,7 @@ async fn show_requirements(
     page: Option<u32>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
 
@@ -757,7 +769,7 @@ async fn show_requirements(
         "project": json!({
             "id": selected_project.id,
             "name": selected_project.name.clone(),
-            "slug": selected_project.slug.clone(),
+            "slug": project_slug,
         }),
         "selected_project_id": project_id,
         "selected_project_slug": project_slug,
@@ -784,14 +796,15 @@ async fn show_requirements(
     Ok(Template::render("requirements/requirements", ctx))
 }
 
-#[get("/<project_id>/requirements/show/<requirement_id>")]
+#[get("/<namespace>/<project_id>/requirements/show/<requirement_id>")]
 async fn show_requirement_id(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     requirement_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
 
@@ -1061,11 +1074,11 @@ async fn show_requirement_id(
         "project_id": project_id,
         "project_slug": project_slug,
         "selected_project_id": project_id,
-        "selected_project_slug": selected_project.slug.clone(),
+        "selected_project_slug": project_slug,
         "project": json!({
             "id": selected_project.id,
             "name": selected_project.name.clone(),
-            "slug": selected_project.slug.clone(),
+            "slug": project_slug,
         }),
         "requirement_data": canonical_data,
         "requirement_data_json": serde_json::to_string(&canonical_data).unwrap_or_else(|_| "{}".to_string()),
@@ -1090,15 +1103,16 @@ async fn show_requirement_id(
 }
 
 /// View a specific immutable version of a requirement (read-only).
-#[get("/<project_id>/requirements/show/<requirement_id>/version/<version_id>")]
+#[get("/<namespace>/<project_id>/requirements/show/<requirement_id>/version/<version_id>")]
 async fn show_requirement_version(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     requirement_id: i32,
     version_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     let selected_project = ProjectService::new(state.inner()).get_by_id(project_id)?;
@@ -1365,8 +1379,8 @@ async fn show_requirement_version(
         "project_id": project_id,
         "project_slug": project_slug,
         "selected_project_id": project_id,
-        "selected_project_slug": selected_project.slug.clone(),
-        "project": json!({ "id": selected_project.id, "name": selected_project.name.clone(), "slug": selected_project.slug.clone() }),
+        "selected_project_slug": project_slug,
+        "project": json!({ "id": selected_project.id, "name": selected_project.name.clone(), "slug": project_slug }),
         "requirement_data": canonical_data,
         "requirement_data_json": serde_json::to_string(&canonical_data).unwrap_or_else(|_| "{}".to_string()),
         "page_title": format!("{} - Requirement (v{})", requirement.reference_code, version_id),
@@ -1387,14 +1401,15 @@ async fn show_requirement_version(
     Ok(Template::render("requirements/requirement", ctx))
 }
 
-#[get("/<project_id>/requirements/edit/<requirement_id>")]
+#[get("/<namespace>/<project_id>/requirements/edit/<requirement_id>")]
 async fn get_edit_requirement(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     requirement_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     if !has_permission(
@@ -1412,14 +1427,15 @@ async fn get_edit_requirement(
 }
 
 /// Returns only the edit form HTML fragment for the right-side panel (no layout).
-#[get("/<project_id>/requirements/edit-panel/<requirement_id>")]
+#[get("/<namespace>/<project_id>/requirements/edit-panel/<requirement_id>")]
 async fn get_edit_requirement_panel(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     requirement_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     if !has_permission(
@@ -1434,15 +1450,19 @@ async fn get_edit_requirement_panel(
     Ok(Template::render("requirements/edit_panel", ctx))
 }
 
-#[post("/<project_id>/requirements/edit/<requirement_id>", data = "<form>")]
+#[post(
+    "/<namespace>/<project_id>/requirements/edit/<requirement_id>",
+    data = "<form>"
+)]
 async fn post_edit_requirement(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     requirement_id: i32,
     form: Form<RequirementEditForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     let service = RequirementService::new(state.inner());
@@ -1498,14 +1518,15 @@ async fn post_edit_requirement(
     )))
 }
 
-#[delete("/<project_id>/requirements/delete/<requirement_id>")]
+#[delete("/<namespace>/<project_id>/requirements/delete/<requirement_id>")]
 async fn delete_requirement_route(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     requirement_id: i32,
     state: &State<AppState>,
 ) -> Result<Redirect, rocket::http::Status> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     if !has_permission(
@@ -1546,19 +1567,23 @@ async fn delete_requirement_route(
     Ok(requirements_list_redirect(&project_slug))
 }
 
-#[get("/<project_id>/requirements/new?<error>&<created>&<parent>&<template>")]
+#[get("/<namespace>/<project_id>/requirements/new?<query..>")]
 async fn new_requirement(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     state: &State<AppState>,
-    error: Option<String>,
-    created: Option<String>,
-    parent: Option<i32>,
-    template: Option<i32>, // use this requirement as a template
+    query: NewRequirementQuery,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
+    let NewRequirementQuery {
+        error,
+        created,
+        parent,
+        template,
+    } = query;
     if !has_permission(
         &*state.repo_read(),
         &user,
@@ -1715,11 +1740,11 @@ async fn new_requirement(
         "project": {
             "id": project.id,
             "name": project.name.clone(),
-            "slug": project.slug.clone(),
+            "slug": project_slug,
         },
         "project_slug": project_slug,
         "selected_project_id": project_id,
-        "selected_project_slug": project.slug.clone(),
+        "selected_project_slug": project_slug,
         "template": new_requirement,
         "template_verification_ids": template_verification_ids,
         "created_timestamp": created_timestamp,
@@ -1737,14 +1762,15 @@ async fn new_requirement(
     Ok(Template::render("requirements/new_requirement", ctx))
 }
 
-#[post("/<project_id>/requirements/new", data = "<new_req>")]
+#[post("/<namespace>/<project_id>/requirements/new", data = "<new_req>")]
 async fn post_requirement(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     new_req: Form<RequirementCreateForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
 
@@ -1906,13 +1932,14 @@ async fn post_requirement(
     Ok(Redirect::to(requirement_detail_path(&project_slug, id)))
 }
 
-#[get("/<project_id>/requirements/tree")]
+#[get("/<namespace>/<project_id>/requirements/tree")]
 async fn show_requirements_tree(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
 
@@ -1983,17 +2010,17 @@ async fn show_requirements_tree(
 }
 
 #[post(
-    "/<project_id>/requirements/inline/category",
+    "/<namespace>/<project_id>/requirements/inline/category",
     format = "json",
     data = "<payload>"
 )]
 async fn create_category_inline(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     payload: Json<InlineCategoryPayload>,
     state: &State<AppState>,
 ) -> Result<Json<serde_json::Value>, rocket::http::Status> {
-    let _project_slug = project_id;
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     let data = payload.into_inner();
@@ -2020,17 +2047,17 @@ async fn create_category_inline(
 }
 
 #[post(
-    "/<project_id>/requirements/inline/applicability",
+    "/<namespace>/<project_id>/requirements/inline/applicability",
     format = "json",
     data = "<payload>"
 )]
 async fn create_applicability_inline(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     payload: Json<InlineApplicabilityPayload>,
     state: &State<AppState>,
 ) -> Result<Json<serde_json::Value>, rocket::http::Status> {
-    let _project_slug = project_id;
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     let data = payload.into_inner();
@@ -2059,17 +2086,17 @@ async fn create_applicability_inline(
 }
 
 #[post(
-    "/<project_id>/requirements/inline/verification",
+    "/<namespace>/<project_id>/requirements/inline/verification",
     format = "json",
     data = "<payload>"
 )]
 async fn create_verification_inline(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     payload: Json<InlineVerificationPayload>,
     state: &State<AppState>,
 ) -> Result<Json<serde_json::Value>, rocket::http::Status> {
-    let _project_slug = project_id;
     let project_id = project_access.project_id();
     let _user = project_access.into_user();
     let data = payload.into_inner();
@@ -2143,11 +2170,12 @@ mod tests {
     use rocket::serde::json::{serde_json, Value as JsonValue};
 
     const ADMIN_ID: i32 = 1;
+    const ADMIN_NAMESPACE: &str = "site-admin";
     const PRIMARY_PROJECT: i32 = 1;
 
     fn base_repo() -> DieselRepoMock {
         let mut repo = DieselRepoMock::default();
-        let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
+        let mut admin = DieselRepoMock::make_user(ADMIN_ID, ADMIN_NAMESPACE, "");
         admin.is_admin = true;
         repo.users.insert(ADMIN_ID, admin);
 
@@ -2163,6 +2191,7 @@ mod tests {
                 status: ProjectStatus::Active,
                 owner_id: Some(ADMIN_ID),
                 slug: "test-project".into(),
+                group_id: None,
             },
         );
 
@@ -2261,7 +2290,8 @@ mod tests {
         repo.requirements.insert(1, sample_requirement(1));
         let client = test_client(repo).await;
 
-        let response = get_with_session(&client, "/p/test-project/requirements", ADMIN_ID).await;
+        let response =
+            get_with_session(&client, "/site-admin/test-project/requirements", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
 
         let body = response.into_string().await.expect("valid response");
@@ -2285,7 +2315,7 @@ mod tests {
 
         let response = get_with_session(
             &client,
-            "/p/test-project/requirements?status_filter=1",
+            "/site-admin/test-project/requirements?status_filter=1",
             ADMIN_ID,
         )
         .await;
@@ -2312,7 +2342,7 @@ mod tests {
 
         let response = get_with_session(
             &client,
-            "/p/test-project/requirements?status_filter=1&verification_filter=&category_filter=",
+            "/site-admin/test-project/requirements?status_filter=1&verification_filter=&category_filter=",
             ADMIN_ID,
         )
         .await;
@@ -2339,7 +2369,7 @@ mod tests {
 
         let response = get_with_session(
             &client,
-            "/p/test-project/requirements?status_filter=1&verification_filter=&category_filter=&search=",
+            "/site-admin/test-project/requirements?status_filter=1&verification_filter=&category_filter=&search=",
             ADMIN_ID,
         )
         .await;
@@ -2366,6 +2396,7 @@ mod tests {
                 status: ProjectStatus::Active,
                 owner_id: Some(ADMIN_ID),
                 slug: "other-project".into(),
+                group_id: None,
             },
         );
 
@@ -2380,7 +2411,7 @@ mod tests {
         let client = test_client(repo).await;
 
         let response = client
-            .get("/p/other-project/requirements")
+            .get("/site-admin/other-project/requirements")
             .cookie(Cookie::new("selected_project_id", "1"))
             .private_cookie(session_cookie(ADMIN_ID))
             .dispatch()
@@ -2390,19 +2421,19 @@ mod tests {
 
         let body = response.into_string().await.expect("valid response");
         assert!(
-            body.contains("action=\"/p/other-project/requirements\""),
+            body.contains("action=\"/site-admin/other-project/requirements\""),
             "filter form must target the route project"
         );
         assert!(
-            !body.contains("action=\"/p/test-project/requirements\""),
+            !body.contains("action=\"/site-admin/test-project/requirements\""),
             "filter form must not target cookie project"
         );
         assert!(
-            body.contains("/p/other-project/requirements/new"),
+            body.contains("/site-admin/other-project/requirements/new"),
             "primary action must use the route project"
         );
         assert!(
-            !body.contains("/p/test-project/requirements/new"),
+            !body.contains("/site-admin/test-project/requirements/new"),
             "primary action must not use cookie project"
         );
     }
@@ -2413,8 +2444,12 @@ mod tests {
         repo.requirements.insert(1, sample_requirement(1));
         let client = test_client(repo).await;
 
-        let response =
-            get_with_session(&client, "/p/test-project/requirements/show/1", ADMIN_ID).await;
+        let response = get_with_session(
+            &client,
+            "/site-admin/test-project/requirements/show/1",
+            ADMIN_ID,
+        )
+        .await;
         assert_eq!(response.status(), Status::Ok);
 
         let body = response.into_string().await.expect("valid response");
@@ -2425,8 +2460,12 @@ mod tests {
     #[rocket::async_test]
     async fn new_requirement_form_renders() {
         let client = test_client(base_repo()).await;
-        let response =
-            get_with_session(&client, "/p/test-project/requirements/new", ADMIN_ID).await;
+        let response = get_with_session(
+            &client,
+            "/site-admin/test-project/requirements/new",
+            ADMIN_ID,
+        )
+        .await;
         assert_eq!(response.status(), Status::Ok);
 
         let body = response.into_string().await.expect("valid response");
@@ -2440,7 +2479,7 @@ mod tests {
         let client = test_client(base_repo()).await;
         let response = post_form_with_session(
             &client,
-            "/p/test-project/requirements/new",
+            "/site-admin/test-project/requirements/new",
             "title=Test&description=Description&verification_method_ids=1&\
              status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&reference_code=&\
@@ -2466,7 +2505,7 @@ mod tests {
         let client = test_client(base_repo()).await;
         let response = post_form_with_session(
             &client,
-            "/p/test-project/requirements/new",
+            "/site-admin/test-project/requirements/new",
             "title=Next+Requirement&description=Body&verification_method_ids=1&\
              status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&reference_code=&\
@@ -2478,7 +2517,7 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/test-project/requirements/new?created=1")
+            Some("/site-admin/test-project/requirements/new?created=1")
         );
     }
 
@@ -2486,7 +2525,7 @@ mod tests {
     async fn inline_category_creation_returns_json() {
         let client = test_client(base_repo()).await;
         let response = client
-            .post("/p/test-project/requirements/inline/category")
+            .post("/site-admin/test-project/requirements/inline/category")
             .header(ContentType::JSON)
             .private_cookie(session_cookie(ADMIN_ID))
             .body(r#"{"title":"Telemetry","description":"Data channel","tag":"TEL"}"#)
@@ -2504,7 +2543,7 @@ mod tests {
     async fn inline_applicability_creation_returns_json() {
         let client = test_client(base_repo()).await;
         let response = client
-            .post("/p/test-project/requirements/inline/applicability")
+            .post("/site-admin/test-project/requirements/inline/applicability")
             .header(ContentType::JSON)
             .private_cookie(session_cookie(ADMIN_ID))
             .body(r#"{"title":"Mission","description":"Applies to mission","tag":"MIS"}"#)
@@ -2521,7 +2560,7 @@ mod tests {
     async fn inline_verification_creation_returns_json() {
         let client = test_client(base_repo()).await;
         let response = client
-            .post("/p/test-project/requirements/inline/verification")
+            .post("/site-admin/test-project/requirements/inline/verification")
             .header(ContentType::JSON)
             .private_cookie(session_cookie(ADMIN_ID))
             .body(r#"{"title":"Inspection","description":"Visual inspection","tag":"INSPECTION"}"#)
@@ -2540,8 +2579,12 @@ mod tests {
         repo.requirements.insert(1, sample_requirement(1));
         let client = test_client(repo).await;
 
-        let response =
-            get_with_session(&client, "/p/test-project/requirements/edit/1", ADMIN_ID).await;
+        let response = get_with_session(
+            &client,
+            "/site-admin/test-project/requirements/edit/1",
+            ADMIN_ID,
+        )
+        .await;
         assert_eq!(response.status(), Status::Ok);
 
         let body = response.into_string().await.expect("valid response");
@@ -2557,7 +2600,7 @@ mod tests {
 
         let response = post_form_with_session(
             &client,
-            "/p/test-project/requirements/edit/1",
+            "/site-admin/test-project/requirements/edit/1",
             "id=1&title=Updated&description=New+desc&verification_method_ids=1&\
              status_id=1&author_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
@@ -2579,12 +2622,16 @@ mod tests {
         repo.requirements.insert(1, sample_requirement(1));
         let client = test_client(repo).await;
 
-        let response =
-            delete_with_session(&client, "/p/test-project/requirements/delete/1", ADMIN_ID).await;
+        let response = delete_with_session(
+            &client,
+            "/site-admin/test-project/requirements/delete/1",
+            ADMIN_ID,
+        )
+        .await;
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/test-project/requirements")
+            Some("/site-admin/test-project/requirements")
         );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -2611,7 +2658,7 @@ mod tests {
 
         // Use non-admin cookie
         let response = client
-            .delete("/p/test-project/requirements/delete/1")
+            .delete("/site-admin/test-project/requirements/delete/1")
             .private_cookie(session_cookie(2))
             .dispatch()
             .await;
@@ -2628,7 +2675,8 @@ mod tests {
         repo.requirements.insert(2, child);
         let client = test_client(repo).await;
 
-        let response = get_with_session(&client, "/p/test-project/requirements", ADMIN_ID).await;
+        let response =
+            get_with_session(&client, "/site-admin/test-project/requirements", ADMIN_ID).await;
         assert_eq!(response.status(), Status::Ok);
 
         let body = response.into_string().await.expect("valid response");
@@ -2644,7 +2692,7 @@ mod tests {
         let client = test_client(base_repo()).await;
         let response = post_form_with_session(
             &client,
-            "/p/test-project/requirements/new",
+            "/site-admin/test-project/requirements/new",
             "title=&description=Test&verification_method_ids=1&\
              status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&reference_code=",
@@ -2661,7 +2709,7 @@ mod tests {
         let client = test_client(base_repo()).await;
         let response = post_form_with_session(
             &client,
-            "/p/test-project/requirements/new",
+            "/site-admin/test-project/requirements/new",
             "title=Test&description=Body&verification_method_ids=1&\
              status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
@@ -2681,7 +2729,7 @@ mod tests {
         let client = test_client(base_repo()).await;
         let response = post_form_with_session(
             &client,
-            "/p/test-project/requirements/new",
+            "/site-admin/test-project/requirements/new",
             "title=Custom&description=Test&verification_method_ids=1&\
              status_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
@@ -2711,13 +2759,17 @@ mod tests {
 
         let client = test_client(repo).await;
 
-        let response =
-            get_with_session(&client, "/p/test-project/requirements/show/1", ADMIN_ID).await;
+        let response = get_with_session(
+            &client,
+            "/site-admin/test-project/requirements/show/1",
+            ADMIN_ID,
+        )
+        .await;
 
         // Should redirect to the correct project (unknown since project 99 doesn't exist)
         assert_eq!(response.status(), Status::SeeOther);
         let location = response.headers().get_one("Location").unwrap_or("");
-        assert!(location.contains("/p/unknown-project/"));
+        assert!(location.contains("/unknown-project/"));
     }
 
     #[rocket::async_test]
@@ -2730,12 +2782,16 @@ mod tests {
 
         let client = test_client(repo).await;
 
-        let response =
-            get_with_session(&client, "/p/test-project/requirements/edit/1", ADMIN_ID).await;
+        let response = get_with_session(
+            &client,
+            "/site-admin/test-project/requirements/edit/1",
+            ADMIN_ID,
+        )
+        .await;
 
         assert_eq!(response.status(), Status::SeeOther);
         let location = response.headers().get_one("Location").unwrap_or("");
-        assert!(location.contains("/p/unknown-project/"));
+        assert!(location.contains("/unknown-project/"));
     }
 
     #[rocket::async_test]
@@ -2743,7 +2799,7 @@ mod tests {
         let client = test_client(base_repo()).await;
         let response = get_with_session(
             &client,
-            "/p/test-project/requirements/new?created=1",
+            "/site-admin/test-project/requirements/new?created=1",
             ADMIN_ID,
         )
         .await;
@@ -2761,7 +2817,7 @@ mod tests {
 
         let response = get_with_session(
             &client,
-            "/p/test-project/requirements/new?parent=1",
+            "/site-admin/test-project/requirements/new?parent=1",
             ADMIN_ID,
         )
         .await;
@@ -2784,7 +2840,7 @@ mod tests {
 
         let response = get_with_session(
             &client,
-            "/p/test-project/requirements/new?template=1",
+            "/site-admin/test-project/requirements/new?template=1",
             ADMIN_ID,
         )
         .await;
@@ -2803,14 +2859,18 @@ mod tests {
 
         let client = test_client(repo).await;
 
-        let response =
-            delete_with_session(&client, "/p/test-project/requirements/delete/1", ADMIN_ID).await;
+        let response = delete_with_session(
+            &client,
+            "/site-admin/test-project/requirements/delete/1",
+            ADMIN_ID,
+        )
+        .await;
 
         // Admin should be able to delete
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/p/test-project/requirements")
+            Some("/site-admin/test-project/requirements")
         );
     }
 
@@ -2822,7 +2882,7 @@ mod tests {
 
         let response = post_form_with_session(
             &client,
-            "/p/test-project/requirements/edit/1",
+            "/site-admin/test-project/requirements/edit/1",
             "id=1&title=Updated+Title&description=Updated+Description&\
              verification_method_ids=1&status_id=1&author_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
@@ -2861,7 +2921,7 @@ mod tests {
 
         let response = get_with_session(
             &client,
-            "/p/test-project/requirements?status_filter=1&category_filter=1&verification_filter=1",
+            "/site-admin/test-project/requirements?status_filter=1&category_filter=1&verification_filter=1",
             ADMIN_ID,
         )
         .await;
@@ -2888,7 +2948,8 @@ mod tests {
 
         let client = test_client(repo).await;
 
-        let response = get_with_session(&client, "/p/test-project/requirements", ADMIN_ID).await;
+        let response =
+            get_with_session(&client, "/site-admin/test-project/requirements", ADMIN_ID).await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
@@ -2967,8 +3028,12 @@ mod tests {
 
         let client = test_client(repo).await;
 
-        let response =
-            get_with_session(&client, "/p/test-project/requirements/show/1", ADMIN_ID).await;
+        let response = get_with_session(
+            &client,
+            "/site-admin/test-project/requirements/show/1",
+            ADMIN_ID,
+        )
+        .await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
@@ -2987,8 +3052,12 @@ mod tests {
 
         let client = test_client(repo).await;
 
-        let response =
-            get_with_session(&client, "/p/test-project/requirements/show/1", ADMIN_ID).await;
+        let response = get_with_session(
+            &client,
+            "/site-admin/test-project/requirements/show/1",
+            ADMIN_ID,
+        )
+        .await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
@@ -2999,7 +3068,7 @@ mod tests {
     async fn inline_category_creation_returns_new_id() {
         let client = test_client(base_repo()).await;
         let response = client
-            .post("/p/test-project/requirements/inline/category")
+            .post("/site-admin/test-project/requirements/inline/category")
             .header(ContentType::JSON)
             .private_cookie(session_cookie(ADMIN_ID))
             .body(r#"{"title":"New Category","description":"Test category","tag":"NEW"}"#)
@@ -3018,7 +3087,8 @@ mod tests {
     async fn requirements_tree_handles_empty_project() {
         let client = test_client(base_repo()).await;
 
-        let response = get_with_session(&client, "/p/test-project/requirements", ADMIN_ID).await;
+        let response =
+            get_with_session(&client, "/site-admin/test-project/requirements", ADMIN_ID).await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
@@ -3045,7 +3115,8 @@ mod tests {
 
         let client = test_client(repo).await;
 
-        let response = get_with_session(&client, "/p/test-project/requirements", ADMIN_ID).await;
+        let response =
+            get_with_session(&client, "/site-admin/test-project/requirements", ADMIN_ID).await;
 
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.expect("valid response");
@@ -3067,7 +3138,7 @@ mod tests {
         repo.requirements.insert(1, sample_requirement(1));
         let client = test_client(repo).await;
 
-        let response = get_with_session(&client, "/p/test-project/requirements", 99).await;
+        let response = get_with_session(&client, "/site-admin/test-project/requirements", 99).await;
 
         // Should be forbidden or redirect
         assert!(
@@ -3089,7 +3160,7 @@ mod tests {
 
         let response = post_form_with_session(
             &client,
-            "/p/test-project/requirements/edit/1",
+            "/site-admin/test-project/requirements/edit/1",
             "id=1&title=Hack&description=Test&verification_method_ids=1&\
              status_id=1&author_id=1&reviewer_id=1&\
              category_id=1&parent_id=0&applicability_id=1&\
@@ -3101,6 +3172,6 @@ mod tests {
         // Should redirect to correct project (unknown since project 99 doesn't exist)
         assert_eq!(response.status(), Status::SeeOther);
         let location = response.headers().get_one("Location").unwrap_or("");
-        assert!(location.contains("/p/unknown-project/"));
+        assert!(location.contains("/unknown-project/"));
     }
 }

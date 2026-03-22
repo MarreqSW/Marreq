@@ -3,4 +3,6 @@
 
 pub mod api_info;
 pub mod catchers;
-pub mod html;
+// Large helper module; only dashboard JSON uses part of it today.
+#[allow(dead_code)]
+pub mod helpers;

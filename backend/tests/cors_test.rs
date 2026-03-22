@@ -16,7 +16,7 @@
 //! - `OPTIONS` preflight for a disallowed origin receives no CORS headers.
 //! - `Access-Control-Allow-Credentials` is present iff the policy enables it.
 
-use marreq::html::cors::{CorsFairing, CorsPolicy};
+use marreq::cors::{CorsFairing, CorsPolicy};
 use rocket::http::{Header, Status};
 use rocket::local::asynchronous::Client;
 

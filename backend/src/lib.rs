@@ -20,7 +20,7 @@ pub mod errors;
 pub mod fairings;
 pub mod generators;
 pub mod helper_functions;
-pub mod html;
+pub mod cors;
 pub mod importers;
 pub mod logger;
 pub mod models;

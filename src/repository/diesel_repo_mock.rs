@@ -5,10 +5,12 @@
 
 use super::*;
 use crate::models::{
-    CustomFieldDefinition, CustomFieldDefinitionPayload, NewRequirementComment,
-    NewRequirementVersionLink, NewVerification, NewVerificationStatus, RequirementComment,
-    RequirementVersion, RequirementVersionLink, Verification, VerificationStatus,
+    CustomFieldDefinition, CustomFieldDefinitionPayload, Group, GroupMember, NewGroupMember,
+    NewGroupRow, NewRequirementComment, NewRequirementVersionLink, NewVerification,
+    NewVerificationStatus, RequirementComment, RequirementVersion, RequirementVersionLink,
+    UpdateGroup, Verification, VerificationStatus,
 };
+use crate::namespaces::TAKEN_NAMESPACE_MESSAGE;
 use crate::repository::errors::RepoError;
 use chrono::{NaiveDate, NaiveDateTime};
 use std::collections::HashMap;
@@ -29,6 +31,8 @@ pub struct DieselRepoMock {
     /// Next version id when creating versions
     pub next_version_id: i32,
     pub verifications: HashMap<i32, Verification>,
+    pub groups: HashMap<i32, Group>,
+    pub group_members: Vec<GroupMember>,
     pub projects: HashMap<i32, Project>,
     pub matrices: Vec<MatrixLink>,
     pub project_members: Vec<ProjectMember>,
@@ -75,6 +79,8 @@ impl Default for DieselRepoMock {
             requirement_versions: HashMap::new(),
             next_version_id: 1,
             verifications: HashMap::new(),
+            groups: HashMap::new(),
+            group_members: Vec::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
             project_members: Vec::new(),
@@ -115,6 +121,8 @@ impl DieselRepoMock {
             requirement_versions: HashMap::new(),
             next_version_id: 1,
             verifications: HashMap::new(),
+            groups: HashMap::new(),
+            group_members: Vec::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
             project_members: Vec::new(),
@@ -148,6 +156,8 @@ impl DieselRepoMock {
             requirement_versions: HashMap::new(),
             next_version_id: 1,
             verifications: HashMap::new(),
+            groups: HashMap::new(),
+            group_members: Vec::new(),
             projects: HashMap::new(),
             matrices: Vec::new(),
             project_members: Vec::new(),
@@ -248,7 +258,7 @@ impl UserRepository for DieselRepoMock {
             .values()
             .any(|u| u.username.to_lowercase() == lower_username)
         {
-            return Err(RepoError::Duplicate("username is already taken".into()));
+            return Err(RepoError::Duplicate(TAKEN_NAMESPACE_MESSAGE.into()));
         }
         if self
             .users
@@ -291,6 +301,22 @@ impl UserRepository for DieselRepoMock {
 
     fn update_user_without_password(&mut self, user_data: &UpdateUser) -> Result<bool, RepoError> {
         let id = user_data.id.ok_or(RepoError::NotFound)?;
+        let lower_username = user_data.username.to_lowercase();
+        let lower_email = user_data.email.to_lowercase();
+        if self
+            .users
+            .values()
+            .any(|u| u.id != id && u.username.to_lowercase() == lower_username)
+        {
+            return Err(RepoError::Duplicate(TAKEN_NAMESPACE_MESSAGE.into()));
+        }
+        if self
+            .users
+            .values()
+            .any(|u| u.id != id && u.email.to_lowercase() == lower_email)
+        {
+            return Err(RepoError::Duplicate("email is already in use".into()));
+        }
         match self.users.get_mut(&id) {
             Some(user) => {
                 user.username = user_data.username.clone();
@@ -1191,6 +1217,135 @@ impl VerificationsRepository for DieselRepoMock {
     }
 }
 
+impl GroupsRepository for DieselRepoMock {
+    fn get_groups_all(&self) -> Result<Vec<Group>, RepoError> {
+        Ok(self.groups.values().cloned().collect())
+    }
+
+    fn get_group_by_id(&self, group_id: i32) -> Result<Group, RepoError> {
+        self.groups
+            .get(&group_id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn get_group_by_slug(&self, slug: &str) -> Result<Group, RepoError> {
+        self.groups
+            .values()
+            .find(|g| g.slug == slug)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn insert_new_group(&mut self, new: &NewGroupRow) -> Result<i32, RepoError> {
+        if self.groups.values().any(|group| group.slug == new.slug) {
+            return Err(RepoError::Duplicate(TAKEN_NAMESPACE_MESSAGE.into()));
+        }
+        let id = self.groups.keys().max().map(|i| i + 1).unwrap_or(1);
+        let now = epoch();
+        let group = Group {
+            id,
+            name: new.name.clone(),
+            slug: new.slug.clone(),
+            description: new.description.clone(),
+            owner_id: new.owner_id,
+            created_at: now,
+            updated_at: now,
+        };
+        self.groups.insert(id, group);
+        Ok(id)
+    }
+
+    fn edit_group(&mut self, group_id: i32, update: &UpdateGroup) -> Result<bool, RepoError> {
+        match self.groups.get_mut(&group_id) {
+            Some(group) => {
+                group.name = update.name.clone();
+                group.description = update.description.clone();
+                group.owner_id = update.owner_id;
+                group.updated_at = epoch();
+                Ok(true)
+            }
+            None => Err(RepoError::NotFound),
+        }
+    }
+
+    fn delete_group(&mut self, group_id: i32) -> Result<Group, RepoError> {
+        self.groups.remove(&group_id).ok_or(RepoError::NotFound)
+    }
+
+    fn get_projects_by_group(&self, group_id: i32) -> Result<Vec<Project>, RepoError> {
+        Ok(self
+            .projects
+            .values()
+            .filter(|p| p.group_id == Some(group_id))
+            .cloned()
+            .collect())
+    }
+}
+
+impl GroupMembersRepository for DieselRepoMock {
+    fn get_members_by_group(&self, group_id: i32) -> Result<Vec<GroupMember>, RepoError> {
+        Ok(self
+            .group_members
+            .iter()
+            .filter(|m| m.group_id == group_id)
+            .cloned()
+            .collect())
+    }
+
+    fn get_groups_for_user(&self, user_id: i32) -> Result<Vec<GroupMember>, RepoError> {
+        Ok(self
+            .group_members
+            .iter()
+            .filter(|m| m.user_id == user_id)
+            .cloned()
+            .collect())
+    }
+
+    fn add_group_member(&mut self, new: &NewGroupMember) -> Result<(), RepoError> {
+        self.group_members
+            .retain(|m| !(m.group_id == new.group_id && m.user_id == new.user_id));
+        self.group_members.push(GroupMember {
+            group_id: new.group_id,
+            user_id: new.user_id,
+            role: new.role,
+            created_at: epoch(),
+            updated_at: epoch(),
+        });
+        Ok(())
+    }
+
+    fn update_group_member_role(
+        &mut self,
+        group_id: i32,
+        user_id: i32,
+        role: i32,
+    ) -> Result<(), RepoError> {
+        if let Some(m) = self
+            .group_members
+            .iter_mut()
+            .find(|m| m.group_id == group_id && m.user_id == user_id)
+        {
+            m.role = role;
+            m.updated_at = epoch();
+            Ok(())
+        } else {
+            Err(RepoError::NotFound)
+        }
+    }
+
+    fn remove_group_member(&mut self, group_id: i32, user_id: i32) -> Result<(), RepoError> {
+        let before = self.group_members.len();
+        self.group_members
+            .retain(|m| !(m.group_id == group_id && m.user_id == user_id));
+        if self.group_members.len() == before {
+            Err(RepoError::NotFound)
+        } else {
+            Ok(())
+        }
+    }
+}
+
 impl ProjectsRepository for DieselRepoMock {
     fn get_projects_all(&self) -> Result<Vec<Project>, RepoError> {
         Ok(self.projects.values().cloned().collect())
@@ -1201,14 +1356,68 @@ impl ProjectsRepository for DieselRepoMock {
     }
 
     fn get_project_by_slug(&self, slug: &str) -> Result<Project, RepoError> {
+        let matches: Vec<Project> = self
+            .projects
+            .values()
+            .filter(|project| project.slug == slug)
+            .cloned()
+            .collect();
+
+        match matches.len() {
+            0 => Err(RepoError::NotFound),
+            1 => Ok(matches.into_iter().next().expect("single project")),
+            _ => Err(RepoError::BadInput(format!(
+                "project slug '{slug}' is ambiguous across namespaces"
+            ))),
+        }
+    }
+
+    fn get_project_by_user_namespace_and_slug(
+        &self,
+        username: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError> {
+        let user = self
+            .get_user_by_username(username)?
+            .ok_or(RepoError::NotFound)?;
+
         self.projects
             .values()
-            .find(|project| project.slug == slug)
+            .find(|project| {
+                project.group_id.is_none()
+                    && project.owner_id == Some(user.id)
+                    && project.slug == slug
+            })
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn get_project_by_group_namespace_and_slug(
+        &self,
+        group_slug: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError> {
+        let group = self.get_group_by_slug(group_slug)?;
+
+        self.projects
+            .values()
+            .find(|project| project.group_id == Some(group.id) && project.slug == slug)
             .cloned()
             .ok_or(RepoError::NotFound)
     }
 
     fn insert_new_project(&mut self, _new: &NewProjectRow) -> Result<i32, RepoError> {
+        let duplicate_in_namespace = self.projects.values().any(|project| {
+            project.slug == _new.slug
+                && project.group_id == _new.group_id
+                && (project.group_id.is_some() || project.owner_id == _new.owner_id)
+        });
+        if duplicate_in_namespace {
+            return Err(RepoError::Duplicate(
+                "project slug is already used in this namespace".into(),
+            ));
+        }
+
         let id = self.projects.keys().max().map(|i| i + 1).unwrap_or(1);
         let now = epoch();
         let proj = Project {
@@ -1220,6 +1429,7 @@ impl ProjectsRepository for DieselRepoMock {
             update_date: Some(now),
             owner_id: _new.owner_id,
             status: _new.status,
+            group_id: _new.group_id,
         };
         self.projects.insert(id, proj);
         Ok(id)
@@ -1230,6 +1440,24 @@ impl ProjectsRepository for DieselRepoMock {
         _project_id: i32,
         _update: &UpdateProject,
     ) -> Result<bool, RepoError> {
+        let current_slug = self
+            .projects
+            .get(&_project_id)
+            .map(|project| project.slug.clone())
+            .ok_or(RepoError::NotFound)?;
+        let next_slug = _update.slug.clone().unwrap_or(current_slug);
+        let duplicate_in_namespace = self.projects.values().any(|project| {
+            project.id != _project_id
+                && project.slug == next_slug
+                && project.group_id == _update.group_id
+                && (project.group_id.is_some() || project.owner_id == _update.owner_id)
+        });
+        if duplicate_in_namespace {
+            return Err(RepoError::Duplicate(
+                "project slug is already used in this namespace".into(),
+            ));
+        }
+
         match self.projects.get_mut(&_project_id) {
             Some(proj) => {
                 proj.name = _update.name.clone();
@@ -1238,6 +1466,8 @@ impl ProjectsRepository for DieselRepoMock {
                 if let Some(status) = _update.status {
                     proj.status = status;
                 }
+                proj.slug = next_slug;
+                proj.group_id = _update.group_id;
                 proj.update_date = Some(epoch());
                 Ok(true)
             }

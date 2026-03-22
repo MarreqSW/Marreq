@@ -74,7 +74,7 @@
           </td>
           <td class="marreq-requirements-row__cell marreq-requirements-row__cell--title">
             <a
-              href="/p/{{../project.slug}}/requirements/show/{{id}}"
+              href="/{{../project.slug}}/requirements/show/{{id}}"
               class="marreq-requirements-title"
               title="{{title}}"
               data-requirement-preview
@@ -100,7 +100,7 @@
               <span class="marreq-requirements-cell__display marreq-requirements-parents-list">
                 {{#each req_parents}}
                   {{#unless @first}}<span class="marreq-requirements-parents-sep">, </span>{{/unless}}
-                  <a href="/p/{{../../project.slug}}/requirements/show/{{id}}" class="marreq-requirements-parent-link" title="View {{reference_code}} — {{title}}" data-requirement-preview data-requirement-preview-project-id="{{../../project.id}}" data-requirement-preview-id="{{id}}" data-requirement-preview-ref="{{reference_code}}" data-requirement-preview-title="{{title}}">{{#if reference_code}}{{reference_code}} — {{/if}}{{title}}</a>
+                  <a href="/{{../../project.slug}}/requirements/show/{{id}}" class="marreq-requirements-parent-link" title="View {{reference_code}} — {{title}}" data-requirement-preview data-requirement-preview-project-id="{{../../project.id}}" data-requirement-preview-id="{{id}}" data-requirement-preview-ref="{{reference_code}}" data-requirement-preview-title="{{title}}">{{#if reference_code}}{{reference_code}} — {{/if}}{{title}}</a>
                 {{/each}}
               </span>
             {{else}}
@@ -134,7 +134,7 @@
           <td class="marreq-requirements-row__cell marreq-requirements-row__cell--actions">
             <div class="marreq-requirements-row__actions">
               <a 
-                href="/p/{{../project.slug}}/requirements/show/{{id}}" 
+                href="/{{../project.slug}}/requirements/show/{{id}}" 
                 class="marreq-requirements-row__action marreq-requirements-row__action--icon"
                 title="View requirement">
                 <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
@@ -145,7 +145,7 @@
               </a>
               {{#if ../can_edit_requirements}}
               <a 
-                href="/p/{{../project.slug}}/requirements/edit/{{id}}" 
+                href="/{{../project.slug}}/requirements/edit/{{id}}" 
                 class="marreq-requirements-row__action marreq-requirements-row__action--icon"
                 data-action="open-edit-panel"
                 data-requirement-id="{{id}}"
@@ -205,7 +205,7 @@
                   {{#if req_parents}}
                     {{#each req_parents}}
                       {{#unless @first}}, {{/unless}}
-                      <a href="/p/{{../../project.slug}}/requirements/show/{{id}}">{{#if reference_code}}{{reference_code}} — {{/if}}{{title}}</a>
+                      <a href="/{{../../project.slug}}/requirements/show/{{id}}">{{#if reference_code}}{{reference_code}} — {{/if}}{{title}}</a>
                     {{/each}}
                   {{else}}
                     —

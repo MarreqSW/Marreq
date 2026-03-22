@@ -46,16 +46,16 @@ View switcher buttons, export/import, and new requirement button
         Export
       </button>
       <ul class="dropdown-menu dropdown-menu-end">
-        <li><a class="dropdown-item" href="/p/{{project.slug}}/requirements.xls" title="Export to Excel">Excel</a></li>
-        <li><a class="dropdown-item" href="/p/{{project.slug}}/export_reqif" title="Export current project as ReqIF 1.2">ReqIF (current)</a></li>
-        <li><a class="dropdown-item" href="/p/{{project.slug}}/baselines" title="Export a baseline as ReqIF">ReqIF (from baseline…)</a></li>
+        <li><a class="dropdown-item" href="/{{project.slug}}/requirements.xls" title="Export to Excel">Excel</a></li>
+        <li><a class="dropdown-item" href="/{{project.slug}}/export_reqif" title="Export current project as ReqIF 1.2">ReqIF (current)</a></li>
+        <li><a class="dropdown-item" href="/{{project.slug}}/baselines" title="Export a baseline as ReqIF">ReqIF (from baseline…)</a></li>
       </ul>
     </div>
     {{#if is_admin}}
-    <a href="/p/{{project.slug}}/import_excel" class="btn btn-outline-secondary btn-sm" title="Import from Excel/CSV">
+    <a href="/{{project.slug}}/import_excel" class="btn btn-outline-secondary btn-sm" title="Import from Excel/CSV">
       Import
     </a>
-    <a href="/p/{{project.slug}}/import_reqif" class="btn btn-outline-secondary btn-sm" title="Import from ReqIF 1.2">
+    <a href="/{{project.slug}}/import_reqif" class="btn btn-outline-secondary btn-sm" title="Import from ReqIF 1.2">
       Import ReqIF
     </a>
     {{/if}}
@@ -89,7 +89,7 @@ View switcher buttons, export/import, and new requirement button
   </div>
   {{#if project.id}}
   {{#if can_edit_requirements}}
-  <a href="/p/{{project.slug}}/requirements/new" class="btn btn-primary marreq-requirements-header__primary"
+  <a href="/{{project.slug}}/requirements/new" class="btn btn-primary marreq-requirements-header__primary"
     id="newRequirementButton">
     New Requirement
   </a>

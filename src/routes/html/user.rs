@@ -3,7 +3,15 @@
 
 use super::helpers::build_context_with_projects;
 use super::prelude::*;
+use crate::repository::errors::RepoError;
 use crate::services::UserService;
+
+fn friendly_user_error(error: RepoError, fallback: &str) -> String {
+    match error {
+        RepoError::BadInput(message) | RepoError::Duplicate(message) => message,
+        _ => fallback.to_string(),
+    }
+}
 
 #[get("/profile?<updated>")]
 async fn profile(
@@ -61,12 +69,12 @@ async fn post_edit_profile(
 
     let service = UserService::new(state.inner());
 
-    if service.update_without_password(&actor, &user_data).is_ok() {
-        Redirect::to(uri!(profile(updated = Some(true))))
-    } else {
-        Redirect::to(uri!(edit_profile(
-            error = Some("Failed to update profile".to_string())
-        )))
+    match service.update_without_password(&actor, &user_data) {
+        Ok(_) => Redirect::to(uri!("/user", profile(updated = Some(true)))),
+        Err(error) => Redirect::to(uri!(
+            "/user",
+            edit_profile(error = Some(friendly_user_error(error, "Failed to update profile")))
+        )),
     }
 }
 
@@ -117,8 +125,8 @@ async fn delete_user_route(
     }
     let service = UserService::new(state.inner());
     match service.delete(&current_user, user_id) {
-        Ok(_) => Ok(Redirect::to("/admin/users")),
-        Err(_) => Err(Redirect::to("/admin/users")),
+        Ok(_) => Ok(Redirect::to("/-/admin/users")),
+        Err(_) => Err(Redirect::to("/-/admin/users")),
     }
 }
 
@@ -159,11 +167,11 @@ async fn post_edit_user(
 
     match service.update_without_password(&admin.into_inner(), &user_data) {
         Ok(_) => Ok(Redirect::to(uri!("/user", show_user_id(user_id)))),
-        Err(_) => Ok(Redirect::to(uri!(
+        Err(error) => Ok(Redirect::to(uri!(
             "/user",
             edit_user(
                 user_id = user_id,
-                error = Some("Failed to update user".to_string())
+                error = Some(friendly_user_error(error, "Failed to update user"))
             )
         ))),
     }
@@ -182,7 +190,7 @@ async fn admin_change_password_page(
     let target_user = state
         .repo_read()
         .get_user_by_id(user_id)
-        .map_err(|_| Redirect::to(uri!("/admin/users")))?;
+        .map_err(|_| Redirect::to(uri!("/-/admin/users")))?;
 
     let mut ctx = build_context_with_projects(state, current_user.clone(), cookies);
     if let Some(ctx_obj) = ctx.as_object_mut() {
@@ -433,7 +441,10 @@ mod tests {
         let response = delete_with_admin(&client, "/user/2/delete").await;
 
         assert_eq!(response.status(), Status::SeeOther);
-        assert_eq!(response.headers().get_one("Location"), Some("/admin/users"));
+        assert_eq!(
+            response.headers().get_one("Location"),
+            Some("/-/admin/users")
+        );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
         let repo = state.repo_read();
@@ -495,6 +506,52 @@ mod tests {
     }
 
     #[rocket::async_test]
+    async fn duplicate_user_creation_redirects_back_with_namespace_error() {
+        let mut repo = base_repo();
+        repo.groups.insert(
+            9,
+            crate::models::Group {
+                id: 9,
+                name: "FlightSystems".into(),
+                slug: "flightsystems".into(),
+                description: None,
+                owner_id: Some(ADMIN_ID),
+                created_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+                updated_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap(),
+            },
+        );
+        let client = test_client(repo).await;
+
+        let response = client
+            .post("/user/new")
+            .header(ContentType::Form)
+            .body(
+                "username=flightsystems&name=Flight+User&email=flight%40example.com&password_hash=Voyager!Marble_2026&is_admin=false",
+            )
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        let location = response.headers().get_one("Location").expect("location");
+        assert!(location.starts_with("/user/new?error="));
+
+        let page = client
+            .get(location)
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
+        let body = page.into_string().await.expect("body");
+        assert!(body.contains(crate::namespaces::TAKEN_NAMESPACE_MESSAGE));
+    }
+
+    #[rocket::async_test]
     async fn profile_page_displays_current_user_information() {
         let client = test_client(base_repo()).await;
         let response = get_as_standard_user(&client, "/user/profile").await;
@@ -534,7 +591,7 @@ mod tests {
         assert_eq!(response.status(), Status::SeeOther);
         assert_eq!(
             response.headers().get_one("Location"),
-            Some("/profile?updated=true")
+            Some("/user/profile?updated=true")
         );
 
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -543,6 +600,64 @@ mod tests {
         assert_eq!(updated.name, "Jane Updated");
         assert_eq!(updated.username, "jane_updated");
         assert_eq!(updated.email, "jane_updated@example.com");
+    }
+
+    #[rocket::async_test]
+    async fn edit_profile_collision_redirects_back_with_namespace_error() {
+        let mut repo = base_repo();
+        let mut other = DieselRepoMock::make_user(3, "otheruser", "");
+        other.name = "Other User".into();
+        other.email = "other@example.com".into();
+        repo.users.insert(3, other);
+        let client = test_client(repo).await;
+        let response = client
+            .post("/user/profile/edit")
+            .header(ContentType::Form)
+            .body("name=Jane+Doe&username=otheruser&email=jane%40example.com&is_admin=false&id=2")
+            .private_cookie(user_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        let location = response.headers().get_one("Location").expect("location");
+        assert!(location.starts_with("/user/profile/edit?error="));
+
+        let page = client
+            .get(location)
+            .private_cookie(user_cookie())
+            .dispatch()
+            .await;
+        let body = page.into_string().await.expect("body");
+        assert!(body.contains(crate::namespaces::TAKEN_NAMESPACE_MESSAGE));
+    }
+
+    #[rocket::async_test]
+    async fn admin_edit_user_collision_redirects_back_with_namespace_error() {
+        let mut repo = base_repo();
+        let mut other = DieselRepoMock::make_user(3, "otheruser", "");
+        other.name = "Other User".into();
+        other.email = "other@example.com".into();
+        repo.users.insert(3, other);
+        let client = test_client(repo).await;
+        let response = client
+            .post("/user/2/edit")
+            .header(ContentType::Form)
+            .body("name=Jane+Doe&username=otheruser&email=jane%40example.com&is_admin=false&id=2")
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::SeeOther);
+        let location = response.headers().get_one("Location").expect("location");
+        assert!(location.starts_with("/user/2/edit?error="));
+
+        let page = client
+            .get(location)
+            .private_cookie(admin_cookie())
+            .dispatch()
+            .await;
+        let body = page.into_string().await.expect("body");
+        assert!(body.contains(crate::namespaces::TAKEN_NAMESPACE_MESSAGE));
     }
 
     #[rocket::async_test]

@@ -46,6 +46,19 @@
                                 {{/each}}
                             </select>
                         </div>
+
+                        <div class="mb-3">
+                            <label for="group_id" class="form-label c-form-label">Group</label>
+                            <select class="form-select c-form-select c-form-control c-form-control--select" id="group_id" name="group_id">
+                                <option value="0" {{#unless form.group_id}}selected{{/unless}}>No group</option>
+                                {{#each groups}}
+                                    <option value="{{id}}" {{#if (eq id ../form.group_id)}}selected{{/if}}>
+                                        {{name}}
+                                    </option>
+                                {{/each}}
+                            </select>
+                            <small class="text-muted">Groups organize projects but do not grant access by themselves.</small>
+                        </div>
                         
                         <div class="d-flex justify-content-between">
                             <a href="/projects" class="btn btn-secondary">

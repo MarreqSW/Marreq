@@ -276,7 +276,7 @@ function renderRelationships(root, view, projectId, linkedTests = []) {
 
       const link = document.createElement('a');
       link.className = 'fw-semibold flex-grow-1';
-      link.href = `/p/${projectId}/requirements/show/${pl.target.id}`;
+      link.href = `/${projectId}/requirements/show/${pl.target.id}`;
       link.textContent = `${pl.target.reference} · ${pl.target.title}`;
 
       item.append(typeBadge, link);
@@ -294,7 +294,7 @@ function renderRelationships(root, view, projectId, linkedTests = []) {
 
     const link = document.createElement('a');
     link.className = 'fw-semibold';
-    link.href = `/p/${projectId}/requirements/show/${view.parent.id}`;
+    link.href = `/${projectId}/requirements/show/${view.parent.id}`;
     link.textContent = `${view.parent.reference} · ${view.parent.title}`;
 
     const status = document.createElement('span');
@@ -324,7 +324,7 @@ function renderRelationships(root, view, projectId, linkedTests = []) {
 
       const link = document.createElement('a');
       link.className = 'fw-semibold flex-grow-1';
-      link.href = `/p/${projectId}/requirements/show/${child.id}`;
+      link.href = `/${projectId}/requirements/show/${child.id}`;
       link.textContent = `${child.reference} · ${child.title}`;
 
       const status = document.createElement('span');
@@ -354,7 +354,7 @@ function renderRelationships(root, view, projectId, linkedTests = []) {
 
       const link = document.createElement('a');
       link.className = 'fw-semibold';
-      link.href = `/p/${projectId}/verifications/show/${test.id}`;
+      link.href = `/${projectId}/verifications/show/${test.id}`;
       link.textContent = `${test.reference_code || `Test #${test.id}`} · ${test.name || ''}`.trim() || `Test #${test.id}`;
 
       item.appendChild(link);
@@ -448,7 +448,7 @@ function renderVerification(root, view, canonical) {
     row.setAttribute('data-status-id', String(test.test_status_id ?? test.status_id ?? ''));
 
     const link = document.createElement('a');
-    link.href = `/p/${projectSlug}/verifications/show/${test.id}`;
+    link.href = `/${projectSlug}/verifications/show/${test.id}`;
     link.className = 'text-decoration-none text-body flex-grow-1 me-2';
     link.style.minWidth = '0';
 
@@ -509,7 +509,7 @@ function renderVerification(root, view, canonical) {
           if (select.parentNode) select.remove();
           displayEl.hidden = false;
           try {
-            await postJson(`/p/${projectSlug}/verifications/update-status/${test.id}`, {
+            await postJson(`/${projectSlug}/verifications/update-status/${test.id}`, {
               status_id: v,
             });
             const variant = testStatusVariant(displayText);

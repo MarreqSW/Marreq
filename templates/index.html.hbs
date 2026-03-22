@@ -14,6 +14,14 @@
             icon="fas fa-folder-tree"
             label="Browse Projects"
             modifier="marreq-action-card--primary"}}
+        {{> partials/quick_action_card
+            href="/groups"
+            icon="fas fa-users"
+            label="Browse Groups"}}
+        {{> partials/quick_action_card
+            href="/groups/new"
+            icon="fas fa-user-plus"
+            label="Create Group"}}
         {{#if user.is_admin}}
           {{> partials/quick_action_card
               href="/new_project"
@@ -25,7 +33,7 @@
               disabled=true
               title="Coming soon"}}
           {{> partials/quick_action_card
-              href="/admin"
+              href="/-/admin"
               icon="fas fa-shield-alt"
               label="Admin Panel"}}
         {{/if}}

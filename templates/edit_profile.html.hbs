@@ -13,7 +13,7 @@
     <div class="card-body c-card__body">
       {{#if profile_error}}
         <div class="alert alert-danger c-alert" role="alert">
-          We couldn't save your changes. Please try again.
+          {{profile_error}}
         </div>
       {{/if}}
       <form method="post" action="/user/profile/edit">

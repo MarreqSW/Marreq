@@ -114,11 +114,13 @@ pub struct LinkTypeInfo {
 }
 
 /// List allowed link types. Project-scoped (any project access).
-#[get("/projects/<_project_id>/requirement-version-links/link-types")]
+/// Route segment must be `<project_id>` (not `<_project_id>`) so `ProjectAccessOrBearer` can resolve it.
+#[get("/projects/<project_id>/requirement-version-links/link-types")]
 pub async fn link_types(
     _access: ProjectAccessOrBearer,
-    _project_id: i32,
+    project_id: i32,
 ) -> ApiResult<Json<LinkTypeInfo>> {
+    let _ = project_id;
     Ok(Json(LinkTypeInfo {
         link_types: crate::services::requirement_service::REQUIREMENT_VERSION_LINK_TYPES.to_vec(),
     }))

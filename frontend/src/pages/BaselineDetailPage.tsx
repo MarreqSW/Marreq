@@ -98,7 +98,7 @@ export default function BaselineDetailPage() {
       >
         <a
           href={`/p/${pid}/baselines/${bid}`}
-          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-white/[0.06]"
+          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
         >
           Classic view
         </a>
@@ -106,19 +106,19 @@ export default function BaselineDetailPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div className="rounded-xl border border-stitch-border bg-stitch-surface p-4 text-center">
-          <p className="text-2xl font-extrabold text-white">{reqs.length}</p>
+          <p className="text-2xl font-extrabold text-stitch-fg">{reqs.length}</p>
           <p className="text-[10px] text-stitch-muted uppercase tracking-widest mt-1">
             Requirements in snapshot
           </p>
         </div>
         <div className="rounded-xl border border-stitch-border bg-stitch-surface p-4 text-center">
-          <p className="text-2xl font-extrabold text-white">{vers.length}</p>
+          <p className="text-2xl font-extrabold text-stitch-fg">{vers.length}</p>
           <p className="text-[10px] text-stitch-muted uppercase tracking-widest mt-1">
             Verifications in snapshot
           </p>
         </div>
         <div className="rounded-xl border border-stitch-border bg-stitch-surface p-4 text-center">
-          <p className="text-2xl font-extrabold text-white">{trace.length}</p>
+          <p className="text-2xl font-extrabold text-stitch-fg">{trace.length}</p>
           <p className="text-[10px] text-stitch-muted uppercase tracking-widest mt-1">
             Traceability rows
           </p>
@@ -126,7 +126,7 @@ export default function BaselineDetailPage() {
       </div>
 
       <section className="mb-8">
-        <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-3">
+        <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-widest mb-3">
           Sample traceability (first {traceSample.length} of {trace.length})
         </h3>
         <div className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden max-h-96 overflow-y-auto">

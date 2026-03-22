@@ -146,7 +146,7 @@ export default function CatalogVerificationMethodsPage() {
         onSubmit={addRow}
         className="rounded-xl border border-stitch-border bg-stitch-surface p-4 space-y-3"
       >
-        <h3 className="text-sm font-bold text-white">New verification method</h3>
+        <h3 className="text-sm font-bold text-stitch-fg">New verification method</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <input
             className={inp}

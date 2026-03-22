@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
+import { useTheme, type ThemePreference } from '@/context/ThemeContext';
 import type { User } from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 
@@ -31,6 +32,7 @@ export default function ProjectLayout() {
   const pid = Number(projectId);
   const navigate = useNavigate();
   const { dashboard, setSelectedProjectId, refresh, logout } = useDashboard();
+  const { preference, setPreference } = useTheme();
   const [sidebarWide, setSidebarWide] = useState(true);
   const [globalSearch, setGlobalSearch] = useState('');
 
@@ -66,7 +68,7 @@ export default function ProjectLayout() {
         `flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider font-bold transition-all rounded-r-md ${
           isActive
             ? 'border-l-4 border-stitch-accent bg-stitch-elevated text-stitch-accent'
-            : 'border-l-4 border-transparent text-stitch-muted hover:bg-white/[0.04] hover:text-white'
+            : 'border-l-4 border-transparent text-stitch-muted hover:bg-stitch-elevated hover:text-stitch-fg'
         } ${!sidebarWide ? 'justify-center px-2' : ''}`
       }
       title={!sidebarWide ? opts.label : undefined}
@@ -77,10 +79,7 @@ export default function ProjectLayout() {
   );
 
   return (
-    <div
-      className="stitch-app min-h-screen flex bg-stitch-canvas text-white text-stitch font-sans antialiased"
-      style={{ colorScheme: 'dark' }}
-    >
+    <div className="stitch-app min-h-screen flex bg-stitch-canvas text-stitch-fg text-stitch font-sans antialiased">
       {/* SideNavBar — structure from Image 2.html, Stitch dark palette */}
       <aside
         className={`flex flex-col h-screen sticky top-0 shrink-0 border-r border-stitch-border bg-stitch-surface z-50 transition-[width] duration-200 ${
@@ -176,14 +175,14 @@ export default function ProjectLayout() {
 
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         {/* TopNavBar */}
-        <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-4 w-full px-6 py-3 border-b border-stitch-border bg-stitch-canvas/85 backdrop-blur-md shadow-stitch">
+        <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-4 w-full px-6 py-3 border-b border-stitch-border bg-stitch-surface/95 backdrop-blur-md shadow-stitch">
           <div className="flex items-center gap-4 md:gap-8 min-w-0 flex-1">
             <div className="flex items-center gap-3 min-w-0">
-              <h1 className="text-lg md:text-xl font-bold tracking-tight text-white truncate">
+              <h1 className="text-lg md:text-xl font-bold tracking-tight text-stitch-fg truncate">
                 {currentProject?.name ?? 'Project'}
               </h1>
               <select
-                className="text-stitch max-w-[160px] sm:max-w-[220px] border border-stitch-border rounded-md px-2 py-1.5 bg-stitch-surface text-white text-xs focus:outline-none focus:ring-1 focus:ring-stitch-accent/50"
+                className="text-stitch max-w-[160px] sm:max-w-[220px] border border-stitch-border rounded-md px-2 py-1.5 bg-stitch-elevated text-stitch-fg text-xs focus:outline-none focus:ring-1 focus:ring-stitch-accent/50"
                 value={Number.isFinite(pid) ? pid : ''}
                 onChange={(e) => {
                   const id = Number(e.target.value);
@@ -194,7 +193,7 @@ export default function ProjectLayout() {
                 }}
               >
                 {projects.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-stitch-surface text-white">
+                  <option key={p.id} value={p.id} className="bg-stitch-surface text-stitch-fg">
                     {p.name}
                   </option>
                 ))}
@@ -209,22 +208,50 @@ export default function ProjectLayout() {
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
                 placeholder="Global Search…"
-                className="w-full pl-10 pr-4 py-1.5 bg-stitch-elevated border border-stitch-border rounded-md text-sm text-white placeholder:text-stitch-muted focus:ring-1 focus:ring-stitch-accent focus:border-stitch-accent outline-none"
+                className="w-full pl-10 pr-4 py-1.5 bg-stitch-elevated border border-stitch-border rounded-md text-sm text-stitch-fg placeholder:text-stitch-muted focus:ring-1 focus:ring-stitch-accent focus:border-stitch-accent outline-none"
               />
             </div>
           </div>
           <div className="flex items-center gap-4 shrink-0">
+            <div
+              className="flex items-center rounded-lg border border-stitch-border p-0.5 gap-0.5 shrink-0"
+              role="group"
+              aria-label="Color scheme"
+            >
+              {(
+                [
+                  ['light', 'light_mode', 'Light theme'] as const,
+                  ['dark', 'dark_mode', 'Dark theme'] as const,
+                  ['system', 'routine', 'Match system'] as const,
+                ] as const
+              ).map(([pref, icon, title]) => (
+                <button
+                  key={pref}
+                  type="button"
+                  title={title}
+                  aria-pressed={preference === pref}
+                  onClick={() => setPreference(pref as ThemePreference)}
+                  className={`p-1.5 rounded-md transition-colors ${
+                    preference === pref
+                      ? 'bg-stitch-elevated text-stitch-accent'
+                      : 'text-stitch-muted hover:bg-stitch-elevated hover:text-stitch-fg'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-lg">{icon}</span>
+                </button>
+              ))}
+            </div>
             <div className="hidden sm:flex items-center gap-1 text-stitch-muted">
               <button
                 type="button"
-                className="hover:bg-white/[0.06] p-2 rounded-full transition-colors"
+                className="hover:bg-stitch-elevated p-2 rounded-full transition-colors"
                 title="Notifications"
               >
                 <span className="material-symbols-outlined text-xl">notifications</span>
               </button>
               <Link
                 to={`/p/${pid}/settings`}
-                className="hover:bg-white/[0.06] p-2 rounded-full transition-colors text-stitch-muted"
+                className="hover:bg-stitch-elevated p-2 rounded-full transition-colors text-stitch-muted"
                 title="Settings"
               >
                 <span className="material-symbols-outlined text-xl">settings</span>
@@ -239,7 +266,7 @@ export default function ProjectLayout() {
               <span className="hidden lg:inline">Create Requirement</span>
             </Link>
             <div
-              className="w-8 h-8 rounded-full border-2 border-stitch-accent/50 bg-stitch-elevated flex items-center justify-center text-[10px] font-bold text-white"
+              className="w-8 h-8 rounded-full border-2 border-stitch-accent/50 bg-stitch-elevated flex items-center justify-center text-[10px] font-bold text-stitch-fg"
               title={user ? `${user.name} (${user.username})` : 'User'}
             >
               {user ? userInitials(user) : '?'}
@@ -247,7 +274,7 @@ export default function ProjectLayout() {
             <button
               type="button"
               onClick={() => void logout().then(() => navigate('/login', { replace: true }))}
-              className="text-xs text-stitch-muted hover:text-white transition-colors hidden sm:block"
+              className="text-xs text-stitch-muted hover:text-stitch-fg transition-colors hidden sm:block"
             >
               Sign out
             </button>

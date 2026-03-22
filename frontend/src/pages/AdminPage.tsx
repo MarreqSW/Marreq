@@ -55,7 +55,7 @@ export default function AdminPage() {
         />
         <div className="rounded-xl border border-stitch-border bg-stitch-surface p-8 text-center">
           <span className="material-symbols-outlined text-4xl text-stitch-muted mb-3 block">lock</span>
-          <p className="text-white font-semibold">Access denied</p>
+          <p className="text-stitch-fg font-semibold">Access denied</p>
           <p className="text-sm text-stitch-muted mt-2 max-w-md mx-auto">
             Listing users requires a global administrator account. You are signed in as{' '}
             <span className="text-stitch-accent">{me?.username ?? '?'}</span>.
@@ -76,7 +76,7 @@ export default function AdminPage() {
         <button
           type="button"
           onClick={() => void load()}
-          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-white/[0.06]"
+          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
         >
           Refresh
         </button>
@@ -96,7 +96,7 @@ export default function AdminPage() {
             {users.map((u) => (
               <tr key={u.id} className="hover:bg-white/[0.03]">
                 <td className="px-4 py-3 font-mono text-stitch-accent">{u.username}</td>
-                <td className="px-4 py-3 text-white">{u.name}</td>
+                <td className="px-4 py-3 text-stitch-fg">{u.name}</td>
                 <td className="px-4 py-3 text-stitch-muted text-xs">{u.email}</td>
                 <td className="px-4 py-3 text-center">
                   {u.is_admin ? (

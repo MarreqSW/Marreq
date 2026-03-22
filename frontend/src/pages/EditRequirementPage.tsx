@@ -455,15 +455,15 @@ export default function EditRequirementPage() {
     return s;
   }, [statuses, statusId]);
 
-  const selectLight =
-    'w-full text-sm font-medium bg-white border border-outline-variant/50 rounded-lg px-3 py-2 text-on-surface focus:border-primary focus:ring-1 focus:ring-primary/25 outline-none transition-colors';
+  const selectStitch =
+    'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-lg px-3 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/30 outline-none transition-colors';
 
   if (loadError) {
     return (
-      <div className="rounded-xl border border-error/40 bg-error-container/80 p-4 text-sm text-on-error-container">
+      <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-800 dark:text-red-100">
         {loadError}
         <div className="mt-3">
-          <Link to={`/p/${pid}/requirements`} className="font-semibold text-primary underline">
+          <Link to={`/p/${pid}/requirements`} className="font-semibold text-stitch-accent underline">
             Back to requirements
           </Link>
         </div>
@@ -473,7 +473,7 @@ export default function EditRequirementPage() {
 
   if (!detail) {
     return (
-      <div className="text-on-surface-variant text-sm py-12 text-center font-body bg-surface-low -mx-6 md:-mx-8 px-6 rounded-lg">
+      <div className="text-stitch-muted text-sm py-12 text-center font-body bg-stitch-elevated -mx-6 md:-mx-8 px-6 rounded-lg">
         Loading requirement…
       </div>
     );
@@ -484,13 +484,13 @@ export default function EditRequirementPage() {
   const canEditParents = detail.current_version_id != null && detail.current_version_id > 0;
 
   return (
-    <div className="font-body text-on-surface -mx-6 md:-mx-8 -mt-6 md:-mt-8 px-6 md:px-8 pt-6 md:pt-8 pb-36 min-h-full bg-surface-low">
-      <nav className="flex items-center gap-2 text-xs font-semibold text-on-surface-variant mb-6 uppercase tracking-widest max-w-7xl mx-auto">
-        <Link to={`/p/${pid}/requirements`} className="hover:text-primary transition-colors">
+    <div className="font-body text-stitch-fg -mx-6 md:-mx-8 -mt-6 md:-mt-8 px-6 md:px-8 pt-6 md:pt-8 pb-36 min-h-full bg-stitch-canvas">
+      <nav className="flex items-center gap-2 text-xs font-semibold text-stitch-muted mb-6 uppercase tracking-widest max-w-7xl mx-auto">
+        <Link to={`/p/${pid}/requirements`} className="hover:text-stitch-accent transition-colors">
           Requirements
         </Link>
-        <span className="material-symbols-outlined text-sm text-outline">chevron_right</span>
-        <span className="text-primary font-bold font-headline">
+        <span className="material-symbols-outlined text-sm text-stitch-muted">chevron_right</span>
+        <span className="text-stitch-accent font-bold font-headline">
           {detail.reference_code || `REQ-${detail.id}`}
         </span>
       </nav>
@@ -499,19 +499,19 @@ export default function EditRequirementPage() {
         <div className="grid grid-cols-12 gap-8">
           {/* Main editor */}
           <div className="col-span-12 lg:col-span-8 space-y-8">
-            <section className="bg-white p-6 md:p-8 rounded-xl shadow-sm border border-outline-variant/20">
+            <section className="bg-stitch-surface p-6 md:p-8 rounded-xl shadow-sm border border-stitch-border">
               <div className="flex flex-col gap-2 mb-6">
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="font-mono text-xs font-bold text-on-surface-variant bg-surface-container px-2 py-1 rounded border border-outline-variant/30">
+                  <span className="font-mono text-xs font-bold text-stitch-muted bg-stitch-higher px-2 py-1 rounded border border-stitch-border">
                     {detail.reference_code || `#${detail.id}`}
                   </span>
-                  <div className="h-1 w-1 bg-outline-variant rounded-full" />
-                  <span className="text-xs font-medium text-on-tertiary-fixed-variant bg-surface-container px-2 py-1 rounded border border-outline-variant/30 uppercase tracking-wide">
+                  <div className="h-1 w-1 bg-stitch-border rounded-full" />
+                  <span className="text-xs font-medium text-stitch-accent-dim bg-stitch-higher px-2 py-1 rounded border border-stitch-border uppercase tracking-wide">
                     {approvalLabel(detail.approval_state)}
                   </span>
                 </div>
                 <input
-                  className="text-3xl font-bold font-headline bg-transparent border-none focus:ring-0 w-full p-0 text-primary placeholder:text-outline"
+                  className="text-3xl font-bold font-headline bg-transparent border-none focus:ring-0 w-full p-0 text-stitch-fg placeholder:text-stitch-muted"
                   placeholder="Enter requirement title…"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -519,29 +519,29 @@ export default function EditRequirementPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-4 bg-surface-low rounded-lg border border-outline-variant/15">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 p-4 bg-stitch-elevated rounded-lg border border-stitch-border">
                 <div>
-                  <span className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
+                  <span className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                     Priority
                   </span>
-                  <div className="flex items-center gap-2 text-sm font-semibold text-on-surface">
-                    <span className="material-symbols-outlined text-tertiary-container text-lg">
+                  <div className="flex items-center gap-2 text-sm font-semibold text-stitch-fg">
+                    <span className="material-symbols-outlined text-stitch-accent-dim text-lg">
                       priority_high
                     </span>
                     {priorityLabel}
                   </div>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
+                  <span className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                     Status
                   </span>
                   <div className="flex items-center gap-2">
                     <div
-                      className="w-2 h-2 rounded-full shrink-0 bg-secondary"
+                      className="w-2 h-2 rounded-full shrink-0 bg-stitch-muted"
                       style={statusTagColorSwatchStyle(statusMeta?.tag_color)}
                     />
                     <select
-                      className={`flex-1 min-w-0 ${selectLight} py-1.5 font-semibold text-sm border-0 bg-transparent pl-0 focus:ring-0`}
+                      className={`flex-1 min-w-0 ${selectStitch} py-1.5 font-semibold text-sm border-0 bg-transparent pl-0 focus:ring-0`}
                       value={statusId}
                       onChange={(e) => setStatusId(Number(e.target.value))}
                     >
@@ -557,16 +557,16 @@ export default function EditRequirementPage() {
                   </div>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
+                  <span className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                     Version
                   </span>
-                  <span className="text-sm font-mono font-medium text-on-surface">{latestVersionLabel}</span>
+                  <span className="text-sm font-mono font-medium text-stitch-fg">{latestVersionLabel}</span>
                 </div>
                 <div>
-                  <span className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
+                  <span className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                     Author
                   </span>
-                  <span className="text-sm font-semibold text-on-surface line-clamp-2">
+                  <span className="text-sm font-semibold text-stitch-fg line-clamp-2">
                     {userLabel(authorId)}
                   </span>
                 </div>
@@ -574,10 +574,10 @@ export default function EditRequirementPage() {
 
               <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
+                  <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                     Category
                   </label>
-                  <select className={selectLight} value={categoryId} onChange={(e) => setCategoryId(Number(e.target.value))}>
+                  <select className={selectStitch} value={categoryId} onChange={(e) => setCategoryId(Number(e.target.value))}>
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.title}
@@ -589,11 +589,11 @@ export default function EditRequirementPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
+                  <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                     Applicability
                   </label>
                   <select
-                    className={selectLight}
+                    className={selectStitch}
                     value={applicabilityId}
                     onChange={(e) => setApplicabilityId(Number(e.target.value))}
                   >
@@ -608,10 +608,10 @@ export default function EditRequirementPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
+                  <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                     Author (account)
                   </label>
-                  <select className={selectLight} value={authorId} onChange={(e) => setAuthorId(Number(e.target.value))}>
+                  <select className={selectStitch} value={authorId} onChange={(e) => setAuthorId(Number(e.target.value))}>
                     {memberOptionIds.map((id) => (
                       <option key={id} value={id}>
                         {userLabel(id)}
@@ -620,10 +620,10 @@ export default function EditRequirementPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-outline uppercase tracking-wider mb-1">
+                  <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                     Reviewer
                   </label>
-                  <select className={selectLight} value={reviewerId} onChange={(e) => setReviewerId(Number(e.target.value))}>
+                  <select className={selectStitch} value={reviewerId} onChange={(e) => setReviewerId(Number(e.target.value))}>
                     {memberOptionIds.map((id) => (
                       <option key={`r-${id}`} value={id}>
                         {userLabel(id)}
@@ -632,36 +632,36 @@ export default function EditRequirementPage() {
                   </select>
                 </div>
               </div>
-              <p className="mt-3 text-[10px] text-on-surface-variant flex flex-wrap items-center gap-2">
+              <p className="mt-3 text-[10px] text-stitch-muted flex flex-wrap items-center gap-2">
                 Displayed status:
                 <StatusBadge title={statusTitle} tagColor={statusMeta?.tag_color} />
               </p>
             </section>
 
-            <section className="bg-white rounded-xl shadow-sm border border-outline-variant/20 overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-3 border-b border-outline-variant/20 bg-surface-low">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant font-headline">
+            <section className="bg-stitch-surface rounded-xl shadow-sm border border-stitch-border overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-3 border-b border-stitch-border bg-stitch-elevated">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-stitch-muted font-headline">
                   Requirement statement
                 </h3>
                 <div className="flex gap-1 opacity-40 pointer-events-none" aria-hidden>
-                  <button type="button" className="p-1.5 hover:bg-surface-container rounded transition-colors">
-                    <span className="material-symbols-outlined text-lg text-on-surface-variant">format_bold</span>
+                  <button type="button" className="p-1.5 hover:bg-stitch-higher rounded transition-colors">
+                    <span className="material-symbols-outlined text-lg text-stitch-muted">format_bold</span>
                   </button>
-                  <button type="button" className="p-1.5 hover:bg-surface-container rounded transition-colors">
-                    <span className="material-symbols-outlined text-lg text-on-surface-variant">format_italic</span>
+                  <button type="button" className="p-1.5 hover:bg-stitch-higher rounded transition-colors">
+                    <span className="material-symbols-outlined text-lg text-stitch-muted">format_italic</span>
                   </button>
-                  <button type="button" className="p-1.5 hover:bg-surface-container rounded transition-colors">
-                    <span className="material-symbols-outlined text-lg text-on-surface-variant">format_list_bulleted</span>
+                  <button type="button" className="p-1.5 hover:bg-stitch-higher rounded transition-colors">
+                    <span className="material-symbols-outlined text-lg text-stitch-muted">format_list_bulleted</span>
                   </button>
-                  <div className="w-px h-6 bg-outline-variant/30 mx-1 self-center" />
-                  <button type="button" className="p-1.5 hover:bg-surface-container rounded transition-colors">
-                    <span className="material-symbols-outlined text-lg text-on-surface-variant">link</span>
+                  <div className="w-px h-6 bg-stitch-border mx-1 self-center" />
+                  <button type="button" className="p-1.5 hover:bg-stitch-higher rounded transition-colors">
+                    <span className="material-symbols-outlined text-lg text-stitch-muted">link</span>
                   </button>
                 </div>
               </div>
               <div className="p-6 md:p-8">
                 <textarea
-                  className="w-full min-h-[300px] text-sm leading-relaxed text-on-surface bg-transparent border-none focus:ring-0 rounded-md p-0 resize-y placeholder:text-outline"
+                  className="w-full min-h-[300px] text-sm leading-relaxed text-stitch-fg bg-transparent border-none focus:ring-0 rounded-md p-0 resize-y placeholder:text-stitch-muted"
                   placeholder="Describe the requirement…"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
@@ -673,26 +673,26 @@ export default function EditRequirementPage() {
 
           {/* Sidebar */}
           <aside className="col-span-12 lg:col-span-4 space-y-6">
-            <div className="bg-white rounded-xl shadow-sm border border-outline-variant/20 p-6">
+            <div className="bg-stitch-surface rounded-xl shadow-sm border border-stitch-border p-6">
               <div className="flex items-center gap-2 mb-6">
-                <span className="material-symbols-outlined text-primary text-xl">account_tree</span>
-                <h3 className="text-sm font-bold font-headline text-primary">Traceability matrix</h3>
+                <span className="material-symbols-outlined text-stitch-accent text-xl">account_tree</span>
+                <h3 className="text-sm font-bold font-headline text-stitch-accent">Traceability matrix</h3>
               </div>
               <div className="space-y-6">
                 <div>
-                  <p className="text-[10px] font-bold text-outline uppercase tracking-wider mb-3">
+                  <p className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-3">
                     Upstream links (parent)
                   </p>
                   <div className="space-y-2">
                     {ts.parent_links.length === 0 ? (
-                      <p className="text-xs text-on-surface-variant py-1">None</p>
+                      <p className="text-xs text-stitch-muted py-1">None</p>
                     ) : (
                       ts.parent_links.map((l) => {
                         const parentReq = resolveParentReq(l);
                         return (
                           <div
                             key={l.id}
-                            className="flex items-center justify-between gap-2 p-3 bg-surface-low rounded-lg border border-outline-variant/15 group"
+                            className="flex items-center justify-between gap-2 p-3 bg-stitch-elevated rounded-lg border border-stitch-border group"
                           >
                             <div className="min-w-0 flex-1">
                               {parentReq ? (
@@ -700,20 +700,20 @@ export default function EditRequirementPage() {
                                   to={`/p/${pid}/requirements/${parentReq.id}/edit`}
                                   className="block hover:opacity-90 transition-opacity"
                                 >
-                                  <span className="font-mono text-[10px] font-bold text-primary">
+                                  <span className="font-mono text-[10px] font-bold text-stitch-accent">
                                     {parentReq.reference_code || `#${parentReq.id}`}
                                   </span>
-                                  <span className="block text-xs font-medium text-on-surface truncate">
+                                  <span className="block text-xs font-medium text-stitch-fg truncate">
                                     {parentReq.title}
                                   </span>
-                                  <span className="text-[10px] text-on-surface-variant">{l.link_type}</span>
+                                  <span className="text-[10px] text-stitch-muted">{l.link_type}</span>
                                 </Link>
                               ) : (
                                 <div>
-                                  <span className="font-mono text-[10px] font-bold text-primary">
+                                  <span className="font-mono text-[10px] font-bold text-stitch-accent">
                                     Version #{l.target_version_id}
                                   </span>
-                                  <span className="block text-[10px] text-on-surface-variant">{l.link_type}</span>
+                                  <span className="block text-[10px] text-stitch-muted">{l.link_type}</span>
                                 </div>
                               )}
                             </div>
@@ -721,7 +721,7 @@ export default function EditRequirementPage() {
                               {parentReq ? (
                                 <Link
                                   to={`/p/${pid}/requirements/${parentReq.id}/edit`}
-                                  className="p-1 text-outline hover:text-primary transition-colors"
+                                  className="p-1 text-stitch-muted hover:text-stitch-accent transition-colors"
                                   title="Open parent"
                                 >
                                   <span className="material-symbols-outlined text-lg">open_in_new</span>
@@ -732,7 +732,7 @@ export default function EditRequirementPage() {
                                 title="Remove link"
                                 disabled={linkBusy || !(csrfToken ?? '').length}
                                 onClick={() => void removeParentLink(l.id)}
-                                className="p-1 text-outline hover:text-error transition-colors disabled:opacity-40"
+                                className="p-1 text-stitch-muted hover:text-red-600 dark:text-red-400 transition-colors disabled:opacity-40"
                               >
                                 <span className="material-symbols-outlined text-lg">link_off</span>
                               </button>
@@ -743,10 +743,10 @@ export default function EditRequirementPage() {
                     )}
                   </div>
                   {canEditParents ? (
-                    <div className="mt-4 pt-4 border-t border-outline-variant/20 space-y-2">
-                      <p className="text-[10px] font-bold text-outline uppercase tracking-wider">Add parent</p>
+                    <div className="mt-4 pt-4 border-t border-stitch-border space-y-2">
+                      <p className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider">Add parent</p>
                       <select
-                        className={selectLight}
+                        className={selectStitch}
                         value={newParentId === '' ? '' : String(newParentId)}
                         onChange={(e) => setNewParentId(e.target.value === '' ? '' : Number(e.target.value))}
                       >
@@ -759,7 +759,7 @@ export default function EditRequirementPage() {
                         ))}
                       </select>
                       <select
-                        className={selectLight}
+                        className={selectStitch}
                         value={newLinkType}
                         onChange={(e) => setNewLinkType(e.target.value)}
                       >
@@ -773,13 +773,13 @@ export default function EditRequirementPage() {
                         type="button"
                         disabled={linkBusy || newParentId === '' || !(csrfToken ?? '').length}
                         onClick={() => void addParentLink()}
-                        className="w-full text-xs font-bold uppercase tracking-wider bg-gradient-to-br from-primary to-primary-container text-white py-2 rounded-lg shadow-sm hover:opacity-95 disabled:opacity-40 transition-opacity"
+                        className="w-full text-xs font-bold uppercase tracking-wider bg-gradient-to-br from-[#000666] to-[#1a237e] text-white py-2 rounded-lg shadow-sm hover:opacity-95 disabled:opacity-40 transition-opacity"
                       >
                         {linkBusy ? 'Updating…' : 'Add upstream link'}
                       </button>
                     </div>
                   ) : (
-                    <p className="mt-3 text-[10px] text-on-surface-variant">
+                    <p className="mt-3 text-[10px] text-stitch-muted">
                       Parent links need a current requirement version.
                     </p>
                   )}
@@ -787,7 +787,7 @@ export default function EditRequirementPage() {
 
                 {ts.child_ids.length > 0 ? (
                   <div>
-                    <p className="text-[10px] font-bold text-outline uppercase tracking-wider mb-3">
+                    <p className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-3">
                       Child requirements
                     </p>
                     <div className="space-y-2">
@@ -795,15 +795,15 @@ export default function EditRequirementPage() {
                         <Link
                           key={cid}
                           to={`/p/${pid}/requirements/${cid}/edit`}
-                          className="flex items-center justify-between p-3 bg-surface-low rounded-lg hover:bg-surface-container transition-colors"
+                          className="flex items-center justify-between p-3 bg-stitch-elevated rounded-lg hover:bg-stitch-higher transition-colors"
                         >
                           <div className="min-w-0">
-                            <span className="font-mono text-[10px] font-bold text-secondary">#{cid}</span>
-                            <span className="block text-xs font-medium text-on-surface truncate">
+                            <span className="font-mono text-[10px] font-bold text-stitch-muted">#{cid}</span>
+                            <span className="block text-xs font-medium text-stitch-fg truncate">
                               {reqTitleById.get(cid) ?? '—'}
                             </span>
                           </div>
-                          <span className="material-symbols-outlined text-outline text-sm">chevron_right</span>
+                          <span className="material-symbols-outlined text-stitch-muted text-sm">chevron_right</span>
                         </Link>
                       ))}
                     </div>
@@ -811,12 +811,12 @@ export default function EditRequirementPage() {
                 ) : null}
 
                 <div>
-                  <p className="text-[10px] font-bold text-outline uppercase tracking-wider mb-3">
+                  <p className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-3">
                     Downstream links (verification)
                   </p>
                   <div className="space-y-2">
                     {ts.linked_test_ids.length === 0 ? (
-                      <p className="text-xs text-on-surface-variant py-1">None</p>
+                      <p className="text-xs text-stitch-muted py-1">None</p>
                     ) : (
                       ts.linked_test_ids.map((vid) => {
                         const v = verById.get(vid);
@@ -826,17 +826,17 @@ export default function EditRequirementPage() {
                           <Link
                             key={vid}
                             to={`/p/${pid}/verifications/${vid}/edit`}
-                            className="flex items-center justify-between p-3 bg-surface-low rounded-lg border-l-2 border-secondary hover:bg-surface-container transition-colors gap-2"
+                            className="flex items-center justify-between p-3 bg-stitch-elevated rounded-lg border-l-2 border-stitch-muted hover:bg-stitch-higher transition-colors gap-2"
                             style={borderColor ? { borderLeftColor: borderColor } : undefined}
                           >
                             <div className="min-w-0 flex-1">
                               <span
-                                className="font-mono text-[10px] font-bold text-on-tertiary-fixed-variant block"
+                                className="font-mono text-[10px] font-bold text-stitch-accent-dim block"
                                 style={borderColor ? { color: borderColor } : undefined}
                               >
                                 {v?.reference_code ?? `TEST-${vid}`}
                               </span>
-                              <span className="text-xs font-medium text-on-surface block truncate">
+                              <span className="text-xs font-medium text-stitch-fg block truncate">
                                 {v?.name ?? '—'}
                               </span>
                             </div>
@@ -844,7 +844,7 @@ export default function EditRequirementPage() {
                               {vst?.title ? (
                                 <StatusBadge title={vst.title} tagColor={vst.tag_color} />
                               ) : (
-                                <span className="text-[10px] font-bold uppercase text-secondary">—</span>
+                                <span className="text-[10px] font-bold uppercase text-stitch-muted">—</span>
                               )}
                             </div>
                           </Link>
@@ -856,27 +856,27 @@ export default function EditRequirementPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-outline-variant/20 flex flex-col max-h-[400px]">
-              <div className="px-6 py-4 border-b border-outline-variant/20 flex items-center justify-between shrink-0">
-                <h3 className="text-sm font-bold font-headline text-primary">Change log &amp; discussion</h3>
+            <div className="bg-stitch-surface rounded-xl shadow-sm border border-stitch-border flex flex-col max-h-[400px]">
+              <div className="px-6 py-4 border-b border-stitch-border flex items-center justify-between shrink-0">
+                <h3 className="text-sm font-bold font-headline text-stitch-accent">Change log &amp; discussion</h3>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-6">
                 {versions.length > 0 ? (
                   <div className="flex gap-3 opacity-90">
-                    <span className="material-symbols-outlined text-outline text-lg shrink-0">history</span>
+                    <span className="material-symbols-outlined text-stitch-muted text-lg shrink-0">history</span>
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-on-surface-variant">Version history</span>
-                        <span className="text-[10px] text-outline">{latestVersionLabel}</span>
+                        <span className="text-xs font-bold text-stitch-muted">Version history</span>
+                        <span className="text-[10px] text-stitch-muted">{latestVersionLabel}</span>
                       </div>
-                      <p className="text-xs text-on-surface-variant leading-relaxed">
+                      <p className="text-xs text-stitch-muted leading-relaxed">
                         {versions.length} snapshot(s). Latest:{' '}
                         {latestVersionCreatedAt ? formatTs(latestVersionCreatedAt) : '—'}.
                       </p>
                       {projectSlug ? (
                         <a
                           href={`/p/${projectSlug}/requirements/show/${rid}`}
-                          className="text-[10px] font-bold text-primary hover:underline mt-2 inline-block uppercase tracking-wide"
+                          className="text-[10px] font-bold text-stitch-accent hover:underline mt-2 inline-block uppercase tracking-wide"
                         >
                           Full diffs in classic UI →
                         </a>
@@ -885,7 +885,7 @@ export default function EditRequirementPage() {
                   </div>
                 ) : null}
                 {comments.length === 0 && versions.length === 0 ? (
-                  <p className="text-xs text-on-surface-variant">No activity yet.</p>
+                  <p className="text-xs text-stitch-muted">No activity yet.</p>
                 ) : null}
                 {[...comments]
                   .sort(
@@ -893,7 +893,7 @@ export default function EditRequirementPage() {
                   )
                   .map((c) => (
                     <div key={c.id} className="flex gap-3">
-                      <div className="h-6 w-6 rounded-full bg-primary-container flex items-center justify-center text-[10px] text-white font-bold shrink-0">
+                      <div className="h-6 w-6 rounded-full bg-stitch-accent flex items-center justify-center text-[10px] text-stitch-on-accent font-bold shrink-0">
                         {c.author_name
                           ? c.author_name
                               .split(/\s+/)
@@ -905,17 +905,17 @@ export default function EditRequirementPage() {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
-                          <span className="text-xs font-bold text-on-surface">{c.author_name}</span>
-                          <span className="text-[10px] text-outline">{formatRelativeTime(c.created_at) || formatTs(c.created_at)}</span>
+                          <span className="text-xs font-bold text-stitch-fg">{c.author_name}</span>
+                          <span className="text-[10px] text-stitch-muted">{formatRelativeTime(c.created_at) || formatTs(c.created_at)}</span>
                         </div>
-                        <p className="text-xs text-on-surface-variant leading-relaxed whitespace-pre-wrap">{c.body}</p>
+                        <p className="text-xs text-stitch-muted leading-relaxed whitespace-pre-wrap">{c.body}</p>
                       </div>
                     </div>
                   ))}
               </div>
-              <div className="px-6 py-3 border-t border-outline-variant/15 bg-surface-low shrink-0">
+              <div className="px-6 py-3 border-t border-stitch-border bg-stitch-elevated shrink-0">
                 <textarea
-                  className={`w-full min-h-[72px] text-sm resize-y ${selectLight}`}
+                  className={`w-full min-h-[72px] text-sm resize-y ${selectStitch}`}
                   placeholder="Add a comment…"
                   value={commentBody}
                   onChange={(e) => setCommentBody(e.target.value)}
@@ -924,48 +924,48 @@ export default function EditRequirementPage() {
                   type="button"
                   disabled={commentPosting || !commentBody.trim() || !(csrfToken ?? '').length}
                   onClick={() => void postComment()}
-                  className="mt-2 text-primary text-[10px] font-bold uppercase tracking-wider hover:underline disabled:opacity-40"
+                  className="mt-2 text-stitch-accent text-[10px] font-bold uppercase tracking-wider hover:underline disabled:opacity-40"
                 >
                   {commentPosting ? 'Posting…' : 'Add comment'}
                 </button>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-outline-variant/20 p-6">
+            <div className="bg-stitch-surface rounded-xl shadow-sm border border-stitch-border p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold font-headline text-primary">Attachments</h3>
-                <span className="material-symbols-outlined text-outline" title="Manage in classic UI">
+                <h3 className="text-sm font-bold font-headline text-stitch-accent">Attachments</h3>
+                <span className="material-symbols-outlined text-stitch-muted" title="Manage in classic UI">
                   add_circle
                 </span>
               </div>
-              <p className="text-xs text-on-surface-variant mb-2">
+              <p className="text-xs text-stitch-muted mb-2">
                 Upload and manage files on the classic requirement page.
               </p>
               {projectSlug ? (
                 <a
                   href={`/p/${projectSlug}/requirements/show/${rid}`}
-                  className="text-xs font-bold text-primary hover:underline"
+                  className="text-xs font-bold text-stitch-accent hover:underline"
                 >
                   Open classic requirement →
                 </a>
               ) : (
-                <p className="text-xs text-on-surface-variant">Project slug unavailable.</p>
+                <p className="text-xs text-stitch-muted">Project slug unavailable.</p>
               )}
             </div>
           </aside>
         </div>
 
         {saveError && (
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 max-w-lg w-[calc(100%-2rem)] rounded-lg bg-error-container border border-error/30 text-on-error-container text-sm px-4 py-2 shadow-lg z-[60]">
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 max-w-lg w-[calc(100%-2rem)] rounded-lg bg-red-500/15 border border-red-500/35 text-red-900 dark:text-red-100 text-sm px-4 py-2 shadow-lg z-[60]">
             {saveError}
           </div>
         )}
 
-        <footer className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-outline-variant/30 px-4 md:px-8 py-4 flex flex-wrap items-center justify-between gap-3 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]">
+        <footer className="fixed bottom-0 left-0 right-0 z-40 bg-stitch-surface/95 backdrop-blur-md border-t border-stitch-border px-4 md:px-8 py-4 flex flex-wrap items-center justify-between gap-3 shadow-stitch">
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="flex items-center gap-2 text-on-surface-variant hover:text-error transition-colors text-xs font-bold uppercase tracking-wider px-3 py-2 rounded disabled:opacity-40"
+              className="flex items-center gap-2 text-stitch-muted hover:text-red-600 dark:text-red-400 transition-colors text-xs font-bold uppercase tracking-wider px-3 py-2 rounded disabled:opacity-40"
               disabled={deleteBusy || !(csrfToken ?? '').length}
               onClick={() => void deleteRequirement()}
             >
@@ -974,7 +974,7 @@ export default function EditRequirementPage() {
             </button>
             <button
               type="button"
-              className="text-xs font-bold uppercase tracking-wider text-outline hover:text-on-surface px-3 py-2"
+              className="text-xs font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-fg px-3 py-2"
               onClick={() => navigate(`/p/${pid}/requirements`)}
             >
               Cancel
@@ -985,14 +985,14 @@ export default function EditRequirementPage() {
               type="button"
               disabled={!dirty}
               onClick={revert}
-              className="px-5 py-2 text-xs font-bold uppercase tracking-widest text-on-surface-variant hover:bg-surface-low transition-colors rounded-lg disabled:opacity-40"
+              className="px-5 py-2 text-xs font-bold uppercase tracking-widest text-stitch-muted hover:bg-stitch-elevated transition-colors rounded-lg disabled:opacity-40"
             >
               Revert changes
             </button>
             <button
               type="submit"
               disabled={saving || !dirty}
-              className="bg-gradient-to-br from-primary to-primary-container text-white px-8 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg shadow-primary/20 active:scale-[0.98] transition-all disabled:opacity-50"
+              className="bg-gradient-to-br from-[#000666] to-[#1a237e] text-white px-8 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg shadow-stitch active:scale-[0.98] transition-all disabled:opacity-50"
             >
               {saving ? 'Saving…' : 'Save requirement'}
             </button>

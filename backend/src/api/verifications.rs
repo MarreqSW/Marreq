@@ -109,12 +109,9 @@ pub async fn update_field(
                 if update.value.is_empty() || update.value == "0" {
                     None
                 } else {
-                    Some(
-                        update
-                            .value
-                            .parse()
-                            .map_err(|_| RepoError::BadInput("invalid verification_method_id".into()))?,
-                    )
+                    Some(update.value.parse().map_err(|_| {
+                        RepoError::BadInput("invalid verification_method_id".into())
+                    })?)
                 };
         }
         other => {

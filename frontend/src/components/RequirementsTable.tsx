@@ -686,15 +686,13 @@ export default function RequirementsTable({
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0 border-t sm:border-t-0 sm:border-l border-stitch-border/40 pt-3 sm:pt-0 sm:pl-3">
-                    {projectSlug ? (
-                      <a
-                        href={`/p/${projectSlug}/requirements/show/${req.id}`}
-                        className="p-1.5 text-stitch-muted hover:text-stitch-accent"
-                        title="View"
-                      >
-                        <span className="material-symbols-outlined text-lg">visibility</span>
-                      </a>
-                    ) : null}
+                    <Link
+                      to={`/p/${projectId}/requirements/${req.id}`}
+                      className="p-1.5 text-stitch-muted hover:text-stitch-accent"
+                      title="View"
+                    >
+                      <span className="material-symbols-outlined text-lg">visibility</span>
+                    </Link>
                     <Link
                       to={`/p/${projectId}/requirements/${req.id}/edit`}
                       className="p-1.5 text-stitch-muted hover:text-stitch-accent"
@@ -1010,15 +1008,13 @@ export default function RequirementsTable({
                     </td>
                     <td className="px-2 py-2 align-top sticky right-0 z-[1] bg-stitch-surface border-l border-stitch-border/60">
                       <div className="flex items-center gap-1">
-                        {projectSlug ? (
-                          <a
-                            href={`/p/${projectSlug}/requirements/show/${req.id}`}
-                            className="p-1.5 text-stitch-muted hover:text-stitch-accent"
-                            title="View"
-                          >
-                            <span className="material-symbols-outlined text-lg">visibility</span>
-                          </a>
-                        ) : null}
+                        <Link
+                          to={`/p/${projectId}/requirements/${req.id}`}
+                          className="p-1.5 text-stitch-muted hover:text-stitch-accent"
+                          title="View"
+                        >
+                          <span className="material-symbols-outlined text-lg">visibility</span>
+                        </Link>
                         <Link
                           to={`/p/${projectId}/requirements/${req.id}/edit`}
                           className="p-1.5 text-stitch-muted hover:text-stitch-accent"

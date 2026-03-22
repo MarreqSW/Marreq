@@ -8,8 +8,9 @@ services:
       POSTGRES_DB: 'marreq'
     volumes:
       - pgdata:/var/lib/postgresql
+    # Host 5433 avoids clashing with a local PostgreSQL on 5432. Containers use db:5432.
     ports:
-      - '5432:5432'
+      - '5433:5432'
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U rust -d marreq"]
       interval: 2s
@@ -20,18 +21,13 @@ services:
   ollama:
     image: ollama/ollama
     restart: unless-stopped
+    # Host 11435 avoids clashing with a local Ollama on 11434. Backend still uses http://ollama:11434.
     ports:
-      - '11434:11434'
+      - '11435:11434'
     volumes:
       - ollama_data:/root/.ollama
-    # For GPU support, uncomment:
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - capabilities: [gpu]
 
-  marreq:
+  backend:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -47,9 +43,33 @@ services:
       DATABASE_URL: 'postgres://rust:rust@db:5432/marreq'
       ROCKET_DATABASES: '{my_db={url="postgres://rust:rust@db:5432/marreq"}}'
       ROCKET_ADDRESS: '0.0.0.0'
+      ROCKET_PORT: '8000'
+      # Release binary requires a real key; override via .env for non-local deploys.
+      ROCKET_SECRET_KEY: ${ROCKET_SECRET_KEY:-UT5jxByH2kV2h9j/620KVP2w5NwZUEGVREFBbIKHVZk=}
       OLLAMA_URL: 'http://ollama:11434'
+      MARREQ_DOCKER_SPLIT_BACKEND: '1'
+      # Must include the SPA origin so POST /api/* passes CSRF Origin check when header/cookie mismatch.
+      CSRF_ALLOWED_ORIGINS: 'http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:8000,http://localhost:8000'
     ports:
-      - '8000:8000'
+      # API on host for debugging; web UI is still the SPA on :8080 (GET / here is JSON in api_only).
+      - '127.0.0.1:8000:8000'
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -sf http://127.0.0.1:8000/api/auth/csrf >/dev/null']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 120s
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/frontend/Dockerfile
+    restart: always
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - '8080:80'
 
   adminer:
     image: adminer
@@ -57,7 +77,7 @@ services:
     depends_on:
       - db
     ports:
-      - 8080:8080
+      - '8081:8080'
 
 volumes:
   pgdata:

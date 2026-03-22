@@ -14,6 +14,8 @@ This repo’s documentation is organized by audience:
 
 ## Developers
 
+- [Backend layout & API-only mode](developer/backend-layout.md)
+- [HTTP API contract (SPA / interchangeable clients)](../doc/API.md) — auth, CSRF, cookies; partial [OpenAPI](../doc/openapi.yaml)
 - [Database setup](developer/database-setup.md)
 - [MCP setup](developer/mcp-setup.md)
 - [Semantic search](developer/semantic-search.md)

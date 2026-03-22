@@ -127,17 +127,23 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 
 #### Quick Start (Recommended)
 
-For a fully initialized database with pre-configured users and sample data, use the helper scripts described in the [scripts README](scripts/README.md), in particular [`db_setup.sh`](scripts/db_setup.sh) (optionally followed by [`db_seed.sh`](scripts/db_seed.sh)).
+For a fully initialized database with pre-configured users and sample data, use the helper scripts described in the [scripts README](backend/scripts/README.md), in particular [`db_setup.sh`](backend/scripts/db_setup.sh) (optionally followed by [`db_seed.sh`](backend/scripts/db_seed.sh)).
 
 Typical flow:
 - Start database: `docker compose -f docker/docker-compose.yml up -d db`
-- Initialize DB schema: `./scripts/db_setup.sh`
-- Load sample data (optional): `./scripts/db_seed.sh`
-- Start app: `cargo run --bin marreq`
+- Initialize DB schema: `./backend/scripts/db_setup.sh`
+- Load sample data (optional): `./backend/scripts/db_seed.sh`
+- Start app: `cargo run -p marreq` (from repo root) or `cd backend && cargo run --bin marreq`
 
 Then open **http://localhost:8000** in your browser (demo admin user `alice` uses password `ChangeMe123!`).
 
 For detailed database setup options (automated, manual, reset, verification) see the [database setup guide](docs/developer/database-setup.md).
+
+### Docker: API backend + SPA frontend
+
+The default [docker/docker-compose.yml](docker/docker-compose.yml) stack runs **two app containers**: **backend** (Rocket, JSON API only) and **frontend** (nginx + Vite-built SPA). Use the UI at **http://localhost:8080**; `/api` is proxied to Rocket on the Docker network. **Adminer** is on **http://localhost:8081**. See [docker/README.md](docker/README.md) and [doc/API.md](doc/API.md) (auth, CSRF, cookies, OpenAPI sketch).
+
+Local classic SSR (`cargo run` without `MARREQ_UI_MODE=api_only`) remains available for development; backend layout notes: [docs/developer/backend-layout.md](docs/developer/backend-layout.md). The SPA package lives in [frontend/](frontend/) (`npm run dev` with Vite proxy to Rocket).
 
 ## 📖 Usage
 
@@ -166,14 +172,25 @@ For detailed database setup options (automated, manual, reset, verification) see
 
 ## 🔌 API Reference
 
+**Interchangeable clients:** session auth, CSRF, and Docker/nginx notes are documented in [doc/API.md](doc/API.md). A partial [doc/openapi.yaml](doc/openapi.yaml) covers auth and session-scoped project listing.
+
 ### Base URL
 ```
 http://localhost:8000/api
 ```
 
-All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or changing API endpoints, update this section so the list stays in sync.
+Behind the split Docker frontend, use the **same origin** as the SPA (e.g. `http://localhost:8080/api/...`). All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or changing API endpoints, update this section so the list stays in sync.
 
 ### Endpoints
+
+#### Auth & session (JSON / SPA)
+- `GET /auth/csrf` — JSON `{ "csrf_token" }` for mutating requests (`X-CSRF-Token` header)
+- `POST /auth/login` — JSON body `username`, `password`; sets session + CSRF cookies
+- `POST /auth/logout` — clears session
+- `GET /auth/me` — current user or **401** JSON (not HTML login page)
+- `GET /projects` — projects for logged-in user (admin: all; others: memberships)
+- `GET /project-from-path/{namespace}/{slug}` — resolve `/{namespace}/{slug}` to project id (SPA deep links; **403** if not a member)
+- `GET /projects/{project_id}/verifications` — list verifications (tests) in the project (`ViewRequirements`)
 
 #### Requirements
 - `GET /requirements` - List all requirements
@@ -299,12 +316,14 @@ For a full entity-relationship diagram see [docs/architecture/database-schema.md
 
 A comprehensive database initialization system is provided, including SQL files, helper scripts, pre-configured users, and rich sample data.
 
-- For end-to-end database setup and reset via scripts, see the [scripts README](scripts/README.md) (`db_setup.sh`, `db_seed.sh`, `db_reset.sh`).
+- For end-to-end database setup and reset via scripts, see the [scripts README](backend/scripts/README.md) (`db_setup.sh`, `db_seed.sh`, `db_reset.sh`).
 - For a full description of the schema, sample projects/users, and manual initialization commands, see the [database setup guide](docs/developer/database-setup.md).
 
 ### Migrations
-Database schema changes are managed through Diesel migrations:
+Database schema changes are managed through Diesel migrations (run CLI commands from **`backend/`**, where `diesel.toml` lives):
 ```bash
+cd backend
+
 # Create new migration
 diesel migration generate migration_name
 
@@ -315,26 +334,38 @@ diesel migration run
 diesel migration redo
 ```
 
-**Note**: Migrations are the single source of truth for schema creation/evolution. `scripts/init_complete.sql` is seed data only (sample projects/users/requirements) and should be run after migrations.
+**Note**: Migrations are the single source of truth for schema creation/evolution. `backend/scripts/init_complete.sql` is seed data only (sample projects/users/requirements) and should be run after migrations.
 
 ## 🛠️ Development
 
 ### Project Structure
 ```
 Marreq/
-├── src/
-│   ├── main.rs             # Application entry point
-│   ├── app.rs              # Rocket bootstrap and route mounting
-│   ├── schema.rs           # Diesel schema (generated)
-│   ├── routes/             # HTML + API route handlers
-│   ├── services/           # Business logic and orchestration
-│   ├── repository/         # Data access layer (Diesel + cache)
-│   ├── models/             # Domain entities and forms
-│   ├── importers/          # Excel importer implementation
-│   ├── reqif/              # ReqIF import/export implementation
-│   └── html/               # Static assets
-├── templates/              # Handlebars templates
-├── migrations/             # Database migrations
+├── Cargo.toml              # Workspace root (virtual workspace)
+├── backend/                # Rust / Rocket application
+│   ├── Cargo.toml
+│   ├── src/
+│   │   ├── main.rs         # Application entry point
+│   │   ├── app.rs          # Rocket bootstrap and route mounting
+│   │   ├── schema.rs       # Diesel schema (generated)
+│   │   ├── routes/         # HTML + API route handlers
+│   │   ├── services/       # Business logic and orchestration
+│   │   ├── repository/     # Data access layer (Diesel + cache)
+│   │   ├── models/         # Domain entities and forms
+│   │   ├── importers/      # Excel importer implementation
+│   │   ├── reqif/          # ReqIF import/export implementation
+│   │   └── html/           # Static assets (JS/CSS for SSR + Vite alias)
+│   ├── templates/          # Handlebars templates
+│   ├── migrations/         # Database migrations
+│   └── scripts/            # Dev tooling & DB setup
+│       ├── db_setup.sh
+│       ├── db_seed.sh
+│       ├── db_migrate.sh
+│       ├── db_reset.sh
+│       ├── db_backup.sh
+│       ├── reindex_project.sh
+│       └── init_complete.sql
+├── frontend/               # Vite SPA (split-stack UI)
 ├── docs/                   # Documentation (developers/architects/users)
 │   ├── README.md           # Documentation index
 │   └── ReqIF/              # ReqIF standards and reference docs
@@ -345,14 +376,6 @@ Marreq/
 │   ├── Dockerfile          # Application image build
 │   ├── docker-entrypoint.sh # Container startup/migrations
 │   └── README.md           # Docker usage guide
-├── scripts/                # Dev tooling & DB setup
-│   ├── db_setup.sh         # Automated DB setup + migrations
-│   ├── db_seed.sh          # Demo data seeding
-│   ├── db_migrate.sh       # Migration apply/revert helper
-│   ├── db_reset.sh         # Development reset helper
-│   ├── db_backup.sh        # Backup helper
-│   ├── reindex_project.sh  # Semantic index reindex helper
-│   └── init_complete.sql   # Seed data loaded by db_seed.sh
 ```
 
 ### Key Technologies
@@ -371,16 +394,16 @@ cargo build
 cargo build --release
 
 # Run tests
-cargo test
+cargo test -p marreq
 
 # Run all checks (fmt, clippy, stylelint, purgecss, npm ci, npm test)
-bash scripts/run_checks.sh
+bash backend/scripts/run_checks.sh
 
 # Run backend test suite with summary output
-bash scripts/run_tests.sh
+bash backend/scripts/run_tests.sh
 
 # Run local CI flow (supports --jobs)
-bash scripts/run_ci.sh local-ci --jobs 2
+bash backend/scripts/run_ci.sh local-ci --jobs 2
 ```
 
 ## 📝 License
@@ -410,7 +433,7 @@ lsof -i :8000
 kill <PID>
 
 # Start application with specific binary
-cargo run --bin marreq
+cargo run -p marreq
 ```
 
 #### Login Issues

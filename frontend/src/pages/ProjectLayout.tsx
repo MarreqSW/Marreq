@@ -95,7 +95,7 @@ export default function ProjectLayout() {
             {sidebarWide ? (
               <div className="min-w-0">
                 <h2 className="text-stitch-accent font-sans text-xs uppercase tracking-wider font-bold">
-                  RVM Engineering
+                  Marreq
                 </h2>
                 <p className="text-[10px] text-stitch-muted font-mono">{APP_VERSION}</p>
               </div>
@@ -137,6 +137,11 @@ export default function ProjectLayout() {
               to: `/p/${pid}/reports`,
               icon: 'description',
               label: 'Reports',
+            })}
+            {sideLink({
+              to: `/p/${pid}/catalog`,
+              icon: 'tune',
+              label: 'Catalog',
             })}
             {sideLink({
               to: `/p/${pid}/admin`,

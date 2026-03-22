@@ -23,6 +23,7 @@ export default {
         error: '#ba1a1a',
         'error-container': '#ffdad6',
         'on-error-container': '#93000a',
+        'on-tertiary-container': '#e17c5a',
         /** Google Stitch-style dark UI */
         stitch: {
           canvas: '#191a1f',
@@ -39,7 +40,7 @@ export default {
       },
       fontFamily: {
         sans: ['"Google Sans Text"', 'Inter', 'system-ui', 'sans-serif'],
-        headline: ['"Google Sans Text"', 'Inter', 'system-ui', 'sans-serif'],
+        headline: ['"Public Sans"', 'Inter', 'system-ui', 'sans-serif'],
         body: ['"Google Sans Text"', 'Inter', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },

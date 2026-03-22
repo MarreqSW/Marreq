@@ -22,7 +22,7 @@ export default function StitchPageHeader({
           <span className="mx-2">/</span>
           <span className="text-stitch-accent font-bold">{section}</span>
         </nav>
-        <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight font-headline">
+        <h2 className="text-2xl md:text-3xl font-extrabold text-stitch-fg tracking-tight font-headline">
           {title}
         </h2>
         {subtitle ? (

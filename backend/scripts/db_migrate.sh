@@ -37,7 +37,7 @@ if [[ -f "${REPO_ROOT}/.env" ]]; then
   set -a; source "${REPO_ROOT}/.env"; set +a
 fi
 
-DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5432/marreq}"
+DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5433/marreq}"
 
 # ── Require diesel CLI ───────────────────────────────────────────────────────
 if ! command -v diesel &>/dev/null; then

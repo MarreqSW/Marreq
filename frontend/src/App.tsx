@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from 'react-router-dom';
 import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
 import HomeRedirect from '@/pages/HomeRedirect';
 import LoginPage from '@/pages/LoginPage';
@@ -19,6 +26,13 @@ import VerificationsPage from '@/pages/VerificationsPage';
 import MatrixPage from '@/pages/MatrixPage';
 import BaselinesPage from '@/pages/BaselinesPage';
 import BaselineDetailPage from '@/pages/BaselineDetailPage';
+import ProjectCatalogLayout from '@/pages/catalog/ProjectCatalogLayout';
+import CatalogCategoriesPage from '@/pages/catalog/CatalogCategoriesPage';
+import CatalogApplicabilityPage from '@/pages/catalog/CatalogApplicabilityPage';
+import CatalogRequirementStatusesPage from '@/pages/catalog/CatalogRequirementStatusesPage';
+import CatalogVerificationStatusesPage from '@/pages/catalog/CatalogVerificationStatusesPage';
+import CatalogCustomFieldsPage from '@/pages/catalog/CatalogCustomFieldsPage';
+import CatalogVerificationMethodsPage from '@/pages/catalog/CatalogVerificationMethodsPage';
 
 function ProtectedShell() {
   const { refresh, loading, dashboard, error } = useDashboard();
@@ -87,6 +101,15 @@ export default function App() {
           <Route path="baselines" element={<BaselinesPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="settings" element={<ProjectSettingsPage />} />
+          <Route path="catalog" element={<ProjectCatalogLayout />}>
+            <Route index element={<Navigate to="categories" replace />} />
+            <Route path="categories" element={<CatalogCategoriesPage />} />
+            <Route path="applicability" element={<CatalogApplicabilityPage />} />
+            <Route path="requirement-statuses" element={<CatalogRequirementStatusesPage />} />
+            <Route path="verification-statuses" element={<CatalogVerificationStatusesPage />} />
+            <Route path="custom-fields" element={<CatalogCustomFieldsPage />} />
+            <Route path="verification-methods" element={<CatalogVerificationMethodsPage />} />
+          </Route>
           <Route path="help" element={<HelpPage />} />
           <Route path="admin" element={<AdminPage />} />
         </Route>

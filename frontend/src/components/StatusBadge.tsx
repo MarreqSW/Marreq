@@ -32,7 +32,7 @@ function relLuminance(r: number, g: number, b: number): number {
 function classesForTitle(title: string): string | null {
   const t = title.toLowerCase();
   if (t.includes('approved')) {
-    return 'bg-stitch-accent-dim text-white border-transparent';
+    return 'bg-stitch-accent-dim text-stitch-on-accent border-transparent';
   }
   if (t.includes('verified') || t.includes('accepted')) {
     return 'bg-amber-500/20 text-amber-200 border-amber-500/30';

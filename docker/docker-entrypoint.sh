@@ -1,6 +1,8 @@
 #!/bin/sh
 set -e
 
+# Split-stack backend (docker-compose `backend` service): JSON API only; SPA is served by the frontend container.
+
 if [ -n "${DATABASE_URL}" ]; then
   echo "Waiting for database..."
   until psql "${DATABASE_URL}" -c "SELECT 1" >/dev/null 2>&1; do

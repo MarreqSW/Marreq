@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+#![allow(unused_variables)]
+
 //! HTML routes for project-scoped verification status management.
 //! System statuses are shown but not editable or deletable.
 
@@ -191,10 +193,7 @@ async fn delete_verification_status_route(
     status_id: i32,
     state: &State<AppState>,
 ) -> Result<rocket::http::Status, Redirect> {
-    let project_id = {
-        let _project_slug = project_id;
-        project_access.project_id()
-    };
+    let project_id = project_access.project_id();
     let _user = project_access.into_user();
     let service = StatusService::new(state.inner());
 

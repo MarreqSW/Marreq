@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+#![allow(unused_variables)]
+
 //! HTML routes for project-scoped custom field definitions (admin UI).
 
 use super::helpers::*;
@@ -41,21 +43,25 @@ fn form_to_payload(form: CustomFieldForm) -> CustomFieldDefinitionPayload {
 }
 
 fn list_url(project_slug: &str) -> String {
-    format!("/p/{project_slug}/custom_fields")
+    format!("/{project_slug}/custom_fields")
 }
 
-#[get("/<project_id>/custom_fields?<error>&<count>")]
+#[get("/<namespace>/<project_id>/custom_fields?<error>&<count>")]
 async fn show_custom_fields(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     error: Option<&str>,
     count: Option<i64>,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
-    let projects = get_accessible_projects(state, &user);
+    let projects: Vec<_> = get_accessible_projects(state, &user)
+        .iter()
+        .map(|project| project_to_template_value(state, project))
+        .collect();
     let service = CustomFieldService::new(state.inner());
     let custom_fields = service.list_by_project(project_id).unwrap_or_default();
     let in_use_counts: std::collections::HashMap<i32, i64> = custom_fields
@@ -96,13 +102,14 @@ async fn show_custom_fields(
     Ok(Template::render("custom_fields/custom_fields", ctx))
 }
 
-#[get("/<project_id>/custom_fields/new")]
+#[get("/<namespace>/<project_id>/custom_fields/new")]
 async fn new_custom_field(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     if !has_permission(
@@ -113,7 +120,10 @@ async fn new_custom_field(
     ) {
         return Err(Redirect::to(list_url(&project_slug)));
     }
-    let projects = get_accessible_projects(state, &user);
+    let projects: Vec<_> = get_accessible_projects(state, &user)
+        .iter()
+        .map(|project| project_to_template_value(state, project))
+        .collect();
 
     let ctx = json!({
         "user": user,
@@ -125,14 +135,15 @@ async fn new_custom_field(
     Ok(Template::render("custom_fields/new_custom_field", ctx))
 }
 
-#[post("/<project_id>/custom_fields/new", data = "<form>")]
+#[post("/<namespace>/<project_id>/custom_fields/new", data = "<form>")]
 async fn post_custom_field(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     form: Form<CustomFieldForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     if !has_permission(
@@ -145,7 +156,7 @@ async fn post_custom_field(
     }
     let service = CustomFieldService::new(state.inner());
 
-    let new_url = format!("/p/{project_slug}/custom_fields/new");
+    let new_url = format!("/{project_slug}/custom_fields/new");
     let show_url = list_url(&project_slug);
 
     let payload = form_to_payload(form.into_inner());
@@ -158,14 +169,15 @@ async fn post_custom_field(
     Ok(Redirect::to(show_url.clone()))
 }
 
-#[get("/<project_id>/custom_fields/edit/<field_id>")]
+#[get("/<namespace>/<project_id>/custom_fields/edit/<field_id>")]
 async fn get_edit_custom_field(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     field_id: i32,
     state: &State<AppState>,
 ) -> Result<Template, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     if !has_permission(
@@ -189,7 +201,10 @@ async fn get_edit_custom_field(
     }
 
     let in_use_count = service.count_versions_using_field(field_id).unwrap_or(0);
-    let projects = get_accessible_projects(state, &user);
+    let projects: Vec<_> = get_accessible_projects(state, &user)
+        .iter()
+        .map(|project| project_to_template_value(state, project))
+        .collect();
     let enum_values_string: String = custom_field
         .enum_values
         .as_ref()
@@ -211,15 +226,19 @@ async fn get_edit_custom_field(
     Ok(Template::render("custom_fields/edit_custom_field", ctx))
 }
 
-#[post("/<project_id>/custom_fields/edit/<field_id>", data = "<form>")]
+#[post(
+    "/<namespace>/<project_id>/custom_fields/edit/<field_id>",
+    data = "<form>"
+)]
 async fn post_edit_custom_field(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     field_id: i32,
     form: Form<CustomFieldForm>,
     state: &State<AppState>,
 ) -> Result<Redirect, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     if !has_permission(
@@ -232,7 +251,7 @@ async fn post_edit_custom_field(
     }
     let service = CustomFieldService::new(state.inner());
 
-    let edit_url = format!("/p/{project_slug}/custom_fields/edit/{field_id}");
+    let edit_url = format!("/{project_slug}/custom_fields/edit/{field_id}");
     let show_url = list_url(&project_slug);
 
     let old = service
@@ -254,14 +273,14 @@ async fn post_edit_custom_field(
     Ok(Redirect::to(show_url))
 }
 
-#[delete("/<project_id>/custom_fields/delete/<field_id>")]
+#[delete("/<namespace>/<project_id>/custom_fields/delete/<field_id>")]
 async fn delete_custom_field_route(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     field_id: i32,
     state: &State<AppState>,
 ) -> Result<rocket::http::Status, DeleteCustomFieldError> {
-    let _project_slug = project_id;
     let project_id = project_access.project_id();
     let user = project_access.into_user();
     if !has_permission(
@@ -319,8 +338,8 @@ mod tests {
 
     #[test]
     fn list_url_format() {
-        assert_eq!(list_url("my-project"), "/p/my-project/custom_fields");
-        assert_eq!(list_url("orbiter"), "/p/orbiter/custom_fields");
+        assert_eq!(list_url("my-project"), "/my-project/custom_fields");
+        assert_eq!(list_url("orbiter"), "/orbiter/custom_fields");
     }
 
     #[test]

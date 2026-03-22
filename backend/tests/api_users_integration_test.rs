@@ -226,6 +226,47 @@ async fn post_user_creates_admin_user() {
     assert_eq!(user.is_admin, true);
 }
 
+#[rocket::async_test]
+async fn post_user_with_taken_username_returns_conflict() {
+    let mut repo = base_repo();
+    let mut duplicate =
+        marreq::repository::diesel_repo_mock::DieselRepoMock::make_user(3, "alice", "password");
+    duplicate.email = "alice@example.com".into();
+    duplicate.name = "Alice".into();
+    repo.users.insert(3, duplicate);
+    let client = test_client(repo).await;
+
+    let response = client
+        .post("/api/users")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body(new_user_json("alice", "Duplicate User", false).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Conflict);
+    let body: Value = response.into_json().await.expect("json");
+    assert_eq!(
+        body["message"],
+        Value::from(marreq::namespaces::TAKEN_NAMESPACE_MESSAGE)
+    );
+}
+
+#[rocket::async_test]
+async fn post_user_with_reserved_namespace_returns_bad_request() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .post("/api/users")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body(new_user_json("projects", "Reserved User", false).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::BadRequest);
+}
+
 // ============================================================================
 // DELETE /api/users/{id} - Delete User
 // ============================================================================

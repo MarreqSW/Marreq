@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Marreq
 
 #![allow(clippy::result_large_err)]
+#![allow(unused_variables)]
 
 use super::helpers::*;
 use super::prelude::*;
@@ -73,7 +74,7 @@ fn render_import_page_html(
                             </div>
                             {}
                             <p>Upload a file to import requirements or tests into the selected project.</p>
-                            <form action="/p/{}/import_excel/upload" method="post" enctype="multipart/form-data">
+                            <form action="/{}/import_excel/upload" method="post" enctype="multipart/form-data">
                                 <div class="mb-3">
                                     <label for="excel_file" class="form-label">Select File</label>
                                     <input type="file" class="form-control" id="excel_file" name="file" accept=".xlsx,.xls,.csv" required>
@@ -96,14 +97,15 @@ fn render_import_page_html(
     )
 }
 
-#[get("/p/<project_id>/import_excel?<error>")]
+#[get("/<namespace>/<project_id>/import_excel?<error>")]
 pub fn import_excel_page(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     state: &State<AppState>,
     error: Option<String>,
 ) -> Result<content::RawHtml<String>, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let _user = project_access.into_user();
 
@@ -117,13 +119,14 @@ pub fn import_excel_page(
     Ok(content::RawHtml(html))
 }
 
-#[post("/p/<project_id>/import_excel/upload", data = "<upload>")]
+#[post("/<namespace>/<project_id>/import_excel/upload", data = "<upload>")]
 pub async fn upload_excel_file(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     mut upload: rocket::form::Form<rocket::fs::TempFile<'_>>,
 ) -> Result<content::RawHtml<String>, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let _project_id = project_access.project_id();
     let _user = project_access.into_user();
 
@@ -157,7 +160,7 @@ pub async fn upload_excel_file(
     let is_supported = matches!(extension.as_str(), "xlsx" | "xls" | "csv");
     if !is_supported {
         return Err(Redirect::to(format!(
-            "/p/{project_slug}/import_excel?error={}",
+            "/{project_slug}/import_excel?error={}",
             urlencoding::encode("Unsupported file type. Use .xlsx, .xls, or .csv")
         )));
     }
@@ -169,7 +172,7 @@ pub async fn upload_excel_file(
     );
     upload.persist_to(&temp_path).await.map_err(|_| {
         Redirect::to(format!(
-            "/p/{project_slug}/import_excel?error={}",
+            "/{project_slug}/import_excel?error={}",
             urlencoding::encode("Failed to store upload. Please try again.")
         ))
     })?;
@@ -177,7 +180,7 @@ pub async fn upload_excel_file(
     // Parse Excel file
     let importer = crate::importers::excel::ExcelImporter::new(&temp_path).map_err(|e| {
         Redirect::to(format!(
-            "/p/{project_slug}/import_excel?error={}",
+            "/{project_slug}/import_excel?error={}",
             urlencoding::encode(&format!("Failed to parse file: {}", e))
         ))
     })?;
@@ -218,7 +221,7 @@ pub async fn upload_excel_file(
                             <p class="mb-0">Import Type: <strong>{}</strong> | Data Rows: <strong>{}</strong></p>
                         </div>
                         <div class="card-body">
-                            <form action="/p/{}/import_excel/process" method="post" id="mapping-form">
+                            <form action="/{}/import_excel/process" method="post" id="mapping-form">
                                 <input type="hidden" name="import_type" value="{}">
                                 <input type="hidden" name="temp_file" value="{}">
                                 <input type="hidden" name="column_mappings" id="column_mappings" value="">
@@ -240,7 +243,7 @@ pub async fn upload_excel_file(
                                 
                                 <div class="mt-3">
                                     <button type="submit" class="btn btn-primary">Import Data</button>
-                                    <a href="/p/{}/import_excel" class="btn btn-secondary">Cancel</a>
+                                    <a href="/{}/import_excel" class="btn btn-secondary">Cancel</a>
                                 </div>
                             </form>
                         </div>
@@ -311,14 +314,18 @@ pub async fn upload_excel_file(
     Ok(content::RawHtml(html))
 }
 
-#[post("/p/<project_id>/import_excel/process", data = "<mapping_data>")]
+#[post(
+    "/<namespace>/<project_id>/import_excel/process",
+    data = "<mapping_data>"
+)]
 pub fn process_excel_import(
     project_access: HtmlProjectAccess,
+    namespace: String,
     project_id: String,
     mapping_data: Form<crate::models::ImportMappingForm>,
     state: &State<AppState>,
 ) -> Result<content::RawHtml<String>, Redirect> {
-    let project_slug = project_id;
+    let project_slug = project_access.project_route_slug().to_string();
     let project_id = project_access.project_id();
     let _user = project_access.into_user();
 
@@ -329,7 +336,7 @@ pub fn process_excel_import(
         serde_json::from_str(&mapping_data.column_mappings).map_err(|e| {
             eprintln!("JSON parsing error: {}", e);
             Redirect::to(format!(
-                "/p/{project_slug}/import_excel?error={}",
+                "/{project_slug}/import_excel?error={}",
                 urlencoding::encode("Invalid column mapping data.")
             ))
         })?;
@@ -339,7 +346,7 @@ pub fn process_excel_import(
         crate::importers::excel::ExcelImporter::new(&mapping_data.temp_file).map_err(|e| {
             eprintln!("Excel importer creation error: {}", e);
             Redirect::to(format!(
-                "/p/{project_slug}/import_excel?error={}",
+                "/{project_slug}/import_excel?error={}",
                 urlencoding::encode("Unable to read uploaded file. Please re-upload.")
             ))
         })?;
@@ -354,7 +361,7 @@ pub fn process_excel_import(
     let connection = &mut get_db_connection(state).map_err(|e| {
         eprintln!("Database connection error: {}", e);
         Redirect::to(format!(
-            "/p/{project_slug}/import_excel?error={}",
+            "/{project_slug}/import_excel?error={}",
             urlencoding::encode("Database connection failed.")
         ))
     })?;
@@ -406,7 +413,7 @@ pub fn process_excel_import(
                                     
                                     <div class="mt-3">
                                         <a href="/" class="btn btn-primary">Back to Home</a>
-                                        <a href="/p/{}/import_excel" class="btn btn-outline-primary">Import Another File</a>
+                                        <a href="/{}/import_excel" class="btn btn-outline-primary">Import Another File</a>
                                     </div>
                                 </div>
                             </div>
@@ -454,7 +461,7 @@ pub fn process_excel_import(
                                     </div>
                                     
                                     <div class="mt-3">
-                                        <a href="/p/{}/import_excel" class="btn btn-primary">Try Again</a>
+                                        <a href="/{}/import_excel" class="btn btn-primary">Try Again</a>
                                         <a href="/" class="btn btn-secondary">Back to Home</a>
                                     </div>
                                 </div>
@@ -483,7 +490,7 @@ mod tests {
         assert!(html.contains("Import File"));
         assert!(html.contains("Target Project"));
         assert!(html.contains("Test Project"));
-        assert!(html.contains("/p/test-project/import_excel/upload"));
+        assert!(html.contains("/test-project/import_excel/upload"));
         assert!(html.contains(".xlsx,.xls,.csv"));
     }
 

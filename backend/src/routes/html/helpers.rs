@@ -3,7 +3,7 @@
 
 // This module is deprecated and will be removed in future versions.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use chrono::Utc;
 use rocket::http::CookieJar;
@@ -15,12 +15,13 @@ use crate::helper_functions::{
     decorators::decorate_verifications_with_repo, get_selected_project_id,
 };
 use crate::models::{
-    Category, DecoratedVerification, Project, ProjectMember, Requirement, User, Verification,
+    Category, DecoratedVerification, Group, Project, ProjectMember, Requirement, User, Verification,
 };
+use crate::namespaces::{project_base_path, project_route_slug};
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
-    LookupRepository, ProjectMembersRepository, ProjectsRepository, RequirementsRepository,
-    UserRepository, VerificationsRepository,
+    GroupMembersRepository, GroupsRepository, LookupRepository, ProjectMembersRepository,
+    ProjectsRepository, RequirementsRepository, UserRepository, VerificationsRepository,
 };
 use crate::services::project_service::ProjectService;
 use crate::status_enums::ProjectStatus;
@@ -60,6 +61,51 @@ pub(crate) fn get_accessible_projects(state: &AppState, user: &User) -> Vec<Proj
     projects
 }
 
+pub(crate) fn get_accessible_groups(state: &AppState, user: &User) -> Vec<Group> {
+    let repo = state.repo_read();
+
+    if user.is_admin {
+        let mut groups = repo.get_groups_all().unwrap_or_default();
+        groups.sort_by_key(|group| group.name.to_lowercase());
+        return groups;
+    }
+
+    let memberships = repo.get_groups_for_user(user.id).unwrap_or_default();
+    if memberships.is_empty() {
+        return Vec::new();
+    }
+
+    let mut groups: Vec<Group> = memberships
+        .into_iter()
+        .filter_map(|membership| repo.get_group_by_id(membership.group_id).ok())
+        .collect();
+
+    groups.sort_by_key(|group| group.name.to_lowercase());
+    groups
+}
+
+pub(crate) fn list_all_groups_sorted(state: &AppState) -> Vec<Group> {
+    let mut groups = state.repo_read().get_groups_all().unwrap_or_default();
+    groups.sort_by_key(|group| group.name.to_lowercase());
+    groups
+}
+
+pub(crate) fn can_user_view_group(state: &AppState, user: &User, group_id: i32) -> bool {
+    if user.is_admin {
+        return true;
+    }
+
+    state
+        .repo_read()
+        .get_groups_for_user(user.id)
+        .map(|memberships| {
+            memberships
+                .iter()
+                .any(|membership| membership.group_id == group_id)
+        })
+        .unwrap_or(false)
+}
+
 pub(crate) fn resolve_selected_project_id(
     requested: Option<i32>,
     projects: &[Project],
@@ -73,6 +119,7 @@ pub(crate) fn resolve_selected_project_id(
 }
 
 pub(crate) fn resolve_selected_project_slug(
+    state: &AppState,
     selected_project_id: Option<i32>,
     projects: &[Project],
 ) -> Option<String> {
@@ -80,7 +127,7 @@ pub(crate) fn resolve_selected_project_slug(
         projects
             .iter()
             .find(|project| project.id == project_id)
-            .map(|project| project.slug.clone())
+            .map(|project| project_route_slug_safe(state, project))
     })
 }
 
@@ -101,7 +148,15 @@ pub(crate) fn build_context_with_projects(
     cookies: &CookieJar<'_>,
 ) -> rocket::serde::json::Value {
     let (projects, selected_project_id) = get_user_projects_and_selection(state, &user, cookies);
-    let selected_project_slug = resolve_selected_project_slug(selected_project_id, &projects);
+    let selected_project_slug =
+        resolve_selected_project_slug(state, selected_project_id, &projects);
+    let selected_project_base_path = selected_project_slug
+        .as_ref()
+        .map(|route_slug| project_base_path_from_route_slug(route_slug));
+    let projects: Vec<Value> = projects
+        .iter()
+        .map(|project| project_to_template_value(state, project))
+        .collect();
     // Mint / refresh the CSRF token so the template context always carries a
     // valid token for the <meta name="csrf-token"> tag used by AJAX clients.
     let csrf_token = crate::auth::csrf::get_or_create_csrf_token(cookies);
@@ -111,6 +166,7 @@ pub(crate) fn build_context_with_projects(
         "projects": projects,
         "selected_project_id": selected_project_id,
         "selected_project_slug": selected_project_slug,
+        "selected_project_base_path": selected_project_base_path,
         "csrf_token": csrf_token
     })
 }
@@ -135,6 +191,21 @@ pub(crate) fn decorate_projects_for_listing(
         .into_iter()
         .map(|u| (u.id, u.name))
         .collect();
+    let group_lookup: HashMap<i32, Group> = repo
+        .get_groups_all()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|group| (group.id, group))
+        .collect();
+    let accessible_group_ids: HashSet<i32> = if user.is_admin {
+        group_lookup.keys().copied().collect()
+    } else {
+        repo.get_groups_for_user(user.id)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|membership| membership.group_id)
+            .collect()
+    };
 
     let mut decorated: Vec<Value> = Vec::with_capacity(projects.len());
 
@@ -171,6 +242,13 @@ pub(crate) fn decorate_projects_for_listing(
         let owner_name = project
             .owner_id
             .and_then(|owner_id| owner_lookup.get(&owner_id).cloned());
+        let group = project
+            .group_id
+            .and_then(|group_id| group_lookup.get(&group_id).cloned());
+        let can_view_group = group
+            .as_ref()
+            .map(|group| accessible_group_ids.contains(&group.id))
+            .unwrap_or(false);
 
         let status = project.status;
 
@@ -187,7 +265,8 @@ pub(crate) fn decorate_projects_for_listing(
 
         decorated.push(json!({
             "project_id": project.id,
-            "project_slug": project.slug,
+            "project_slug": project_route_slug_safe(state, project),
+            "project_base_path": project_base_path_safe(state, project),
             "name": project.name,
             "description": project.description,
             "creation_date": project
@@ -201,6 +280,11 @@ pub(crate) fn decorate_projects_for_listing(
             "project_status_badge": status_badge,
             "owner_id": project.owner_id,
             "project_owner_name": owner_name,
+            "group_id": project.group_id,
+            "group_name": group.as_ref().map(|group| group.name.clone()),
+            "group_slug": group.as_ref().map(|group| group.slug.clone()),
+            "group_path": group.as_ref().map(|group| format!("/{}", group.slug)),
+            "can_view_group": can_view_group,
             "role_label": role_label,
             "role_id": role_id,
             "requirements_count": requirements_count,
@@ -295,6 +379,7 @@ pub(crate) fn get_project_by_id_pooled_safe(state: &State<AppState>, project_id:
             update_date: Some(Utc::now().naive_utc()),
             owner_id: Some(0),
             status: ProjectStatus::Active,
+            group_id: None,
         })
 }
 
@@ -304,8 +389,38 @@ pub(crate) fn get_project_slug_by_id_pooled_safe(
 ) -> String {
     ProjectService::new(state.inner())
         .get_by_id(project_id)
-        .map(|project| project.slug)
+        .map(|project| project_route_slug_safe(state.inner(), &project))
         .unwrap_or_else(|_| "unknown-project".to_string())
+}
+
+pub(crate) fn project_base_path_from_route_slug(route_slug: &str) -> String {
+    format!("/{}", route_slug.trim_start_matches('/'))
+}
+
+pub(crate) fn project_route_slug_safe(state: &AppState, project: &Project) -> String {
+    let repo = state.repo_read();
+    project_route_slug(&*repo, project).unwrap_or_else(|_| project.slug.clone())
+}
+
+pub(crate) fn project_base_path_safe(state: &AppState, project: &Project) -> String {
+    let repo = state.repo_read();
+    project_base_path(&*repo, project)
+        .unwrap_or_else(|_| project_base_path_from_route_slug(&project.slug))
+}
+
+pub(crate) fn project_to_template_value(state: &AppState, project: &Project) -> Value {
+    let route_slug = project_route_slug_safe(state, project);
+    let base_path = project_base_path_from_route_slug(&route_slug);
+    let mut value = json!(project);
+
+    if let Some(project_obj) = value.as_object_mut() {
+        project_obj.insert("raw_slug".to_string(), json!(project.slug));
+        project_obj.insert("slug".to_string(), json!(route_slug.clone()));
+        project_obj.insert("route_slug".to_string(), json!(route_slug));
+        project_obj.insert("base_path".to_string(), json!(base_path));
+    }
+
+    value
 }
 
 #[cfg(test)]
@@ -347,6 +462,7 @@ mod tests {
             status: ProjectStatus::Active,
             owner_id: Some(1),
             slug: "test-project".into(),
+            group_id: None,
         }
     }
 

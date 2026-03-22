@@ -89,7 +89,6 @@ export default function VerificationsPage() {
 
   const projectName =
     dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
-  const projectSlug = dashboard?.projects?.find((p) => p.id === pid)?.slug;
 
   const canEdit = Boolean(perms?.edit_requirements && (csrfToken ?? '').length);
 
@@ -499,15 +498,13 @@ export default function VerificationsPage() {
                   </td>
                   <td className="px-3 py-2 align-top sticky right-0 z-[1] bg-stitch-surface border-l border-stitch-border/60">
                     <div className="flex items-center gap-1">
-                      {projectSlug ? (
-                        <a
-                          href={`/p/${projectSlug}/verifications/show/${v.id}`}
-                          className="p-1.5 text-stitch-muted hover:text-stitch-accent"
-                          title="Classic view"
-                        >
-                          <span className="material-symbols-outlined text-lg">visibility</span>
-                        </a>
-                      ) : null}
+                      <Link
+                        to={`/p/${pid}/verifications/${v.id}`}
+                        className="p-1.5 text-stitch-muted hover:text-stitch-accent"
+                        title="View"
+                      >
+                        <span className="material-symbols-outlined text-lg">visibility</span>
+                      </Link>
                       <Link
                         to={`/p/${pid}/verifications/${v.id}/edit`}
                         className="p-1.5 text-stitch-muted hover:text-stitch-accent"

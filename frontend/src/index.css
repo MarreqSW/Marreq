@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply antialiased bg-slate-100 text-slate-900;
+}
+
+/* Stitch dark shell: React Flow chrome */
+.stitch-flow {
+  color-scheme: dark;
+}
+
+.stitch-flow .react-flow__controls {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.stitch-flow .react-flow__controls-button {
+  @apply bg-stitch-elevated border-stitch-border text-white;
+  border-bottom-width: 1px;
+}
+
+.stitch-flow .react-flow__controls-button:last-child {
+  border-bottom-width: 0;
+}
+
+.stitch-flow .react-flow__controls-button:hover {
+  @apply bg-stitch-higher;
+}
+
+.stitch-flow .react-flow__controls-button svg {
+  fill: currentColor;
+}
+
+.stitch-flow .react-flow__attribution {
+  @apply opacity-40 text-[10px];
+}
+
+.stitch-flow .react-flow__attribution a {
+  @apply text-stitch-accent;
+}

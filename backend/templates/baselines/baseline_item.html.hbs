@@ -16,8 +16,8 @@
   <div class="marreq-list-page__row-meta">
     <span class="marreq-list-page__row-id" title="Baseline ID">#{{id}}</span>
     <div class="marreq-list-page__row-actions">
-      <a href="/p/{{@root.selected_project_slug}}/baselines/{{id}}" class="btn btn-secondary btn-sm marreq-list-page__action-btn">View</a>
-      <a href="/p/{{@root.selected_project_slug}}/export_reqif?baseline_id={{id}}" class="btn btn-outline btn-sm marreq-list-page__action-btn" title="Export this baseline as ReqIF 1.2">Export ReqIF</a>
+      <a href="/{{@root.selected_project_slug}}/baselines/{{id}}" class="btn btn-secondary btn-sm marreq-list-page__action-btn">View</a>
+      <a href="/{{@root.selected_project_slug}}/export_reqif?baseline_id={{id}}" class="btn btn-outline btn-sm marreq-list-page__action-btn" title="Export this baseline as ReqIF 1.2">Export ReqIF</a>
     </div>
   </div>
 </article>

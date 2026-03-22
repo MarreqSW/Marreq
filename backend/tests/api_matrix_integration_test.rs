@@ -61,6 +61,7 @@ mod test_support {
                 status: ProjectStatus::Active,
                 owner_id: Some(1),
                 slug: "test-project".into(),
+                group_id: None,
             },
         );
 
@@ -262,6 +263,7 @@ fn link_sets_correct_project_id() {
             status: ProjectStatus::Active,
             owner_id: Some(1),
             slug: "other-project".into(),
+            group_id: None,
         },
     );
     repo.requirements

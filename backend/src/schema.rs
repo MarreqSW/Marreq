@@ -138,6 +138,36 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    group_members (group_id, user_id) {
+        group_id -> Int4,
+        user_id -> Int4,
+        role -> Int4,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
+    groups (id) {
+        id -> Int4,
+        #[max_length = 255]
+        name -> Varchar,
+        #[max_length = 255]
+        slug -> Varchar,
+        description -> Nullable<Text>,
+        owner_id -> Nullable<Int4>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     logs (log_id) {
         log_id -> Int4,
         user_id -> Int4,
@@ -205,6 +235,7 @@ diesel::table! {
         owner_id -> Nullable<Int4>,
         #[max_length = 255]
         slug -> Varchar,
+        group_id -> Nullable<Int4>,
     }
 }
 
@@ -417,6 +448,9 @@ diesel::joinable!(custom_field_values -> custom_field_definitions (custom_field_
 diesel::joinable!(custom_field_values -> requirement_versions (requirement_version_id));
 diesel::joinable!(embedding_index_queue -> projects (project_id));
 diesel::joinable!(embedding_index_queue -> requirements (requirement_id));
+diesel::joinable!(group_members -> groups (group_id));
+diesel::joinable!(group_members -> users (user_id));
+diesel::joinable!(groups -> users (owner_id));
 diesel::joinable!(logs -> projects (project_id));
 diesel::joinable!(logs -> users (user_id));
 diesel::joinable!(matrix -> projects (project_id));
@@ -425,6 +459,7 @@ diesel::joinable!(matrix -> requirements (req_id));
 diesel::joinable!(matrix -> verifications (verification_id));
 diesel::joinable!(project_members -> projects (project_id));
 diesel::joinable!(project_members -> users (user_id));
+diesel::joinable!(projects -> groups (group_id));
 diesel::joinable!(projects -> users (owner_id));
 diesel::joinable!(requirement_comments -> requirement_versions (requirement_version_id));
 diesel::joinable!(requirement_comments -> requirements (requirement_id));
@@ -457,6 +492,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     custom_field_definitions,
     custom_field_values,
     embedding_index_queue,
+    group_members,
+    groups,
     logs,
     matrix,
     project_members,

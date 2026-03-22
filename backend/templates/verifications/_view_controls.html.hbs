@@ -20,11 +20,11 @@
       </button>
     </div>
     {{#if project.id}}
-    <a href="/p/{{project.slug}}/verifications.xls" class="btn btn-outline-secondary btn-sm">
+    <a href="/{{project.slug}}/verifications.xls" class="btn btn-outline-secondary btn-sm">
       Export
     </a>
     {{#if is_admin}}
-    <a href="/p/{{project.slug}}/import_excel" class="btn btn-outline-secondary btn-sm">
+    <a href="/{{project.slug}}/import_excel" class="btn btn-outline-secondary btn-sm">
       Import
     </a>
     {{/if}}
@@ -41,7 +41,7 @@
   </div>
   {{#if project.id}}
   {{#if can_edit_requirements}}
-  <a href="/p/{{project.slug}}/verifications/new" class="btn btn-primary marreq-requirements-header__primary" id="newVerificationButton">
+  <a href="/{{project.slug}}/verifications/new" class="btn btn-primary marreq-requirements-header__primary" id="newVerificationButton">
     New Verification
   </a>
   {{else}}

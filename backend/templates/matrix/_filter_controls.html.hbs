@@ -101,7 +101,7 @@
         Apply
       </button>
       {{#if (or verification_status_filter req_status_filter category_filter applicability_filter search suspect_filter)}}
-        <a href="/p/{{selected_project_slug}}/matrix" class="btn btn-sm btn-outline-secondary" aria-label="Clear all filters" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+        <a href="/{{selected_project_slug}}/matrix" class="btn btn-sm btn-outline-secondary" aria-label="Clear all filters" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
           Clear
         </a>
       {{/if}}

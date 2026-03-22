@@ -263,6 +263,32 @@ pub struct Verification {
     pub verification_method_id: Option<i32>,
 }
 
+/// A group organizes multiple related projects under a shared container.
+#[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::groups)]
+pub struct Group {
+    pub id: i32,
+    pub name: String,
+    pub slug: String,
+    pub description: Option<String>,
+    pub owner_id: Option<i32>,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+/// Membership that links a user to a group with a specific role.
+/// Roles: 1 = Owner, 2 = Maintainer, 3 = Contributor, 4 = Viewer
+#[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::group_members)]
+#[diesel(primary_key(group_id, user_id))]
+pub struct GroupMember {
+    pub group_id: i32,
+    pub user_id: i32,
+    pub role: i32,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
 /// A project groups a collection of requirements and tests.
 #[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
 pub struct Project {
@@ -274,6 +300,7 @@ pub struct Project {
     pub status: ProjectStatus,
     pub owner_id: Option<i32>,
     pub slug: String,
+    pub group_id: Option<i32>,
 }
 
 /// Membership that links a user to a project with a specific role.
@@ -434,6 +461,7 @@ impl ActionType {
 /// Entities that can be referenced by a [`Log`] entry.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EntityType {
+    Group,
     Project,
     Requirement,
     Category,
@@ -450,6 +478,7 @@ pub enum EntityType {
 impl std::fmt::Display for EntityType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            EntityType::Group => write!(f, "GROUP"),
             EntityType::Project => write!(f, "PROJECT"),
             EntityType::Requirement => write!(f, "REQUIREMENT"),
             EntityType::Category => write!(f, "CATEGORY"),
@@ -467,6 +496,7 @@ impl EntityType {
     /// Lowercase, human-oriented label for log descriptions.
     pub fn human_name(self) -> &'static str {
         match self {
+            EntityType::Group => "group",
             EntityType::Project => "project",
             EntityType::Requirement => "requirement",
             EntityType::Category => "category",
@@ -565,6 +595,21 @@ macro_rules! impl_loggable {
             }
         }
     };
+}
+
+impl Loggable for Group {
+    fn entity_type() -> EntityType {
+        EntityType::Group
+    }
+    fn id(&self) -> i32 {
+        self.id
+    }
+    fn project_id(&self) -> Option<i32> {
+        None
+    }
+    fn display_name(&self) -> String {
+        self.name.clone()
+    }
 }
 
 impl_loggable!(Project, EntityType::Project, id, name);

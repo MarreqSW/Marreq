@@ -40,7 +40,7 @@ describe('Requirements List Page', () => {
                 </div>
               </td>
               <td class="marreq-requirements-row__cell--title">
-                <a href="/p/1/requirements/show/1" class="marreq-requirements-title">Test Requirement</a>
+                <a href="/1/requirements/show/1" class="marreq-requirements-title">Test Requirement</a>
               </td>
               <td class="marreq-requirements-row__cell--status">
                 <span class="marreq-requirements-status-badge" data-status="Draft">Draft</span>

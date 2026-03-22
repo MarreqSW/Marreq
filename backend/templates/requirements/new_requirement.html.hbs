@@ -4,12 +4,12 @@ Depends on: css/pages/requirement-form.css, css/pages/requirement-create.css,
             js/pages/requirementForm.js
 --}}
 {{#*inline "page"}}
-<form method="post" action="/p/{{#if project}}{{project.slug}}{{else}}{{project_slug}}{{/if}}/requirements/new" data-requirement-form data-allow-soft-mismatch="false" class="c-reqform create-form"
+<form method="post" action="/{{#if project}}{{project.slug}}{{else}}{{project_slug}}{{/if}}/requirements/new" data-requirement-form data-allow-soft-mismatch="false" class="c-reqform create-form"
   data-project-id="{{project_id}}" data-project-slug="{{project_slug}}" {{#if flash_success}}data-flash-success="{{flash_success}}" {{/if}}>
   <header class="c-reqform-topbar">
     <div class="c-reqform-topbar__context">
       <nav class="c-reqform-breadcrumb" aria-label="Breadcrumb">
-        <a href="/p/{{#if project}}{{project.slug}}{{else}}{{project_slug}}{{/if}}/requirements"
+        <a href="/{{#if project}}{{project.slug}}{{else}}{{project_slug}}{{/if}}/requirements"
           class="c-reqform-breadcrumb__link">
           {{#if project}}{{project.name}}{{else}}Project{{/if}}
         </a>
@@ -26,7 +26,7 @@ Depends on: css/pages/requirement-form.css, css/pages/requirement-create.css,
         <span class="c-reqform-autosave__text" data-role="autosave-text"></span>
       </div>
       <button type="submit" class="btn btn-primary c-reqform-topbar__save" data-role="submit-requirement">Save</button>
-      <a href="/p/{{#if project}}{{project.slug}}{{else}}{{project_slug}}{{/if}}/requirements"
+      <a href="/{{#if project}}{{project.slug}}{{else}}{{project_slug}}{{/if}}/requirements"
         class="btn btn-outline-secondary c-reqform-topbar__cancel" data-role="cancel-create">Cancel</a>
     </div>
   </header>

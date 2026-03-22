@@ -1,0 +1,173 @@
+{{!-- Depends on: css/pages/groups.css, js/app.js --}}
+{{#*inline "page"}}
+<div class="container mt-4 marreq-group-members-page">
+  {{#if success}}
+    <div class="alert alert-success c-alert" role="alert">{{success}}</div>
+  {{/if}}
+  {{#if error}}
+    <div class="alert alert-danger c-alert" role="alert">{{error}}</div>
+  {{/if}}
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card shadow-sm c-card">
+        <div class="card-header d-flex justify-content-between align-items-center c-card__header">
+          <div>
+            <h1 class="h4 mb-0">Group Members</h1>
+            <p class="text-muted mb-0">{{group.name}}</p>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            {{#if can_manage_members}}
+              <a href="#add-member" class="btn btn-primary btn-sm">
+                <i class="fas fa-user-plus me-1" aria-hidden="true"></i>Add Member
+              </a>
+            {{/if}}
+            <span class="badge bg-primary bg-gradient">{{member_count}} Members</span>
+          </div>
+        </div>
+        <div class="card-body p-0 c-card__body">
+          {{#if members.0}}
+            <div class="table-responsive c-table-responsive">
+              <table class="table table-hover align-middle mb-0 c-table c-table--hover">
+                <thead class="table-light c-table__head">
+                  <tr>
+                    <th scope="col">Member</th>
+                    <th scope="col">Role</th>
+                    {{#if can_manage_members}}
+                      <th scope="col" class="text-end">Actions</th>
+                    {{/if}}
+                  </tr>
+                </thead>
+                <tbody>
+                  {{#each members}}
+                    <tr>
+                      <td>
+                        <div class="fw-semibold">{{name}}</div>
+                        <div class="text-muted small">@{{username}}</div>
+                        {{#if email}}
+                          <div class="text-muted small"><i class="fas fa-envelope me-1" aria-hidden="true"></i>{{email}}</div>
+                        {{/if}}
+                      </td>
+                      <td>
+                        {{#if ../can_manage_members}}
+                          <form method="post" action="/{{../group_slug}}/-/members/{{id}}/role" class="marreq-group-role-form">
+                            <select name="role" class="form-select form-select-sm c-form-select c-form-control c-form-control--select" {{#unless can_change_role}}disabled{{/unless}}>
+                              {{#each @root.role_options}}
+                                <option value="{{id}}" {{#if (eq id ../role_id)}}selected{{/if}}>{{label}}</option>
+                              {{/each}}
+                            </select>
+                            {{#if can_change_role}}
+                              <button type="submit" class="btn btn-sm btn-outline-primary">Update Role</button>
+                            {{/if}}
+                          </form>
+                        {{else}}
+                          <span class="badge bg-info text-dark">{{role_label}}</span>
+                        {{/if}}
+                        {{#if is_admin}}
+                          <span class="badge bg-dark ms-1">Admin</span>
+                        {{/if}}
+                        {{#if is_last_owner}}
+                          <div class="small text-muted mt-1">Assign another owner before changing this role.</div>
+                        {{/if}}
+                      </td>
+                      {{#if ../can_manage_members}}
+                        <td class="text-end">
+                          <div class="marreq-group-member-actions">
+                            {{#unless can_change_role}}
+                              <span class="text-muted small">Last owner</span>
+                            {{/unless}}
+                            {{#if can_remove}}
+                              <form method="post" action="/{{../group_slug}}/-/members/{{id}}/remove" class="d-inline">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" data-confirm="Remove this member from the group?">
+                                  <i class="fas fa-user-minus me-1" aria-hidden="true"></i>Remove
+                                </button>
+                              </form>
+                            {{/if}}
+                          </div>
+                        </td>
+                      {{/if}}
+                    </tr>
+                  {{/each}}
+                </tbody>
+              </table>
+            </div>
+          {{else}}
+            <div class="p-4 text-center text-muted u-text-center">
+              <i class="fas fa-users fa-2x mb-3" aria-hidden="true"></i>
+              <p class="mb-0">This group does not have any members yet.</p>
+            </div>
+          {{/if}}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-sm mb-4 c-card">
+        <div class="card-header c-card__header">
+          <h2 class="h6 mb-0">Membership Rules</h2>
+        </div>
+        <div class="card-body c-card__body">
+          <p class="text-muted small mb-2">
+            Groups must always keep at least one <span class="badge bg-info text-dark">Owner</span>.
+          </p>
+          <ul class="small text-muted ps-3 mb-0">
+            <li>Owners can manage members and edit group settings.</li>
+            <li>Maintainers, contributors, and viewers can browse the group.</li>
+            <li>Project access still depends on direct project membership.</li>
+          </ul>
+        </div>
+      </div>
+
+      {{#if can_manage_members}}
+        <div class="card shadow-sm c-card" id="add-member">
+          <div class="card-header c-card__header">
+            <h2 class="h6 mb-0">Add a Member</h2>
+          </div>
+          <div class="card-body c-card__body">
+            {{#if has_available_users}}
+              <form method="post" action="/{{group_slug}}/-/members" class="vstack gap-3">
+                <div>
+                  <label for="member-user" class="form-label c-form-label">User</label>
+                  <select id="member-user" name="user_id" class="form-select c-form-select c-form-control c-form-control--select" required>
+                    <option value="" disabled selected>Select a user</option>
+                    {{#each available_users}}
+                      <option value="{{id}}">{{label}}</option>
+                    {{/each}}
+                  </select>
+                </div>
+                <div>
+                  <label for="member-role" class="form-label c-form-label">Role</label>
+                  <select id="member-role" name="role" class="form-select c-form-select c-form-control c-form-control--select" required>
+                    {{#each role_options}}
+                      <option value="{{id}}">{{label}}</option>
+                    {{/each}}
+                  </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">
+                  <i class="fas fa-user-plus me-1" aria-hidden="true"></i>Add Member
+                </button>
+              </form>
+            {{else}}
+              <p class="text-muted small mb-2">All existing users already belong to this group.</p>
+              <p class="small mb-0">
+                <a href="/user/new" class="btn btn-outline-primary btn-sm">Create new user</a>
+                in User Management, then return here to add them.
+              </p>
+            {{/if}}
+          </div>
+        </div>
+      {{else}}
+        <div class="card shadow-sm c-card">
+          <div class="card-header c-card__header">
+            <h2 class="h6 mb-0">Access</h2>
+          </div>
+          <div class="card-body c-card__body">
+            <p class="text-muted small mb-0">Only group owners and administrators can update member roles or manage the roster.</p>
+          </div>
+        </div>
+      {{/if}}
+    </div>
+  </div>
+</div>
+{{/inline}}
+{{> layout this page_id="group-members"}}

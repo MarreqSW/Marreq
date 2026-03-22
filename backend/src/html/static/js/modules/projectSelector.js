@@ -1,12 +1,45 @@
 const COOKIE_NAME = 'selected_project_id';
+const RESERVED_ROOTS = new Set([
+  'admin',
+  'api',
+  'cache',
+  'change_password',
+  'cleanup_logs',
+  'error',
+  'export_logs',
+  'groups',
+  'log_analytics',
+  'login',
+  'logout',
+  'logs',
+  'new_project',
+  'profile',
+  'projects',
+  'static',
+  'status',
+  'user',
+]);
 
 function setCookie(name, value) {
   document.cookie = `${name}=${value}; path=/; max-age=86400`;
 }
 
 function getProjectSlugFromPath() {
-  const match = window.location.pathname.match(/^\/p\/([^/]+)/);
-  return match ? decodeURIComponent(match[1]) : null;
+  const segments = window.location.pathname
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => decodeURIComponent(segment));
+
+  if (segments.length < 2) {
+    return null;
+  }
+
+  const [namespace, projectSlug] = segments;
+  if (!namespace || !projectSlug || projectSlug === '-' || RESERVED_ROOTS.has(namespace)) {
+    return null;
+  }
+
+  return `${namespace}/${projectSlug}`;
 }
 
 function resolveProjectId(explicit) {
@@ -53,9 +86,11 @@ function navigateToProject(projectId, selector) {
 
   const path = window.location.pathname;
   const segments = path.split('/').filter(Boolean);
+  const projectSegments = projectSlug.split('/').filter(Boolean);
 
-  if (segments[0] === 'p' && segments.length >= 2) {
-    segments[1] = projectSlug;
+  if (segments.length >= 2 && projectSegments.length === 2 && getProjectSlugFromPath()) {
+    segments[0] = projectSegments[0];
+    segments[1] = projectSegments[1];
     const newPath = `/${segments.join('/')}`;
     const suffix = window.location.search + window.location.hash;
     window.location.assign(`${newPath}${suffix}`);

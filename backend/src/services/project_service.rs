@@ -11,6 +11,7 @@ use crate::models::{
     NewApplicability, NewCategory, NewProject, NewProjectMember, NewProjectRow, Project,
     UpdateProject, User,
 };
+use crate::namespaces::{resolve_project_namespace_entity, NamespaceEntity};
 use crate::repository::errors::RepoError;
 use crate::repository::{
     LookupRepository, PooledConnectionWrapper, ProjectMembersRepository, ProjectsRepository,
@@ -45,6 +46,42 @@ impl<'a> ProjectService<'a> {
         self.state.repo_read().get_project_by_slug(slug)
     }
 
+    pub fn get_by_user_namespace_and_slug(
+        &self,
+        username: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError> {
+        self.state
+            .repo_read()
+            .get_project_by_user_namespace_and_slug(username, slug)
+    }
+
+    pub fn get_by_group_namespace_and_slug(
+        &self,
+        group_slug: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError> {
+        self.state
+            .repo_read()
+            .get_project_by_group_namespace_and_slug(group_slug, slug)
+    }
+
+    pub fn get_by_namespace_and_slug(
+        &self,
+        namespace: &str,
+        slug: &str,
+    ) -> Result<Project, RepoError> {
+        let repo = self.state.repo_read();
+        match resolve_project_namespace_entity(&*repo, namespace)? {
+            NamespaceEntity::User(user) => {
+                repo.get_project_by_user_namespace_and_slug(&user.username, slug)
+            }
+            NamespaceEntity::Group(group) => {
+                repo.get_project_by_group_namespace_and_slug(&group.slug, slug)
+            }
+        }
+    }
+
     /// Retrieve all projects that the specified user is a member of.
     pub fn get_by_user_id(&self, id: i32) -> Result<Vec<Project>, RepoError> {
         let repo = self.state.repo_read();
@@ -76,7 +113,7 @@ impl<'a> ProjectService<'a> {
         }
 
         self.prepare_new_payload(&mut payload)?;
-        let slug = self.generate_slug(&payload.name)?;
+        let slug = self.generate_slug(&payload.name, payload.owner_id, payload.group_id, None)?;
 
         let owner_id = payload.owner_id.unwrap_or(actor.id);
         let id = {
@@ -87,6 +124,7 @@ impl<'a> ProjectService<'a> {
                 description: payload.description.clone(),
                 owner_id: payload.owner_id,
                 status: payload.status,
+                group_id: payload.group_id,
             })?;
             repo.add_project_member(&NewProjectMember {
                 project_id: id,
@@ -170,6 +208,19 @@ impl<'a> ProjectService<'a> {
         }
 
         self.prepare_update_payload(&mut payload)?;
+        payload.slug = None;
+
+        if self.namespace_changed(&before, &payload) {
+            let next_slug = self.generate_slug(
+                &before.slug,
+                payload.owner_id,
+                payload.group_id,
+                Some(before.id),
+            )?;
+            if next_slug != before.slug {
+                payload.slug = Some(next_slug);
+            }
+        }
 
         {
             let mut repo = self.state.repo_write();
@@ -196,6 +247,10 @@ impl<'a> ProjectService<'a> {
     }
 
     fn prepare_new_payload(&self, payload: &mut NewProject) -> Result<(), RepoError> {
+        if matches!(payload.group_id, Some(group_id) if group_id <= 0) {
+            payload.group_id = None;
+        }
+
         sanitize_string(&mut payload.name);
         sanitize_optional_string(&mut payload.description);
 
@@ -203,6 +258,10 @@ impl<'a> ProjectService<'a> {
     }
 
     fn prepare_update_payload(&self, payload: &mut UpdateProject) -> Result<(), RepoError> {
+        if matches!(payload.group_id, Some(group_id) if group_id <= 0) {
+            payload.group_id = None;
+        }
+
         sanitize_string(&mut payload.name);
         sanitize_optional_string(&mut payload.description);
 
@@ -211,20 +270,54 @@ impl<'a> ProjectService<'a> {
             description: payload.description.clone(),
             status: payload.status.unwrap_or_default(),
             owner_id: payload.owner_id,
+            group_id: payload.group_id,
         };
         self.prepare_new_payload(&mut clone)
     }
 
-    fn generate_slug(&self, name: &str) -> Result<String, RepoError> {
-        let existing = self
-            .state
-            .repo_read()
-            .get_projects_all()?
-            .into_iter()
-            .map(|project| project.slug)
-            .collect::<Vec<_>>();
+    fn generate_slug(
+        &self,
+        name_or_slug_seed: &str,
+        owner_id: Option<i32>,
+        group_id: Option<i32>,
+        exclude_project_id: Option<i32>,
+    ) -> Result<String, RepoError> {
+        let existing = self.existing_namespace_slugs(owner_id, group_id, exclude_project_id)?;
 
-        Ok(generate_unique_project_slug(name, existing))
+        Ok(generate_unique_project_slug(name_or_slug_seed, existing))
+    }
+
+    fn existing_namespace_slugs(
+        &self,
+        owner_id: Option<i32>,
+        group_id: Option<i32>,
+        exclude_project_id: Option<i32>,
+    ) -> Result<Vec<String>, RepoError> {
+        let projects = self.state.repo_read().get_projects_all()?;
+        Ok(projects
+            .into_iter()
+            .filter(|project| exclude_project_id != Some(project.id))
+            .filter(|project| self.project_in_namespace(project, owner_id, group_id))
+            .map(|project| project.slug)
+            .collect())
+    }
+
+    fn project_in_namespace(
+        &self,
+        project: &Project,
+        owner_id: Option<i32>,
+        group_id: Option<i32>,
+    ) -> bool {
+        if let Some(group_id) = group_id {
+            return project.group_id == Some(group_id);
+        }
+
+        project.group_id.is_none() && project.owner_id == owner_id
+    }
+
+    fn namespace_changed(&self, before: &Project, payload: &UpdateProject) -> bool {
+        before.group_id != payload.group_id
+            || (payload.group_id.is_none() && before.owner_id != payload.owner_id)
     }
 
     fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
@@ -302,6 +395,7 @@ mod tests {
             status: ProjectStatus::Active,
             owner_id: Some(1),
             slug: name.to_lowercase().replace(' ', "-"),
+            group_id: None,
         }
     }
 
@@ -316,6 +410,7 @@ mod tests {
             description: Some("   ".into()),
             status: ProjectStatus::Active,
             owner_id: Some(1),
+            group_id: None,
         };
 
         let id = service.create(&actor(), payload).unwrap();
@@ -337,10 +432,31 @@ mod tests {
             description: None,
             status: ProjectStatus::Completed,
             owner_id: None,
+            group_id: None,
         };
 
         let err = service.create(&actor(), payload).unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn create_treats_non_positive_group_id_as_none() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let payload = NewProject {
+            name: "Grouped Project".into(),
+            description: None,
+            status: ProjectStatus::Active,
+            owner_id: Some(1),
+            group_id: Some(0),
+        };
+
+        let id = service.create(&actor(), payload).unwrap();
+        let stored = service.get_by_id(id).unwrap();
+
+        assert_eq!(stored.group_id, None);
     }
 
     #[test]
@@ -355,6 +471,7 @@ mod tests {
             description: None,
             status: ProjectStatus::Active,
             owner_id: Some(1),
+            group_id: None,
         };
 
         let project_id = service.create(&actor(), payload).unwrap();
@@ -414,6 +531,8 @@ mod tests {
             description: Some("  Updated description  ".into()),
             status: Some(ProjectStatus::OnHold),
             owner_id: Some(2),
+            slug: None,
+            group_id: None,
         };
 
         let updated = service.update(&actor(), 1, payload).unwrap();
@@ -421,6 +540,28 @@ mod tests {
         assert_eq!(updated.description.as_deref(), Some("Updated description"));
         assert_eq!(updated.status, ProjectStatus::OnHold);
         assert_eq!(updated.owner_id, Some(2));
+    }
+
+    #[test]
+    fn update_treats_non_positive_group_id_as_none() {
+        let mut repo = DieselRepoMock::default();
+        let mut existing = project(1, "Legacy");
+        existing.group_id = Some(4);
+        repo.projects.insert(1, existing);
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        let payload = UpdateProject {
+            name: "Legacy".into(),
+            description: Some("Still grouped".into()),
+            status: Some(ProjectStatus::Active),
+            owner_id: Some(1),
+            slug: None,
+            group_id: Some(0),
+        };
+
+        let updated = service.update(&actor(), 1, payload).unwrap();
+        assert_eq!(updated.group_id, None);
     }
 
     #[test]
@@ -434,6 +575,8 @@ mod tests {
             description: Some("Desc".into()),
             status: Some(ProjectStatus::Active),
             owner_id: None,
+            slug: None,
+            group_id: None,
         };
 
         let err = service.update(&actor(), 99, payload).unwrap_err();
@@ -452,6 +595,8 @@ mod tests {
             description: Some("Still around".into()),
             status: Some(ProjectStatus::Active),
             owner_id: None,
+            slug: None,
+            group_id: None,
         };
 
         let updated = service.update(&actor(), 1, payload).unwrap();
@@ -475,6 +620,8 @@ mod tests {
             description: Some("Needs owner".into()),
             status: Some(ProjectStatus::Active),
             owner_id: None,
+            slug: None,
+            group_id: None,
         };
 
         let updated = service.update(&editor, 2, payload).unwrap();

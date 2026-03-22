@@ -71,9 +71,11 @@ fn render_new_project_form(
     error: Option<String>,
 ) -> Template {
     let users = state.repo_read().get_users_all().unwrap_or_default();
+    let groups = list_all_groups_sorted(state);
 
     let ctx = json!({
         "users": users,
+        "groups": groups,
         "user": user,
         "form": form,
         "error": error,
@@ -89,6 +91,7 @@ fn default_new_project_form() -> Value {
         "description": "",
         "status_id": "active",
         "owner_id": null,
+        "group_id": 0,
     })
 }
 
@@ -151,6 +154,19 @@ mod tests {
             status: ProjectStatus::Active,
             owner_id: Some(owner_id),
             slug: "test-project".into(),
+            group_id: None,
+        }
+    }
+
+    fn group(id: i32, name: &str) -> Group {
+        Group {
+            id,
+            name: name.into(),
+            slug: name.to_lowercase().replace(' ', "-"),
+            description: Some("Organizational group".into()),
+            owner_id: Some(ADMIN_ID),
+            created_at: timestamp(),
+            updated_at: timestamp(),
         }
     }
 
@@ -207,8 +223,10 @@ mod tests {
         let owner = owner_user();
         let owner_id = owner.id;
         repo.users.insert(owner_id, owner);
+        repo.groups.insert(9, group(9, "Launch Org"));
 
-        let accessible = project(7, "Mars Lander", owner_id);
+        let mut accessible = project(7, "Mars Lander", owner_id);
+        accessible.group_id = Some(9);
         let accessible_id = accessible.id;
         let inaccessible = project(8, "Venus Rover", owner_id);
         repo.projects.insert(accessible_id, accessible);
@@ -231,6 +249,8 @@ mod tests {
         assert!(!body.contains("Venus Rover"));
         assert!(body.contains("Role: Reviewer"));
         assert!(body.contains("Owned by Mission Owner"));
+        assert!(body.contains("Launch Org"));
+        assert!(!body.contains("href=\"/launch-org\""));
     }
 
     #[rocket::async_test]
@@ -238,6 +258,8 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         repo.users.insert(ADMIN_ID, admin_user());
         repo.users.insert(USER_ID, standard_user());
+        repo.groups.insert(5, group(5, "Flight Systems"));
+        repo.groups.insert(6, group(6, "Payload Team"));
 
         let client = test_client(repo).await;
         let response = get_with_session(&client, "/new_project", ADMIN_ID).await;
@@ -248,18 +270,23 @@ mod tests {
         assert!(body.contains("Project Owner *"));
         assert!(body.contains("Admin User (admin)"));
         assert!(body.contains("Jane Doe (jane)"));
+        assert!(body.contains("name=\"group_id\""));
+        assert!(body.contains(">No group</option>"));
+        assert!(body.contains("Flight Systems"));
+        assert!(body.contains("Payload Team"));
     }
 
     #[rocket::async_test]
     async fn post_project_creates_project_and_redirects() {
         let mut repo = DieselRepoMock::default();
         repo.users.insert(ADMIN_ID, admin_user());
+        repo.groups.insert(5, group(5, "Flight Systems"));
 
         let client = test_client(repo).await;
         let response = post_with_session(
             &client,
             "/new_project",
-            "name=New+Initiative&description=Launch+prep&owner_id=1",
+            "name=New+Initiative&description=Launch+prep&owner_id=1&status=active&group_id=5",
             ADMIN_ID,
         )
         .await;
@@ -276,6 +303,7 @@ mod tests {
         assert_eq!(project.description.as_deref(), Some("Launch prep"));
         assert_eq!(project.status, ProjectStatus::Active);
         assert_eq!(project.owner_id, Some(ADMIN_ID));
+        assert_eq!(project.group_id, Some(5));
     }
 
     #[rocket::async_test]

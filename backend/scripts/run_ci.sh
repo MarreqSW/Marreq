@@ -72,7 +72,7 @@ run_local_ci() {
   npm test
 
   echo "5️⃣ Running backend tests with coverage..."
-  export DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/marreq
+  export DATABASE_URL=postgres://rust:rust@127.0.0.1:5433/marreq
   cargo llvm-cov "${cargo_args[@]}" -p marreq --all-features --doctests --fail-under-lines 70
 
   echo "✅ All checks passed!"

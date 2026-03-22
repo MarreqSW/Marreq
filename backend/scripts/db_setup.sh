@@ -17,7 +17,7 @@ set -euo pipefail
 #   • diesel CLI installed:
 #       cargo install diesel_cli --no-default-features --features postgres
 #   • DATABASE_URL in .env or environment
-#       default: postgres://rust:rust@127.0.0.1:5432/marreq
+#       default: postgres://rust:rust@127.0.0.1:5433/marreq (host port from docker-compose.yml)
 #
 # For non-Docker (bare-metal) setups, ensure DATABASE_URL points to your
 # server and that psql is available in PATH.  The script auto-detects whether
@@ -27,6 +27,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${BACKEND_ROOT}/.." && pwd)"
 COMPOSE_FILE="${REPO_ROOT}/docker/docker-compose.yml"
+COMPOSE_CI_FILE="${REPO_ROOT}/docker/docker-compose.ci.yml"
 SEED=false
 
 for arg in "$@"; do
@@ -57,7 +58,7 @@ if [[ -f "${REPO_ROOT}/.env" ]]; then
 fi
 
 # Default credentials — must match docker/docker-compose.yml
-DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5432/marreq}"
+DATABASE_URL="${DATABASE_URL:-postgres://rust:rust@127.0.0.1:5433/marreq}"
 DB_USER="${DATABASE_URL%@*}"           # strip host/port/db
 DB_USER="${DB_USER##*:}"              # strip scheme and name, keep password
 DB_USER="${DATABASE_URL#*://}"        # scheme://user:pass@...
@@ -74,12 +75,20 @@ if ! command -v diesel &>/dev/null; then
 fi
 
 # ── Detect Docker Compose ────────────────────────────────────────────────────
+# In GitHub Actions, use the same override as .github/workflows so the db service
+# is not recreated with a different definition mid-CI.
+DC_FILES=(-f "${COMPOSE_FILE}")
+if [[ -n "${GITHUB_ACTIONS:-}" && -f "${COMPOSE_CI_FILE}" ]]; then
+  DC_FILES+=(-f "${COMPOSE_CI_FILE}")
+fi
 USE_DOCKER=false
-DC=""
+DC=()
 if docker compose version >/dev/null 2>&1; then
-  DC="docker compose -f ${COMPOSE_FILE}"; USE_DOCKER=true
+  DC=(docker compose "${DC_FILES[@]}")
+  USE_DOCKER=true
 elif docker-compose version >/dev/null 2>&1; then
-  DC="docker-compose -f ${COMPOSE_FILE}"; USE_DOCKER=true
+  DC=(docker-compose "${DC_FILES[@]}")
+  USE_DOCKER=true
 fi
 
 # ── Start db container (Docker path) ────────────────────────────────────────
@@ -90,8 +99,8 @@ if [[ "${USE_DOCKER}" == "true" ]]; then
   fi
   info "Starting PostgreSQL container (db service)..."
   cd "${REPO_ROOT}"
-  ${DC} up -d db
-  DB_CID=$(${DC} ps -q db || true)
+  "${DC[@]}" up -d db
+  DB_CID=$("${DC[@]}" ps -q db || true)
   if [[ -z "${DB_CID}" ]]; then
     error "Could not determine container ID for the 'db' service."
   fi

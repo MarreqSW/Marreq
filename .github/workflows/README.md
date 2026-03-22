@@ -271,7 +271,7 @@ npm run test:coverage
 
 ```bash
 # Set database URL (or use .env file)
-export DATABASE_URL=postgres://rust:rust@127.0.0.1:5432/marreq
+export DATABASE_URL=postgres://rust:rust@127.0.0.1:5433/marreq
 
 # Run tests with coverage
 cargo llvm-cov --workspace --all-features --doctests

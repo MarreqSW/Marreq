@@ -306,3 +306,51 @@ export type RequirementPatchBody = {
   verification_method_ids?: number[];
   custom_fields?: CustomFieldPatchItem[];
 };
+
+/** POST/PUT `/api/categories`, `/api/applicability` (id null on create). */
+export type TaggedMetadataBody = {
+  id?: number | null;
+  title: string;
+  description: string;
+  tag: string;
+  project_id: number;
+};
+
+/** POST `/api/status`, PUT `/api/status/:id` */
+export type RequirementStatusWriteBody = {
+  id?: number | null;
+  title: string;
+  description: string;
+  tag: string;
+  project_id: number;
+  is_system?: boolean;
+  tag_color?: string | null;
+};
+
+/** POST `/api/verification-status`, PUT `/api/verification-status/:id` */
+export type VerificationStatusWriteBody = {
+  id?: number | null;
+  title: string;
+  description: string;
+  tag: string;
+  project_id: number;
+  is_system?: boolean;
+  tag_color?: string | null;
+};
+
+/** POST/PUT `/api/projects/:pid/custom_fields` */
+export type CustomFieldWriteBody = {
+  label: string;
+  field_type: string;
+  enum_values?: string[] | null;
+  sort_order?: number | null;
+};
+
+/** POST/PUT `/api/projects/:pid/verification-methods` */
+export type VerificationMethodWriteBody = {
+  id?: number | null;
+  title: string;
+  description: string;
+  tag: string;
+  project_id: number;
+};

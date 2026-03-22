@@ -9,6 +9,7 @@ import {
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import type { Verification, VerificationStatus } from '@/api/types';
+import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
 
 const selectClass =
   'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-white focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
@@ -74,6 +75,8 @@ export default function EditVerificationPage() {
     const forProject = statuses.filter((s) => s.project_id === pid);
     return forProject.length > 0 ? forProject : statuses;
   }, [statuses, pid]);
+
+  const statusMeta = useMemo(() => statuses.find((s) => s.id === statusId), [statuses, statusId]);
 
   const dirty = useMemo(() => {
     if (!base) return false;
@@ -262,17 +265,24 @@ export default function EditVerificationPage() {
               <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                 Status
               </label>
-              <select
-                className={selectClass}
-                value={statusId}
-                onChange={(e) => setStatusId(Number(e.target.value))}
-              >
-                {statusOptions.map((s) => (
-                  <option key={s.id} value={s.id} className="bg-stitch-surface text-white">
-                    {s.title}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-2 h-2 rounded-full shrink-0 bg-stitch-accent/40"
+                  style={statusTagColorSwatchStyle(statusMeta?.tag_color)}
+                  title={statusMeta?.tag_color ? 'Catalog color' : undefined}
+                />
+                <select
+                  className={`${selectClass} flex-1 min-w-0`}
+                  value={statusId}
+                  onChange={(e) => setStatusId(Number(e.target.value))}
+                >
+                  {statusOptions.map((s) => (
+                    <option key={s.id} value={s.id} className="bg-stitch-surface text-white">
+                      {s.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="sm:col-span-2">
               <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">

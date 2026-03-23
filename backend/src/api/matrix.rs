@@ -1,10 +1,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+use rocket::serde::Deserialize;
+
 use crate::api::prelude::*;
 use crate::auth::guards::ProjectAccessOrBearer;
 use crate::models::MatrixLink;
+use crate::repository::MatrixRepository;
+use crate::repository::RequirementsRepository;
+use crate::repository::VerificationsRepository;
 use crate::services::MatrixService;
+
+/// Request body for [`put_verification_matrix`]: replace all matrix rows for one verification.
+#[derive(Debug, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct VerificationMatrixPutBody {
+    /// Requirement ids that this verification will cover (empty = unlink all).
+    pub requirement_ids: Vec<i32>,
+}
 
 #[get("/matrix")]
 pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<MatrixLink>>> {
@@ -29,6 +42,91 @@ pub async fn list_by_project(
     let service = MatrixService::new(state.inner());
     let entries = service.list_by_project(project_id)?;
     Ok(Json(entries))
+}
+
+/// Requirement ids currently linked to this verification (project-scoped). Session or Bearer.
+#[get("/projects/<project_id>/verifications/<verification_id>/matrix")]
+pub async fn get_verification_matrix(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    verification_id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<Value>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let repo = state.repo_read();
+    let verification = repo.get_verification_by_id(verification_id)?;
+    if verification.project_id != project_id {
+        return Err(ApiError::NotFound("verification not in project".into()));
+    }
+    let links = repo.get_matrix_by_project(project_id)?;
+    let mut requirement_ids: Vec<i32> = links
+        .into_iter()
+        .filter(|m| m.verification_id == verification_id)
+        .map(|m| m.req_id)
+        .collect();
+    requirement_ids.sort_unstable();
+    requirement_ids.dedup();
+    Ok(Json(json!({
+        "verification_id": verification_id,
+        "requirement_ids": requirement_ids
+    })))
+}
+
+/// Replace traceability links for one verification with the given requirements (same semantics as
+/// legacy “edit test” form: delete existing matrix rows for this verification, then insert one per id).
+/// Requires `EditRequirements`. Session or Bearer.
+#[put(
+    "/projects/<project_id>/verifications/<verification_id>/matrix",
+    data = "<body>"
+)]
+pub async fn put_verification_matrix(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    verification_id: i32,
+    body: Json<VerificationMatrixPutBody>,
+    state: &State<AppState>,
+) -> ApiResult<Json<Value>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::EditRequirements,
+    )?;
+
+    let body = body.into_inner();
+    let mut requirement_ids = body.requirement_ids;
+    requirement_ids.sort_unstable();
+    requirement_ids.dedup();
+
+    let repo = state.repo_read();
+    let verification = repo.get_verification_by_id(verification_id)?;
+    if verification.project_id != project_id {
+        return Err(ApiError::NotFound("verification not in project".into()));
+    }
+    for &rid in &requirement_ids {
+        let req = repo.get_requirement_by_id(rid)?;
+        if req.project_id != project_id {
+            return Err(ApiError::BadRequest(format!(
+                "requirement {rid} is not in project {project_id}"
+            )));
+        }
+    }
+    drop(repo);
+
+    state
+        .repo_write()
+        .update_verification_requirement_links(verification_id, &requirement_ids)?;
+
+    Ok(Json(json!({
+        "status": "ok",
+        "verification_id": verification_id,
+        "requirement_ids": requirement_ids
+    })))
 }
 
 #[cfg(test)]

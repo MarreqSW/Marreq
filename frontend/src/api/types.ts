@@ -37,6 +37,8 @@ export interface Requirement {
   }>;
   /** Present on `GET /api/projects/:id/requirements` list responses. */
   verification_method_ids?: number[];
+  /** All upstream parent requirement ids (version links); list API only. `parent_id` is the first. */
+  parent_requirement_ids?: number[];
 }
 
 export interface MatrixLink {

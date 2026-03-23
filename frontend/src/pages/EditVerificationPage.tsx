@@ -3,12 +3,19 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   deleteVerificationGlobally,
   getVerification,
+  getVerificationMatrix,
+  listRequirements,
   listVerificationStatuses,
   listVerifications,
+  putVerificationMatrix,
   updateVerificationField,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
-import type { Verification, VerificationStatus } from '@/api/types';
+import type { Requirement, Verification, VerificationStatus } from '@/api/types';
+import {
+  matrixSelectionEquals,
+  RequirementMatrixPicker,
+} from '@/components/RequirementMatrixPicker';
 import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
 
 const selectClass =
@@ -24,6 +31,9 @@ export default function EditVerificationPage() {
   const [base, setBase] = useState<Verification | null>(null);
   const [statuses, setStatuses] = useState<VerificationStatus[]>([]);
   const [siblings, setSiblings] = useState<Verification[]>([]);
+  const [requirements, setRequirements] = useState<Requirement[]>([]);
+  const [linkedReqIds, setLinkedReqIds] = useState<number[]>([]);
+  const [baselineLinkedIds, setBaselineLinkedIds] = useState<number[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -40,10 +50,12 @@ export default function EditVerificationPage() {
     if (!Number.isFinite(pid) || !Number.isFinite(vid)) return;
     setLoadError(null);
     try {
-      const [v, st, all] = await Promise.all([
+      const [v, st, all, reqs, mx] = await Promise.all([
         getVerification(vid),
         listVerificationStatuses(),
         listVerifications(),
+        listRequirements(pid),
+        getVerificationMatrix(pid, vid),
       ]);
       if (v.project_id !== pid) {
         setLoadError('This verification belongs to another project.');
@@ -58,6 +70,10 @@ export default function EditVerificationPage() {
       setParentId(v.parent_id != null ? String(v.parent_id) : '');
       setStatuses(st);
       setSiblings(all.filter((x) => x.project_id === pid && x.id !== vid));
+      setRequirements(reqs);
+      const ids = [...mx.requirement_ids].sort((a, b) => a - b);
+      setLinkedReqIds(ids);
+      setBaselineLinkedIds(ids);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load verification');
     }
@@ -78,6 +94,11 @@ export default function EditVerificationPage() {
 
   const statusMeta = useMemo(() => statuses.find((s) => s.id === statusId), [statuses, statusId]);
 
+  const matrixDirty = useMemo(
+    () => !matrixSelectionEquals(linkedReqIds, baselineLinkedIds),
+    [linkedReqIds, baselineLinkedIds],
+  );
+
   const dirty = useMemo(() => {
     if (!base) return false;
     return (
@@ -86,9 +107,10 @@ export default function EditVerificationPage() {
       description !== base.description ||
       source !== base.source ||
       statusId !== base.status_id ||
-      (parentId === '' ? null : Number(parentId)) !== base.parent_id
+      (parentId === '' ? null : Number(parentId)) !== base.parent_id ||
+      matrixDirty
     );
-  }, [base, name, referenceCode, description, source, statusId, parentId]);
+  }, [base, name, referenceCode, description, source, statusId, parentId, matrixDirty]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -121,6 +143,10 @@ export default function EditVerificationPage() {
       }
       for (const u of updates) {
         await updateVerificationField(vid, u.field, u.value, token);
+      }
+      if (matrixDirty) {
+        await putVerificationMatrix(pid, vid, { requirement_ids: linkedReqIds }, token);
+        setBaselineLinkedIds([...linkedReqIds].sort((a, b) => a - b));
       }
       await refreshDashboard();
       await load();
@@ -199,7 +225,7 @@ export default function EditVerificationPage() {
           {base.name}
         </h1>
         <p className="text-stitch-muted text-sm mt-2">
-          Changes are saved via the API field endpoint (one update per changed field).
+          Fields update via the API per changed column; traceability links save together with your changes.
         </p>
         {projectSlug ? (
           <p className="text-stitch-muted text-xs mt-2">
@@ -311,6 +337,23 @@ export default function EditVerificationPage() {
               is set on this record. Changing it is not exposed in this UI yet.
             </p>
           )}
+        </section>
+
+        <section className="bg-stitch-surface rounded-xl border border-stitch-border shadow-stitch p-6 md:p-8 space-y-4">
+          <div>
+            <h2 className="text-sm font-bold font-headline text-stitch-fg">Traceability (requirements)</h2>
+            <p className="text-xs text-stitch-muted mt-1">
+              Which requirements this verification covers in the matrix. Replaces all links for this test when you
+              save.
+            </p>
+          </div>
+          <RequirementMatrixPicker
+            projectId={pid}
+            requirements={requirements}
+            selectedIds={linkedReqIds}
+            onChange={setLinkedReqIds}
+            disabled={saving}
+          />
         </section>
 
         {saveError && (

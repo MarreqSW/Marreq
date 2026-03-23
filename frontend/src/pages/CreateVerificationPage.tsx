@@ -2,12 +2,15 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   createVerification,
+  listRequirements,
   listVerificationMethodsByProject,
   listVerificationStatuses,
   listVerifications,
+  putVerificationMatrix,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
-import type { Verification, VerificationMethod, VerificationStatus } from '@/api/types';
+import type { Requirement, Verification, VerificationMethod, VerificationStatus } from '@/api/types';
+import { RequirementMatrixPicker } from '@/components/RequirementMatrixPicker';
 import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
 
 const selectClass =
@@ -22,6 +25,8 @@ export default function CreateVerificationPage() {
   const [statuses, setStatuses] = useState<VerificationStatus[]>([]);
   const [methods, setMethods] = useState<VerificationMethod[]>([]);
   const [existing, setExisting] = useState<Verification[]>([]);
+  const [requirements, setRequirements] = useState<Requirement[]>([]);
+  const [linkedReqIds, setLinkedReqIds] = useState<number[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -38,14 +43,16 @@ export default function CreateVerificationPage() {
     if (!Number.isFinite(pid)) return;
     setLoadError(null);
     try {
-      const [st, meth, ver] = await Promise.all([
+      const [st, meth, ver, reqs] = await Promise.all([
         listVerificationStatuses(),
         listVerificationMethodsByProject(pid),
         listVerifications(),
+        listRequirements(pid),
       ]);
       setStatuses(st);
       setMethods(meth);
       setExisting(ver.filter((v) => v.project_id === pid));
+      setRequirements(reqs);
       const forProject = st.filter((s) => s.project_id === pid);
       const useSt = forProject.length > 0 ? forProject : st;
       if (useSt[0]) setStatusId((id) => (id === 0 ? useSt[0]!.id : id));
@@ -78,7 +85,7 @@ export default function CreateVerificationPage() {
     setSaveError(null);
     setSaving(true);
     try {
-      await createVerification(
+      const { id: newId } = await createVerification(
         {
           name: name.trim(),
           reference_code: referenceCode.trim(),
@@ -91,8 +98,21 @@ export default function CreateVerificationPage() {
         },
         token,
       );
+      if (linkedReqIds.length > 0) {
+        try {
+          await putVerificationMatrix(pid, newId, { requirement_ids: linkedReqIds }, token);
+        } catch (linkErr) {
+          await refreshDashboard();
+          const msg =
+            linkErr instanceof Error ? linkErr.message : 'Failed to save traceability links';
+          setSaveError(
+            `Verification was created (id ${newId}), but matrix links could not be saved: ${msg}. Open it from the list and edit links there.`,
+          );
+          return;
+        }
+      }
       await refreshDashboard();
-      navigate(`/p/${pid}/verifications`);
+      navigate(`/p/${pid}/verifications/${newId}`);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Create failed');
     } finally {
@@ -136,7 +156,8 @@ export default function CreateVerificationPage() {
           Create verification
         </h1>
         <p className="text-stitch-muted text-sm mt-2">
-          Add a test / verification record for this project. Link an optional parent for hierarchy.
+          Add a test / verification record for this project. Optionally link requirements for traceability and set a
+          parent for hierarchy.
         </p>
       </div>
 
@@ -253,6 +274,22 @@ export default function CreateVerificationPage() {
               </select>
             </div>
           </div>
+        </section>
+
+        <section className="bg-stitch-surface rounded-xl border border-stitch-border shadow-stitch p-6 md:p-8 space-y-4">
+          <div>
+            <h2 className="text-sm font-bold font-headline text-stitch-fg">Traceability (requirements)</h2>
+            <p className="text-xs text-stitch-muted mt-1">
+              Optional: link this verification to requirements in the matrix after it is created.
+            </p>
+          </div>
+          <RequirementMatrixPicker
+            projectId={pid}
+            requirements={requirements}
+            selectedIds={linkedReqIds}
+            onChange={setLinkedReqIds}
+            disabled={saving}
+          />
         </section>
 
         {saveError && (

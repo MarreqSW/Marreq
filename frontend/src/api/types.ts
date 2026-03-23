@@ -55,6 +55,17 @@ export interface MatrixLink {
   triggering_user_id: number | null;
 }
 
+/** GET/PUT `/api/projects/:projectId/verifications/:verificationId/matrix` */
+export interface VerificationMatrixPayload {
+  verification_id: number;
+  requirement_ids: number[];
+}
+
+/** PUT body: replace all requirement↔verification matrix rows for that verification. */
+export type VerificationMatrixPutBody = {
+  requirement_ids: number[];
+};
+
 export interface Verification {
   id: number;
   name: string;

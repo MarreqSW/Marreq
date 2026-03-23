@@ -63,6 +63,14 @@ type RequirementTableEditCell =
   | { reqId: number; kind: 'verification_methods' }
   | { reqId: number; kind: 'author' };
 
+/** Parent ids from list API (`parent_requirement_ids`) or legacy single `parent_id`. */
+function parentRequirementIdsForDisplay(req: Requirement): number[] {
+  const ids = req.parent_requirement_ids;
+  if (ids != null && ids.length > 0) return ids;
+  if (req.parent_id != null) return [req.parent_id];
+  return [];
+}
+
 function mergeRequirementAfterPatch(req: Requirement, patch: RequirementPatchBody): Requirement {
   const next: Requirement = { ...req };
   if (patch.title !== undefined) next.title = patch.title;
@@ -318,7 +326,7 @@ export default function RequirementsTable({
       'Key',
       'Title',
       'Category',
-      'Parent id',
+      'Parent ids',
       'Status',
       'Approval',
       'Verification method ids',
@@ -333,7 +341,7 @@ export default function RequirementsTable({
           escapeCsv(req.reference_code || `#${req.id}`),
           escapeCsv(req.title),
           escapeCsv(categoryById.get(req.category_id) ?? ''),
-          escapeCsv(req.parent_id != null ? String(req.parent_id) : ''),
+          escapeCsv(parentRequirementIdsForDisplay(req).join(';')),
           escapeCsv(st?.title ?? ''),
           escapeCsv(req.approval_state),
           escapeCsv((req.verification_method_ids ?? []).join(';')),
@@ -444,6 +452,7 @@ export default function RequirementsTable({
             const st = statusById.get(req.status_id);
             const statusTitle = st?.title ?? `Status #${req.status_id}`;
             const methodIds = req.verification_method_ids ?? [];
+            const parentIds = parentRequirementIdsForDisplay(req);
             const busy = savingId === req.id;
             return (
               <li
@@ -580,16 +589,24 @@ export default function RequirementsTable({
                         )}
                       </div>
                       <div>
-                        <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">Parent</p>
-                        {req.parent_id != null ? (
-                          <Link
-                            to={`/p/${projectId}/requirements/${req.parent_id}/edit`}
-                            className="text-stitch-accent hover:underline"
-                          >
-                            {reqTitleById.get(req.parent_id) ?? `REQ #${req.parent_id}`}
-                          </Link>
-                        ) : (
+                        <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">
+                          Parents
+                        </p>
+                        {parentIds.length === 0 ? (
                           <span className="text-stitch-muted">—</span>
+                        ) : (
+                          <ul className="space-y-1 list-none m-0 p-0">
+                            {parentIds.map((parentId) => (
+                              <li key={parentId}>
+                                <Link
+                                  to={`/p/${projectId}/requirements/${parentId}`}
+                                  className="text-stitch-accent hover:underline block"
+                                >
+                                  {reqTitleById.get(parentId) ?? `REQ #${parentId}`}
+                                </Link>
+                              </li>
+                            ))}
+                          </ul>
                         )}
                       </div>
                       <div className="sm:col-span-2">
@@ -721,7 +738,7 @@ export default function RequirementsTable({
                   Category
                 </th>
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[120px]">
-                  Parent
+                  Parents
                 </th>
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[110px]">
                   Status
@@ -746,6 +763,7 @@ export default function RequirementsTable({
             <tbody className="divide-y divide-stitch-border">
               {pageRows.map((req) => {
                 const methodIds = req.verification_method_ids ?? [];
+                const parentIds = parentRequirementIdsForDisplay(req);
                 const busy = savingId === req.id;
                 return (
                   <tr key={req.id} className="hover:bg-white/[0.03] transition-colors">
@@ -836,15 +854,21 @@ export default function RequirementsTable({
                       )}
                     </td>
                     <td className="px-2 py-2 align-top text-xs">
-                      {req.parent_id != null ? (
-                        <Link
-                          to={`/p/${projectId}/requirements/${req.parent_id}/edit`}
-                          className="text-stitch-accent hover:underline line-clamp-2"
-                        >
-                          {reqTitleById.get(req.parent_id) ?? `REQ #${req.parent_id}`}
-                        </Link>
-                      ) : (
+                      {parentIds.length === 0 ? (
                         <span className="text-stitch-muted">—</span>
+                      ) : (
+                        <ul className="space-y-1 list-none m-0 p-0 max-w-[200px]">
+                          {parentIds.map((parentId) => (
+                            <li key={parentId}>
+                              <Link
+                                to={`/p/${projectId}/requirements/${parentId}`}
+                                className="text-stitch-accent hover:underline line-clamp-2 block"
+                              >
+                                {reqTitleById.get(parentId) ?? `REQ #${parentId}`}
+                              </Link>
+                            </li>
+                          ))}
+                        </ul>
                       )}
                     </td>
                     <td className="px-2 py-2 align-top">

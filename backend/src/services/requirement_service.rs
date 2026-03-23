@@ -881,6 +881,108 @@ mod tests {
     }
 
     #[test]
+    fn update_reparents_version_links_to_new_current_version() {
+        use crate::models::RequirementVersionLink;
+
+        let mut repo = DieselRepoMock::default();
+        let v_parent = 100_i32;
+        let v_child = 200_i32;
+        let ts = timestamp();
+
+        repo.requirement_versions.insert(
+            v_parent,
+            RequirementVersion {
+                id: v_parent,
+                requirement_id: 2,
+                title: "Parent".into(),
+                description: "".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: ts,
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+        repo.requirement_versions.insert(
+            v_child,
+            RequirementVersion {
+                id: v_child,
+                requirement_id: 1,
+                title: "Child".into(),
+                description: "".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                category_id: 1,
+                applicability_id: 1,
+                justification: None,
+                deadline_date: None,
+                created_at: ts,
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+            },
+        );
+
+        let mut parent_req = requirement(2, 7, "REQ-P");
+        parent_req.current_version_id = Some(v_parent);
+        let mut child_req = requirement(1, 7, "REQ-C");
+        child_req.current_version_id = Some(v_child);
+        repo.requirements.insert(2, parent_req);
+        repo.requirements.insert(1, child_req);
+
+        repo.requirement_version_links.push(RequirementVersionLink {
+            id: 1,
+            source_version_id: v_child,
+            target_version_id: v_parent,
+            link_type: "DERIVES_FROM".into(),
+            rationale: None,
+            project_id: 7,
+            created_at: ts,
+            metadata: None,
+        });
+        repo.next_link_id = 2;
+        repo.next_version_id = 1000;
+
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        assert_eq!(
+            service.get_parent_requirement_ids_for_version(v_child),
+            vec![2]
+        );
+
+        let mut payload = new_payload();
+        payload.id = Some(1);
+        payload.title = "Updated child".into();
+        payload.description = "x".into();
+        payload.reference_code = "REQ-C".into();
+        payload.project_id = 7;
+
+        let _ = service
+            .update(&actor(), 1, payload, &[1], None, None)
+            .unwrap();
+
+        let updated = service.get_by_id(1).unwrap();
+        let new_vid = updated.current_version_id.expect("new version");
+
+        assert_eq!(
+            service.get_parent_requirement_ids_for_version(new_vid),
+            vec![2]
+        );
+        assert!(service
+            .get_parent_links_for_version(v_child)
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
     fn delete_removes_requirement() {
         let mut repo = DieselRepoMock::default();
         repo.requirements.insert(2, requirement(2, 7, "REQ-002"));

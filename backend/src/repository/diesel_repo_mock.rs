@@ -928,6 +928,7 @@ impl RequirementsRepository for DieselRepoMock {
         let id = _new.id.ok_or(RepoError::NotFound)?;
         match self.requirements.get_mut(&id) {
             Some(req) => {
+                let old_version_id = req.current_version_id;
                 let now = epoch();
                 let version_id = self.next_version_id;
                 self.next_version_id += 1;
@@ -950,6 +951,16 @@ impl RequirementsRepository for DieselRepoMock {
                     approved_at: None,
                 };
                 self.requirement_versions.insert(version_id, version);
+                if let Some(old_vid) = old_version_id {
+                    for link in &mut self.requirement_version_links {
+                        if link.source_version_id == old_vid {
+                            link.source_version_id = version_id;
+                        }
+                        if link.target_version_id == old_vid {
+                            link.target_version_id = version_id;
+                        }
+                    }
+                }
                 req.current_version_id = Some(version_id);
                 req.title = _new.title.clone();
                 req.description = _new.description.clone();

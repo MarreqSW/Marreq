@@ -1291,6 +1291,7 @@ impl RequirementsRepository for DieselRepo {
     }
 
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError> {
+        use schema::requirement_version_links::dsl as rvl;
         use schema::requirement_versions;
         use schema::requirements;
         let id_val = new
@@ -1298,15 +1299,13 @@ impl RequirementsRepository for DieselRepo {
             .ok_or(RepoError::Db(diesel::result::Error::NotFound))?;
         let mut conn = self.get_conn()?;
         conn.as_mut().transaction::<bool, RepoError, _>(|conn| {
-            let current_version_id: Option<i32> = requirements::table
+            let old_version_id: i32 = requirements::table
                 .filter(requirements::id.eq(id_val))
                 .select(requirements::current_version_id)
                 .get_result::<Option<i32>>(conn)
                 .optional()?
-                .flatten();
-            let Some(_) = current_version_id else {
-                return Err(diesel::result::Error::NotFound.into());
-            };
+                .flatten()
+                .ok_or(RepoError::NotFound)?;
             let version = new.to_new_version(id_val);
             let new_version_id: i32 = diesel::insert_into(requirement_versions::table)
                 .values(&version)
@@ -1315,6 +1314,20 @@ impl RequirementsRepository for DieselRepo {
             let affected = diesel::update(requirements::table.filter(requirements::id.eq(id_val)))
                 .set(requirements::current_version_id.eq(new_version_id))
                 .execute(conn)?;
+            // Keep hierarchy: version links attach to a specific requirement_version row. Without
+            // repointing, parent/child edges would still reference the previous current_version_id
+            // while `requirements.current_version_id` moved forward — list/detail enrichment would
+            // see no parents and `list_links_by_target_version(current)` would miss children.
+            diesel::update(
+                rvl::requirement_version_links.filter(rvl::source_version_id.eq(old_version_id)),
+            )
+            .set(rvl::source_version_id.eq(new_version_id))
+            .execute(conn)?;
+            diesel::update(
+                rvl::requirement_version_links.filter(rvl::target_version_id.eq(old_version_id)),
+            )
+            .set(rvl::target_version_id.eq(new_version_id))
+            .execute(conn)?;
             Ok(affected > 0)
         })
     }

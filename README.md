@@ -2,7 +2,7 @@
 
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/972f03dc70864d4e807afd7d2adcd1b0)](https://app.codacy.com?utm_source=gh&utm_medium=referral&utm_content=&utm_campaign=Badge_grade)
 
-A comprehensive web-based requirements and test management system built with Rust, Rocket, and PostgreSQL. This software provides a complete solution for managing hierarchical requirements, tests, traceability matrices, and generating reports.
+A comprehensive web-based requirements and test management system built with **Rust**, **Rocket**, and **PostgreSQL**. The **primary UI** is a **React 19 + Vite + TypeScript** SPA (Tailwind CSS; React Flow for traceability), talking to a **JSON API** under `/api`. Legacy client assets remain under `frontend/static/` for gradual migration (`@static` in Vite). This software supports hierarchical requirements, tests (verifications), traceability matrices, baselines, reports, and exports.
 
 Documentation index (by audience): [docs/README.md](docs/README.md)
 
@@ -40,11 +40,11 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 - **Baseline detail page**: View baseline metadata, requirements table, and full traceability list; requirement and test **references** (e.g. REQ-PWR-001, TEST-PWR-001) are shown instead of raw IDs, with one row per (requirement, test) link
 - **Diff vs current**: From a baseline view, compare a requirement’s snapshot to the current version in a **diff modal**; the “Diff vs current” action is hidden when the requirement is unchanged (same version as current)
 
-### 🎨 Modern UI
-- **Responsive Design**: Works on desktop and mobile devices
-- **Modern Interface**: Clean, card-based layout with consistent styling
-- **Intuitive Navigation**: Easy-to-use interface with clear visual hierarchy
-- **Professional Styling**: Consistent color scheme and typography
+### 🎨 Web UI (React SPA)
+- **Stack**: React 19, Vite 6, TypeScript, Tailwind CSS; light/dark theming and shared design tokens
+- **Routing**: Login, project-scoped requirements and verification views, requirement editor, traceability graph — see [frontend/README.md](frontend/README.md)
+- **Responsive**: Layout tuned for desktop and smaller viewports
+- **Same-origin API**: Session cookies and CSRF work when the SPA and `/api` share an origin (Docker nginx or Vite dev proxy); details in [doc/API.md](doc/API.md)
 
 ### 🔌 API Access
 - **RESTful API**: Complete programmatic access to all data
@@ -133,28 +133,37 @@ Typical flow:
 - Start database: `docker compose -f docker/docker-compose.yml up -d db`
 - Initialize DB schema: `./backend/scripts/db_setup.sh`
 - Load sample data (optional): `./backend/scripts/db_seed.sh`
-- Start app: `cargo run -p marreq` (from repo root) or `cd backend && cargo run --bin marreq`
+- Start API: `cargo run -p marreq` (from repo root) or `cd backend && cargo run --bin marreq` — serves **http://127.0.0.1:8000** with JSON under **`/api`** (no server-rendered HTML app).
 
-Then open **http://localhost:8000** in your browser (demo admin user `alice` uses password `ChangeMe123!`).
+For the **full browser UI** locally, run the SPA against that API:
+
+```bash
+cd frontend
+npm install
+npm run dev   # http://localhost:5173 — proxies /api → http://127.0.0.1:8000
+```
+
+Demo admin user **`alice`** / **`ChangeMe123!`** (change after first login).
 
 For detailed database setup options (automated, manual, reset, verification) see the [database setup guide](docs/developer/database-setup.md).
 
 ### Docker: API backend + SPA frontend
 
-The default [docker/docker-compose.yml](docker/docker-compose.yml) stack runs **two app containers**: **backend** (Rocket, JSON API only) and **frontend** (nginx + Vite-built SPA). Use the UI at **http://localhost:8080**; `/api` is proxied to Rocket on the Docker network. **Adminer** is on **http://localhost:8081**. See [docker/README.md](docker/README.md) and [doc/API.md](doc/API.md) (auth, CSRF, cookies, OpenAPI sketch).
+The default [docker/docker-compose.yml](docker/docker-compose.yml) stack runs **db**, **backend** (Rocket **JSON API** on `127.0.0.1:8000`), **frontend** (nginx serving the **production Vite build** on **http://localhost:8080** with **`/api/`** proxied to the backend), and **adminer** (**http://localhost:8081**). See [docker/README.md](docker/README.md) and [doc/API.md](doc/API.md) (auth, CSRF, cookies).
 
-Local classic SSR (`cargo run` without `MARREQ_UI_MODE=api_only`) remains available for development; backend layout notes: [docs/developer/backend-layout.md](docs/developer/backend-layout.md). The SPA package lives in [frontend/](frontend/) (`npm run dev` with Vite proxy to Rocket).
+Backend layout and optional env toggles: [docs/developer/backend-layout.md](docs/developer/backend-layout.md). SPA scripts, routes, and API mapping: [frontend/README.md](frontend/README.md).
 
 ## 📖 Usage
 
-### Web Interface
+### Web interface
 
-1. **Requirements**: Navigate to project requirements to view and manage requirements (with version history). On requirement and version detail pages, use the **Comments** section to read and add comments (add form hidden when the version is approved and comments are locked).
-2. **Tests**: Go to project tests to manage test cases
-3. **Matrix**: Visit project matrix to view the traceability matrix
-4. **Baselines**: From project dashboard or nav, open **Baselines** to create immutable snapshots, **view** a baseline (detail page with requirements and traceability), compare requirements to current via **Diff vs current** (opens diff modal; hidden when unchanged), or export a baseline as ReqIF
-5. **Categories**: Access project categories to manage requirement categories
-6. **Applicability**: Visit project applicability to manage applicability options
+Use the SPA (**Docker** `http://localhost:8080` or **`npm run dev`** in `frontend/`). Sign in, pick a project, then use requirements, verifications, traceability, and related flows from the in-app navigation.
+
+1. **Requirements**: View and manage requirements (versions, comments where exposed in the UI). Comments on requirement/version views follow project rules (e.g. locked on approved versions when configured).
+2. **Verifications (tests)**: Manage verification records per project
+3. **Traceability**: Matrix / graph views linking requirements and verifications
+4. **Baselines**: Create and inspect immutable snapshots; export ReqIF where the UI exposes it; diff vs current when available
+5. **Categories & applicability**: Managed per project where the UI provides entry points (additional admin flows may be API-only)
 
 ### Export Features
 
@@ -179,7 +188,7 @@ Local classic SSR (`cargo run` without `MARREQ_UI_MODE=api_only`) remains availa
 http://localhost:8000/api
 ```
 
-Behind the split Docker frontend, use the **same origin** as the SPA (e.g. `http://localhost:8080/api/...`). All API routes are mounted at `/api` in [src/app.rs](src/app.rs). When adding or changing API endpoints, update this section so the list stays in sync.
+Behind the Docker frontend (or Vite dev), use the **same origin** as the SPA (e.g. `http://localhost:8080/api/...`). JSON routes are mounted under `/api` from [backend/src/api/mod.rs](backend/src/api/mod.rs) (see also [backend/src/app.rs](backend/src/app.rs)). When adding or changing API endpoints, update this section so the list stays in sync.
 
 ### Endpoints
 
@@ -338,24 +347,24 @@ diesel migration redo
 
 ## 🛠️ Development
 
-### Project Structure
+### Project structure
 ```
 Marreq/
 ├── Cargo.toml              # Workspace root (virtual workspace)
-├── backend/                # Rust / Rocket application
+├── backend/                # Rust / Rocket JSON API
 │   ├── Cargo.toml
 │   ├── src/
 │   │   ├── main.rs         # Application entry point
 │   │   ├── app.rs          # Rocket bootstrap and route mounting
+│   │   ├── api/            # REST handlers under /api
+│   │   ├── routes/         # Catchers, shared helpers (e.g. project listing)
+│   │   ├── auth/           # Session, CSRF, login, guards
 │   │   ├── schema.rs       # Diesel schema (generated)
-│   │   ├── routes/         # HTML + API route handlers
 │   │   ├── services/       # Business logic and orchestration
-│   │   ├── repository/     # Data access layer (Diesel + cache)
+│   │   ├── repository/     # Data access (Diesel + cache)
 │   │   ├── models/         # Domain entities and forms
-│   │   ├── importers/      # Excel importer implementation
-│   │   ├── reqif/          # ReqIF import/export implementation
-│   │   └── html/           # Static assets (JS/CSS for SSR + Vite alias)
-│   ├── templates/          # Handlebars templates
+│   │   ├── importers/      # Excel importer
+│   │   └── reqif/          # ReqIF import/export
 │   ├── migrations/         # Database migrations
 │   └── scripts/            # Dev tooling & DB setup
 │       ├── db_setup.sh
@@ -364,26 +373,31 @@ Marreq/
 │       ├── db_reset.sh
 │       ├── db_backup.sh
 │       ├── reindex_project.sh
+│       ├── run_checks.sh   # fmt, clippy, stylelint, purgecss, npm test
 │       └── init_complete.sql
-├── frontend/               # Vite SPA (split-stack UI)
+├── frontend/               # React + Vite SPA + legacy static/
+│   ├── src/                # React app (main.tsx, routes, components)
+│   ├── static/             # Legacy JS/CSS (optional @static alias)
+│   └── package.json
 ├── docs/                   # Documentation (developers/architects/users)
 │   ├── README.md           # Documentation index
 │   └── ReqIF/              # ReqIF standards and reference docs
 ├── mcp-server/             # Optional MCP server (Node/TypeScript) for AI assistants
 ├── docker/                 # Container files (compose, Dockerfile, entrypoint, CI override)
 │   ├── docker-compose.yml  # Main Docker Compose stack
-│   ├── docker-compose.ci.yml # CI compose overrides
-│   ├── Dockerfile          # Application image build
-│   ├── docker-entrypoint.sh # Container startup/migrations
-│   └── README.md           # Docker usage guide
+│   ├── docker-compose.ci.yml
+│   ├── Dockerfile          # Backend image
+│   ├── frontend/           # Frontend image + nginx config
+│   ├── docker-entrypoint.sh
+│   └── README.md
 ```
 
-### Key Technologies
-- **Backend**: Rust with Rocket web framework
-- **Database**: PostgreSQL with Diesel ORM
-- **Frontend**: Handlebars templates with custom CSS
+### Key technologies
+- **Backend**: Rust, Rocket, Diesel, PostgreSQL
+- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS (see [frontend/README.md](frontend/README.md))
+- **Legacy assets**: `frontend/static/` (not loaded by default in the React shell)
 - **Reports**: Excel generation with xlsxwriter
-- **Containerization**: Docker for database
+- **Containerization**: Docker Compose (db, backend, frontend, optional services)
 
 ### Building
 ```bash

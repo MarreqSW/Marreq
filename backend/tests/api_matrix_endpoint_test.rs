@@ -15,9 +15,9 @@ use marreq::auth::session::SESSION_COOKIE;
 use marreq::models::*;
 use marreq::repository::diesel_repo_mock::DieselRepoMock;
 use marreq::status_enums::ProjectStatus;
-use rocket::http::{Cookie, SameSite, Status};
+use rocket::http::{ContentType, Cookie, SameSite, Status};
 use rocket::local::asynchronous::Client;
-use serde_json::Value;
+use serde_json::{json, Value};
 
 mod test_support {
     use super::*;
@@ -84,6 +84,20 @@ mod test_support {
                 group_id: None,
             },
         );
+        repo.projects.insert(
+            2,
+            Project {
+                id: 2,
+                name: "Other Project".into(),
+                description: None,
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status: ProjectStatus::Active,
+                owner_id: Some(1),
+                slug: "other-project".into(),
+                group_id: None,
+            },
+        );
 
         repo
     }
@@ -101,6 +115,46 @@ mod test_support {
             cleared_at: None,
             triggering_version_id: None,
             triggering_user_id: None,
+        }
+    }
+
+    pub fn sample_requirement(id: i32, project_id: i32, title: &str) -> Requirement {
+        Requirement {
+            id,
+            current_version_id: None,
+            same_as_current: None,
+            title: title.to_string(),
+            description: format!("{title} description"),
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            reference_code: format!("REQ-SYS-{id:03}"),
+            category_id: 1,
+            parent_id: Some(0),
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            applicability_id: 1,
+            justification: Some("Test justification".into()),
+            project_id,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
+            custom_fields: None,
+        }
+    }
+
+    pub fn sample_verification(id: i32, project_id: i32, name: &str) -> Verification {
+        Verification {
+            id,
+            name: name.to_string(),
+            reference_code: format!("TST-{id:03}"),
+            description: format!("{name} description"),
+            source: "automated".into(),
+            status_id: 1,
+            parent_id: None,
+            project_id,
+            verification_method_id: None,
         }
     }
 }
@@ -231,4 +285,132 @@ async fn get_matrix_returns_empty_array_when_no_links() {
         let matrix: Vec<Value> = response.into_json().await.expect("json");
         assert_eq!(matrix.len(), 0);
     }
+}
+
+// ============================================================================
+// Dedicated matrix API: GET/PUT .../projects/{id}/verifications/{id}/matrix
+// ============================================================================
+
+#[rocket::async_test]
+async fn get_verification_matrix_returns_linked_requirement_ids() {
+    let mut repo = base_repo();
+    repo.requirements.insert(1, sample_requirement(1, 1, "R1"));
+    repo.requirements.insert(2, sample_requirement(2, 1, "R2"));
+    repo.verifications
+        .insert(10, sample_verification(10, 1, "T1"));
+    repo.matrices.push(sample_matrix_link(1, 10, 1));
+    repo.matrices.push(sample_matrix_link(2, 10, 1));
+
+    let client = test_client(repo).await;
+    let response = client
+        .get("/api/projects/1/verifications/10/matrix")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let body: Value = response.into_json().await.expect("json");
+    assert_eq!(body["verification_id"], 10);
+    let ids: Vec<i32> = serde_json::from_value(body["requirement_ids"].clone()).unwrap();
+    assert_eq!(ids, vec![1, 2]);
+}
+
+#[rocket::async_test]
+async fn put_verification_matrix_replaces_links() {
+    let mut repo = base_repo();
+    repo.requirements.insert(1, sample_requirement(1, 1, "R1"));
+    repo.requirements.insert(2, sample_requirement(2, 1, "R2"));
+    repo.verifications
+        .insert(10, sample_verification(10, 1, "T1"));
+    repo.matrices.push(sample_matrix_link(1, 10, 1));
+
+    let client = test_client(repo).await;
+    let response = client
+        .put("/api/projects/1/verifications/10/matrix")
+        .header(ContentType::JSON)
+        .body(json!({ "requirement_ids": [2] }).to_string())
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let body: Value = response.into_json().await.expect("json");
+    assert_eq!(body["status"], "ok");
+    let ids: Vec<i32> = serde_json::from_value(body["requirement_ids"].clone()).unwrap();
+    assert_eq!(ids, vec![2]);
+
+    let check = client
+        .get("/api/projects/1/verifications/10/matrix")
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+    assert_eq!(check.status(), Status::Ok);
+    let check_body: Value = check.into_json().await.expect("json");
+    let got: Vec<i32> = serde_json::from_value(check_body["requirement_ids"].clone()).unwrap();
+    assert_eq!(got, vec![2]);
+}
+
+#[rocket::async_test]
+async fn put_verification_matrix_forbidden_for_viewer() {
+    let mut repo = base_repo();
+    repo.requirements.insert(1, sample_requirement(1, 1, "R1"));
+    repo.verifications
+        .insert(10, sample_verification(10, 1, "T1"));
+    repo.project_members.push(ProjectMember {
+        project_id: 1,
+        user_id: 2,
+        role: 4,
+        created_at: timestamp(),
+        updated_at: timestamp(),
+    });
+
+    let client = test_client(repo).await;
+    let response = client
+        .put("/api/projects/1/verifications/10/matrix")
+        .header(ContentType::JSON)
+        .body(json!({ "requirement_ids": [1] }).to_string())
+        .private_cookie(session_cookie(2))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn put_verification_matrix_not_found_when_verification_other_project() {
+    let mut repo = base_repo();
+    repo.requirements.insert(1, sample_requirement(1, 1, "R1"));
+    repo.verifications
+        .insert(10, sample_verification(10, 2, "T1"));
+
+    let client = test_client(repo).await;
+    let response = client
+        .put("/api/projects/1/verifications/10/matrix")
+        .header(ContentType::JSON)
+        .body(json!({ "requirement_ids": [1] }).to_string())
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::NotFound);
+}
+
+#[rocket::async_test]
+async fn put_verification_matrix_bad_request_when_requirement_wrong_project() {
+    let mut repo = base_repo();
+    repo.requirements
+        .insert(99, sample_requirement(99, 2, "R99"));
+    repo.verifications
+        .insert(10, sample_verification(10, 1, "T1"));
+
+    let client = test_client(repo).await;
+    let response = client
+        .put("/api/projects/1/verifications/10/matrix")
+        .header(ContentType::JSON)
+        .body(json!({ "requirement_ids": [99] }).to_string())
+        .private_cookie(session_cookie(1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::BadRequest);
 }

@@ -26,6 +26,8 @@ import type {
   User,
   Verification,
   TaggedMetadataBody,
+  VerificationMatrixPayload,
+  VerificationMatrixPutBody,
   VerificationMethod,
   VerificationMethodWriteBody,
   VerificationStatus,
@@ -122,6 +124,35 @@ export async function listRequirements(projectId: number): Promise<Requirement[]
 
 export async function listMatrix(projectId: number): Promise<MatrixLink[]> {
   return fetchJson<MatrixLink[]>(`/api/projects/${projectId}/matrix`);
+}
+
+export async function getVerificationMatrix(
+  projectId: number,
+  verificationId: number,
+): Promise<VerificationMatrixPayload> {
+  return fetchJson<VerificationMatrixPayload>(
+    `/api/projects/${projectId}/verifications/${verificationId}/matrix`,
+  );
+}
+
+/** Replace traceability links for this verification (full list; empty array unlinks all). */
+export async function putVerificationMatrix(
+  projectId: number,
+  verificationId: number,
+  body: VerificationMatrixPutBody,
+  csrfToken: string,
+): Promise<VerificationMatrixPayload & { status: string }> {
+  return fetchJson<VerificationMatrixPayload & { status: string }>(
+    `/api/projects/${projectId}/verifications/${verificationId}/matrix`,
+    {
+      method: 'PUT',
+      headers: {
+        ...JSON_HEADERS,
+        'X-CSRF-Token': csrfToken,
+      },
+      body: JSON.stringify(body),
+    },
+  );
 }
 
 /** All verifications (filter by project_id client-side). */

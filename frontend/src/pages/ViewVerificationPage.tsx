@@ -3,6 +3,8 @@ import { Link, useParams } from 'react-router-dom';
 import {
   getMyPermissions,
   getVerification,
+  getVerificationMatrix,
+  listRequirements,
   listVerificationMethodsByProject,
   listVerificationStatuses,
   listVerifications,
@@ -11,6 +13,7 @@ import { useDashboard } from '@/context/DashboardContext';
 import { StatusBadge } from '@/components/StatusBadge';
 import type {
   EffectivePermissions,
+  Requirement,
   Verification,
   VerificationMethod,
   VerificationStatus,
@@ -36,18 +39,22 @@ export default function ViewVerificationPage() {
   const [methods, setMethods] = useState<VerificationMethod[]>([]);
   const [siblings, setSiblings] = useState<Verification[]>([]);
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
+  const [requirements, setRequirements] = useState<Requirement[]>([]);
+  const [linkedReqIds, setLinkedReqIds] = useState<number[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid) || !Number.isFinite(vid)) return;
     setLoadError(null);
     try {
-      const [v, st, m, all, p] = await Promise.all([
+      const [v, st, m, all, p, reqs, mx] = await Promise.all([
         getVerification(vid),
         listVerificationStatuses(),
         listVerificationMethodsByProject(pid),
         listVerifications(),
         getMyPermissions(pid).catch(() => null),
+        listRequirements(pid),
+        getVerificationMatrix(pid, vid),
       ]);
       if (v.project_id !== pid) {
         setLoadError('This verification belongs to another project.');
@@ -58,6 +65,8 @@ export default function ViewVerificationPage() {
       setMethods(m);
       setSiblings(all.filter((x) => x.project_id === pid && x.id !== vid));
       setPerms(p);
+      setRequirements(reqs);
+      setLinkedReqIds([...mx.requirement_ids].sort((a, b) => a - b));
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load verification');
     }
@@ -83,6 +92,12 @@ export default function ViewVerificationPage() {
     if (!row?.parent_id) return null;
     return siblings.find((x) => x.id === row.parent_id) ?? null;
   }, [row, siblings]);
+
+  const reqById = useMemo(() => new Map(requirements.map((r) => [r.id, r])), [requirements]);
+
+  const linkedRequirements = useMemo(() => {
+    return linkedReqIds.map((id) => reqById.get(id)).filter(Boolean) as Requirement[];
+  }, [linkedReqIds, reqById]);
 
   const canEdit = Boolean(perms?.edit_requirements);
 
@@ -200,6 +215,61 @@ export default function ViewVerificationPage() {
           </div>
         </dl>
 
+      </section>
+
+      <section className="mt-8 bg-stitch-surface rounded-xl border border-stitch-border shadow-stitch p-6 md:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+          <div>
+            <h2 className="text-sm font-bold font-headline text-stitch-fg">Linked requirements</h2>
+            <p className="text-[10px] text-stitch-muted mt-1">
+              Traceability matrix: this verification is linked from these requirements.
+            </p>
+          </div>
+          {canEdit ? (
+            <Link
+              to={`/p/${pid}/verifications/${vid}/edit`}
+              className="text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline"
+            >
+              Edit links
+            </Link>
+          ) : null}
+        </div>
+        {linkedReqIds.length === 0 ? (
+          <p className="text-sm text-stitch-muted">
+            No requirement links yet.
+            {canEdit ? (
+              <>
+                {' '}
+                <Link to={`/p/${pid}/verifications/${vid}/edit`} className="text-stitch-accent font-semibold hover:underline">
+                  Add links in the editor
+                </Link>
+                .
+              </>
+            ) : null}
+          </p>
+        ) : (
+          <ul className="space-y-2">
+            {linkedRequirements.map((r) => (
+              <li key={r.id}>
+                <Link
+                  to={`/p/${pid}/requirements/${r.id}`}
+                  className="group flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm"
+                >
+                  <span className="font-mono text-stitch-accent font-semibold group-hover:underline">
+                    {r.reference_code || `#${r.id}`}
+                  </span>
+                  <span className="text-stitch-fg group-hover:underline">{r.title}</span>
+                </Link>
+              </li>
+            ))}
+            {linkedReqIds.some((id) => !reqById.has(id)) ? (
+              <li className="text-xs text-amber-200/90">
+                Some linked requirement ids are missing from the project list (ids:{' '}
+                {linkedReqIds.filter((id) => !reqById.has(id)).join(', ')}).
+              </li>
+            ) : null}
+          </ul>
+        )}
       </section>
 
       <section className="mt-8 bg-stitch-surface rounded-xl border border-stitch-border shadow-stitch overflow-hidden">

@@ -352,6 +352,45 @@ export default function ViewRequirementPage() {
                     `Applicability #${detail.applicability_id}`}
                 </dd>
               </div>
+              <div className="sm:col-span-2">
+                <dt className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-2">Parents</dt>
+                <dd>
+                  {ts.parent_links.length === 0 ? (
+                    <span className="text-stitch-muted text-sm">None</span>
+                  ) : (
+                    <ul className="space-y-2 list-none m-0 p-0">
+                      {ts.parent_links.map((l) => {
+                        const parentReq = resolveParentReq(l);
+                        return (
+                          <li
+                            key={l.id}
+                            className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-sm border border-stitch-border rounded-lg px-3 py-2 bg-stitch-elevated/80"
+                          >
+                            {parentReq ? (
+                              <Link
+                                to={`/p/${pid}/requirements/${parentReq.id}`}
+                                className="font-mono font-semibold text-stitch-accent hover:underline shrink-0"
+                              >
+                                {parentReq.reference_code || `#${parentReq.id}`}
+                              </Link>
+                            ) : (
+                              <span className="text-stitch-muted font-mono text-xs">
+                                Version #{l.target_version_id}
+                              </span>
+                            )}
+                            <span className="text-stitch-fg line-clamp-2 min-w-0">
+                              {parentReq?.title?.trim() ? parentReq.title : '—'}
+                            </span>
+                            <span className="text-[10px] font-bold text-stitch-muted uppercase tracking-wide shrink-0">
+                              {l.link_type}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </dd>
+              </div>
               <div>
                 <dt className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">Modified</dt>
                 <dd className="text-stitch-fg font-mono text-xs">{formatTs(detail.update_date)}</dd>

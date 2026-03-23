@@ -68,6 +68,9 @@ pub struct RequirementListRow {
     #[serde(flatten)]
     pub requirement: Requirement,
     pub verification_method_ids: Vec<i32>,
+    /// All parent requirement ids from version links (current version as source); `parent_id` on
+    /// [`Requirement`] remains the first for backwards compatibility.
+    pub parent_requirement_ids: Vec<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -119,9 +122,14 @@ pub async fn list_by_project(
             let verification_method_ids = service
                 .get_verification_method_ids(requirement.id)
                 .unwrap_or_default();
+            let parent_requirement_ids = requirement
+                .current_version_id
+                .map(|vid| service.get_parent_requirement_ids_for_version(vid))
+                .unwrap_or_default();
             RequirementListRow {
                 requirement,
                 verification_method_ids,
+                parent_requirement_ids,
             }
         })
         .collect();

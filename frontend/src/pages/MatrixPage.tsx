@@ -4,11 +4,20 @@ import {
   clearTraceabilitySuspect,
   listMatrix,
   listRequirements,
+  listVerificationMethodsByProject,
+  listVerificationStatuses,
   listVerifications,
 } from '@/api/client';
+import { StatusBadge } from '@/components/StatusBadge';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
-import type { MatrixLink, Requirement, Verification } from '@/api/types';
+import type {
+  MatrixLink,
+  Requirement,
+  Verification,
+  VerificationMethod,
+  VerificationStatus,
+} from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 const PAGE_SIZE = 50;
@@ -22,6 +31,8 @@ export default function MatrixPage() {
   const [matrix, setMatrix] = useState<MatrixLink[]>([]);
   const [reqs, setReqs] = useState<Requirement[]>([]);
   const [vers, setVers] = useState<Verification[]>([]);
+  const [statuses, setStatuses] = useState<VerificationStatus[]>([]);
+  const [methods, setMethods] = useState<VerificationMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [page, setPage] = useState(1);
@@ -33,14 +44,18 @@ export default function MatrixPage() {
     setLoading(true);
     setErr(null);
     try {
-      const [mx, r, allV] = await Promise.all([
+      const [mx, r, allV, st, m] = await Promise.all([
         listMatrix(pid),
         listRequirements(pid),
         listVerifications(),
+        listVerificationStatuses(),
+        listVerificationMethodsByProject(pid),
       ]);
       setMatrix(mx);
       setReqs(r);
       setVers(allV.filter((v) => v.project_id === pid));
+      setStatuses(st);
+      setMethods(m);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load matrix');
     } finally {
@@ -54,6 +69,8 @@ export default function MatrixPage() {
 
   const reqById = useMemo(() => new Map(reqs.map((r) => [r.id, r])), [reqs]);
   const verById = useMemo(() => new Map(vers.map((v) => [v.id, v])), [vers]);
+  const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses]);
+  const methodById = useMemo(() => new Map(methods.map((m) => [m.id, m])), [methods]);
 
   const q = globalSearch.trim().toLowerCase();
   const filtered = useMemo(() => {
@@ -63,11 +80,18 @@ export default function MatrixPage() {
     return rows.filter((m) => {
       const r = reqById.get(m.req_id);
       const t = verById.get(m.verification_id);
+      const st = t ? statusById.get(t.status_id) : undefined;
+      const meth = t?.verification_method_id
+        ? methodById.get(t.verification_method_id)
+        : undefined;
       const blob = [
         r?.reference_code,
         r?.title,
         t?.reference_code,
         t?.name,
+        st?.title,
+        st?.tag,
+        meth?.title,
         String(m.req_id),
         String(m.verification_id),
       ]
@@ -75,7 +99,23 @@ export default function MatrixPage() {
         .toLowerCase();
       return blob.includes(q);
     });
-  }, [matrix, suspectOnly, q, reqById, verById]);
+  }, [matrix, suspectOnly, q, reqById, verById, statusById, methodById]);
+
+  /** Count matrix rows by linked verification status (test outcome / workflow state). */
+  const statusRollup = useMemo(() => {
+    const counts = new Map<string, { n: number; tagColor: string | null }>();
+    for (const m of filtered) {
+      const t = verById.get(m.verification_id);
+      const st = t ? statusById.get(t.status_id) : undefined;
+      const label = st?.title ?? (t ? `Status #${t.status_id}` : 'Unknown verification');
+      const prev = counts.get(label);
+      counts.set(label, {
+        n: (prev?.n ?? 0) + 1,
+        tagColor: st?.tag_color ?? prev?.tagColor ?? null,
+      });
+    }
+    return [...counts.entries()].sort((a, b) => b[1].n - a[1].n);
+  }, [filtered, verById, statusById]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
@@ -123,7 +163,7 @@ export default function MatrixPage() {
         projectName={projectName}
         section="Matrix"
         title="Traceability matrix"
-        subtitle="All requirement ↔ verification links for this project. Matches legacy matrix data; use Classic UI for bulk Excel/CSV export with extra filters."
+        subtitle="Each row is one traceability link. Verification status reflects the test record (passed, failed, pending, etc., per your project catalog)."
       >
         <a
           href={`/p/${pid}/matrix`}
@@ -155,13 +195,29 @@ export default function MatrixPage() {
         </p>
       </div>
 
+      {statusRollup.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-[10px] uppercase tracking-widest text-stitch-muted font-bold">
+            By verification status
+          </span>
+          {statusRollup.map(([label, { n, tagColor }]) => (
+            <span key={label} className="inline-flex items-center gap-1.5">
+              <StatusBadge title={label} tagColor={tagColor} />
+              <span className="text-xs text-stitch-muted tabular-nums">×{n}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
       <div className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm min-w-[640px]">
+          <table className="w-full text-left text-sm min-w-[900px]">
             <thead>
               <tr className="border-b border-stitch-border bg-stitch-elevated text-[10px] text-stitch-muted uppercase tracking-widest">
                 <th className="px-4 py-3">Requirement</th>
                 <th className="px-4 py-3">Verification</th>
+                <th className="px-4 py-3">Test status</th>
+                <th className="px-4 py-3">Method</th>
                 <th className="px-4 py-3 text-center">Suspect</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
@@ -169,7 +225,7 @@ export default function MatrixPage() {
             <tbody className="divide-y divide-stitch-border">
               {slice.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-4 py-10 text-center text-stitch-muted">
+                  <td colSpan={6} className="px-4 py-10 text-center text-stitch-muted">
                     No links match filters.
                   </td>
                 </tr>
@@ -177,7 +233,13 @@ export default function MatrixPage() {
                 slice.map((m) => {
                   const r = reqById.get(m.req_id);
                   const t = verById.get(m.verification_id);
+                  const vst = t ? statusById.get(t.status_id) : undefined;
+                  const meth =
+                    t?.verification_method_id != null
+                      ? methodById.get(t.verification_method_id)
+                      : undefined;
                   const bkey = `${m.req_id}-${m.verification_id}`;
+                  const statusTitle = vst?.title ?? (t ? `Status #${t.status_id}` : 'Unknown');
                   return (
                     <tr key={`${m.req_id}-${m.verification_id}-${m.creation_date}`} className="hover:bg-white/[0.03]">
                       <td className="px-4 py-3">
@@ -197,6 +259,12 @@ export default function MatrixPage() {
                           {t?.reference_code ?? `#${m.verification_id}`}
                         </Link>
                         <p className="text-xs text-stitch-muted line-clamp-1">{t?.name ?? '—'}</p>
+                      </td>
+                      <td className="px-4 py-3 align-middle">
+                        <StatusBadge title={statusTitle} tagColor={vst?.tag_color} />
+                      </td>
+                      <td className="px-4 py-3 text-stitch-muted text-xs">
+                        {meth?.title ?? '—'}
                       </td>
                       <td className="px-4 py-3 text-center">
                         {m.suspect ? (

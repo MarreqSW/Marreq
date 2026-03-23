@@ -110,6 +110,8 @@ pub fn routes() -> Vec<Route> {
         users::delete,
         matrix::list,
         matrix::list_by_project,
+        matrix::get_verification_matrix,
+        matrix::put_verification_matrix,
         traceability::trace_up,
         traceability::trace_down,
         traceability::coverage_report,

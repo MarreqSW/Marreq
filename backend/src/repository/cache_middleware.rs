@@ -521,11 +521,20 @@ impl<R: Repository> VerificationsRepository for CacheRepository<R> {
         verification_id: i32,
         requirement_ids: &[i32],
     ) -> Result<(), RepoError> {
+        let project_id = self
+            .inner
+            .get_verification_by_id(verification_id)
+            .ok()
+            .map(|v| v.project_id);
         self.inner
             .update_verification_requirement_links(verification_id, requirement_ids)?;
         self.cache.invalidate_verification(verification_id);
         for &requirement_id in requirement_ids {
             self.cache.invalidate_requirement(requirement_id);
+        }
+        if let Some(pid) = project_id {
+            self.cache
+                .remove(&super::cache::keys::Matrix::by_project(pid));
         }
         Ok(())
     }

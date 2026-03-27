@@ -204,9 +204,10 @@ export default function ViewVerificationPage() {
               ) : parentRow ? (
                 <Link
                   to={`/p/${pid}/verifications/${row.parent_id}`}
-                  className="text-stitch-accent font-medium hover:underline"
+                  className="font-mono font-semibold text-stitch-accent hover:underline"
+                  title={parentRow.name?.trim() || undefined}
                 >
-                  {parentRow.reference_code || `#${parentRow.id}`} — {parentRow.name}
+                  {(parentRow.reference_code ?? '').trim() || `#${parentRow.id}`}
                 </Link>
               ) : (
                 <span className="text-stitch-muted">Parent #{row.parent_id}</span>

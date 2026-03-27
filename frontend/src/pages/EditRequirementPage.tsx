@@ -699,12 +699,10 @@ export default function EditRequirementPage() {
                                 <Link
                                   to={`/p/${pid}/requirements/${parentReq.id}/edit`}
                                   className="block hover:opacity-90 transition-opacity"
+                                  title={parentReq.title?.trim() || undefined}
                                 >
-                                  <span className="font-mono text-[10px] font-bold text-stitch-accent">
-                                    {parentReq.reference_code || `#${parentReq.id}`}
-                                  </span>
-                                  <span className="block text-xs font-medium text-stitch-fg truncate">
-                                    {parentReq.title}
+                                  <span className="font-mono text-xs font-bold text-stitch-accent">
+                                    {(parentReq.reference_code ?? '').trim() || `#${parentReq.id}`}
                                   </span>
                                   <span className="text-[10px] text-stitch-muted">{l.link_type}</span>
                                 </Link>

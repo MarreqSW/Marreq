@@ -369,18 +369,16 @@ export default function ViewRequirementPage() {
                             {parentReq ? (
                               <Link
                                 to={`/p/${pid}/requirements/${parentReq.id}`}
-                                className="font-mono font-semibold text-stitch-accent hover:underline shrink-0"
+                                className="font-mono font-semibold text-stitch-accent hover:underline min-w-0"
+                                title={parentReq.title?.trim() || undefined}
                               >
-                                {parentReq.reference_code || `#${parentReq.id}`}
+                                {(parentReq.reference_code ?? '').trim() || `#${parentReq.id}`}
                               </Link>
                             ) : (
                               <span className="text-stitch-muted font-mono text-xs">
                                 Version #{l.target_version_id}
                               </span>
                             )}
-                            <span className="text-stitch-fg line-clamp-2 min-w-0">
-                              {parentReq?.title?.trim() ? parentReq.title : '—'}
-                            </span>
                             <span className="text-[10px] font-bold text-stitch-muted uppercase tracking-wide shrink-0">
                               {l.link_type}
                             </span>
@@ -437,11 +435,11 @@ export default function ViewRequirementPage() {
                             <Link
                               to={`/p/${pid}/requirements/${parentReq.id}`}
                               className="block p-3 rounded-lg border border-stitch-border bg-stitch-elevated hover:bg-stitch-higher transition-colors"
+                              title={parentReq.title?.trim() || undefined}
                             >
-                              <span className="font-mono text-[10px] font-bold text-stitch-accent block">
-                                {parentReq.reference_code || `#${parentReq.id}`}
+                              <span className="font-mono text-xs font-bold text-stitch-accent block">
+                                {(parentReq.reference_code ?? '').trim() || `#${parentReq.id}`}
                               </span>
-                              <span className="text-xs text-stitch-fg line-clamp-2">{parentReq.title}</span>
                               <span className="text-[10px] text-stitch-muted">{l.link_type}</span>
                             </Link>
                           ) : (

@@ -208,6 +208,16 @@ export default function RequirementsTable({
     [members],
   );
 
+  /** Reference code (KEY) per requirement id — used for parent column display. */
+  const reqKeyById = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const r of requirements) {
+      const key = (r.reference_code ?? '').trim();
+      m.set(r.id, key || `#${r.id}`);
+    }
+    return m;
+  }, [requirements]);
+
   const reqTitleById = useMemo(() => {
     const m = new Map<number, string>();
     for (const r of requirements) m.set(r.id, r.title);
@@ -600,9 +610,10 @@ export default function RequirementsTable({
                               <li key={parentId}>
                                 <Link
                                   to={`/p/${projectId}/requirements/${parentId}`}
-                                  className="text-stitch-accent hover:underline block"
+                                  className="text-stitch-accent hover:underline block font-mono text-xs"
+                                  title={reqTitleById.get(parentId) ?? undefined}
                                 >
-                                  {reqTitleById.get(parentId) ?? `REQ #${parentId}`}
+                                  {reqKeyById.get(parentId) ?? `REQ #${parentId}`}
                                 </Link>
                               </li>
                             ))}
@@ -862,9 +873,10 @@ export default function RequirementsTable({
                             <li key={parentId}>
                               <Link
                                 to={`/p/${projectId}/requirements/${parentId}`}
-                                className="text-stitch-accent hover:underline line-clamp-2 block"
+                                className="text-stitch-accent hover:underline line-clamp-2 block font-mono text-xs"
+                                title={reqTitleById.get(parentId) ?? undefined}
                               >
-                                {reqTitleById.get(parentId) ?? `REQ #${parentId}`}
+                                {reqKeyById.get(parentId) ?? `REQ #${parentId}`}
                               </Link>
                             </li>
                           ))}

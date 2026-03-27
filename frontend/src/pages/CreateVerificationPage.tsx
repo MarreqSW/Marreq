@@ -75,6 +75,13 @@ export default function CreateVerificationPage() {
 
   const statusMeta = useMemo(() => statuses.find((s) => s.id === statusId), [statuses, statusId]);
 
+  const selectedParent = useMemo(() => {
+    if (parentId === '') return null;
+    const id = Number(parentId);
+    if (!Number.isFinite(id)) return null;
+    return existing.find((x) => x.id === id) ?? null;
+  }, [parentId, existing]);
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     const token = csrfToken ?? '';
@@ -249,10 +256,22 @@ export default function CreateVerificationPage() {
                 </option>
                 {existing.map((v) => (
                   <option key={v.id} value={v.id} className="bg-stitch-surface text-stitch-fg">
-                    {v.reference_code} — {v.name}
+                    {(v.reference_code ?? '').trim() || `#${v.id}`} —{' '}
+                    {v.name.length > 48 ? `${v.name.slice(0, 48)}…` : v.name}
                   </option>
                 ))}
               </select>
+              {parentId !== '' ? (
+                <div className="mt-1.5">
+                  <Link
+                    to={`/p/${pid}/verifications/${parentId}`}
+                    className="text-xs font-mono font-semibold text-stitch-accent hover:underline"
+                    title={selectedParent?.name?.trim() || undefined}
+                  >
+                    {(selectedParent?.reference_code ?? '').trim() || `#${parentId}`}
+                  </Link>
+                </div>
+              ) : null}
             </div>
             <div>
               <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">

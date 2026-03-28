@@ -404,6 +404,10 @@ async fn update_test_field_with_invalid_field_name_returns_error() {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         },
     );
 
@@ -441,6 +445,10 @@ async fn update_test_field_with_invalid_status_value_returns_error() {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         },
     );
 

@@ -473,6 +473,8 @@ mod tests {
                     approval_state: "draft".to_string(),
                     approved_by: None,
                     approved_at: None,
+                    reviewed_by: None,
+                    reviewed_at: None,
                 },
             );
         }
@@ -509,6 +511,8 @@ mod tests {
                 approval_state: "draft".to_string(),
                 approved_by: None,
                 approved_at: None,
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
         repo.requirement_version_links.push(RequirementVersionLink {
@@ -653,6 +657,10 @@ mod tests {
                 parent_id: None,
                 project_id: 1,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             },
         );
 
@@ -666,6 +674,10 @@ mod tests {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         };
         let t2 = Verification {
             id: 21,
@@ -677,6 +689,10 @@ mod tests {
             parent_id: Some(10),
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         };
         let t3 = Verification {
             id: 22,
@@ -688,6 +704,10 @@ mod tests {
             parent_id: Some(999),
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         };
 
         let decorated = decorate_verifications_impl(&repo, vec![t1, t2, t3]);
@@ -760,6 +780,10 @@ mod tests {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         };
         repo.requirements.insert(1, req);
         repo.verifications.insert(10, test);

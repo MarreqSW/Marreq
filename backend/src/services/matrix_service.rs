@@ -563,6 +563,10 @@ mod tests {
                 parent_id: None,
                 project_id: 42,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             },
         );
         let state = state_with_repo(repo);
@@ -620,6 +624,10 @@ mod tests {
                 parent_id: None,
                 project_id: 2, // ← project 2
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             },
         );
         let state = state_with_repo(repo);
@@ -677,6 +685,10 @@ mod tests {
                 parent_id: None,
                 project_id: 5,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             },
         );
         let state = state_with_repo(repo);
@@ -736,6 +748,10 @@ mod tests {
                 parent_id: None,
                 project_id: 1,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             },
         );
         repo.verifications.insert(
@@ -750,6 +766,10 @@ mod tests {
                 parent_id: None,
                 project_id: 1,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             },
         );
 
@@ -868,6 +888,10 @@ mod tests {
                 parent_id: None,
                 project_id: 1,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             },
         );
 
@@ -884,6 +908,10 @@ mod tests {
                 parent_id: None,
                 project_id: 1,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             },
         );
 
@@ -1445,6 +1473,10 @@ mod tests {
                 parent_id: None,
                 project_id: 1,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             },
         );
         repo.matrices.push(MatrixLink {
@@ -1552,6 +1584,10 @@ mod tests {
                 parent_id: None,
                 project_id: 1,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             },
         );
         repo.matrices.push(MatrixLink {
@@ -1621,6 +1657,10 @@ mod tests {
                 parent_id: None,
                 project_id: 1,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             },
         );
         repo.matrices.push(MatrixLink {

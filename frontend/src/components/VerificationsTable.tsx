@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import {
   getMyPermissions,
+  listUsersOptional,
   listVerificationMethodsByProject,
   listVerificationStatuses,
   listVerifications,
@@ -10,6 +11,7 @@ import {
 } from '@/api/client';
 import type {
   EffectivePermissions,
+  User,
   Verification,
   VerificationMethod,
   VerificationStatus,
@@ -53,6 +55,7 @@ export default function VerificationsTable({
   const [statuses, setStatuses] = useState<VerificationStatus[]>([]);
   const [methods, setMethods] = useState<VerificationMethod[]>([]);
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
+  const [users, setUsers] = useState<User[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [saveErr, setSaveErr] = useState<string | null>(null);
@@ -69,16 +72,18 @@ export default function VerificationsTable({
     setLoading(true);
     setErr(null);
     try {
-      const [ver, st, m, p] = await Promise.all([
+      const [ver, st, m, p, u] = await Promise.all([
         listVerifications(),
         listVerificationStatuses(),
         listVerificationMethodsByProject(projectId),
         getMyPermissions(projectId).catch(() => null),
+        listUsersOptional(),
       ]);
       setRows(ver.filter((v) => v.project_id === projectId));
       setStatuses(st);
       setMethods(m);
       setPerms(p);
+      setUsers(u);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -168,15 +173,25 @@ export default function VerificationsTable({
 
   const closeCellEdit = () => setEditCell(null);
 
+  const userLabel = useCallback(
+    (uid: number) => {
+      const u = users?.find((x) => x.id === uid);
+      if (u) return `${u.name} (${u.username})`;
+      return `User #${uid}`;
+    },
+    [users],
+  );
+
   const saveField = useCallback(
     async (id: number, field: string, value: string) => {
       const token = csrfToken ?? '';
       if (!token || !perms?.edit_requirements) return;
+      if (field === 'status_id' && !perms?.is_project_reviewer) return;
       setSaveErr(null);
       setEditCell((prev) => (prev?.verId === id ? null : prev));
       setSavingId(id);
       try {
-        await updateVerificationField(id, field, value, token);
+        await updateVerificationField(projectId, id, field, value, token);
       } catch (e) {
         setSaveErr(e instanceof Error ? e.message : 'Save failed');
         await load();
@@ -184,7 +199,7 @@ export default function VerificationsTable({
         setSavingId(null);
       }
     },
-    [csrfToken, perms?.edit_requirements, load],
+    [csrfToken, perms?.edit_requirements, perms?.is_project_reviewer, projectId, load],
   );
 
   const resetFilters = useCallback(() => {
@@ -192,7 +207,16 @@ export default function VerificationsTable({
   }, []);
 
   const exportCsv = useCallback(() => {
-    const headers = ['Key', 'Title', 'Parent key', 'Status', 'Verification', 'Source'];
+    const headers = [
+      'Key',
+      'Title',
+      'Parent key',
+      'Status',
+      'Author',
+      'Reviewer',
+      'Verification',
+      'Source',
+    ];
     const lines = [headers.join(',')];
     for (const v of filtered) {
       const stRow = statusById.get(v.status_id);
@@ -213,6 +237,8 @@ export default function VerificationsTable({
           escapeCsv(v.name),
           escapeCsv(parentKey),
           escapeCsv(stRow?.title ?? ''),
+          escapeCsv(userLabel(v.author_id)),
+          escapeCsv(userLabel(v.reviewer_id)),
           escapeCsv(methodTitle),
           escapeCsv(v.source),
         ].join(','),
@@ -225,9 +251,12 @@ export default function VerificationsTable({
     a.download = `verifications-project-${projectId}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [filtered, statusById, methods, rows, projectId]);
+  }, [filtered, statusById, methods, rows, projectId, userLabel]);
 
-  const canEdit = Boolean(perms?.edit_requirements && (csrfToken ?? '').length);
+  const canEditFields = Boolean(perms?.edit_requirements && (csrfToken ?? '').length);
+  const canEditVerificationStatus = Boolean(
+    perms?.edit_requirements && perms?.is_project_reviewer && (csrfToken ?? '').length,
+  );
 
   const cellInput =
     'w-full min-w-[90px] max-w-[min(100%,280px)] text-xs bg-stitch-elevated border border-stitch-border rounded px-2 py-1.5 text-stitch-fg focus:border-stitch-accent outline-none disabled:opacity-50';
@@ -378,7 +407,7 @@ export default function VerificationsTable({
                       <span className="font-mono text-sm text-stitch-accent font-semibold">
                         {v.reference_code || `#${v.id}`}
                       </span>
-                      {editCell?.verId === v.id && editCell.kind === 'status' && canEdit && !busy ? (
+                      {editCell?.verId === v.id && editCell.kind === 'status' && canEditVerificationStatus && !busy ? (
                         <div ref={inlineEditRef} className="min-w-[160px]">
                           <select
                             className={cellSelect}
@@ -404,7 +433,7 @@ export default function VerificationsTable({
                             )}
                           </select>
                         </div>
-                      ) : canEdit && !busy ? (
+                      ) : canEditVerificationStatus && !busy ? (
                         <button
                           type="button"
                           title="Click to edit status"
@@ -419,7 +448,7 @@ export default function VerificationsTable({
                     </div>
                     <div>
                       <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">Title</p>
-                      {editCell?.verId === v.id && editCell.kind === 'name' && canEdit && !busy ? (
+                      {editCell?.verId === v.id && editCell.kind === 'name' && canEditFields && !busy ? (
                         <div ref={inlineEditRef}>
                           <input
                             className={cellInput}
@@ -436,7 +465,7 @@ export default function VerificationsTable({
                             }}
                           />
                         </div>
-                      ) : canEdit && !busy ? (
+                      ) : canEditFields && !busy ? (
                         <button
                           type="button"
                           title="Click to edit title"
@@ -468,7 +497,7 @@ export default function VerificationsTable({
                         </p>
                         {editCell?.verId === v.id &&
                         editCell.kind === 'verification_method' &&
-                        canEdit &&
+                        canEditFields &&
                         !busy ? (
                           <div ref={inlineEditRef}>
                             <select
@@ -496,7 +525,7 @@ export default function VerificationsTable({
                               ))}
                             </select>
                           </div>
-                        ) : canEdit && !busy ? (
+                        ) : canEditFields && !busy ? (
                           <button
                             type="button"
                             className={displayCellBtn}
@@ -512,7 +541,7 @@ export default function VerificationsTable({
                         <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">
                           Source
                         </p>
-                        {editCell?.verId === v.id && editCell.kind === 'source' && canEdit && !busy ? (
+                        {editCell?.verId === v.id && editCell.kind === 'source' && canEditFields && !busy ? (
                           <div ref={inlineEditRef}>
                             <input
                               className={cellInput}
@@ -529,7 +558,7 @@ export default function VerificationsTable({
                               }}
                             />
                           </div>
-                        ) : canEdit && !busy ? (
+                        ) : canEditFields && !busy ? (
                           <button type="button" className={displayCellBtn} onClick={() => setEditCell({ verId: v.id, kind: 'source' })}>
                             {v.source.trim() ? v.source : '—'}
                           </button>
@@ -541,7 +570,13 @@ export default function VerificationsTable({
                         <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">
                           Author
                         </p>
-                        <span className="text-stitch-muted">—</span>
+                        <span className="text-stitch-fg/90">{userLabel(v.author_id)}</span>
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">
+                          Reviewer
+                        </p>
+                        <span className="text-stitch-fg/90">{userLabel(v.reviewer_id)}</span>
                       </div>
                     </div>
                   </div>
@@ -584,6 +619,12 @@ export default function VerificationsTable({
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[110px]">
                   Status
                 </th>
+                <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[100px]">
+                  Author
+                </th>
+                <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[100px]">
+                  Reviewer
+                </th>
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[140px]">
                   Verification
                 </th>
@@ -610,7 +651,7 @@ export default function VerificationsTable({
                     <td className="px-2 py-2 align-top sticky left-0 z-[1] bg-stitch-surface border-r border-stitch-border/60 max-w-[min(140px,18vw)]">
                       {editCell?.verId === v.id &&
                       editCell.kind === 'reference_code' &&
-                      canEdit &&
+                      canEditFields &&
                       !busy ? (
                         <div ref={inlineEditRef}>
                           <input
@@ -628,7 +669,7 @@ export default function VerificationsTable({
                             }}
                           />
                         </div>
-                      ) : canEdit && !busy ? (
+                      ) : canEditFields && !busy ? (
                         <button
                           type="button"
                           title="Click to edit reference"
@@ -644,7 +685,7 @@ export default function VerificationsTable({
                       )}
                     </td>
                     <td className="px-2 py-2 align-top max-w-[min(280px,26vw)]">
-                      {editCell?.verId === v.id && editCell.kind === 'name' && canEdit && !busy ? (
+                      {editCell?.verId === v.id && editCell.kind === 'name' && canEditFields && !busy ? (
                         <div ref={inlineEditRef}>
                           <input
                             className={cellInput}
@@ -661,7 +702,7 @@ export default function VerificationsTable({
                             }}
                           />
                         </div>
-                      ) : canEdit && !busy ? (
+                      ) : canEditFields && !busy ? (
                         <button
                           type="button"
                           title="Click to edit title"
@@ -680,7 +721,7 @@ export default function VerificationsTable({
                       {renderParentCell(v, rows)}
                     </td>
                     <td className="px-2 py-2 align-top min-w-[110px]">
-                      {editCell?.verId === v.id && editCell.kind === 'status' && canEdit && !busy ? (
+                      {editCell?.verId === v.id && editCell.kind === 'status' && canEditVerificationStatus && !busy ? (
                         <div ref={inlineEditRef}>
                           <select
                             className={cellSelect}
@@ -706,7 +747,7 @@ export default function VerificationsTable({
                             )}
                           </select>
                         </div>
-                      ) : canEdit && !busy ? (
+                      ) : canEditVerificationStatus && !busy ? (
                         <button
                           type="button"
                           title="Click to edit status"
@@ -721,10 +762,20 @@ export default function VerificationsTable({
                         </span>
                       )}
                     </td>
+                    <td className="px-2 py-2 align-top text-xs text-stitch-fg/90 max-w-[140px]">
+                      <span className="line-clamp-2" title={userLabel(v.author_id)}>
+                        {userLabel(v.author_id)}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2 align-top text-xs text-stitch-fg/90 max-w-[140px]">
+                      <span className="line-clamp-2" title={userLabel(v.reviewer_id)}>
+                        {userLabel(v.reviewer_id)}
+                      </span>
+                    </td>
                     <td className="px-2 py-2 align-top min-w-[140px]">
                       {editCell?.verId === v.id &&
                       editCell.kind === 'verification_method' &&
-                      canEdit &&
+                      canEditFields &&
                       !busy ? (
                         <div ref={inlineEditRef}>
                           <select
@@ -752,7 +803,7 @@ export default function VerificationsTable({
                             ))}
                           </select>
                         </div>
-                      ) : canEdit && !busy ? (
+                      ) : canEditFields && !busy ? (
                         <button
                           type="button"
                           title="Click to edit verification"
@@ -768,7 +819,7 @@ export default function VerificationsTable({
                       )}
                     </td>
                     <td className="px-2 py-2 align-top max-w-[160px]">
-                      {editCell?.verId === v.id && editCell.kind === 'source' && canEdit && !busy ? (
+                      {editCell?.verId === v.id && editCell.kind === 'source' && canEditFields && !busy ? (
                         <div ref={inlineEditRef}>
                           <input
                             className={cellInput}
@@ -785,7 +836,7 @@ export default function VerificationsTable({
                             }}
                           />
                         </div>
-                      ) : canEdit && !busy ? (
+                      ) : canEditFields && !busy ? (
                         <button
                           type="button"
                           title="Click to edit source"

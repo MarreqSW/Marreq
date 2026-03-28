@@ -17,6 +17,7 @@ pub mod mcp;
 pub mod members;
 pub mod meta;
 pub mod prelude;
+pub mod projects;
 pub mod projects_session;
 pub mod requirement_diff;
 pub mod requirement_version_links;
@@ -138,6 +139,8 @@ pub fn routes() -> Vec<Route> {
         semantic_search::index_status,
         semantic_search::search_status,
         mcp::audit,
+        // Project creation
+        projects::create,
         // Group endpoints
         groups::list,
         groups::get,

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
+  createProject,
   deleteGroup,
   getGroup,
   listGroupMembers,
@@ -21,7 +22,7 @@ export default function GroupViewPage() {
   const { groupId } = useParams();
   const gid = Number(groupId);
   const navigate = useNavigate();
-  const { csrfToken, dashboard } = useDashboard();
+  const { csrfToken, dashboard, refresh: refreshDashboard } = useDashboard();
   const currentUserId = (dashboard?.user as { id?: number } | undefined)?.id;
 
   const [group, setGroup] = useState<GroupResponse | null>(null);
@@ -31,6 +32,13 @@ export default function GroupViewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+
+  // Create project inline form
+  const [showCreateProject, setShowCreateProject] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectDesc, setNewProjectDesc] = useState('');
+  const [createProjectBusy, setCreateProjectBusy] = useState(false);
+  const [createProjectError, setCreateProjectError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(gid)) return;
@@ -60,8 +68,12 @@ export default function GroupViewPage() {
 
   const userMap = new Map(users.map((u) => [u.id, u]));
   const isOwner = members.some((m) => m.user_id === currentUserId && m.role === 1);
+  const isMaintainer = members.some(
+    (m) => m.user_id === currentUserId && (m.role === 1 || m.role === 2),
+  );
   const isAdmin = (dashboard?.user as { is_admin?: boolean } | undefined)?.is_admin ?? false;
   const canManage = isOwner || isAdmin;
+  const canCreateProject = isMaintainer || isAdmin;
 
   async function handleDelete() {
     if (!window.confirm('Delete this group? Projects in this group will need to be reassigned.'))
@@ -78,6 +90,36 @@ export default function GroupViewPage() {
       setDeleteBusy(false);
     }
   }
+
+  async function handleCreateProject() {
+    const token = csrfToken ?? '';
+    if (!token || !newProjectName.trim()) return;
+    setCreateProjectBusy(true);
+    setCreateProjectError(null);
+    try {
+      const result = await createProject(
+        {
+          name: newProjectName.trim(),
+          description: newProjectDesc.trim() || null,
+          group_id: gid,
+        },
+        token,
+      );
+      setNewProjectName('');
+      setNewProjectDesc('');
+      setShowCreateProject(false);
+      await refreshDashboard();
+      await load();
+      navigate(`/${group!.slug}/${result.slug}/dashboard`);
+    } catch (e) {
+      setCreateProjectError(e instanceof Error ? e.message : 'Failed to create project');
+    } finally {
+      setCreateProjectBusy(false);
+    }
+  }
+
+  const inputClass =
+    'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
 
   if (loading) {
     return (
@@ -145,16 +187,89 @@ export default function GroupViewPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Projects */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-4">
             <div className="bg-stitch-surface rounded-xl border border-stitch-border shadow-stitch overflow-hidden">
               <div className="px-5 py-3 border-b border-stitch-border bg-stitch-elevated flex items-center justify-between">
                 <h2 className="text-xs font-bold uppercase tracking-widest text-stitch-muted">
                   Projects ({projects.length})
                 </h2>
+                {canCreateProject && !showCreateProject && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateProject(true)}
+                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline"
+                  >
+                    <span className="material-symbols-outlined text-sm">add</span>
+                    New project
+                  </button>
+                )}
               </div>
-              {projects.length === 0 ? (
+
+              {showCreateProject && (
+                <div className="px-5 py-4 border-b border-stitch-border bg-stitch-elevated/50 space-y-3">
+                  <div>
+                    <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+                      Project name
+                    </label>
+                    <input
+                      value={newProjectName}
+                      onChange={(e) => setNewProjectName(e.target.value)}
+                      placeholder="e.g. Flight Control System"
+                      className={inputClass}
+                      autoFocus
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+                      Description (optional)
+                    </label>
+                    <input
+                      value={newProjectDesc}
+                      onChange={(e) => setNewProjectDesc(e.target.value)}
+                      placeholder="Brief description"
+                      className={inputClass}
+                    />
+                  </div>
+                  {createProjectError && (
+                    <div className="text-xs text-red-400">{createProjectError}</div>
+                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={createProjectBusy || !newProjectName.trim()}
+                      onClick={() => void handleCreateProject()}
+                      className="bg-gradient-to-br from-[#000666] to-[#1a237e] text-white px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-widest shadow-lg disabled:opacity-50 hover:opacity-95 transition-opacity"
+                    >
+                      {createProjectBusy ? 'Creating…' : 'Create'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCreateProject(false);
+                        setNewProjectName('');
+                        setNewProjectDesc('');
+                        setCreateProjectError(null);
+                      }}
+                      className="text-xs font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-fg transition-colors px-2 py-1.5"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {projects.length === 0 && !showCreateProject ? (
                 <div className="p-6 text-center text-sm text-stitch-muted">
-                  No projects in this group yet.
+                  <p>No projects in this group yet.</p>
+                  {canCreateProject && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCreateProject(true)}
+                      className="mt-3 text-sm font-semibold text-stitch-accent hover:underline"
+                    >
+                      Create the first project
+                    </button>
+                  )}
                 </div>
               ) : (
                 <ul className="divide-y divide-stitch-border">

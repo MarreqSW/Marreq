@@ -136,8 +136,11 @@ async fn workflow_traceability_lifecycle() {
                 "source": "manual",
                 "status_id": 1,
                 "reference_code": "TST-001",
-                "parent_id": 0,
-                "project_id": 1
+                "parent_id": null,
+                "project_id": 1,
+                "verification_method_id": null,
+                "author_id": 1,
+                "reviewer_id": 1
             })
             .to_string(),
         )

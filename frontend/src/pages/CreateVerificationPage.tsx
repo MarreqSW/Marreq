@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   createVerification,
+  getProjectReviewers,
   listProjectMembers,
   listUsersOptional,
   listRequirements,
@@ -48,6 +49,7 @@ export default function CreateVerificationPage() {
   const [parentId, setParentId] = useState<string>(''); // "" = none
   const [methodId, setMethodId] = useState<string>(''); // "" = none
   const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [projectReviewerIds, setProjectReviewerIds] = useState<number[]>([]);
   const [authorId, setAuthorId] = useState(0);
   const [reviewerId, setReviewerId] = useState(0);
   const [users, setUsers] = useState<User[] | null>(null);
@@ -56,14 +58,16 @@ export default function CreateVerificationPage() {
     if (!Number.isFinite(pid)) return;
     setLoadError(null);
     try {
-      const [st, meth, ver, reqs, mem, userList] = await Promise.all([
+      const [st, meth, ver, reqs, mem, userList, revPool] = await Promise.all([
         listVerificationStatuses(),
         listVerificationMethodsByProject(pid),
         listVerifications(),
         listRequirements(pid),
         listProjectMembers(pid),
         listUsersOptional(),
+        getProjectReviewers(pid).catch(() => ({ user_ids: [] as number[] })),
       ]);
+      setProjectReviewerIds(revPool.user_ids);
       setUsers(userList);
       setStatuses(st);
       setMethods(meth);
@@ -75,12 +79,17 @@ export default function CreateVerificationPage() {
       if (useSt[0]) setStatusId((id) => (id === 0 ? useSt[0]!.id : id));
       const sessionUserId = (dashboard?.user as { id?: number } | undefined)?.id;
       const mids = mem.map((m) => m.user_id);
-      const pick =
+      const authorPick =
         sessionUserId != null && mids.includes(sessionUserId)
           ? sessionUserId
           : [...mids].sort((a, b) => a - b)[0] ?? 0;
-      setAuthorId((prev) => (prev === 0 ? pick : prev));
-      setReviewerId((prev) => (prev === 0 ? pick : prev));
+      const revSorted = [...revPool.user_ids].sort((a, b) => a - b);
+      const reviewerPick =
+        sessionUserId != null && revPool.user_ids.includes(sessionUserId)
+          ? sessionUserId
+          : revSorted[0] ?? 0;
+      setAuthorId((prev) => (prev === 0 ? authorPick : prev));
+      setReviewerId((prev) => (prev === 0 ? reviewerPick : prev));
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load form data');
     }
@@ -127,7 +136,7 @@ export default function CreateVerificationPage() {
     setSaving(true);
     try {
       if (authorId <= 0 || reviewerId <= 0) {
-        setSaveError('Select author and reviewer (project members).');
+        setSaveError('Select author (project member) and reviewer (must be a project reviewer).');
         setSaving(false);
         return;
       }
@@ -357,21 +366,31 @@ export default function CreateVerificationPage() {
               <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                 Reviewer
               </label>
-              <select
-                className={selectClass}
-                value={reviewerId || ''}
-                onChange={(e) => setReviewerId(Number(e.target.value))}
-                required
-              >
-                <option value="" disabled>
-                  Select…
-                </option>
-                {members.map((m) => (
-                  <option key={`r-${m.user_id}`} value={m.user_id} className="bg-stitch-surface text-stitch-fg">
-                    {userLabel(m.user_id)}
+              {projectReviewerIds.length === 0 ? (
+                <p className="text-xs text-stitch-muted py-2">
+                  No project reviewers configured. Add them in{' '}
+                  <Link to={`/p/${pid}/settings`} className="text-stitch-accent underline font-semibold">
+                    Project settings
+                  </Link>{' '}
+                  before assigning a reviewer.
+                </p>
+              ) : (
+                <select
+                  className={selectClass}
+                  value={reviewerId || ''}
+                  onChange={(e) => setReviewerId(Number(e.target.value))}
+                  required
+                >
+                  <option value="" disabled>
+                    Select…
                   </option>
-                ))}
-              </select>
+                  {[...projectReviewerIds].sort((a, b) => a - b).map((uid) => (
+                    <option key={`r-${uid}`} value={uid} className="bg-stitch-surface text-stitch-fg">
+                      {userLabel(uid)}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
         </section>
@@ -407,7 +426,7 @@ export default function CreateVerificationPage() {
           </Link>
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || projectReviewerIds.length === 0}
             className="bg-stitch-accent text-stitch-canvas px-6 py-2.5 rounded-md text-xs font-bold uppercase tracking-widest shadow-stitch disabled:opacity-50 hover:bg-stitch-accent-dim transition-colors"
           >
             {saving ? 'Creating…' : 'Create verification'}

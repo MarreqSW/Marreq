@@ -166,6 +166,10 @@ mod tests {
                 parent_id: None,
                 project_id: 1,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             };
 
             let display = format!("{}", ver);
@@ -184,6 +188,10 @@ mod tests {
                 parent_id: Some(10),
                 project_id: 1,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             };
 
             let display = format!("{}", ver);
@@ -329,6 +337,10 @@ mod tests {
                 parent_id: None,
                 project_id: 4,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             };
 
             assert_eq!(Verification::entity_type(), EntityType::Verification);
@@ -696,6 +708,8 @@ mod tests {
                 parent_id: None,
                 project_id: 4,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
             };
 
             assert_eq!(NewVerification::entity_type(), EntityType::Verification);
@@ -1395,6 +1409,10 @@ mod tests {
                 parent_id: Some(5),
                 project_id: 1,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             };
 
             assert_eq!(ver.parent_id, Some(5));
@@ -1468,6 +1486,8 @@ mod tests {
                 parent_id: Some(5),
                 project_id: 1,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
             };
 
             assert_eq!(new_ver.id, Some(1));

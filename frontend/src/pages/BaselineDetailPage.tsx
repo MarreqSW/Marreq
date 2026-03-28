@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useOutletContext, useParams } from 'react-router-dom';
 import {
   getBaseline,
   getBaselineRequirements,
@@ -14,10 +14,12 @@ import type {
   BaselineVerificationSnapshot,
   Requirement,
 } from '@/api/types';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 export default function BaselineDetailPage() {
-  const { projectId: projectIdParam, baselineId: baselineIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { basePath, projectId } = useOutletContext<ProjectOutletContext>();
+  const { baselineId: baselineIdParam } = useParams();
+  const pid = projectId;
   const bid = Number(baselineIdParam);
   const { dashboard } = useDashboard();
 
@@ -71,7 +73,7 @@ export default function BaselineDetailPage() {
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-200 text-sm">
           {err ?? 'Not found'}
         </div>
-        <Link to={`/p/${pid}/baselines`} className="text-stitch-accent text-sm font-semibold">
+        <Link to={`${basePath}/baselines`} className="text-stitch-accent text-sm font-semibold">
           ← Back to baselines
         </Link>
       </div>
@@ -83,7 +85,7 @@ export default function BaselineDetailPage() {
   return (
     <div>
       <nav className="flex items-center gap-2 text-[10px] font-semibold text-stitch-muted mb-4 uppercase tracking-widest">
-        <Link to={`/p/${pid}/baselines`} className="hover:text-stitch-accent">
+        <Link to={`${basePath}/baselines`} className="hover:text-stitch-accent">
           Baselines
         </Link>
         <span className="material-symbols-outlined text-sm">chevron_right</span>
@@ -97,7 +99,7 @@ export default function BaselineDetailPage() {
         subtitle={meta.description ?? 'Snapshot contents from the API.'}
       >
         <a
-          href={`/p/${pid}/baselines/${bid}`}
+          href={`${basePath}/baselines/${bid}`}
           className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
         >
           Classic view

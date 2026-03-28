@@ -2,6 +2,8 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   createVerification,
+  listProjectMembers,
+  listUsersOptional,
   listRequirements,
   listVerificationMethodsByProject,
   listVerificationStatuses,
@@ -9,7 +11,14 @@ import {
   putVerificationMatrix,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
-import type { Requirement, Verification, VerificationMethod, VerificationStatus } from '@/api/types';
+import type {
+  ProjectMember,
+  User,
+  Requirement,
+  Verification,
+  VerificationMethod,
+  VerificationStatus,
+} from '@/api/types';
 import { RequirementMatrixPicker } from '@/components/RequirementMatrixPicker';
 import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
 
@@ -38,28 +47,44 @@ export default function CreateVerificationPage() {
   const [statusId, setStatusId] = useState(0);
   const [parentId, setParentId] = useState<string>(''); // "" = none
   const [methodId, setMethodId] = useState<string>(''); // "" = none
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [authorId, setAuthorId] = useState(0);
+  const [reviewerId, setReviewerId] = useState(0);
+  const [users, setUsers] = useState<User[] | null>(null);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid)) return;
     setLoadError(null);
     try {
-      const [st, meth, ver, reqs] = await Promise.all([
+      const [st, meth, ver, reqs, mem, userList] = await Promise.all([
         listVerificationStatuses(),
         listVerificationMethodsByProject(pid),
         listVerifications(),
         listRequirements(pid),
+        listProjectMembers(pid),
+        listUsersOptional(),
       ]);
+      setUsers(userList);
       setStatuses(st);
       setMethods(meth);
       setExisting(ver.filter((v) => v.project_id === pid));
       setRequirements(reqs);
+      setMembers(mem);
       const forProject = st.filter((s) => s.project_id === pid);
       const useSt = forProject.length > 0 ? forProject : st;
       if (useSt[0]) setStatusId((id) => (id === 0 ? useSt[0]!.id : id));
+      const sessionUserId = (dashboard?.user as { id?: number } | undefined)?.id;
+      const mids = mem.map((m) => m.user_id);
+      const pick =
+        sessionUserId != null && mids.includes(sessionUserId)
+          ? sessionUserId
+          : [...mids].sort((a, b) => a - b)[0] ?? 0;
+      setAuthorId((prev) => (prev === 0 ? pick : prev));
+      setReviewerId((prev) => (prev === 0 ? pick : prev));
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load form data');
     }
-  }, [pid]);
+  }, [pid, dashboard?.user]);
 
   useEffect(() => {
     void load();
@@ -74,6 +99,15 @@ export default function CreateVerificationPage() {
   }, [statuses, pid]);
 
   const statusMeta = useMemo(() => statuses.find((s) => s.id === statusId), [statuses, statusId]);
+
+  const userLabel = useCallback(
+    (id: number) => {
+      const u = users?.find((x) => x.id === id);
+      if (u) return `${u.name} (${u.username})`;
+      return `User #${id}`;
+    },
+    [users],
+  );
 
   const selectedParent = useMemo(() => {
     if (parentId === '') return null;
@@ -92,6 +126,11 @@ export default function CreateVerificationPage() {
     setSaveError(null);
     setSaving(true);
     try {
+      if (authorId <= 0 || reviewerId <= 0) {
+        setSaveError('Select author and reviewer (project members).');
+        setSaving(false);
+        return;
+      }
       const { id: newId } = await createVerification(
         {
           name: name.trim(),
@@ -102,6 +141,8 @@ export default function CreateVerificationPage() {
           parent_id: parentId === '' ? null : Number(parentId),
           project_id: pid,
           verification_method_id: methodId === '' ? null : Number(methodId),
+          author_id: authorId,
+          reviewer_id: reviewerId,
         },
         token,
       );
@@ -288,6 +329,46 @@ export default function CreateVerificationPage() {
                 {methods.map((m) => (
                   <option key={m.id} value={m.id} className="bg-stitch-surface text-stitch-fg">
                     {m.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+                Author
+              </label>
+              <select
+                className={selectClass}
+                value={authorId || ''}
+                onChange={(e) => setAuthorId(Number(e.target.value))}
+                required
+              >
+                <option value="" disabled>
+                  Select…
+                </option>
+                {members.map((m) => (
+                  <option key={m.user_id} value={m.user_id} className="bg-stitch-surface text-stitch-fg">
+                    {userLabel(m.user_id)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+                Reviewer
+              </label>
+              <select
+                className={selectClass}
+                value={reviewerId || ''}
+                onChange={(e) => setReviewerId(Number(e.target.value))}
+                required
+              >
+                <option value="" disabled>
+                  Select…
+                </option>
+                {members.map((m) => (
+                  <option key={`r-${m.user_id}`} value={m.user_id} className="bg-stitch-surface text-stitch-fg">
+                    {userLabel(m.user_id)}
                   </option>
                 ))}
               </select>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import { useTheme, type ThemePreference } from '@/context/ThemeContext';
@@ -35,6 +35,63 @@ export default function ProjectLayout() {
   const { preference, setPreference } = useTheme();
   const [sidebarWide, setSidebarWide] = useState(true);
   const [globalSearch, setGlobalSearch] = useState('');
+  const [createMenuOpen, setCreateMenuOpen] = useState(false);
+  const createMenuRef = useRef<HTMLDivElement | null>(null);
+
+  const onVerificationsSection = /\/verifications(\/|$)/.test(location.pathname);
+
+  const createMenuItems = useMemo(
+    () =>
+      onVerificationsSection
+        ? [
+            {
+              to: `/p/${pid}/verifications/new`,
+              label: 'Create verification',
+              compact: 'Verification',
+              icon: 'verified' as const,
+            },
+            {
+              to: `/p/${pid}/requirements/new`,
+              label: 'Create requirement',
+              compact: 'Requirement',
+              icon: 'list_alt' as const,
+            },
+          ]
+        : [
+            {
+              to: `/p/${pid}/requirements/new`,
+              label: 'Create requirement',
+              compact: 'Requirement',
+              icon: 'list_alt' as const,
+            },
+            {
+              to: `/p/${pid}/verifications/new`,
+              label: 'Create verification',
+              compact: 'Verification',
+              icon: 'verified' as const,
+            },
+          ],
+    [onVerificationsSection, pid],
+  );
+
+  const primaryCreate = createMenuItems[0];
+
+  useEffect(() => {
+    if (!createMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (createMenuRef.current?.contains(e.target as Node)) return;
+      setCreateMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCreateMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [createMenuOpen]);
 
   const projects = dashboard?.projects ?? [];
   const invalid =
@@ -257,14 +314,59 @@ export default function ProjectLayout() {
                 <span className="material-symbols-outlined text-xl">settings</span>
               </Link>
             </div>
-            <Link
-              to={`/p/${pid}/requirements/new`}
-              title="Create requirement"
-              className="bg-gradient-to-br from-[#000666] to-[#1a237e] text-white px-4 py-2 text-sm font-semibold rounded-md shadow-lg active:scale-95 transition-transform flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-sm">add</span>
-              <span className="hidden lg:inline">Create Requirement</span>
-            </Link>
+            <div className="relative inline-flex" ref={createMenuRef}>
+              <div className="inline-flex rounded-md shadow-lg overflow-hidden">
+                <Link
+                  to={primaryCreate.to}
+                  title={primaryCreate.label}
+                  onClick={() => setCreateMenuOpen(false)}
+                  className="bg-gradient-to-br from-[#000666] to-[#1a237e] text-white pl-4 pr-3 py-2 text-sm font-semibold flex items-center gap-2 hover:opacity-95 active:scale-[0.99] transition-transform"
+                >
+                  <span className="material-symbols-outlined text-sm shrink-0">add</span>
+                  <span className="hidden lg:inline whitespace-nowrap">{primaryCreate.label}</span>
+                  <span className="hidden sm:inline lg:hidden whitespace-nowrap">
+                    {primaryCreate.compact}
+                  </span>
+                </Link>
+                <button
+                  type="button"
+                  title="More create options"
+                  aria-expanded={createMenuOpen}
+                  aria-haspopup="menu"
+                  aria-label="Open create menu"
+                  onClick={() => setCreateMenuOpen((o) => !o)}
+                  className="bg-gradient-to-br from-[#000666] to-[#1a237e] text-white px-2 py-2 border-l border-white/25 hover:opacity-95 flex items-center justify-center shrink-0"
+                >
+                  <span
+                    className={`material-symbols-outlined text-xl transition-transform ${createMenuOpen ? 'rotate-180' : ''}`}
+                    aria-hidden
+                  >
+                    expand_more
+                  </span>
+                </button>
+              </div>
+              {createMenuOpen ? (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-[calc(100%+6px)] min-w-[220px] rounded-lg border border-stitch-border bg-stitch-surface shadow-stitch py-1 z-[60]"
+                >
+                  {createMenuItems.map((item) => (
+                    <Link
+                      key={item.to}
+                      role="menuitem"
+                      to={item.to}
+                      onClick={() => setCreateMenuOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-stitch-fg hover:bg-stitch-elevated transition-colors"
+                    >
+                      <span className="material-symbols-outlined text-stitch-accent text-lg">
+                        {item.icon}
+                      </span>
+                      {item.label}
+                    </Link>
+                  ))}
+                </div>
+              ) : null}
+            </div>
             <div
               className="w-8 h-8 rounded-full border-2 border-stitch-accent/50 bg-stitch-elevated flex items-center justify-center text-[10px] font-bold text-stitch-fg"
               title={user ? `${user.name} (${user.username})` : 'User'}

@@ -14,6 +14,7 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 - **Test Management**: Manage tests with status tracking and source documentation
 - **Traceability Matrix**: Visual mapping between requirements and tests; requirement detail page lists **all** linked tests per requirement (“Verified by” section with links to test pages)
 - **User Management**: Assign authors and reviewers to requirements with authentication
+- **Project reviewers**: Per-project list of members who may change **requirement status**, **verification status**, and **version approval** (draft / reviewed / approved); configured in the SPA **Settings** or via `GET`/`PUT /api/projects/<id>/reviewers`
 
 ### 🏷️ Advanced Features
 - **Requirement comments**: Comment threads on requirements and optional requirement versions; author, timestamp, optional version reference; chronological list; immutable after creation. UI panel on requirement/version detail pages; approved versions can be locked from new comments (`LOCK_APPROVED_VERSION_COMMENTS`). Comments in audit logs and in Excel/ReqIF exports.
@@ -61,7 +62,7 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 - See [MCP Setup](docs/developer/mcp-setup.md) for environment variables, tool list, and how to run the server.
 
 ### ✅ Requirement approval workflow (UI)
-- **Detail page**: Approval badge (draft / reviewed / approved), metadata (approved by, date), and contextual actions: *Mark as Reviewed* and *Approve Requirement* (for project owners/managers). Confirmation modals before each transition.
+- **Detail page**: Approval badge (draft / reviewed / approved), metadata (approved by, date), and contextual actions: *Mark as Reviewed* and *Approve Requirement* for users in the **project reviewers** list (or administrators). Confirmation modals before each transition.
 - **Edit when approved**: Clicking *Edit* on an approved requirement shows a warning that editing creates a new Draft version; user can cancel or proceed.
 - **Version history**: Each version shows its approval state; list and detail show approval consistently.
 - **List view**: Approval column and filters (*Approved only* / *Not approved*). Approval state is read-only once set; transitions are explicit and audit-friendly.

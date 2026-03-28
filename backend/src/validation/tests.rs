@@ -308,6 +308,8 @@ mod tests {
                 parent_id: None,
                 project_id: 1,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
             }
         }
 
@@ -1502,6 +1504,8 @@ mod tests {
                 parent_id: Some(10),
                 project_id: 1,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
             };
             assert!(validate_verification(&test).is_ok());
         }

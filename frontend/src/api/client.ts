@@ -13,6 +13,7 @@ import type {
   MatrixLink,
   NewVerificationBody,
   ProjectMember,
+  ProjectReviewersResponse,
   Requirement,
   RequirementCommentItem,
   RequirementCreateBody,
@@ -236,6 +237,32 @@ export async function listProjectMembers(projectId: number): Promise<ProjectMemb
   return fetchJson<ProjectMember[]>(`/api/projects/${projectId}/members`);
 }
 
+export async function getProjectReviewers(
+  projectId: number,
+): Promise<ProjectReviewersResponse> {
+  return fetchJson<ProjectReviewersResponse>(
+    `/api/projects/${projectId}/reviewers`,
+  );
+}
+
+export async function putProjectReviewers(
+  projectId: number,
+  userIds: number[],
+  csrfToken: string,
+): Promise<ProjectReviewersResponse> {
+  return fetchJson<ProjectReviewersResponse>(
+    `/api/projects/${projectId}/reviewers`,
+    {
+      method: 'PUT',
+      headers: {
+        ...JSON_HEADERS,
+        'X-CSRF-Token': csrfToken,
+      },
+      body: JSON.stringify({ user_ids: userIds }),
+    },
+  );
+}
+
 export async function getCoverageReport(projectId: number): Promise<CoverageReport> {
   return fetchJson<CoverageReport>(`/api/projects/${projectId}/coverage_report`);
 }
@@ -259,19 +286,23 @@ export async function getVerification(verificationId: number): Promise<Verificat
 }
 
 export async function updateVerificationField(
+  projectId: number,
   verificationId: number,
   field: string,
   value: string,
   csrfToken: string,
 ): Promise<void> {
-  await fetchJson(`/api/verifications/${verificationId}/field`, {
-    method: 'POST',
-    headers: {
-      ...JSON_HEADERS,
-      'X-CSRF-Token': csrfToken,
+  await fetchJson(
+    `/api/projects/${projectId}/verifications/${verificationId}/field`,
+    {
+      method: 'POST',
+      headers: {
+        ...JSON_HEADERS,
+        'X-CSRF-Token': csrfToken,
+      },
+      body: JSON.stringify({ field, value }),
     },
-    body: JSON.stringify({ field, value }),
-  });
+  );
 }
 
 export async function listRequirementComments(

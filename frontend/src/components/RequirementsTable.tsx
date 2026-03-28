@@ -225,11 +225,15 @@ export default function RequirementsTable({
   }, [requirements]);
 
   const canEdit = Boolean(perms?.edit_requirements && (csrfToken ?? '').length);
+  const canEditStatus = Boolean(
+    perms?.edit_requirements && perms?.is_project_reviewer && (csrfToken ?? '').length,
+  );
 
   const saveReq = useCallback(
     async (id: number, patch: RequirementPatchBody) => {
       const token = csrfToken ?? '';
       if (!token || !perms?.edit_requirements) return;
+      if (patch.status_id !== undefined && !perms?.is_project_reviewer) return;
       setSaveErr(null);
       setEditCell((prev) => (prev?.reqId === id ? null : prev));
       setSavingId(id);
@@ -248,7 +252,7 @@ export default function RequirementsTable({
         setSavingId(null);
       }
     },
-    [csrfToken, perms?.edit_requirements, projectId],
+    [csrfToken, perms?.edit_requirements, perms?.is_project_reviewer, projectId],
   );
 
   const statusOptions = useMemo(() => {
@@ -475,7 +479,7 @@ export default function RequirementsTable({
                       <span className="font-mono text-sm text-stitch-accent font-semibold">
                         {req.reference_code || `#${req.id}`}
                       </span>
-                      {editCell?.reqId === req.id && editCell.kind === 'status' && canEdit && !busy ? (
+                      {editCell?.reqId === req.id && editCell.kind === 'status' && canEditStatus && !busy ? (
                         <div ref={inlineEditRef} className="min-w-[160px]">
                           <select
                             className={cellSelect}
@@ -501,7 +505,7 @@ export default function RequirementsTable({
                             )}
                           </select>
                         </div>
-                      ) : canEdit && !busy ? (
+                      ) : canEditStatus && !busy ? (
                         <button
                           type="button"
                           title="Click to edit status"
@@ -884,7 +888,7 @@ export default function RequirementsTable({
                       )}
                     </td>
                     <td className="px-2 py-2 align-top">
-                      {editCell?.reqId === req.id && editCell.kind === 'status' && canEdit && !busy ? (
+                      {editCell?.reqId === req.id && editCell.kind === 'status' && canEditStatus && !busy ? (
                         <div ref={inlineEditRef}>
                           <select
                             className={cellSelect}
@@ -910,7 +914,7 @@ export default function RequirementsTable({
                             )}
                           </select>
                         </div>
-                      ) : canEdit && !busy ? (
+                      ) : canEditStatus && !busy ? (
                         <button
                           type="button"
                           title="Click to edit status"

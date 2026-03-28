@@ -228,9 +228,13 @@ mod tests {
 
     /// Runs the fairing's on_liftoff by launching a minimal Rocket with timeout.
     /// With EMBEDDINGS_ENABLED unset, the fairing hits the "disabled" path and returns early.
+    ///
+    /// Uses port `0` so the OS picks a free port — avoids `Address already in use` when the
+    /// default `8000` is taken (dev server, parallel tests, or another process).
     #[tokio::test]
     async fn fairing_on_liftoff_runs_embeddings_disabled_path() {
-        let rocket = rocket::build().attach(SemanticIndexFairing);
+        let figment = rocket::Config::figment().merge(("port", 0u16));
+        let rocket = rocket::custom(figment).attach(SemanticIndexFairing);
         let ignited = rocket.ignite().await.expect("ignite");
         // Launch with short timeout; on_liftoff runs during launch and hits the "else" branch
         let result =

@@ -404,6 +404,8 @@ mod tests {
                 approval_state: "draft".into(),
                 approved_by: None,
                 approved_at: None,
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
         mock.requirements.insert(

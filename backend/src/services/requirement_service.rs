@@ -907,6 +907,8 @@ mod tests {
                 approval_state: "draft".into(),
                 approved_by: None,
                 approved_at: None,
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
         repo.requirement_versions.insert(
@@ -927,6 +929,8 @@ mod tests {
                 approval_state: "draft".into(),
                 approved_by: None,
                 approved_at: None,
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
 
@@ -1190,6 +1194,8 @@ mod tests {
                 approval_state: "draft".into(),
                 approved_by: None,
                 approved_at: None,
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
         repo.requirement_versions.insert(
@@ -1210,6 +1216,8 @@ mod tests {
                 approval_state: "draft".into(),
                 approved_by: None,
                 approved_at: None,
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
         let state = state_with_repo(repo);
@@ -1251,6 +1259,8 @@ mod tests {
                 approval_state: "draft".into(),
                 approved_by: None,
                 approved_at: None,
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
         repo.requirement_versions.insert(
@@ -1271,6 +1281,8 @@ mod tests {
                 approval_state: "draft".into(),
                 approved_by: None,
                 approved_at: None,
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
         let state = state_with_repo(repo);
@@ -1323,6 +1335,8 @@ mod tests {
                 approval_state: "draft".into(),
                 approved_by: None,
                 approved_at: None,
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
         repo.requirement_versions.insert(
@@ -1343,6 +1357,8 @@ mod tests {
                 approval_state: "draft".into(),
                 approved_by: None,
                 approved_at: None,
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
         repo.requirement_versions.insert(
@@ -1363,6 +1379,8 @@ mod tests {
                 approval_state: "draft".into(),
                 approved_by: None,
                 approved_at: None,
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
         // Links: req2 -> req1, req3 -> req1 (source=child version, target=parent version)
@@ -1431,6 +1449,10 @@ mod tests {
             parent_id: None,
             project_id: 7,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         };
         repo.verifications.insert(10, verification1);
         repo.matrices.push(MatrixLink {

@@ -472,6 +472,10 @@ async fn list_tests_returns_only_user_projects() {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         },
     );
 
@@ -487,6 +491,10 @@ async fn list_tests_returns_only_user_projects() {
             parent_id: None,
             project_id: 2,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         },
     );
 
@@ -502,6 +510,10 @@ async fn list_tests_returns_only_user_projects() {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         },
     );
 
@@ -544,6 +556,10 @@ async fn get_test_works_for_any_authenticated_user() {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         },
     );
 

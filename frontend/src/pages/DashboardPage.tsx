@@ -125,21 +125,39 @@ export default function DashboardPage() {
 
       {coverage ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
-          <div className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4">
+          <Link
+            to={`/p/${pid}/reports#gaps`}
+            className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 block hover:bg-amber-500/15 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-stitch-accent"
+          >
             <p className="text-xs font-bold text-amber-200 uppercase tracking-wide">Gaps</p>
             <p className="text-2xl font-bold text-stitch-fg mt-1">{coverage.reqNoTest}</p>
             <p className="text-xs text-stitch-muted mt-1">Requirements without tests</p>
-          </div>
-          <div className="rounded-xl border border-stitch-accent/25 bg-stitch-accent/10 p-4">
+            <p className="text-[10px] text-stitch-accent font-bold mt-2 uppercase tracking-wider">
+              View in reports →
+            </p>
+          </Link>
+          <Link
+            to={`/p/${pid}/reports#orphans`}
+            className="rounded-xl border border-stitch-accent/25 bg-stitch-accent/10 p-4 block hover:bg-stitch-accent/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-stitch-accent"
+          >
             <p className="text-xs font-bold text-stitch-accent uppercase tracking-wide">Orphans</p>
             <p className="text-2xl font-bold text-stitch-fg mt-1">{coverage.verNoReq}</p>
             <p className="text-xs text-stitch-muted mt-1">Tests without requirements</p>
-          </div>
-          <div className="rounded-xl border border-red-500/25 bg-red-500/10 p-4">
+            <p className="text-[10px] text-stitch-accent font-bold mt-2 uppercase tracking-wider">
+              View in reports →
+            </p>
+          </Link>
+          <Link
+            to={`/p/${pid}/reports#suspect`}
+            className="rounded-xl border border-red-500/25 bg-red-500/10 p-4 block hover:bg-red-500/15 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-stitch-accent"
+          >
             <p className="text-xs font-bold text-red-200 uppercase tracking-wide">Suspect</p>
             <p className="text-2xl font-bold text-stitch-fg mt-1">{coverage.suspect}</p>
             <p className="text-xs text-stitch-muted mt-1">Links flagged as suspect</p>
-          </div>
+            <p className="text-[10px] text-stitch-accent font-bold mt-2 uppercase tracking-wider">
+              View in reports →
+            </p>
+          </Link>
         </div>
       ) : null}
 

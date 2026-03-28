@@ -158,7 +158,10 @@ mod test_support {
             "source": "automated",
             "status_id": 1,
             "parent_id": null,
-            "project_id": project_id
+            "project_id": project_id,
+            "verification_method_id": null,
+            "author_id": 1,
+            "reviewer_id": 1
         })
     }
 }

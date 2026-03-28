@@ -324,12 +324,14 @@ pub(crate) fn describe_project_role(role: i32) -> &'static str {
 
 /// Build template context with project permission flags. Call when rendering a project-scoped page.
 pub(crate) fn project_permissions_context(state: &AppState, user: &User, project_id: i32) -> Value {
-    use crate::permissions::{has_permission, Permission};
+    use crate::permissions::{has_permission, may_change_review_gates, Permission};
     let repo = state.repo_read();
+    let is_project_reviewer = may_change_review_gates(&*repo, user, project_id);
     json!({
         "can_view_requirements": has_permission(&*repo, user, project_id, Permission::ViewRequirements),
         "can_edit_requirements": has_permission(&*repo, user, project_id, Permission::EditRequirements),
-        "can_approve": has_permission(&*repo, user, project_id, Permission::ApproveVersions),
+        "can_approve": is_project_reviewer,
+        "is_project_reviewer": is_project_reviewer,
         "can_manage_custom_fields": has_permission(&*repo, user, project_id, Permission::ManageCustomFields),
         "can_manage_members": has_permission(&*repo, user, project_id, Permission::ManageProjectMembers),
     })

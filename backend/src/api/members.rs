@@ -10,7 +10,9 @@ use crate::api::prelude::*;
 use crate::auth::guards::ProjectAccessOrBearer;
 use crate::models::NewProjectMember;
 use crate::permissions::{effective_permissions, role_label, EffectivePermissions};
-use crate::repository::{ProjectMembersRepository, ProjectsRepository, UserRepository};
+use crate::repository::{
+    ProjectMembersRepository, ProjectReviewersRepository, ProjectsRepository, UserRepository,
+};
 
 /// Response for one project member (id is user_id).
 #[derive(Debug, serde::Serialize)]
@@ -138,4 +140,59 @@ pub async fn remove_member(
         .remove_project_member(project_id, user_id)
         .map_err(ApiError::from)?;
     Ok(Status::NoContent)
+}
+
+/// GET /api/projects/<project_id>/reviewers — user ids designated as project reviewers.
+#[derive(Debug, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub struct ProjectReviewersResponse {
+    pub user_ids: Vec<i32>,
+}
+
+#[get("/projects/<project_id>/reviewers")]
+pub async fn list_project_reviewers(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<ProjectReviewersResponse>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let repo = state.repo_read();
+    let _ = repo.get_project_by_id(project_id).map_err(ApiError::from)?;
+    let user_ids = repo
+        .list_project_reviewer_ids(project_id)
+        .map_err(ApiError::from)?;
+    Ok(Json(ProjectReviewersResponse { user_ids }))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(crate = "rocket::serde", rename_all = "snake_case")]
+pub struct PutProjectReviewersRequest {
+    pub user_ids: Vec<i32>,
+}
+
+/// PUT /api/projects/<project_id>/reviewers — replace reviewer list (members only). Requires ManageProjectMembers.
+#[put("/projects/<project_id>/reviewers", data = "<body>")]
+pub async fn put_project_reviewers(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    state: &State<AppState>,
+    body: Json<PutProjectReviewersRequest>,
+) -> ApiResult<Json<ProjectReviewersResponse>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ManageProjectMembers,
+    )?;
+    let user_ids = body.into_inner().user_ids;
+    state
+        .repo_write()
+        .replace_project_reviewers(project_id, &user_ids)
+        .map_err(ApiError::from)?;
+    Ok(Json(ProjectReviewersResponse { user_ids }))
 }

@@ -8,7 +8,7 @@ use crate::auth::guards::ProjectAccessOrBearer;
 use crate::models::{
     NewRequirement, Requirement, RequirementVersion, RequirementVersionLink, Verification,
 };
-use crate::repository::{ProjectMembersRepository, RequirementsRepository};
+use crate::repository::RequirementsRepository;
 use crate::services::RequirementService;
 
 /// Trace summary for a requirement (parent, parent_links, children, linked tests). Used in project-scoped get.
@@ -306,20 +306,8 @@ pub async fn set_version_approval(
         ));
     }
     let requirement = service.get_by_id(req_id)?;
-    let members = state
-        .repo_read()
-        .get_members_by_project(requirement.project_id)
-        .map_err(ApiError::from)?;
     let u = user.user();
-    let can_approve = u.is_admin
-        || members
-            .iter()
-            .any(|m| m.user_id == u.id && (m.role == 1 || m.role == 2));
-    if !can_approve {
-        return Err(ApiError::Forbidden(
-            "only project owners or managers can approve requirement versions".into(),
-        ));
-    }
+    require_project_reviewer(state, u, requirement.project_id)?;
     let new_state = payload.state.trim();
     if new_state != "reviewed" && new_state != "approved" {
         return Err(ApiError::BadRequest(
@@ -409,6 +397,15 @@ pub async fn patch_requirement(
 
     let service = RequirementService::new(state.inner());
     let mut requirement = service.get_by_id(id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        requirement.project_id,
+        Permission::EditRequirements,
+    )?;
+    if patch.status_id.is_some() {
+        require_project_reviewer(state, user.user(), requirement.project_id)?;
+    }
 
     if let Some(v) = patch.title {
         requirement.title = v;
@@ -577,6 +574,9 @@ pub async fn patch_by_project(
     if requirement.project_id != project_id {
         return Err(ApiError::NotFound("requirement not in project".into()));
     }
+    if patch.status_id.is_some() {
+        require_project_reviewer(state, access.user(), project_id)?;
+    }
     if let Some(v) = patch.title {
         requirement.title = v;
     }
@@ -657,12 +657,7 @@ pub async fn set_version_approval_by_project(
     if requirement.project_id != project_id {
         return Err(ApiError::NotFound("requirement not in project".into()));
     }
-    require_project_permission(
-        state,
-        access.user(),
-        project_id,
-        Permission::ApproveVersions,
-    )?;
+    require_project_reviewer(state, access.user(), project_id)?;
     let u = access.user();
     let new_state = payload.state.trim();
     if new_state != "reviewed" && new_state != "approved" {

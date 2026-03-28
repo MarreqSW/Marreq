@@ -4,9 +4,10 @@
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::auth::guards::ProjectAccessOrBearer;
+use crate::auth::guards::{ApiUser, ProjectAccessOrBearer};
 use crate::models::{NewVerification, Verification};
 use crate::repository::errors::RepoError;
+use crate::repository::VerificationsRepository;
 use crate::services::VerificationService;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -70,18 +71,32 @@ pub async fn delete(user: ApiUser, id: i32, state: &State<AppState>) -> ApiResul
     Ok(Status::NoContent)
 }
 
-#[post("/verifications/<id>/field", data = "<update>")]
-pub async fn update_field(
-    user: ApiUser,
-    id: i32,
+fn apply_verification_field_update(
     state: &State<AppState>,
-    update: Json<FieldUpdateRequest>,
+    user: &crate::models::User,
+    id: i32,
+    update: FieldUpdateRequest,
+    project_id_match: Option<i32>,
 ) -> ApiResult<Value> {
-    let update = update.into_inner();
     let service = VerificationService::new(state.inner());
     let mut verification = service.get_by_id(id)?;
+    if let Some(pid) = project_id_match {
+        if verification.project_id != pid {
+            return Err(ApiError::NotFound("verification not in project".into()));
+        }
+    }
+    require_project_permission(
+        state,
+        user,
+        verification.project_id,
+        Permission::EditRequirements,
+    )?;
+    let field_key = update.field.as_str();
+    if field_key == "status_id" {
+        require_project_reviewer(state, user, verification.project_id)?;
+    }
 
-    match update.field.as_str() {
+    match field_key {
         "name" => verification.name = update.value,
         "description" => verification.description = update.value,
         "source" => verification.source = update.value,
@@ -114,6 +129,18 @@ pub async fn update_field(
                     })?)
                 };
         }
+        "author_id" => {
+            verification.author_id = update
+                .value
+                .parse()
+                .map_err(|_| RepoError::BadInput("invalid author_id".into()))?;
+        }
+        "reviewer_id" => {
+            verification.reviewer_id = update
+                .value
+                .parse()
+                .map_err(|_| RepoError::BadInput("invalid reviewer_id".into()))?;
+        }
         other => {
             return Err(ApiError::from(RepoError::BadInput(format!(
                 "unsupported field '{other}'"
@@ -121,6 +148,7 @@ pub async fn update_field(
         }
     }
 
+    let status_changed = field_key == "status_id";
     let payload = NewVerification {
         id: Some(verification.id),
         reference_code: verification.reference_code.clone(),
@@ -131,14 +159,50 @@ pub async fn update_field(
         parent_id: verification.parent_id,
         project_id: verification.project_id,
         verification_method_id: verification.verification_method_id,
+        author_id: verification.author_id,
+        reviewer_id: verification.reviewer_id,
     };
 
-    service.update(user.user(), id, payload)?;
+    service.update(user, id, payload)?;
+    if status_changed {
+        state
+            .repo_write()
+            .record_verification_status_audit(id, user.id)
+            .map_err(ApiError::from)?;
+    }
 
     Ok(json!({
         "success": true,
         "message": "Field updated successfully"
     }))
+}
+
+#[post("/verifications/<id>/field", data = "<update>")]
+pub async fn update_field(
+    user: ApiUser,
+    id: i32,
+    state: &State<AppState>,
+    update: Json<FieldUpdateRequest>,
+) -> ApiResult<Value> {
+    apply_verification_field_update(state, user.user(), id, update.into_inner(), None)
+}
+
+/// Project-scoped verification field update (session or Bearer).
+#[post("/projects/<project_id>/verifications/<id>/field", data = "<update>")]
+pub async fn update_field_by_project(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    id: i32,
+    state: &State<AppState>,
+    update: Json<FieldUpdateRequest>,
+) -> ApiResult<Value> {
+    apply_verification_field_update(
+        state,
+        access.user(),
+        id,
+        update.into_inner(),
+        Some(project_id),
+    )
 }
 
 #[cfg(test)]
@@ -165,7 +229,17 @@ mod tests {
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
         let rocket = rocket::build()
             .manage(state_from_repo(repo.with_admin_user()))
-            .mount("/api", routes![list, get, create, delete, update_field]);
+            .mount(
+                "/api",
+                routes![
+                    list,
+                    get,
+                    create,
+                    delete,
+                    update_field,
+                    update_field_by_project
+                ],
+            );
         Client::tracked(rocket).await.unwrap()
     }
 
@@ -187,7 +261,9 @@ mod tests {
             "status_id": 1,
             "reference_code": "VER-001",
             "parent_id": null,
-            "project_id": 1
+            "project_id": 1,
+            "author_id": 1,
+            "reviewer_id": 1
         })
     }
 

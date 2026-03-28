@@ -235,6 +235,8 @@ mod tests {
             approval_state: "draft".into(),
             approved_by: None,
             approved_at: None,
+            reviewed_by: None,
+            reviewed_at: None,
         };
         let v11 = crate::models::RequirementVersion {
             id: 11,
@@ -252,6 +254,8 @@ mod tests {
             approval_state: "draft".into(),
             approved_by: None,
             approved_at: None,
+            reviewed_by: None,
+            reviewed_at: None,
         };
         mock.requirement_versions.insert(10, v10);
         mock.requirement_versions.insert(11, v11);
@@ -283,6 +287,8 @@ mod tests {
                 approval_state: "draft".into(),
                 approved_by: None,
                 approved_at: None,
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
         mock.requirement_versions.insert(
@@ -303,6 +309,8 @@ mod tests {
                 approval_state: "draft".into(),
                 approved_by: None,
                 approved_at: None,
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
         let state = state_with_repo(mock);

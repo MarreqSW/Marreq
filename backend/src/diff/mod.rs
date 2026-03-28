@@ -206,6 +206,8 @@ mod tests {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            reviewed_by: None,
+            reviewed_at: None,
         }
     }
 

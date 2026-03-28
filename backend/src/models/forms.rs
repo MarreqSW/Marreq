@@ -247,6 +247,8 @@ pub struct NewBaselineVerification {
     pub parent_id: Option<i32>,
     pub project_id: i32,
     pub verification_method_id: Option<i32>,
+    pub author_id: i32,
+    pub reviewer_id: i32,
 }
 
 /// Form used to insert or update [`User`] records.
@@ -297,6 +299,8 @@ pub struct NewVerification {
     pub parent_id: Option<i32>,
     pub project_id: i32,
     pub verification_method_id: Option<i32>,
+    pub author_id: i32,
+    pub reviewer_id: i32,
 }
 
 /// Form data submitted when creating a new verification along with linked
@@ -835,6 +839,8 @@ mod forms_tests {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
         };
         assert_eq!(NewVerification::entity_type(), EntityType::Verification);
         assert_eq!(t.id(), 7);

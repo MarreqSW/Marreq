@@ -15,6 +15,7 @@ import {
   listRequirementVersionsByProject,
   listRequirements,
   getMyPermissions,
+  getProjectReviewers,
   listUsersOptional,
   listVerificationStatuses,
   listVerifications,
@@ -80,6 +81,7 @@ export default function EditRequirementPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [applicability, setApplicability] = useState<Applicability[]>([]);
   const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [projectReviewerIds, setProjectReviewerIds] = useState<number[]>([]);
   const [users, setUsers] = useState<User[] | null>(null);
   const [projectReqs, setProjectReqs] = useState<Requirement[]>([]);
   const [verifications, setVerifications] = useState<Verification[]>([]);
@@ -132,6 +134,7 @@ export default function EditRequirementPage() {
         cmts,
         lt,
         permRes,
+        revPool,
       ] = await Promise.all([
         getRequirementByProject(pid, rid),
         listRequirementVersionsByProject(pid, rid),
@@ -146,7 +149,9 @@ export default function EditRequirementPage() {
         listRequirementComments(rid),
         listRequirementVersionLinkTypes(pid),
         getMyPermissions(pid).catch(() => null),
+        getProjectReviewers(pid).catch(() => ({ user_ids: [] as number[] })),
       ]);
+      setProjectReviewerIds(revPool.user_ids);
       setPerms(permRes);
       setDetail(d);
       setComments(cmts);
@@ -198,12 +203,18 @@ export default function EditRequirementPage() {
     [users],
   );
 
-  const memberOptionIds = useMemo(() => {
+  const authorOptionIds = useMemo(() => {
     const ids = new Set(members.map((m) => m.user_id));
-    ids.add(authorId);
-    ids.add(reviewerId);
+    if (authorId > 0) ids.add(authorId);
     return [...ids].sort((a, b) => a - b);
-  }, [members, authorId, reviewerId]);
+  }, [members, authorId]);
+
+  /** Reviewer field: only users in the project reviewer pool (plus current value if legacy / not in pool). */
+  const reviewerOptionIds = useMemo(() => {
+    const ids = new Set(projectReviewerIds);
+    if (reviewerId > 0) ids.add(reviewerId);
+    return [...ids].sort((a, b) => a - b);
+  }, [projectReviewerIds, reviewerId]);
 
   const verById = useMemo(() => {
     const m = new Map<number, Verification>();
@@ -627,7 +638,7 @@ export default function EditRequirementPage() {
                     Author (account)
                   </label>
                   <select className={selectStitch} value={authorId} onChange={(e) => setAuthorId(Number(e.target.value))}>
-                    {memberOptionIds.map((id) => (
+                    {authorOptionIds.map((id) => (
                       <option key={id} value={id}>
                         {userLabel(id)}
                       </option>
@@ -638,13 +649,28 @@ export default function EditRequirementPage() {
                   <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                     Reviewer
                   </label>
-                  <select className={selectStitch} value={reviewerId} onChange={(e) => setReviewerId(Number(e.target.value))}>
-                    {memberOptionIds.map((id) => (
-                      <option key={`r-${id}`} value={id}>
-                        {userLabel(id)}
-                      </option>
-                    ))}
-                  </select>
+                  {reviewerOptionIds.length === 0 ? (
+                    <p className="text-xs text-stitch-muted py-2">
+                      No project reviewers configured. Add them in{' '}
+                      <Link to={`/p/${pid}/settings`} className="text-stitch-accent underline font-semibold">
+                        Project settings
+                      </Link>
+                      .
+                    </p>
+                  ) : (
+                    <select
+                      className={selectStitch}
+                      value={reviewerId}
+                      onChange={(e) => setReviewerId(Number(e.target.value))}
+                    >
+                      {reviewerOptionIds.map((id) => (
+                        <option key={`r-${id}`} value={id}>
+                          {userLabel(id)}
+                          {!projectReviewerIds.includes(id) ? ' (not in reviewer list)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
               <p className="mt-3 text-[10px] text-stitch-muted flex flex-wrap items-center gap-2">

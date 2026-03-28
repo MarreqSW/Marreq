@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   deleteVerificationGlobally,
   getMyPermissions,
+  getProjectReviewers,
   getVerification,
   getVerificationMatrix,
   listProjectMembers,
@@ -58,6 +59,7 @@ export default function EditVerificationPage() {
   const [authorId, setAuthorId] = useState(0);
   const [reviewerId, setReviewerId] = useState(0);
   const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [projectReviewerIds, setProjectReviewerIds] = useState<number[]>([]);
   const [users, setUsers] = useState<User[] | null>(null);
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
 
@@ -65,7 +67,7 @@ export default function EditVerificationPage() {
     if (!Number.isFinite(pid) || !Number.isFinite(vid)) return;
     setLoadError(null);
     try {
-      const [v, st, all, reqs, mx, mem, u, permRes] = await Promise.all([
+      const [v, st, all, reqs, mx, mem, u, permRes, revPool] = await Promise.all([
         getVerification(vid),
         listVerificationStatuses(),
         listVerifications(),
@@ -74,7 +76,9 @@ export default function EditVerificationPage() {
         listProjectMembers(pid),
         listUsersOptional(),
         getMyPermissions(pid).catch(() => null),
+        getProjectReviewers(pid).catch(() => ({ user_ids: [] as number[] })),
       ]);
+      setProjectReviewerIds(revPool.user_ids);
       setMembers(mem);
       setUsers(u);
       setPerms(permRes);
@@ -126,12 +130,17 @@ export default function EditVerificationPage() {
     [users],
   );
 
-  const memberOptionIds = useMemo(() => {
+  const authorOptionIds = useMemo(() => {
     const ids = new Set(members.map((m) => m.user_id));
-    ids.add(authorId);
-    ids.add(reviewerId);
+    if (authorId > 0) ids.add(authorId);
     return [...ids].sort((a, b) => a - b);
-  }, [members, authorId, reviewerId]);
+  }, [members, authorId]);
+
+  const reviewerOptionIds = useMemo(() => {
+    const ids = new Set(projectReviewerIds);
+    if (reviewerId > 0) ids.add(reviewerId);
+    return [...ids].sort((a, b) => a - b);
+  }, [projectReviewerIds, reviewerId]);
 
   const selectedParent = useMemo(() => {
     if (parentId === '') return null;
@@ -379,7 +388,7 @@ export default function EditVerificationPage() {
                 value={authorId}
                 onChange={(e) => setAuthorId(Number(e.target.value))}
               >
-                {memberOptionIds.map((id) => (
+                {authorOptionIds.map((id) => (
                   <option key={id} value={id} className="bg-stitch-surface text-stitch-fg">
                     {userLabel(id)}
                   </option>
@@ -390,17 +399,28 @@ export default function EditVerificationPage() {
               <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                 Reviewer
               </label>
-              <select
-                className={selectClass}
-                value={reviewerId}
-                onChange={(e) => setReviewerId(Number(e.target.value))}
-              >
-                {memberOptionIds.map((id) => (
-                  <option key={`r-${id}`} value={id} className="bg-stitch-surface text-stitch-fg">
-                    {userLabel(id)}
-                  </option>
-                ))}
-              </select>
+              {reviewerOptionIds.length === 0 ? (
+                <p className="text-xs text-stitch-muted py-2">
+                  No project reviewers configured. Add them in{' '}
+                  <Link to={`/p/${pid}/settings`} className="text-stitch-accent underline font-semibold">
+                    Project settings
+                  </Link>
+                  .
+                </p>
+              ) : (
+                <select
+                  className={selectClass}
+                  value={reviewerId}
+                  onChange={(e) => setReviewerId(Number(e.target.value))}
+                >
+                  {reviewerOptionIds.map((id) => (
+                    <option key={`r-${id}`} value={id} className="bg-stitch-surface text-stitch-fg">
+                      {userLabel(id)}
+                      {!projectReviewerIds.includes(id) ? ' (not in reviewer list)' : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="sm:col-span-2">
               <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">

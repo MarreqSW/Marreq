@@ -4,17 +4,174 @@
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>Marreq User Manual</title>
-  <link rel="stylesheet" href="../styles.css" />
+  <title>user-manual</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
 </head>
 <body>
-<main class="o-main-content">
-<header id="title-block-header">
-<h1 class="title">Marreq User Manual</h1>
-</header>
 <nav id="TOC" role="doc-toc">
 <ul>
-<li><a href="#Marreq-user-manual" id="toc-Marreq-user-manual">Marreq
+<li><a href="#marreq-user-manual" id="toc-marreq-user-manual">Marreq
 User Manual</a>
 <ul>
 <li><a href="#table-of-contents" id="toc-table-of-contents">Table of
@@ -57,20 +214,23 @@ Requirement</a></li>
 <li><a href="#semantic-search-ai" id="toc-semantic-search-ai">4.8
 Semantic Search (AI)</a></li>
 </ul></li>
-<li><a href="#test-management" id="toc-test-management">5. Test
-Management</a>
+<li><a href="#test-management-verifications"
+id="toc-test-management-verifications">5. Test Management
+(Verifications)</a>
 <ul>
-<li><a href="#tests-list" id="toc-tests-list">5.1 Tests List</a></li>
-<li><a href="#test-detail-page" id="toc-test-detail-page">5.2 Test
-Detail Page</a></li>
-<li><a href="#creating-a-test" id="toc-creating-a-test">5.3 Creating a
-Test</a></li>
-<li><a href="#editing-a-test" id="toc-editing-a-test">5.4 Editing a
-Test</a></li>
-<li><a href="#updating-test-status" id="toc-updating-test-status">5.5
-Updating Test Status</a></li>
-<li><a href="#test-hierarchy" id="toc-test-hierarchy">5.6 Test
-Hierarchy</a></li>
+<li><a href="#verifications-list" id="toc-verifications-list">5.1
+Verifications List</a></li>
+<li><a href="#verification-detail-page"
+id="toc-verification-detail-page">5.2 Verification Detail Page</a></li>
+<li><a href="#creating-a-verification"
+id="toc-creating-a-verification">5.3 Creating a Verification</a></li>
+<li><a href="#editing-a-verification"
+id="toc-editing-a-verification">5.4 Editing a Verification</a></li>
+<li><a href="#updating-verification-status"
+id="toc-updating-verification-status">5.5 Updating Verification
+Status</a></li>
+<li><a href="#verification-hierarchy"
+id="toc-verification-hierarchy">5.6 Verification Hierarchy</a></li>
 </ul></li>
 <li><a href="#traceability-matrix" id="toc-traceability-matrix">6.
 Traceability Matrix</a>
@@ -105,8 +265,8 @@ Applicability</a></li>
 Verification Methods</a></li>
 <li><a href="#requirement-statuses" id="toc-requirement-statuses">8.4
 Requirement Statuses</a></li>
-<li><a href="#test-statuses" id="toc-test-statuses">8.5 Test
-Statuses</a></li>
+<li><a href="#verification-statuses" id="toc-verification-statuses">8.5
+Verification Statuses</a></li>
 </ul></li>
 <li><a href="#reports-export" id="toc-reports-export">9. Reports &amp;
 Export</a>
@@ -116,8 +276,9 @@ Page</a></li>
 <li><a href="#exporting-requirements-to-excel"
 id="toc-exporting-requirements-to-excel">9.2 Exporting Requirements to
 Excel</a></li>
-<li><a href="#exporting-tests-to-excel"
-id="toc-exporting-tests-to-excel">9.3 Exporting Tests to Excel</a></li>
+<li><a href="#exporting-verifications-to-excel"
+id="toc-exporting-verifications-to-excel">9.3 Exporting Verifications to
+Excel</a></li>
 <li><a href="#exporting-reqif" id="toc-exporting-reqif">9.4 Exporting
 ReqIF</a></li>
 </ul></li>
@@ -129,7 +290,12 @@ Importing from Excel</a></li>
 ReqIF</a></li>
 </ul></li>
 <li><a href="#project-members" id="toc-project-members">11. Project
-Members</a></li>
+Members</a>
+<ul>
+<li><a href="#project-reviewers-workflow-gates"
+id="toc-project-reviewers-workflow-gates">11.1 Project reviewers
+(workflow gates)</a></li>
+</ul></li>
 <li><a href="#profile-account" id="toc-profile-account">12. Profile
 &amp; Account</a>
 <ul>
@@ -161,32 +327,37 @@ Shortcuts</a></li>
 </ul></li>
 </ul>
 </nav>
-<h1 id="Marreq-user-manual">Marreq User Manual</h1>
+<h1 id="marreq-user-manual">Marreq User Manual</h1>
 <p><strong>Requirement Manager (Marreq)</strong> is a web-based
 requirements and test management system. This manual describes how to
 use the application from the end-user perspective.</p>
+<p><strong>IBM DOORS users:</strong> See <strong><a
+href="doors-to-marreq-migration.md">Migrating from DOORS to
+Marreq</a></strong> for concept mapping, workflow comparison, and
+migration steps.</p>
 <p>For a <strong>typical end-to-end workflow</strong> (project setup →
 requirements → tests → traceability → approval → baselines → export),
-see <strong><a href="workflow.html">Typical Workflow with
+see <strong><a href="workflow.md">Typical Workflow with
 Marreq</a></strong>.</p>
 <hr />
 <h2 id="table-of-contents">Table of Contents</h2>
 <ol type="1">
-<li><a href="#introduction">Introduction</a></li>
-<li><a href="#getting-started">Getting Started</a></li>
-<li><a href="#projects">Projects</a></li>
-<li><a href="#requirements">Requirements</a></li>
-<li><a href="#test-management">Test Management</a></li>
-<li><a href="#traceability-matrix">Traceability Matrix</a></li>
-<li><a href="#baselines">Baselines</a></li>
-<li><a href="#categories-applicability-verification">Categories,
+<li><a href="#1-introduction">Introduction</a></li>
+<li><a href="#2-getting-started">Getting Started</a></li>
+<li><a href="#3-projects">Projects</a></li>
+<li><a href="#4-requirements">Requirements</a></li>
+<li><a href="#5-test-management-verifications">Test Management
+(Verifications)</a></li>
+<li><a href="#6-traceability-matrix">Traceability Matrix</a></li>
+<li><a href="#7-baselines">Baselines</a></li>
+<li><a href="#8-categories-applicability--verification">Categories,
 Applicability &amp; Verification</a></li>
-<li><a href="#reports-export">Reports &amp; Export</a></li>
-<li><a href="#import">Import</a></li>
-<li><a href="#project-members">Project Members</a></li>
-<li><a href="#profile-account">Profile &amp; Account</a></li>
-<li><a href="#administration">Administration</a></li>
-<li><a href="#tips-shortcuts">Tips &amp; Shortcuts</a></li>
+<li><a href="#9-reports--export">Reports &amp; Export</a></li>
+<li><a href="#10-import">Import</a></li>
+<li><a href="#11-project-members">Project Members</a></li>
+<li><a href="#12-profile--account">Profile &amp; Account</a></li>
+<li><a href="#13-administration">Administration</a></li>
+<li><a href="#14-tips--shortcuts">Tips &amp; Shortcuts</a></li>
 </ol>
 <hr />
 <h2 id="introduction">1. Introduction</h2>
@@ -195,7 +366,7 @@ Applicability &amp; Verification</a></li>
 <li><strong>Manage requirements</strong> in a hierarchy, with version
 history, comments, and approval workflow</li>
 <li><strong>Manage tests</strong> — create and organize tests (including
-hierarchy), track test status (e.g. Pass/Fail/Pending), link tests to
+hierarchy), track test status (e.g. Pass/Fail/Pending), link tests to
 requirements, and see coverage in reports and on requirement pages</li>
 <li><strong>View and export</strong> traceability matrices and
 reports</li>
@@ -206,24 +377,28 @@ releases</li>
 <p>Data is organized by <strong>projects</strong>. Each project has its
 own requirements, tests, categories, applicability options, and
 baselines. You must be logged in to use the application.</p>
-<p>See <strong><a href="workflow.html">Typical Workflow with
+<p>See <strong><a href="workflow.md">Typical Workflow with
 Marreq</a></strong> for a step-by-step workflow from project setup
 through baselines and export.</p>
 <hr />
 <h2 id="getting-started">2. Getting Started</h2>
 <h3 id="logging-in">2.1 Logging In</h3>
 <ol type="1">
-<li>Open the application in your browser
-(e.g. <strong>http://localhost:8000</strong>).</li>
+<li>Open the application in your browser (e.g.
+<strong>http://localhost:8000</strong>).</li>
 <li>You will see the <strong>Welcome to Marreq</strong> login page.</li>
 <li>Enter your <strong>Username</strong> and
 <strong>Password</strong>.</li>
 <li>Click <strong>Sign In</strong>.</li>
 </ol>
+<figure>
+<img src="screenshots/login.png" alt="Login page" />
+<figcaption aria-hidden="true">Login page</figcaption>
+</figure>
 <p>If you use a demo setup, typical users include <code>alice</code>,
 <code>dr_smith</code>, <code>eng_jones</code>, <code>tech_lee</code>,
 <code>qa_wilson</code>, and <code>admin</code>; the default password is
-often <code>password</code> (check with your administrator).</p>
+<code>ChangeMe123!</code> unless your administrator changed it.</p>
 <ul>
 <li><strong>Theme</strong>: Use the sun/moon toggle on the login card to
 switch between light and dark mode.</li>
@@ -241,6 +416,10 @@ project to open its detail page</li>
 feed</li>
 </ul>
 <p>Use <strong>Home</strong> in the navbar to return here anytime.</p>
+<figure>
+<img src="screenshots/home.png" alt="Home page after login" />
+<figcaption aria-hidden="true">Home page after login</figcaption>
+</figure>
 <h3 id="navigation">2.3 Navigation</h3>
 <p>The top navigation bar includes:</p>
 <table>
@@ -268,8 +447,8 @@ feed</li>
 <td>Project requirements (active when a project is selected)</td>
 </tr>
 <tr class="even">
-<td><strong>Tests</strong></td>
-<td>Project tests</td>
+<td><strong>Verifications</strong></td>
+<td>Project verifications (test cases and their status)</td>
 </tr>
 <tr class="odd">
 <td><strong>Reports</strong></td>
@@ -286,8 +465,8 @@ feed</li>
 <tr class="even">
 <td><strong>Quick Actions</strong> (admin)</td>
 <td>Shortcuts: New Project, New
-Requirement/Test/Category/Applicability/Verification/Status, New User,
-Import File/ReqIF</td>
+Requirement/Verification/Category/Applicability/Verification
+Method/Verification Status, New User, Import File/ReqIF</td>
 </tr>
 <tr class="odd">
 <td><strong>Admin</strong> (admin)</td>
@@ -301,8 +480,8 @@ Log Analytics</td>
 <li><strong>Theme toggle</strong> (sun/moon) for light/dark mode</li>
 <li><strong>User menu</strong>: My Profile, Change Password, Logout</li>
 </ul>
-<p>Requirements, Tests, Reports, Members, and Baselines are
-<strong>project-scoped</strong>: select a project first (e.g. by opening
+<p>Requirements, Verifications, Reports, Members, and Baselines are
+<strong>project-scoped</strong>: select a project first (e.g. by opening
 it from Home or Projects) so these links apply to that project.</p>
 <hr />
 <h2 id="projects">3. Projects</h2>
@@ -313,17 +492,27 @@ Projects</strong> or open <strong>Home</strong> and use “View all” under
 Your Projects.</li>
 <li><strong>Project detail</strong>: Click a project card to open
 <strong>Project Detail</strong>
-(<code>/p/&lt;project_id&gt;</code>).</li>
+(<code>/&lt;namespace&gt;/&lt;project-slug&gt;</code>).</li>
 </ul>
+<p>Project URLs are namespace-based. The <code>&lt;namespace&gt;</code>
+part is either the owner’s username or the group slug.</p>
 <p>On the project detail page you see:</p>
 <ul>
-<li>Project name, status (e.g. active), description</li>
+<li>Project name, status (e.g. active), description</li>
 <li>Created/Updated dates and owner</li>
-<li><strong>Quick Actions</strong>: View Requirements, View Tests, View
-Matrix, Baselines, View Reports, View Members</li>
+<li><strong>Quick Actions</strong>: View Requirements, View
+Verifications, View Matrix, Baselines, View Reports, View Members</li>
 <li><strong>Project Members</strong> list with names, usernames, roles,
 and email</li>
 </ul>
+<figure>
+<img src="screenshots/projects.png" alt="Projects list" />
+<figcaption aria-hidden="true">Projects list</figcaption>
+</figure>
+<figure>
+<img src="screenshots/project-detail.png" alt="Project detail page" />
+<figcaption aria-hidden="true">Project detail page</figcaption>
+</figure>
 <h3 id="creating-a-project-admin">3.2 Creating a Project (Admin)</h3>
 <ol type="1">
 <li><strong>Projects → New Project</strong> or <strong>Quick Actions →
@@ -350,7 +539,8 @@ via the traceability matrix.</p>
 <ul>
 <li>Open a project, then use <strong>Requirements</strong> in the nav or
 <strong>View Requirements</strong> on the project detail page.</li>
-<li>URL: <code>/p/&lt;project_id&gt;/requirements</code>.</li>
+<li>URL:
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/requirements</code>.</li>
 </ul>
 <p>You can:</p>
 <ul>
@@ -358,7 +548,7 @@ via the traceability matrix.</p>
 <strong>Table</strong>, or <strong>Tree</strong> layout (use the view
 toggle).</li>
 <li><strong>Filter</strong> by status, verification, category,
-applicability, approval (e.g. Approved only / Not approved), and custom
+applicability, approval (e.g. Approved only / Not approved), and custom
 filters.</li>
 <li><strong>Search</strong> (and use <strong>Semantic Search</strong> if
 enabled).</li>
@@ -368,13 +558,17 @@ admin/appropriate role).</li>
 <li><strong>Open</strong> a requirement by clicking its title or
 reference to see the <strong>Requirement detail</strong> page.</li>
 </ul>
-<p>Metrics (e.g. total count, by status) are shown at the top.</p>
+<p>Metrics (e.g. total count, by status) are shown at the top.</p>
+<figure>
+<img src="screenshots/requirements-list.png" alt="Requirements list" />
+<figcaption aria-hidden="true">Requirements list</figcaption>
+</figure>
 <h3 id="requirement-detail-page">4.2 Requirement Detail Page</h3>
 <ul>
 <li>URL:
-<code>/p/&lt;project_id&gt;/requirements/show/&lt;requirement_id&gt;</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/requirements/show/&lt;requirement_id&gt;</code>.</li>
 <li>For a specific version:
-<code>/p/&lt;project_id&gt;/requirements/show/&lt;requirement_id&gt;/version/&lt;version_id&gt;</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/requirements/show/&lt;requirement_id&gt;/version/&lt;version_id&gt;</code>.</li>
 </ul>
 <p>On the detail page you see:</p>
 <ul>
@@ -387,10 +581,10 @@ confirmation).</li>
 rationale, category, status, applicability, verification methods,
 author, reviewer, dates.</li>
 <li><strong>Traceability</strong>: Upstream/downstream requirements and
-<strong>Verified by</strong> — list of linked tests with links to test
-pages.</li>
+<strong>Verified by</strong> — list of linked verifications with links
+to verification detail pages.</li>
 <li><strong>Verification</strong> panel: pass/fail/pending counts and
-overall pass rate; list of linked tests.</li>
+overall pass rate; list of linked verifications.</li>
 <li><strong>Version history</strong>: List of versions with approval
 state; click a version to view that snapshot.</li>
 <li><strong>Comments</strong>: Chronological list; form to add a comment
@@ -403,12 +597,18 @@ fields).</li>
 <strong>Edit</strong> on an approved requirement shows a warning that
 editing will create a new <strong>Draft</strong> version; you can cancel
 or proceed.</p>
+<figure>
+<img src="screenshots/requirement-detail.png"
+alt="Requirement detail page" />
+<figcaption aria-hidden="true">Requirement detail page</figcaption>
+</figure>
 <h3 id="creating-a-requirement">4.3 Creating a Requirement</h3>
 <ol type="1">
 <li>From the project’s requirements list, click <strong>New
 Requirement</strong> (or <strong>Quick Actions → New
 Requirement</strong> when a project is selected).</li>
-<li>URL: <code>/p/&lt;project_id&gt;/requirements/new</code>.</li>
+<li>URL:
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/requirements/new</code>.</li>
 <li>Fill in:
 <ul>
 <li><strong>Title</strong> (required)</li>
@@ -431,7 +631,7 @@ Requirement</strong> when a project is selected).</li>
 <li>Open the requirement detail page.</li>
 <li>Click <strong>Edit</strong>.</li>
 <li>URL:
-<code>/p/&lt;project_id&gt;/requirements/edit/&lt;requirement_id&gt;</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/requirements/edit/&lt;requirement_id&gt;</code>.</li>
 <li>Change title, statement, rationale, category, status, applicability,
 verification, reviewer, parent, and custom fields as needed.</li>
 <li>Use <strong>Save</strong> to create a new version.
@@ -446,10 +646,10 @@ shown in the header.</p>
 section lists all versions (newest first); each shows approval
 state.</li>
 <li>Click a version to view that snapshot:
-<code>/p/&lt;project_id&gt;/requirements/show/&lt;requirement_id&gt;/version/&lt;version_id&gt;</code>.</li>
-<li><strong>Compare two versions</strong>: Use the diff action
-(e.g. “Compare” or “Diff”) to open a <strong>diff modal</strong> that
-shows added/removed/unchanged text and metadata (with labels for status,
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/requirements/show/&lt;requirement_id&gt;/version/&lt;version_id&gt;</code>.</li>
+<li><strong>Compare two versions</strong>: Use the diff action (e.g.
+“Compare” or “Diff”) to open a <strong>diff modal</strong> that shows
+added/removed/unchanged text and metadata (with labels for status,
 category, applicability, verification where available).</li>
 </ul>
 <h3 id="comments">4.6 Comments</h3>
@@ -475,7 +675,7 @@ before creating the new requirement.</li>
 (embeddings/RAG):</p>
 <ul>
 <li>Open the <strong>Semantic Search (AI)</strong> modal from the
-requirements list (e.g. search icon or <strong>Ctrl+K</strong>).</li>
+requirements list (e.g. search icon or <strong>Ctrl+K</strong>).</li>
 <li>Enter a natural-language question or search phrase; you can restrict
 by status, category, applicability, verification.</li>
 <li>Results show matching requirements; “AI Answer” may appear when
@@ -484,80 +684,96 @@ using the RAG “ask” feature.</li>
 search, <strong>Esc</strong> close.</li>
 </ul>
 <hr />
-<h2 id="test-management">5. Test Management</h2>
-<p>Test management in Marreq covers creating and organizing tests,
-tracking execution status (e.g. Pass, Fail, Pending), and linking tests
-to requirements for traceability and coverage. Tests are project-scoped
-and can be arranged in a <strong>parent/child hierarchy</strong>.
-Linking is done in the <a href="#traceability-matrix">Traceability
-Matrix</a>; once linked, requirement detail pages show a
-<strong>Verified by</strong> section and verification pass/fail
-summary.</p>
-<h3 id="tests-list">5.1 Tests List</h3>
+<h2 id="test-management-verifications">5. Test Management
+(Verifications)</h2>
+<p>Test management in Marreq covers creating and organizing
+verifications (test cases), tracking execution status (e.g. Pass, Fail,
+Pending), and linking them to requirements for traceability and
+coverage. In the UI, the nav item and pages are named
+<strong>Verifications</strong>. Verifications are project-scoped and can
+be arranged in a <strong>parent/child hierarchy</strong>. Linking is
+done in the <a href="#6-traceability-matrix">Traceability Matrix</a>;
+once linked, requirement detail pages show a <strong>Verified
+by</strong> section and verification pass/fail summary.</p>
+<h3 id="verifications-list">5.1 Verifications List</h3>
 <ul>
-<li>Open a project, then <strong>Tests</strong> in the nav or
-<strong>View Tests</strong> on the project detail page.</li>
-<li>URL: <code>/p/&lt;project_id&gt;/tests</code>.</li>
+<li>Open a project, then <strong>Verifications</strong> in the nav or
+<strong>View Verifications</strong> on the project detail page.</li>
+<li>URL:
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/verifications</code>.</li>
 </ul>
 <p>You can:</p>
 <ul>
 <li>Switch between <strong>Card</strong> and <strong>Table</strong>
 view.</li>
-<li><strong>Filter</strong> by test status, verification, category, and
-<strong>search</strong> (e.g. by name or reference).</li>
-<li>View <strong>metrics</strong> (e.g. total tests, counts by status
-such as Passed/Failed/Pending).</li>
-<li>Click <strong>New Test</strong> to create a test (admin/appropriate
-role).</li>
-<li>Click a test to open its <strong>Test detail</strong> page.</li>
-<li><strong>Update test status</strong> inline in the list (e.g. set
-Pass/Fail after execution) when the UI offers it.</li>
-<li><strong>Export tests to Excel</strong> from the tests list or
-Reports (see <a href="#exporting-tests-to-excel">§9.3 Exporting Tests
+<li><strong>Filter</strong> by verification status, verification method,
+category, and <strong>search</strong> (e.g. by name or reference).</li>
+<li>View <strong>metrics</strong> (e.g. total verifications, counts by
+status such as Passed/Failed/Pending).</li>
+<li><strong>Paginate</strong> through results (pagination controls
+appear at both top and bottom of the list).</li>
+<li>Click <strong>New Verification</strong> to create a verification
+(admin/appropriate role).</li>
+<li>Click a verification to open its <strong>Verification
+detail</strong> page.</li>
+</ul>
+<figure>
+<img src="screenshots/tests-list.png" alt="Verifications list" />
+<figcaption aria-hidden="true">Verifications list</figcaption>
+</figure>
+<ul>
+<li><strong>Update verification status</strong> inline in the list (e.g.
+set Pass/Fail after execution) when the UI offers it.</li>
+<li><strong>Export verifications to Excel</strong> from the
+verifications list or Reports (see <a
+href="#93-exporting-verifications-to-excel">§9.3 Exporting Verifications
 to Excel</a>).</li>
 </ul>
-<h3 id="test-detail-page">5.2 Test Detail Page</h3>
+<h3 id="verification-detail-page">5.2 Verification Detail Page</h3>
 <ul>
 <li>URL:
-<code>/p/&lt;project_id&gt;/tests/show/&lt;test_id&gt;</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/verifications/show/&lt;verification_id&gt;</code>.</li>
 </ul>
 <p>Shows: <strong>Name</strong>, <strong>Description</strong>,
-<strong>Source</strong> (e.g. test file or document reference),
+<strong>Source</strong> (e.g. test file or document reference),
 <strong>Status</strong>, <strong>Reference code</strong>, <strong>Parent
-test</strong> (if part of a hierarchy), and <strong>which requirements
-this test verifies</strong> (traceability links). From here you can
-<strong>Edit</strong> the test (name, description, source, status,
-reference, parent) or <strong>update status</strong> (e.g. after running
-the test). Status updates feed into the requirement
-<strong>Verification</strong> panel and into <a
-href="#reports-export">Reports</a> (coverage, pass rate).</p>
-<h3 id="creating-a-test">5.3 Creating a Test</h3>
+verification</strong> (if part of a hierarchy), and <strong>which
+requirements this verification covers</strong> (traceability links).
+From here you can <strong>Edit</strong> the verification (name,
+description, source, status, reference, parent) or <strong>update
+status</strong> (e.g. after running the test). Status updates feed into
+the requirement <strong>Verification</strong> panel and into <a
+href="#9-reports--export">Reports</a> (coverage, pass rate).</p>
+<h3 id="creating-a-verification">5.3 Creating a Verification</h3>
 <ol type="1">
-<li>From the project’s tests list, click <strong>New Test</strong> (or
-<strong>Quick Actions → New Test</strong>).</li>
-<li>URL: <code>/p/&lt;project_id&gt;/tests/new</code>.</li>
+<li>From the project’s verifications list, click <strong>New
+Verification</strong> (or <strong>Quick Actions → New
+Verification</strong>).</li>
+<li>URL:
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/verifications/new</code>.</li>
 <li>Enter <strong>Name</strong>, <strong>Description</strong>,
-<strong>Source</strong> (e.g. path to test script or doc),
-<strong>Status</strong> (e.g. Pending, Not Run), <strong>Reference
-code</strong> (optional; e.g. TEST-PWR-001), and <strong>Parent
-test</strong> (optional, for hierarchy).</li>
+<strong>Source</strong> (e.g. path to test script or doc),
+<strong>Status</strong> (e.g. Pending, Not Run), <strong>Reference
+code</strong> (optional; e.g. TEST-PWR-001), and <strong>Parent
+verification</strong> (optional, for hierarchy).</li>
 <li>Save.</li>
 </ol>
-<p>After creation, link the test to requirements in the <a
-href="#traceability-matrix">Traceability Matrix</a>.</p>
-<h3 id="editing-a-test">5.4 Editing a Test</h3>
+<p>After creation, link the verification to requirements in the <a
+href="#6-traceability-matrix">Traceability Matrix</a>.</p>
+<h3 id="editing-a-verification">5.4 Editing a Verification</h3>
 <ol type="1">
-<li>Open the test detail page.</li>
+<li>Open the verification detail page.</li>
 <li>Click <strong>Edit</strong>.</li>
 <li>URL:
-<code>/p/&lt;project_id&gt;/tests/edit/&lt;test_id&gt;</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/verifications/edit/&lt;verification_id&gt;</code>.</li>
 <li>Update name, description, source, status, reference code, or parent
-test; save.</li>
+verification; save.</li>
 </ol>
-<p>Linking or unlinking tests to/from requirements is done in the
-<strong>Traceability Matrix</strong> (add/remove links there).</p>
-<h3 id="updating-test-status">5.5 Updating Test Status</h3>
-<p>As tests are executed, update their status (e.g. Pass, Fail, Pending,
+<p>Linking or unlinking verifications to/from requirements is done in
+the <strong>Traceability Matrix</strong> (add/remove links there).</p>
+<h3 id="updating-verification-status">5.5 Updating Verification
+Status</h3>
+<p>As tests are executed, update their status (e.g. Pass, Fail, Pending,
 In Progress) so that:</p>
 <ul>
 <li>Requirement detail pages show correct <strong>Verification</strong>
@@ -565,18 +781,19 @@ counts (passed/failed/pending) and overall pass rate.</li>
 <li><strong>Reports</strong> and <strong>Matrix</strong> reflect current
 coverage and test results.</li>
 <li><strong>Matrix</strong> and <strong>Reports</strong> can be filtered
-by test status (e.g. show only Failed tests).</li>
+by verification status (e.g. show only Failed).</li>
 </ul>
-<p>Update status from the <strong>Test detail</strong> page (Edit or
-dedicated status control) or, when available, <strong>inline from the
-tests list</strong> or from the matrix. Test statuses are configured per
-project under <a href="#test-statuses">Test statuses</a>.</p>
-<h3 id="test-hierarchy">5.6 Test Hierarchy</h3>
-<p>Tests can have a <strong>parent test</strong> (e.g. a test suite or
-feature area). Set the parent when creating or editing a test. The tests
-list and tree views (if available) reflect this hierarchy; reporting and
-traceability still work at the level of individual tests linked to
-requirements.</p>
+<p>Update status from the <strong>Verification detail</strong> page
+(Edit or dedicated status control) or, when available, <strong>inline
+from the verifications list</strong> or from the matrix. Verification
+statuses are configured per project under <a
+href="#85-verification-statuses">Verification statuses</a>.</p>
+<h3 id="verification-hierarchy">5.6 Verification Hierarchy</h3>
+<p>Verifications can have a <strong>parent verification</strong> (e.g. a
+test suite or feature area). Set the parent when creating or editing a
+verification. The verifications list and tree views (if available)
+reflect this hierarchy; reporting and traceability still work at the
+level of individual verifications linked to requirements.</p>
 <hr />
 <h2 id="traceability-matrix">6. Traceability Matrix</h2>
 <p>The traceability matrix is central to <strong>test
@@ -589,29 +806,35 @@ suspect links.</p>
 <ul>
 <li>From the project: <strong>Matrix</strong> in the nav or <strong>View
 Matrix</strong> on the project detail page.</li>
-<li>URL: <code>/p/&lt;project_id&gt;/matrix</code>.</li>
+<li>URL:
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/matrix</code>.</li>
 </ul>
+<figure>
+<img src="screenshots/matrix.png" alt="Traceability matrix" />
+<figcaption aria-hidden="true">Traceability matrix</figcaption>
+</figure>
 <h3 id="using-the-matrix">6.2 Using the Matrix</h3>
 <ul>
 <li><strong>Table</strong>: Rows and columns represent requirements and
-tests (or the configured layout); cells indicate links.</li>
-<li><strong>Filters</strong>: Restrict by test status, requirement
-status, category, applicability, search, suspect links.</li>
+verifications (or the configured layout); cells indicate links.</li>
+<li><strong>Filters</strong>: Restrict by verification status,
+requirement status, category, applicability, search, suspect links.</li>
 <li><strong>Sort</strong> and <strong>paginate</strong> as
 available.</li>
 <li><strong>Sticky headers</strong> and <strong>virtual
 scrolling</strong> may be used for large matrices.</li>
-<li><strong>Clear suspect</strong>: For links marked “suspect”
-(e.g. after a requirement or test change), you can clear the suspect
-flag from the matrix (action/button or <strong>Clear suspect</strong>
-form); the system records user and timestamp.</li>
+<li><strong>Clear suspect</strong>: For links marked “suspect” (e.g.
+after a requirement or test change), you can clear the suspect flag from
+the matrix (action/button or <strong>Clear suspect</strong> form); the
+system records user and timestamp.</li>
 </ul>
 <h3 id="exporting-the-matrix">6.3 Exporting the Matrix</h3>
 <ul>
 <li><strong>Export Excel</strong>: Use <strong>Export Excel</strong> on
 the matrix page to download the matrix as <code>.xls</code>.</li>
 <li><strong>Export CSV</strong>: Use the CSV export link/button when
-offered (e.g. <code>/p/&lt;project_id&gt;/matrix.csv</code>).</li>
+offered (e.g.
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/matrix.csv</code>).</li>
 </ul>
 <hr />
 <h2 id="baselines">7. Baselines</h2>
@@ -622,26 +845,34 @@ audits, releases, or comparison.</p>
 <ul>
 <li>From the project: <strong>Baselines</strong> in the nav or
 <strong>View Baselines</strong> on the project detail page.</li>
-<li>URL: <code>/p/&lt;project_id&gt;/baselines</code>.</li>
+<li>URL:
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/baselines</code>.</li>
 </ul>
 <p>You see all baselines for the project and can click <strong>New
 Baseline</strong> to create one.</p>
+<figure>
+<img src="screenshots/baselines-list.png" alt="Baselines list" />
+<figcaption aria-hidden="true">Baselines list</figcaption>
+</figure>
 <h3 id="creating-a-baseline">7.2 Creating a Baseline</h3>
 <ol type="1">
 <li>Click <strong>New Baseline</strong>.</li>
-<li>URL: <code>/p/&lt;project_id&gt;/baselines/new</code>.</li>
+<li>URL:
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/baselines/new</code>.</li>
 <li>Enter <strong>Name</strong> and optional
 <strong>Description</strong>.</li>
 <li>Submit.</li>
 </ol>
 <p>The system captures the <strong>current</strong> requirement version
-for each requirement and the <strong>current</strong> traceability
-matrix. The baseline cannot be edited or deleted.</p>
+for each requirement, the <strong>current</strong> traceability matrix
+(requirement–verification links), and a <strong>snapshot of verification
+statuses</strong> at that moment. The baseline cannot be edited or
+deleted.</p>
 <h3 id="viewing-a-baseline">7.3 Viewing a Baseline</h3>
 <ul>
 <li>Click a baseline in the list.</li>
 <li>URL:
-<code>/p/&lt;project_id&gt;/baselines/&lt;baseline_id&gt;</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/baselines/&lt;baseline_id&gt;</code>.</li>
 </ul>
 <p>You see:</p>
 <ul>
@@ -650,8 +881,11 @@ by.</li>
 <li><strong>Requirements in this baseline</strong>: Table with
 requirement ID, reference, title; links to requirement (and version)
 pages.</li>
-<li><strong>Traceability</strong>: List of requirement–test pairs (with
-references like REQ-PWR-001, TEST-PWR-001).</li>
+<li><strong>Traceability</strong>: List of requirement–verification
+pairs (with references like REQ-PWR-001, TEST-PWR-001). A
+<strong>Verifications</strong> snapshot is also stored so you can see
+which verification status (e.g. Pass/Fail) each linked verification had
+at baseline time.</li>
 <li><strong>Diff vs current</strong>: For each requirement that has
 changed since the baseline, a <strong>Diff vs current</strong> action
 opens a <strong>diff modal</strong> comparing the baseline snapshot to
@@ -674,61 +908,61 @@ Applicability &amp; Verification</h2>
 <p>These are <strong>project-level</strong> configuration entities used
 to classify and manage requirements (and sometimes tests).</p>
 <h3 id="categories">8.1 Categories</h3>
-<p>Categories organize requirements (e.g. “Safety”, “Performance”).</p>
+<p>Categories organize requirements (e.g. “Safety”, “Performance”).</p>
 <ul>
 <li><strong>List</strong>:
-<code>/p/&lt;project_id&gt;/categories</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/categories</code>.</li>
 <li><strong>New</strong>: <strong>Quick Actions → New Category</strong>
-or <code>/p/&lt;project_id&gt;/categories/new</code> — enter title,
-description, tag.</li>
+or <code>/&lt;namespace&gt;/&lt;project-slug&gt;/categories/new</code> —
+enter title, description, tag.</li>
 <li><strong>Edit</strong>: Open a category → Edit; URL
-<code>/p/&lt;project_id&gt;/categories/edit/&lt;category_id&gt;</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/categories/edit/&lt;category_id&gt;</code>.</li>
 </ul>
 <h3 id="applicability">8.2 Applicability</h3>
-<p>Applicability represents product lines, system types, or scope
-(e.g. “Product A”, “All”).</p>
+<p>Applicability represents product lines, system types, or scope (e.g.
+“Product A”, “All”).</p>
 <ul>
 <li><strong>List</strong>:
-<code>/p/&lt;project_id&gt;/applicability</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/applicability</code>.</li>
 <li><strong>New</strong>: <strong>Quick Actions → New
 Applicability</strong> or
-<code>/p/&lt;project_id&gt;/applicability/new</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/applicability/new</code>.</li>
 <li><strong>Edit</strong>:
-<code>/p/&lt;project_id&gt;/applicability/edit/&lt;applicability_id&gt;</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/applicability/edit/&lt;applicability_id&gt;</code>.</li>
 </ul>
 <h3 id="verification-methods">8.3 Verification Methods</h3>
-<p>Verification methods define how requirements are verified (e.g. Test,
+<p>Verification methods define how requirements are verified (e.g. Test,
 Analysis, Review).</p>
 <ul>
 <li><strong>List</strong>:
-<code>/p/&lt;project_id&gt;/verification</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/verification</code>.</li>
 <li><strong>New</strong>: <strong>Quick Actions → New
 Verification</strong> or
-<code>/p/&lt;project_id&gt;/verification/new</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/verification/new</code>.</li>
 <li><strong>Edit</strong>:
-<code>/p/&lt;project_id&gt;/verification/edit/&lt;verification_id&gt;</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/verification/edit/&lt;verification_id&gt;</code>.</li>
 </ul>
 <h3 id="requirement-statuses">8.4 Requirement Statuses</h3>
-<p>Requirement statuses (e.g. Draft, Accepted, Rejected) are configured
+<p>Requirement statuses (e.g. Draft, Accepted, Rejected) are configured
 per project.</p>
 <ul>
 <li><strong>List</strong>:
-<code>/p/&lt;project_id&gt;/requirement_statuses</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/requirement_statuses</code>.</li>
 <li><strong>New</strong>:
-<code>/p/&lt;project_id&gt;/requirement_statuses/new</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/requirement_statuses/new</code>.</li>
 <li><strong>Edit</strong>:
-<code>/p/&lt;project_id&gt;/requirement_statuses/edit/&lt;status_id&gt;</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/requirement_statuses/edit/&lt;status_id&gt;</code>.</li>
 </ul>
-<h3 id="test-statuses">8.5 Test Statuses</h3>
-<p>Test statuses (e.g. Pass, Fail, Not Run) are configured per
+<h3 id="verification-statuses">8.5 Verification Statuses</h3>
+<p>Verification statuses (e.g. Pass, Fail, Not Run) are configured per
 project.</p>
 <ul>
 <li><strong>List</strong>:
-<code>/p/&lt;project_id&gt;/test_statuses</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/verification_statuses</code>.</li>
 <li><strong>New</strong>:
-<code>/p/&lt;project_id&gt;/test_statuses/new</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/verification_statuses/new</code>.</li>
 <li><strong>Edit</strong>:
-<code>/p/&lt;project_id&gt;/test_statuses/edit/&lt;status_id&gt;</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/verification_statuses/edit/&lt;status_id&gt;</code>.</li>
 </ul>
 <hr />
 <h2 id="reports-export">9. Reports &amp; Export</h2>
@@ -736,17 +970,21 @@ project.</p>
 <ul>
 <li>From the project: <strong>Reports</strong> in the nav or
 <strong>View Reports</strong> on the project detail page.</li>
-<li>URL: <code>/p/&lt;project_id&gt;/reports</code>.</li>
+<li>URL:
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/reports</code>.</li>
 </ul>
+<figure>
+<img src="screenshots/reports.png" alt="Reports page" />
+<figcaption aria-hidden="true">Reports page</figcaption>
+</figure>
 <p>You see:</p>
 <ul>
-<li><strong>Executive summary</strong>: Total requirements, total tests,
-coverage %, average tests per requirement.</li>
-<li><strong>Coverage analysis</strong> (test management): Covered vs
-uncovered requirements, requirements without tests, tests without
-requirements, suspect links. Test status distribution
-(e.g. Passed/Failed/Pending) may be shown for test management
-overview.</li>
+<li><strong>Executive summary</strong>: Total requirements, total
+verifications, coverage %, average verifications per requirement.</li>
+<li><strong>Coverage analysis</strong>: Covered vs uncovered
+requirements, requirements without verifications, verifications without
+requirements, suspect links. Verification status distribution (e.g.
+Passed/Failed/Pending) may be shown.</li>
 <li><strong>Generate PDF Report</strong>: Button to open/download a full
 project report PDF.</li>
 <li><strong>Download requirements (PDF)</strong>: Link to
@@ -757,20 +995,24 @@ Excel</h3>
 <ul>
 <li>From the <strong>Requirements</strong> list: <strong>Export
 Excel</strong> (or use the project-level export link).</li>
-<li>URL: <code>/p/&lt;project_id&gt;/requirements.xls</code>.</li>
+<li>URL:
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/requirements.xls</code>.</li>
 <li>Downloads an <code>.xls</code> file with requirements and all
 configured fields (including a <strong>Comments</strong> sheet when
 applicable).</li>
 </ul>
-<h3 id="exporting-tests-to-excel">9.3 Exporting Tests to Excel</h3>
+<h3 id="exporting-verifications-to-excel">9.3 Exporting Verifications to
+Excel</h3>
 <ul>
-<li>From the <strong>Tests</strong> list or reports: use <strong>Export
-Excel</strong> (tests) when available to download all project tests for
-test management or external reporting.</li>
-<li>URL: <code>/p/&lt;project_id&gt;/tests.xls</code>.</li>
-<li>The export includes test fields (name, description, source, status,
-reference code, etc.) so you can share or analyze test data outside
-Marreq.</li>
+<li>From the <strong>Verifications</strong> list or reports: use
+<strong>Export Excel</strong> (verifications) when available to download
+all project verifications for test management or external
+reporting.</li>
+<li>URL:
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/verifications.xls</code>.</li>
+<li>The export includes verification fields (name, description, source,
+status, reference code, etc.) so you can share or analyze test data
+outside Marreq.</li>
 </ul>
 <h3 id="exporting-reqif">9.4 Exporting ReqIF</h3>
 <ul>
@@ -787,7 +1029,8 @@ ReqIF</strong> to get an immutable ReqIF snapshot.</li>
 <ol type="1">
 <li>Open <strong>Import File</strong> for the project: <strong>Quick
 Actions → Import File</strong> or <strong>Admin → Import File</strong>,
-or go to <code>/p/&lt;project_id&gt;/import_excel</code>.</li>
+or go to
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/import_excel</code>.</li>
 <li>Upload a file (<strong>.xlsx</strong>, <strong>.xls</strong>, or
 <strong>.csv</strong>).</li>
 <li>Click <strong>Upload and Map Columns</strong>.</li>
@@ -799,7 +1042,7 @@ or go to <code>/p/&lt;project_id&gt;/import_excel</code>.</li>
 <ol type="1">
 <li>Open <strong>Import ReqIF</strong>: <strong>Quick Actions → Import
 ReqIF</strong> or <strong>Admin → Import ReqIF</strong>, or
-<code>/p/&lt;project_id&gt;/import_reqif</code>.</li>
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/import_reqif</code>.</li>
 <li>Upload a <strong>ReqIF 1.2</strong> XML file.</li>
 <li>Follow the process flow; requirements (and optionally comments) are
 imported into the project.</li>
@@ -810,18 +1053,50 @@ imported into the project.</li>
 <li><strong>View members</strong>: Project detail page → <strong>View
 Members</strong>, or <strong>Members</strong> in the nav for the
 selected project.</li>
-<li>URL: <code>/p/&lt;project_id&gt;/members</code>.</li>
+<li>URL:
+<code>/&lt;namespace&gt;/&lt;project-slug&gt;/members</code>.</li>
 </ul>
-<p>You see the list of members with names, usernames, roles (e.g. owner,
+<p>You see the list of members with names, usernames, roles (e.g. owner,
 manager), and email. <strong>Admins</strong> can add/remove members and
-change roles via <strong>Add member</strong> and member actions
-(e.g. remove).</p>
+change roles via <strong>Add member</strong> and member actions (e.g.
+remove).</p>
 <ul>
 <li><strong>Add member</strong>: Submit the form with user and
 role.</li>
 <li><strong>Remove member</strong>: Use the remove action for a member
-(e.g. <strong>Remove</strong> button); confirm if prompted.</li>
+(e.g. <strong>Remove</strong> button); confirm if prompted.</li>
 </ul>
+<h3 id="project-reviewers-workflow-gates">11.1 Project reviewers
+(workflow gates)</h3>
+<p>Some actions are limited to a <strong>designated reviewer
+list</strong> for the project (not the same as the “Reviewer” role
+alone):</p>
+<ul>
+<li><strong>Who</strong>: In the React app, open
+<strong>Settings</strong> for the project (project-scoped
+<strong>Settings</strong> in the nav). Users with <strong>Manage
+members</strong> can check which <strong>project members</strong> act as
+<strong>project reviewers</strong>. Only members of the project can be
+reviewers.</li>
+<li><strong>What they control</strong>: <strong>Requirement
+status</strong> (from the requirements table or requirement editor),
+<strong>verification (test) status</strong>, and <strong>version
+approval</strong> transitions (<strong>draft → reviewed →
+approved</strong>). Other editors can still change most requirement or
+verification fields if they have <strong>Edit requirements</strong>, but
+not those gates unless they are in the reviewer list.</li>
+<li><strong>Verifications</strong>: Each verification has an assigned
+<strong>author</strong> and <strong>reviewer</strong> (users). The
+<strong>status</strong> of the verification is still changed only by
+<strong>project reviewers</strong> (or an administrator).</li>
+<li><strong>Audit</strong>: Version <strong>reviewed</strong> /
+<strong>approved</strong> and verification status changes record
+<strong>who</strong> performed the action where the product exposes it
+(and in server logs).</li>
+</ul>
+<p>If <strong>no project reviewers</strong> are configured, only
+<strong>administrators</strong> can change those statuses and approvals
+until at least one reviewer is added.</p>
 <hr />
 <h2 id="profile-account">12. Profile &amp; Account</h2>
 <h3 id="my-profile">12.1 My Profile</h3>
@@ -845,7 +1120,7 @@ other fields offered). Save.</li>
 </ul>
 <p>Enter <strong>Current password</strong>, <strong>New
 password</strong>, and <strong>Confirm new password</strong>. Passwords
-must meet the minimum length (e.g. 8 characters). Submit; success or
+must meet the minimum length (e.g. 8 characters). Submit; success or
 error message is shown.</p>
 <hr />
 <h2 id="administration">13. Administration</h2>
@@ -854,14 +1129,14 @@ error message is shown.</p>
 <h3 id="admin-dashboard">13.1 Admin Dashboard</h3>
 <ul>
 <li><strong>Admin → Dashboard</strong>.</li>
-<li>URL: <code>/admin</code>.</li>
+<li>URL: <code>/-/admin</code>.</li>
 </ul>
 <p>Overview of system status and links to user management, backup,
 cache, logs.</p>
 <h3 id="user-management">13.2 User Management</h3>
 <ul>
 <li><strong>Admin → User Management</strong>.</li>
-<li>URL: <code>/admin/users</code>.</li>
+<li>URL: <code>/-/admin/users</code>.</li>
 </ul>
 <p>List all users. Create <strong>New User</strong>
 (<code>/user/new</code>), or open a user to view/edit
@@ -871,12 +1146,12 @@ email, password, and admin flag.</p>
 <h3 id="database-backup">13.3 Database Backup</h3>
 <ul>
 <li><strong>Admin → Database Backup</strong>.</li>
-<li>URL: <code>/admin/backup</code>.</li>
+<li>URL: <code>/-/admin/backup</code>.</li>
 </ul>
 <p>Generate a backup file; download or save as configured.</p>
 <h3 id="cache-if-exposed">13.4 Cache (if exposed)</h3>
 <ul>
-<li><strong>Admin → Cache</strong> (or <code>/admin/cache</code> when
+<li><strong>Admin → Cache</strong> (or <code>/-/admin/cache</code> when
 available).</li>
 <li>Options may include: view cache stats, <strong>Clear cache</strong>,
 <strong>Cleanup</strong> expired entries, health check, warm cache. Use
@@ -888,7 +1163,7 @@ for tuning or troubleshooting.</li>
 <li>URL: <code>/logs</code>.</li>
 </ul>
 <p>Browse audit logs (entity type, entity ID, user, action, timestamp).
-You can filter by entity and export logs (e.g. <strong>Export
+You can filter by entity and export logs (e.g. <strong>Export
 logs</strong> with optional filename). <strong>Cleanup logs</strong> (if
 available) removes old entries.</p>
 <h3 id="log-analytics">13.6 Log Analytics</h3>
@@ -914,9 +1189,9 @@ unchanged.</li>
 <li><strong>Breadcrumbs</strong>: Requirement and test edit/create pages
 show breadcrumbs (Project → Requirements → …); use them to navigate
 back.</li>
-<li><strong>Project context</strong>: Many links (Requirements, Tests,
-Matrix, Reports, Members, Baselines) depend on having a project
-selected; open a project from Home or Projects first.</li>
+<li><strong>Project context</strong>: Many links (Requirements,
+Verifications, Matrix, Reports, Members, Baselines) depend on having a
+project selected; open a project from Home or Projects first.</li>
 <li><strong>Export formats</strong>: Requirements and matrix export as
 <strong>Excel</strong> (<code>.xls</code>); ReqIF export is
 <strong>XML</strong>. PDF reports are available from the Reports
@@ -925,11 +1200,11 @@ page.</li>
 <hr />
 <h2 id="support">Support</h2>
 <p>For installation, database setup, API reference, and MCP (Model
-Context Protocol) integration, see the main project <strong>README</strong>
-and the <strong>docs/</strong> folder (e.g.
-<code>docs/developer/database-setup.md</code>,
-<code>docs/developer/mcp-setup.md</code>). For bugs or feature requests,
-use the project’s issue tracker.</p>
-</main>
+Context Protocol) integration, see the main project
+<strong>README</strong> and the <a href="../README.md">docs index</a>
+plus the developer docs (e.g. <a
+href="../developer/database-setup.md">database setup</a>, <a
+href="../developer/mcp-setup.md">MCP setup</a>). For bugs or feature
+requests, use the project’s issue tracker.</p>
 </body>
 </html>

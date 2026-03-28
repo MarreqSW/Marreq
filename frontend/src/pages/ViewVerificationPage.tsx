@@ -7,6 +7,7 @@ import {
   listRequirements,
   listVerificationMethodsByProject,
   listVerificationStatuses,
+  listUsersOptional,
   listVerifications,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
@@ -16,6 +17,7 @@ import type {
   Requirement,
   Verification,
   VerificationMethod,
+  User,
   VerificationStatus,
 } from '@/api/types';
 
@@ -42,12 +44,13 @@ export default function ViewVerificationPage() {
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [linkedReqIds, setLinkedReqIds] = useState<number[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [users, setUsers] = useState<User[] | null>(null);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid) || !Number.isFinite(vid)) return;
     setLoadError(null);
     try {
-      const [v, st, m, all, p, reqs, mx] = await Promise.all([
+      const [v, st, m, all, p, reqs, mx, u] = await Promise.all([
         getVerification(vid),
         listVerificationStatuses(),
         listVerificationMethodsByProject(pid),
@@ -55,7 +58,9 @@ export default function ViewVerificationPage() {
         getMyPermissions(pid).catch(() => null),
         listRequirements(pid),
         getVerificationMatrix(pid, vid),
+        listUsersOptional(),
       ]);
+      setUsers(u);
       if (v.project_id !== pid) {
         setLoadError('This verification belongs to another project.');
         return;
@@ -100,6 +105,15 @@ export default function ViewVerificationPage() {
   }, [linkedReqIds, reqById]);
 
   const canEdit = Boolean(perms?.edit_requirements);
+
+  const userLabel = useCallback(
+    (id: number) => {
+      const u = users?.find((x) => x.id === id);
+      if (u) return `${u.name} (${u.username})`;
+      return `User #${id}`;
+    },
+    [users],
+  );
 
   if (loadError) {
     return (
@@ -182,6 +196,25 @@ export default function ViewVerificationPage() {
               )}
             </dd>
           </div>
+          <div>
+            <dt className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">Author</dt>
+            <dd className="text-stitch-fg">{userLabel(row.author_id)}</dd>
+          </div>
+          <div>
+            <dt className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">Reviewer</dt>
+            <dd className="text-stitch-fg">{userLabel(row.reviewer_id)}</dd>
+          </div>
+          {row.status_set_by != null ? (
+            <div className="sm:col-span-2">
+              <dt className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+                Last status change
+              </dt>
+              <dd className="text-stitch-fg text-xs">
+                {userLabel(row.status_set_by)}
+                {row.status_set_at ? ` · ${row.status_set_at}` : ''}
+              </dd>
+            </div>
+          ) : null}
           <div className="sm:col-span-2">
             <dt className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">Description</dt>
             <dd className="text-stitch-fg whitespace-pre-wrap leading-relaxed">

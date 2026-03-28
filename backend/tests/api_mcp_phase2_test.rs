@@ -12,6 +12,7 @@
 //! - POST /api/projects/<id>/baselines (create with ProjectAccessOrBearer)
 
 use marreq::models::*;
+use marreq::repository::diesel_repo_mock::DieselRepoMock;
 use marreq::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
@@ -104,6 +105,9 @@ mod test_support {
             created_at: timestamp(),
             updated_at: timestamp(),
         });
+
+        // Owner and manager can move versions through approval; author (user 3) is excluded.
+        repo.project_reviewers.insert(1, vec![1, 2]);
 
         repo.requirement_statuses.insert(
             1,
@@ -297,6 +301,8 @@ async fn patch_by_project_updates_requirement() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            reviewed_by: None,
+            reviewed_at: None,
         },
     );
     repo.requirement_verification_methods.push((1, 1));
@@ -373,6 +379,8 @@ async fn patch_by_project_returns_404_when_requirement_not_in_project() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            reviewed_by: None,
+            reviewed_at: None,
         },
     );
 
@@ -436,6 +444,8 @@ async fn patch_by_project_rejects_empty_patch() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            reviewed_by: None,
+            reviewed_at: None,
         },
     );
 
@@ -504,6 +514,8 @@ async fn set_version_approval_by_project_succeeds_for_owner() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            reviewed_by: None,
+            reviewed_at: None,
         },
     );
 
@@ -572,6 +584,8 @@ async fn set_version_approval_by_project_succeeds_for_manager() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            reviewed_by: None,
+            reviewed_at: None,
         },
     );
 
@@ -640,6 +654,8 @@ async fn set_version_approval_by_project_returns_forbidden_for_member_without_ro
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            reviewed_by: None,
+            reviewed_at: None,
         },
     );
 
@@ -706,6 +722,8 @@ async fn set_version_approval_by_project_returns_404_when_requirement_not_in_pro
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            reviewed_by: None,
+            reviewed_at: None,
         },
     );
 
@@ -771,6 +789,8 @@ async fn set_version_approval_by_project_rejects_invalid_state() {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            reviewed_by: None,
+            reviewed_at: None,
         },
     );
 
@@ -807,4 +827,155 @@ async fn create_baseline_project_scoped_succeeds_with_session() {
     let baseline: Value = response.into_json().await.expect("json");
     assert_eq!(baseline["name"], "MCP Baseline");
     assert!(baseline["id"].as_i64().unwrap() >= 1);
+}
+
+// ============================================================================
+// Project reviewer gates (status patch + version approval)
+// ============================================================================
+
+fn insert_requirement_with_version_for_gates(repo: &mut DieselRepoMock) {
+    repo.requirement_statuses.insert(
+        2,
+        RequirementStatus {
+            id: 2,
+            title: "Accepted".into(),
+            description: "".into(),
+            tag: "A".into(),
+            project_id: PROJECT_ID,
+            is_system: false,
+            tag_color: None,
+        },
+    );
+    let version_id = 1;
+    repo.requirements.insert(
+        1,
+        Requirement {
+            id: 1,
+            current_version_id: Some(version_id),
+            same_as_current: None,
+            title: "Gate requirement".into(),
+            description: "Gate description".into(),
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            reference_code: "REQ-G-001".into(),
+            category_id: 1,
+            parent_id: None,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: None,
+            applicability_id: 1,
+            justification: None,
+            project_id: PROJECT_ID,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
+            custom_fields: None,
+        },
+    );
+    repo.requirement_versions.insert(
+        version_id,
+        RequirementVersion {
+            id: version_id,
+            requirement_id: 1,
+            title: "Gate requirement".into(),
+            description: "Gate description".into(),
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            category_id: 1,
+            applicability_id: 1,
+            justification: None,
+            deadline_date: None,
+            created_at: timestamp(),
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
+            reviewed_by: None,
+            reviewed_at: None,
+        },
+    );
+    repo.requirement_verification_methods.push((1, 1));
+}
+
+#[rocket::async_test]
+async fn patch_status_forbidden_when_user_not_in_project_reviewer_pool() {
+    let mut repo = base_repo();
+    repo.project_reviewers.insert(PROJECT_ID, vec![3]);
+    insert_requirement_with_version_for_gates(&mut repo);
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .patch(format!("/api/projects/{PROJECT_ID}/requirements/1"))
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(2))
+        .body(json!({ "status_id": 2 }).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn patch_status_ok_for_user_in_project_reviewer_pool() {
+    let mut repo = base_repo();
+    repo.project_reviewers.insert(PROJECT_ID, vec![3]);
+    insert_requirement_with_version_for_gates(&mut repo);
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .patch(format!("/api/projects/{PROJECT_ID}/requirements/1"))
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(3))
+        .body(json!({ "status_id": 2 }).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+}
+
+#[rocket::async_test]
+async fn set_version_approval_forbidden_when_user_not_in_reviewer_pool() {
+    let mut repo = base_repo();
+    repo.project_reviewers.insert(PROJECT_ID, vec![3]);
+    insert_requirement_with_version_for_gates(&mut repo);
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .put(format!(
+            "/api/projects/{PROJECT_ID}/requirements/1/versions/1/approval"
+        ))
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(2))
+        .body(json!({ "state": "reviewed" }).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn set_version_approval_ok_for_user_in_reviewer_pool() {
+    let mut repo = base_repo();
+    repo.project_reviewers.insert(PROJECT_ID, vec![3]);
+    insert_requirement_with_version_for_gates(&mut repo);
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .put(format!(
+            "/api/projects/{PROJECT_ID}/requirements/1/versions/1/approval"
+        ))
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(3))
+        .body(json!({ "state": "reviewed" }).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let version: RequirementVersion = response.into_json().await.expect("json");
+    assert_eq!(version.approval_state, "reviewed");
 }

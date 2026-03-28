@@ -16,6 +16,10 @@ Set `MARREQ_UI_MODE=api_only` to **omit** HTML routes (`/`, `/p/...`, `/user/...
 
 `MARREQ_SERVE_STATIC=0` disables Rocket’s `/static` `FileServer`. Default: static is **off** when `api_only`, **on** otherwise (classic `cargo run` UX).
 
+## API surface (high level)
+
+- **Project reviewers**: `GET` / `PUT` `/api/projects/<project_id>/reviewers` (body `{"user_ids":[...]}`) — who may change requirement **status**, verification **status**, and requirement-version **approval** (plus global admins). Implemented with the members / project API module; see `doc/API.md` after changes land.
+
 ## Related docs
 
 - [doc/API.md](../../doc/API.md) — interchangeable-frontend contract

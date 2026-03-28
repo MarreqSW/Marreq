@@ -46,6 +46,9 @@ pub struct RequirementVersion {
     pub approval_state: String,
     pub approved_by: Option<i32>,
     pub approved_at: Option<chrono::NaiveDateTime>,
+    /// User who transitioned this version to reviewed (if applicable).
+    pub reviewed_by: Option<i32>,
+    pub reviewed_at: Option<chrono::NaiveDateTime>,
 }
 
 /// One custom field value as returned in requirement payloads (field_id, label, value).
@@ -222,6 +225,8 @@ pub struct BaselineVerification {
     pub parent_id: Option<i32>,
     pub project_id: i32,
     pub verification_method_id: Option<i32>,
+    pub author_id: i32,
+    pub reviewer_id: i32,
 }
 
 /// A system user that can access projects and manage requirements.
@@ -261,6 +266,11 @@ pub struct Verification {
     pub project_id: i32,
     /// Project-scoped verification method (e.g. Test, Analysis, Review).
     pub verification_method_id: Option<i32>,
+    pub author_id: i32,
+    pub reviewer_id: i32,
+    /// Last user (project reviewer) who changed verification status.
+    pub status_set_by: Option<i32>,
+    pub status_set_at: Option<chrono::NaiveDateTime>,
 }
 
 /// A group organizes multiple related projects under a shared container.

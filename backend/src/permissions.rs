@@ -7,7 +7,9 @@
 //! All checks are fail-closed: no membership, error, or unknown role → denied.
 
 use crate::models::User;
-use crate::repository::{GroupMembersRepository, ProjectMembersRepository};
+use crate::repository::{
+    GroupMembersRepository, ProjectMembersRepository, ProjectReviewersRepository,
+};
 use std::collections::BTreeSet;
 
 /// Fine-grained permission for project-scoped actions.
@@ -66,20 +68,49 @@ pub struct EffectivePermissions {
     pub view_requirements: bool,
     pub edit_requirements: bool,
     pub approve_versions: bool,
+    /// True when the user may change requirement / verification status and version approval for this project.
+    pub is_project_reviewer: bool,
     pub manage_custom_fields: bool,
     pub manage_project_members: bool,
+}
+
+fn user_is_project_reviewer<R>(repo: &R, user: &User, project_id: i32) -> bool
+where
+    R: ProjectReviewersRepository,
+{
+    if user.is_admin {
+        return true;
+    }
+    let Ok(ids) = repo.list_project_reviewer_ids(project_id) else {
+        return false;
+    };
+    if ids.is_empty() {
+        return false;
+    }
+    repo.is_project_reviewer(project_id, user.id)
+        .unwrap_or(false)
+}
+
+/// Whether the user may change requirement/verification status and version approval (reviewer set or admin).
+pub fn may_change_review_gates<R>(repo: &R, user: &User, project_id: i32) -> bool
+where
+    R: ProjectReviewersRepository,
+{
+    user_is_project_reviewer(repo, user, project_id)
 }
 
 /// Compute effective permissions for a user in a project.
 pub fn effective_permissions<R>(repo: &R, user: &User, project_id: i32) -> EffectivePermissions
 where
-    R: ProjectMembersRepository,
+    R: ProjectMembersRepository + ProjectReviewersRepository,
 {
     use Permission::*;
+    let is_project_reviewer = user_is_project_reviewer(repo, user, project_id);
     EffectivePermissions {
         view_requirements: has_permission(repo, user, project_id, ViewRequirements),
         edit_requirements: has_permission(repo, user, project_id, EditRequirements),
         approve_versions: has_permission(repo, user, project_id, ApproveVersions),
+        is_project_reviewer,
         manage_custom_fields: has_permission(repo, user, project_id, ManageCustomFields),
         manage_project_members: has_permission(repo, user, project_id, ManageProjectMembers),
     }

@@ -59,6 +59,8 @@ diesel::table! {
         parent_id -> Nullable<Int4>,
         project_id -> Int4,
         verification_method_id -> Nullable<Int4>,
+        author_id -> Int4,
+        reviewer_id -> Int4,
     }
 }
 
@@ -223,6 +225,16 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    project_reviewers (project_id, user_id) {
+        project_id -> Int4,
+        user_id -> Int4,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     projects (id) {
         id -> Int4,
         #[max_length = 255]
@@ -335,6 +347,8 @@ diesel::table! {
         approval_state -> Varchar,
         approved_by -> Nullable<Int4>,
         approved_at -> Nullable<Timestamp>,
+        reviewed_by -> Nullable<Int4>,
+        reviewed_at -> Nullable<Timestamp>,
     }
 }
 
@@ -428,6 +442,10 @@ diesel::table! {
         parent_id -> Nullable<Int4>,
         project_id -> Int4,
         verification_method_id -> Nullable<Int4>,
+        author_id -> Int4,
+        reviewer_id -> Int4,
+        status_set_by -> Nullable<Int4>,
+        status_set_at -> Nullable<Timestamp>,
     }
 }
 
@@ -459,6 +477,8 @@ diesel::joinable!(matrix -> requirements (req_id));
 diesel::joinable!(matrix -> verifications (verification_id));
 diesel::joinable!(project_members -> projects (project_id));
 diesel::joinable!(project_members -> users (user_id));
+diesel::joinable!(project_reviewers -> projects (project_id));
+diesel::joinable!(project_reviewers -> users (user_id));
 diesel::joinable!(projects -> groups (group_id));
 diesel::joinable!(projects -> users (owner_id));
 diesel::joinable!(requirement_comments -> requirement_versions (requirement_version_id));
@@ -473,6 +493,7 @@ diesel::joinable!(requirement_version_verification_methods -> verification_metho
 diesel::joinable!(requirement_versions -> applicability (applicability_id));
 diesel::joinable!(requirement_versions -> categories (category_id));
 diesel::joinable!(requirement_versions -> requirement_status (status_id));
+diesel::joinable!(requirement_versions -> users (reviewed_by));
 diesel::joinable!(requirements -> projects (project_id));
 diesel::joinable!(user_api_tokens -> projects (project_id));
 diesel::joinable!(user_api_tokens -> users (user_id));
@@ -497,6 +518,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     logs,
     matrix,
     project_members,
+    project_reviewers,
     projects,
     requirement_comments,
     requirement_embeddings,

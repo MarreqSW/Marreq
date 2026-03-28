@@ -8,7 +8,7 @@ This document describes a **typical end-to-end workflow** for using Marreq: from
 
 A common Marreq workflow follows this sequence:
 
-1. **Set up the project** and configuration (categories, applicability, verification methods, requirement and **verification statuses**).
+1. **Set up the project** and configuration (categories, applicability, verification methods, requirement and **verification statuses**), and designate **project reviewers** in **Settings** (who may change requirement/verification **status** and requirement **version approval**).
 2. **Capture requirements** (create, optionally import, organize in hierarchy).
 3. **Verification management**: define verifications (test cases), organize (e.g. hierarchy), link to requirements in the traceability matrix, and track verification status (Pass/Fail/Pending) as tests are run.
 4. **Review and approve** requirements (draft → reviewed → approved).
@@ -55,7 +55,8 @@ flowchart LR
 ## 1. Set Up the Project
 
 - **Create the project** (Admin: **Projects → New Project**). Enter name and description.
-- **Add project members** (**Members**): assign users and roles (e.g. owner, manager) so the right people can approve requirements and manage the project.
+- **Add project members** (**Members**): assign users and roles (e.g. owner, manager) so the right people can edit and manage the project.
+- **Designate project reviewers** (**Settings** in the SPA, or via API `GET`/`PUT /api/projects/<id>/reviewers`): choose which members may change **requirement status**, **verification status**, and **version approval** (draft / reviewed / approved). Do this early if you use strict workflow gates.
 - **Configure project-level data** (Admin or project **Quick Actions**):
   - **Categories** (e.g. Safety, Performance, Usability) — used to tag requirements.
   - **Applicability** (e.g. Product A, Product B, All) — used for product line or scope.
@@ -103,8 +104,9 @@ Having these in place before bulk-adding requirements keeps data consistent and 
 ## 4. Review and Approve Requirements
 
 - **Review**: Authors and reviewers use the **Requirement detail** page to read the requirement, check linked tests and verification status, and use the **Comments** section to discuss.
-- **Mark as Reviewed**: A project owner/manager uses **Mark as Reviewed** on the requirement (with confirmation). This moves the requirement along the approval workflow.
-- **Approve**: When the requirement is ready for release or baseline, a project owner/manager uses **Approve Requirement** (with confirmation). The requirement then shows as **Approved** with approver and date; editing it later creates a new **Draft** version.
+- **Who can change status and approval**: Only users listed as **project reviewers** (see **Settings**) or **administrators** can change **requirement status** in the table/editor, **verification status**, and move the current version through **draft → reviewed → approved**. Others with **Edit requirements** can still edit text and most metadata.
+- **Mark as Reviewed**: A **project reviewer** (or admin) uses **Mark as Reviewed** on the requirement (with confirmation). This moves the requirement along the approval workflow.
+- **Approve**: When the requirement is ready for release or baseline, a **project reviewer** (or admin) uses **Approve Requirement** (with confirmation). The requirement then shows as **Approved** with approver and date; editing it later creates a new **Draft** version.
 - **Filter by approval**: On the Requirements list, use filters such as **Approved only** or **Not approved** to focus on what still needs review.
 
 ---

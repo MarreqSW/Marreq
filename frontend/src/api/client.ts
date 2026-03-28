@@ -778,6 +778,19 @@ export async function deleteVerificationMethod(
   });
 }
 
+/* ——— Projects ——— */
+
+export async function createProject(
+  body: { name: string; description?: string | null; group_id?: number | null },
+  csrfToken: string,
+): Promise<{ id: number; name: string; slug: string; group_id: number | null }> {
+  return fetchJson('/api/projects', {
+    method: 'POST',
+    headers: { ...JSON_HEADERS, 'X-CSRF-Token': csrfToken },
+    body: JSON.stringify(body),
+  });
+}
+
 /* ——— Namespace resolution ——— */
 
 export async function getProjectFromPath(

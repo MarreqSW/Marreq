@@ -134,6 +134,10 @@ export interface DashboardProject {
   id: number;
   name: string;
   slug: string;
+  project_base_path: string;
+  group_id: number | null;
+  group_name: string | null;
+  group_slug: string | null;
   [key: string]: unknown;
 }
 
@@ -144,7 +148,11 @@ export interface DashboardProject {
 export interface DashboardProjectWire {
   project_id: number;
   project_slug: string;
+  project_base_path: string;
   name: string;
+  group_id: number | null;
+  group_name: string | null;
+  group_slug: string | null;
   [key: string]: unknown;
 }
 
@@ -367,3 +375,41 @@ export type VerificationMethodWriteBody = {
   tag: string;
   project_id: number;
 };
+
+/* ——— Groups ——— */
+
+export interface GroupResponse {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  owner_id: number | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GroupMemberResponse {
+  user_id: number;
+  role: number;
+  role_label: string;
+}
+
+export interface ProjectFromPath {
+  id: number;
+  name: string;
+  description: string | null;
+  slug: string;
+  route_slug: string;
+}
+
+export interface Project {
+  id: number;
+  name: string;
+  slug: string;
+  description: string | null;
+  owner_id: number | null;
+  group_id: number | null;
+  status: string;
+  creation_date: string | null;
+  update_date: string | null;
+}

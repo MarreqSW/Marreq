@@ -2,9 +2,11 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react
 import { useParams } from 'react-router-dom';
 import {
   getMyPermissions,
+  getProjectReviewers,
   listCustomFieldsByProject,
   listProjectMembers,
   listUsersOptional,
+  putProjectReviewers,
   removeProjectMember,
   setProjectMemberRole,
 } from '@/api/client';
@@ -48,22 +50,29 @@ export default function ProjectSettingsPage() {
   const [addUserId, setAddUserId] = useState('');
   const [addRole, setAddRole] = useState(4);
   const [memberBusy, setMemberBusy] = useState<number | 'add' | null>(null);
+  const [reviewerIds, setReviewerIds] = useState<number[]>([]);
+  const [reviewerDraft, setReviewerDraft] = useState<Set<number>>(() => new Set());
+  const [reviewerErr, setReviewerErr] = useState<string | null>(null);
+  const [reviewerBusy, setReviewerBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid)) return;
     setLoading(true);
     setErr(null);
     try {
-      const [p, m, f, u] = await Promise.all([
+      const [p, m, f, u, rev] = await Promise.all([
         getMyPermissions(pid),
         listProjectMembers(pid),
         listCustomFieldsByProject(pid),
         listUsersOptional(),
+        getProjectReviewers(pid).catch(() => ({ user_ids: [] as number[] })),
       ]);
       setPerms(p);
       setMembers(m);
       setFields(f);
       setUsers(u);
+      setReviewerIds(rev.user_ids);
+      setReviewerDraft(new Set(rev.user_ids));
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load settings');
     } finally {
@@ -92,6 +101,38 @@ export default function ProjectSettingsPage() {
   }, [users, memberIds]);
 
   const canManage = perms?.manage_project_members && (csrfToken ?? '').length > 0;
+  const reviewersDirty = useMemo(() => {
+    if (reviewerIds.length !== reviewerDraft.size) return true;
+    const a = [...reviewerIds].sort((x, y) => x - y);
+    const b = [...reviewerDraft].sort((x, y) => x - y);
+    return a.some((id, i) => id !== b[i]);
+  }, [reviewerIds, reviewerDraft]);
+
+  async function saveReviewers() {
+    const token = csrfToken ?? '';
+    if (!token || !canManage) return;
+    setReviewerErr(null);
+    setReviewerBusy(true);
+    try {
+      const next = [...reviewerDraft].sort((a, b) => a - b);
+      const res = await putProjectReviewers(pid, next, token);
+      setReviewerIds(res.user_ids);
+      setReviewerDraft(new Set(res.user_ids));
+    } catch (e) {
+      setReviewerErr(e instanceof Error ? e.message : 'Failed to save reviewers');
+    } finally {
+      setReviewerBusy(false);
+    }
+  }
+
+  function toggleReviewerDraft(userId: number, on: boolean) {
+    setReviewerDraft((prev) => {
+      const n = new Set(prev);
+      if (on) n.add(userId);
+      else n.delete(userId);
+      return n;
+    });
+  }
 
   async function updateRole(userId: number, role: number) {
     const token = csrfToken ?? '';
@@ -175,7 +216,11 @@ export default function ProjectSettingsPage() {
           <div className="flex flex-wrap gap-2">
             <PermPill label="View requirements" on={perms.view_requirements} />
             <PermPill label="Edit requirements" on={perms.edit_requirements} />
-            <PermPill label="Approve versions" on={perms.approve_versions} />
+            <PermPill label="Approve versions (role)" on={perms.approve_versions} />
+            <PermPill
+              label="Project reviewer (status / approval)"
+              on={perms.is_project_reviewer}
+            />
             <PermPill label="Manage custom fields" on={perms.manage_custom_fields} />
             <PermPill label="Manage members" on={perms.manage_project_members} />
           </div>
@@ -303,6 +348,70 @@ export default function ProjectSettingsPage() {
             <a href={`/p/${pid}/members`} className="text-stitch-accent underline">
               Classic members UI
             </a>
+          </p>
+        )}
+      </section>
+
+      <section className="mb-10">
+        <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-widest mb-2">
+          Project reviewers
+        </h3>
+        <p className="text-xs text-stitch-muted mb-4 max-w-2xl">
+          Only users checked here can change requirement and verification status and move requirement versions through
+          draft → reviewed → approved. They must be project members. If the list is empty, only administrators can
+          perform those actions until you add at least one reviewer.
+        </p>
+        {reviewerErr && <p className="text-sm text-red-300 mb-3">{reviewerErr}</p>}
+        <div className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch mb-4">
+          <ul className="divide-y divide-stitch-border text-sm max-h-64 overflow-y-auto">
+            {members.length === 0 ? (
+              <li className="px-4 py-6 text-stitch-muted text-center">No members yet.</li>
+            ) : (
+              members.map((m) => (
+                <li
+                  key={m.user_id}
+                  className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-white/[0.03]"
+                >
+                  <span className="text-stitch-fg">{userLabel(m.user_id)}</span>
+                  <label className="flex items-center gap-2 text-xs text-stitch-muted shrink-0 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="rounded border-stitch-border"
+                      checked={reviewerDraft.has(m.user_id)}
+                      disabled={!canManage || reviewerBusy}
+                      onChange={(e) => toggleReviewerDraft(m.user_id, e.target.checked)}
+                    />
+                    Reviewer
+                  </label>
+                </li>
+              ))
+            )}
+          </ul>
+        </div>
+        {canManage ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={reviewerBusy || !reviewersDirty}
+              onClick={() => void saveReviewers()}
+              className="bg-stitch-accent text-stitch-canvas text-xs font-bold uppercase px-4 py-2 rounded-md disabled:opacity-50"
+            >
+              {reviewerBusy ? 'Saving…' : 'Save reviewer list'}
+            </button>
+            {reviewersDirty ? (
+              <button
+                type="button"
+                disabled={reviewerBusy}
+                className="text-xs text-stitch-muted hover:text-stitch-fg uppercase font-bold"
+                onClick={() => setReviewerDraft(new Set(reviewerIds))}
+              >
+                Reset
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <p className="text-xs text-stitch-muted">
+            You need “Manage members” to edit the reviewer list.
           </p>
         )}
       </section>

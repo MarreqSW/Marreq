@@ -13,18 +13,40 @@ function StatCard({
   label,
   value,
   hint,
+  to,
 }: {
   label: string;
   value: string | number;
   hint?: string;
+  /** When set, the whole card links to this route (relative to app root). */
+  to?: string;
 }) {
-  return (
-    <div className="rounded-xl border border-stitch-border bg-stitch-surface p-5 shadow-stitch">
+  const className =
+    'rounded-xl border border-stitch-border bg-stitch-surface p-5 shadow-stitch block';
+  const interactive =
+    'hover:border-stitch-accent/35 hover:bg-stitch-elevated/40 transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-stitch-accent';
+
+  const body = (
+    <>
       <p className="text-[10px] font-bold text-stitch-muted uppercase tracking-widest">{label}</p>
       <p className="text-3xl font-extrabold text-stitch-fg mt-2 tabular-nums">{value}</p>
       {hint ? <p className="text-xs text-stitch-muted mt-2">{hint}</p> : null}
-    </div>
+    </>
   );
+
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className={`${className} ${interactive}`}
+        aria-label={`${label}: ${value}. Open section.`}
+      >
+        {body}
+      </Link>
+    );
+  }
+
+  return <div className={className}>{body}</div>;
 }
 
 export default function DashboardPage() {
@@ -109,9 +131,14 @@ export default function DashboardPage() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Requirements" value={reqCount} />
-        <StatCard label="Verifications" value={verCount} />
-        <StatCard label="Matrix links" value={linkCount} hint="Requirement ↔ verification ties" />
+        <StatCard label="Requirements" value={reqCount} to={`/p/${pid}/requirements`} />
+        <StatCard label="Verifications" value={verCount} to={`/p/${pid}/verifications`} />
+        <StatCard
+          label="Matrix links"
+          value={linkCount}
+          hint="Requirement ↔ verification ties"
+          to={`/p/${pid}/matrix`}
+        />
         <StatCard
           label="Req. with tests"
           value={linkedReqRatio != null ? `${linkedReqRatio}%` : '—'}

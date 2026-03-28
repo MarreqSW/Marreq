@@ -14,6 +14,7 @@ import {
   listRequirementVersionLinkTypes,
   listRequirementVersionsByProject,
   listRequirements,
+  getMyPermissions,
   listUsersOptional,
   listVerificationStatuses,
   listVerifications,
@@ -23,12 +24,14 @@ import { useDashboard } from '@/context/DashboardContext';
 import type {
   Applicability,
   Category,
+  EffectivePermissions,
   ProjectMember,
   Requirement,
   RequirementCommentItem,
   RequirementDetailPayload,
   RequirementStatus,
   RequirementVersion,
+  RequirementPatchBody,
   RequirementVersionLink,
   User,
   Verification,
@@ -89,6 +92,7 @@ export default function EditRequirementPage() {
   const [commentPosting, setCommentPosting] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [linkBusy, setLinkBusy] = useState(false);
+  const [perms, setPerms] = useState<EffectivePermissions | null>(null);
   const [newParentId, setNewParentId] = useState<number | ''>('');
   const [newLinkType, setNewLinkType] = useState('');
 
@@ -127,6 +131,7 @@ export default function EditRequirementPage() {
         u,
         cmts,
         lt,
+        permRes,
       ] = await Promise.all([
         getRequirementByProject(pid, rid),
         listRequirementVersionsByProject(pid, rid),
@@ -140,7 +145,9 @@ export default function EditRequirementPage() {
         listUsersOptional(),
         listRequirementComments(rid),
         listRequirementVersionLinkTypes(pid),
+        getMyPermissions(pid).catch(() => null),
       ]);
+      setPerms(permRes);
       setDetail(d);
       setComments(cmts);
       setVersions(v);
@@ -354,20 +361,22 @@ export default function EditRequirementPage() {
     setSaveError(null);
     setSaving(true);
     try {
-      await patchRequirementByProject(
-        pid,
-        rid,
-        {
-          title: title.trim(),
-          description: description.trim(),
-          status_id: statusId,
-          category_id: categoryId,
-          applicability_id: applicabilityId,
-          author_id: authorId,
-          reviewer_id: reviewerId,
-        },
-        token,
-      );
+      const patch: RequirementPatchBody = {};
+      if (title.trim() !== baseline.title) patch.title = title.trim();
+      if (description.trim() !== baseline.description) patch.description = description.trim();
+      if (statusId !== baseline.status_id) {
+        if (!perms?.is_project_reviewer) {
+          setSaveError('Only project reviewers can change requirement status.');
+          setSaving(false);
+          return;
+        }
+        patch.status_id = statusId;
+      }
+      if (categoryId !== baseline.category_id) patch.category_id = categoryId;
+      if (applicabilityId !== baseline.applicability_id) patch.applicability_id = applicabilityId;
+      if (authorId !== baseline.author_id) patch.author_id = authorId;
+      if (reviewerId !== baseline.reviewer_id) patch.reviewer_id = reviewerId;
+      await patchRequirementByProject(pid, rid, patch, token);
       await refreshDashboard();
       await load();
     } catch (err) {
@@ -541,8 +550,14 @@ export default function EditRequirementPage() {
                       style={statusTagColorSwatchStyle(statusMeta?.tag_color)}
                     />
                     <select
-                      className={`flex-1 min-w-0 ${selectStitch} py-1.5 font-semibold text-sm border-0 bg-transparent pl-0 focus:ring-0`}
+                      className={`flex-1 min-w-0 ${selectStitch} py-1.5 font-semibold text-sm border-0 bg-transparent pl-0 focus:ring-0 disabled:opacity-50`}
                       value={statusId}
+                      disabled={!perms?.is_project_reviewer}
+                      title={
+                        perms?.is_project_reviewer
+                          ? undefined
+                          : 'Only designated project reviewers can change status'
+                      }
                       onChange={(e) => setStatusId(Number(e.target.value))}
                     >
                       {statusOptions.map((s) => (

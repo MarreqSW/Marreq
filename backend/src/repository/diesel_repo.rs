@@ -20,8 +20,9 @@ use crate::namespaces::TAKEN_NAMESPACE_MESSAGE;
 use crate::repository::{
     ApiTokensRepository, BaselineRepository, CustomFieldRepository, GroupMembersRepository,
     GroupsRepository, LookupRepository, MatrixRepository, ProjectMembersRepository,
-    ProjectsRepository, RequirementCommentsRepository, RequirementVersionLinksRepository,
-    RequirementsRepository, UserRepository, VerificationsRepository,
+    ProjectReviewersRepository, ProjectsRepository, RequirementCommentsRepository,
+    RequirementVersionLinksRepository, RequirementsRepository, UserRepository,
+    VerificationsRepository,
 };
 use crate::schema;
 use diesel::expression_methods::BoolExpressionMethods;
@@ -516,6 +517,70 @@ impl ProjectMembersRepository for DieselRepo {
         } else {
             Ok(())
         }
+    }
+}
+
+impl ProjectReviewersRepository for DieselRepo {
+    fn is_project_reviewer(&self, project_id: i32, user_id: i32) -> Result<bool, RepoError> {
+        use crate::schema::project_reviewers::dsl::{
+            project_id as pr_pid, project_reviewers, user_id as pr_uid,
+        };
+        let mut conn = self.get_conn()?;
+        Ok(project_reviewers
+            .filter(pr_pid.eq(project_id))
+            .filter(pr_uid.eq(user_id))
+            .select(pr_uid)
+            .first::<i32>(conn.as_mut())
+            .optional()
+            .map_err(RepoError::from)?
+            .is_some())
+    }
+
+    fn list_project_reviewer_ids(&self, project_id: i32) -> Result<Vec<i32>, RepoError> {
+        use crate::schema::project_reviewers::dsl::{
+            project_id as pr_pid, project_reviewers, user_id as pr_uid,
+        };
+        let mut conn = self.get_conn()?;
+        project_reviewers
+            .filter(pr_pid.eq(project_id))
+            .order(pr_uid.asc())
+            .select(pr_uid)
+            .load::<i32>(conn.as_mut())
+            .map_err(RepoError::from)
+    }
+
+    fn replace_project_reviewers(
+        &mut self,
+        project_id: i32,
+        user_ids: &[i32],
+    ) -> Result<(), RepoError> {
+        use crate::schema::project_members::dsl as pm;
+        use crate::schema::project_reviewers::dsl as pr;
+        let mut conn = self.get_conn()?;
+        conn.as_mut().transaction::<(), RepoError, _>(|conn| {
+            diesel::delete(pr::project_reviewers.filter(pr::project_id.eq(project_id)))
+                .execute(conn)?;
+            for &uid in user_ids {
+                let is_member = pm::project_members
+                    .filter(pm::project_id.eq(project_id))
+                    .filter(pm::user_id.eq(uid))
+                    .select(pm::user_id)
+                    .first::<i32>(conn)
+                    .optional()
+                    .map_err(RepoError::from)?
+                    .is_some();
+                if !is_member {
+                    return Err(RepoError::BadInput(format!(
+                        "user {uid} is not a member of project {project_id}"
+                    )));
+                }
+                diesel::insert_into(pr::project_reviewers)
+                    .values((pr::project_id.eq(project_id), pr::user_id.eq(uid)))
+                    .execute(conn)?;
+            }
+            Ok(())
+        })?;
+        Ok(())
     }
 }
 
@@ -1424,11 +1489,18 @@ impl RequirementsRepository for DieselRepo {
         } else {
             (version.approved_by, version.approved_at)
         };
+        let (reviewed_by, reviewed_at) = if target == ApprovalState::Reviewed {
+            (Some(approved_by_user_id), Some(now))
+        } else {
+            (version.reviewed_by, version.reviewed_at)
+        };
         diesel::update(dsl::requirement_versions.filter(dsl::id.eq(version_id)))
             .set((
                 dsl::approval_state.eq(target.to_db_string()),
                 dsl::approved_by.eq(approved_by),
                 dsl::approved_at.eq(approved_at),
+                dsl::reviewed_by.eq(reviewed_by),
+                dsl::reviewed_at.eq(reviewed_at),
             ))
             .execute(conn.as_mut())?;
         drop(conn);
@@ -1623,6 +1695,10 @@ impl VerificationsRepository for DieselRepo {
                 v::parent_id,
                 v::project_id,
                 v::verification_method_id,
+                v::author_id,
+                v::reviewer_id,
+                v::status_set_by,
+                v::status_set_at,
             ))
             .load::<Verification>(conn.as_mut())
             .map_err(|e| e.into())
@@ -1649,6 +1725,10 @@ impl VerificationsRepository for DieselRepo {
                 v::parent_id,
                 v::project_id,
                 v::verification_method_id,
+                v::author_id,
+                v::reviewer_id,
+                v::status_set_by,
+                v::status_set_at,
             ))
             .load::<Verification>(conn.as_mut())
             .map_err(|e| e.into())
@@ -1704,9 +1784,28 @@ impl VerificationsRepository for DieselRepo {
                 dsl::status_id.eq(&new.status_id),
                 dsl::parent_id.eq(&new.parent_id),
                 dsl::verification_method_id.eq(&new.verification_method_id),
+                dsl::author_id.eq(new.author_id),
+                dsl::reviewer_id.eq(new.reviewer_id),
             ))
             .execute(conn.as_mut())?;
         Ok(updated > 0)
+    }
+
+    fn record_verification_status_audit(
+        &mut self,
+        verification_id: i32,
+        actor_id: i32,
+    ) -> Result<(), RepoError> {
+        use crate::schema::verifications::dsl;
+        let mut conn = self.get_conn()?;
+        let now = chrono::Utc::now().naive_utc();
+        diesel::update(dsl::verifications.filter(dsl::id.eq(verification_id)))
+            .set((
+                dsl::status_set_by.eq(Some(actor_id)),
+                dsl::status_set_at.eq(Some(now)),
+            ))
+            .execute(conn.as_mut())?;
+        Ok(())
     }
 
     fn delete_verification(&mut self, verification_id: i32) -> Result<Verification, RepoError> {
@@ -2516,6 +2615,8 @@ impl BaselineRepository for DieselRepo {
                     parent_id: v.parent_id,
                     project_id: v.project_id,
                     verification_method_id: v.verification_method_id,
+                    author_id: v.author_id,
+                    reviewer_id: v.reviewer_id,
                 };
                 diesel::insert_into(baseline_verifications::table)
                     .values(&bv)

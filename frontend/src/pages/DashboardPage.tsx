@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import {
   getCoverageReport,
   listMatrix,
@@ -8,6 +8,7 @@ import {
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 function StatCard({
   label,
@@ -50,8 +51,8 @@ function StatCard({
 }
 
 export default function DashboardPage() {
-  const { projectId: projectIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { projectId, basePath } = useOutletContext<ProjectOutletContext>();
+  const pid = projectId;
   const { dashboard } = useDashboard();
 
   const [reqCount, setReqCount] = useState(0);
@@ -131,13 +132,13 @@ export default function DashboardPage() {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Requirements" value={reqCount} to={`/p/${pid}/requirements`} />
-        <StatCard label="Verifications" value={verCount} to={`/p/${pid}/verifications`} />
+        <StatCard label="Requirements" value={reqCount} to={`${basePath}/requirements`} />
+        <StatCard label="Verifications" value={verCount} to={`${basePath}/verifications`} />
         <StatCard
           label="Matrix links"
           value={linkCount}
           hint="Requirement ↔ verification ties"
-          to={`/p/${pid}/matrix`}
+          to={`${basePath}/matrix`}
         />
         <StatCard
           label="Req. with tests"
@@ -153,7 +154,7 @@ export default function DashboardPage() {
       {coverage ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
           <Link
-            to={`/p/${pid}/reports#gaps`}
+            to={`${basePath}/reports#gaps`}
             className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 block hover:bg-amber-500/15 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-stitch-accent"
           >
             <p className="text-xs font-bold text-amber-200 uppercase tracking-wide">Gaps</p>
@@ -164,7 +165,7 @@ export default function DashboardPage() {
             </p>
           </Link>
           <Link
-            to={`/p/${pid}/reports#orphans`}
+            to={`${basePath}/reports#orphans`}
             className="rounded-xl border border-stitch-accent/25 bg-stitch-accent/10 p-4 block hover:bg-stitch-accent/20 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-stitch-accent"
           >
             <p className="text-xs font-bold text-stitch-accent uppercase tracking-wide">Orphans</p>
@@ -175,7 +176,7 @@ export default function DashboardPage() {
             </p>
           </Link>
           <Link
-            to={`/p/${pid}/reports#suspect`}
+            to={`${basePath}/reports#suspect`}
             className="rounded-xl border border-red-500/25 bg-red-500/10 p-4 block hover:bg-red-500/15 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-stitch-accent"
           >
             <p className="text-xs font-bold text-red-200 uppercase tracking-wide">Suspect</p>
@@ -191,28 +192,28 @@ export default function DashboardPage() {
       <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-widest mb-4">Quick links</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <Link
-          to={`/p/${pid}/requirements`}
+          to={`${basePath}/requirements`}
           className="rounded-xl border border-stitch-border bg-stitch-elevated px-4 py-4 text-sm font-semibold text-stitch-fg hover:bg-stitch-higher transition-colors flex items-center gap-2"
         >
           <span className="material-symbols-outlined text-stitch-accent">list_alt</span>
           Requirements
         </Link>
         <Link
-          to={`/p/${pid}/verifications`}
+          to={`${basePath}/verifications`}
           className="rounded-xl border border-stitch-border bg-stitch-elevated px-4 py-4 text-sm font-semibold text-stitch-fg hover:bg-stitch-higher transition-colors flex items-center gap-2"
         >
           <span className="material-symbols-outlined text-stitch-accent">verified</span>
           Verifications
         </Link>
         <Link
-          to={`/p/${pid}/traceability`}
+          to={`${basePath}/traceability`}
           className="rounded-xl border border-stitch-border bg-stitch-elevated px-4 py-4 text-sm font-semibold text-stitch-fg hover:bg-stitch-higher transition-colors flex items-center gap-2"
         >
           <span className="material-symbols-outlined text-stitch-accent">account_tree</span>
           Traceability
         </Link>
         <Link
-          to={`/p/${pid}/reports`}
+          to={`${basePath}/reports`}
           className="rounded-xl border border-stitch-border bg-stitch-elevated px-4 py-4 text-sm font-semibold text-stitch-fg hover:bg-stitch-higher transition-colors flex items-center gap-2"
         >
           <span className="material-symbols-outlined text-stitch-accent">description</span>

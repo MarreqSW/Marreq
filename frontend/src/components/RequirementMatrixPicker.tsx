@@ -4,6 +4,7 @@ import type { Requirement } from '@/api/types';
 
 type Props = {
   projectId: number;
+  basePath: string;
   requirements: Requirement[];
   selectedIds: number[];
   onChange: (ids: number[]) => void;
@@ -15,6 +16,7 @@ type Props = {
  */
 export function RequirementMatrixPicker({
   projectId,
+  basePath,
   requirements,
   selectedIds,
   onChange,
@@ -87,7 +89,7 @@ export function RequirementMatrixPicker({
                 <span className="block text-sm text-stitch-fg line-clamp-2">{r.title}</span>
               </label>
               <Link
-                to={`/p/${projectId}/requirements/${r.id}/edit`}
+                to={`${basePath}/requirements/${r.id}/edit`}
                 onClick={(e) => e.stopPropagation()}
                 className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-accent pt-0.5"
               >

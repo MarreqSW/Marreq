@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import {
   createRequirementByProject,
   listApplicability,
@@ -18,6 +18,7 @@ import type {
   VerificationMethod,
 } from '@/api/types';
 import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 const selectClass =
   'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
@@ -28,6 +29,7 @@ function parseUser(u: unknown): User | null {
 }
 
 export default function CreateRequirementPage() {
+  const { basePath } = useOutletContext<ProjectOutletContext>();
   const { projectId: projectIdParam } = useParams();
   const pid = Number(projectIdParam);
   const navigate = useNavigate();
@@ -154,7 +156,7 @@ export default function CreateRequirementPage() {
         token,
       );
       await refreshDashboard();
-      navigate(`/p/${pid}/requirements/${id}/edit`);
+      navigate(`${basePath}/requirements/${id}/edit`);
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Create failed');
     } finally {
@@ -167,7 +169,7 @@ export default function CreateRequirementPage() {
       <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
         {loadError}
         <div className="mt-3">
-          <Link to={`/p/${pid}/requirements`} className="font-semibold text-stitch-accent underline">
+          <Link to={`${basePath}/requirements`} className="font-semibold text-stitch-accent underline">
             Back to requirements
           </Link>
         </div>
@@ -178,7 +180,7 @@ export default function CreateRequirementPage() {
   return (
     <div className="pb-28 font-body text-stitch-fg text-stitch max-w-4xl">
       <nav className="flex items-center gap-2 text-[10px] font-semibold text-stitch-muted mb-6 uppercase tracking-widest">
-        <Link to={`/p/${pid}/requirements`} className="hover:text-stitch-accent transition-colors">
+        <Link to={`${basePath}/requirements`} className="hover:text-stitch-accent transition-colors">
           Requirements
         </Link>
         <span className="material-symbols-outlined text-sm text-stitch-muted">chevron_right</span>
@@ -379,7 +381,7 @@ export default function CreateRequirementPage() {
 
         <footer className="fixed bottom-0 left-0 right-0 z-40 bg-stitch-surface/85 backdrop-blur-md border-t border-stitch-border px-4 md:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
           <Link
-            to={`/p/${pid}/requirements`}
+            to={`${basePath}/requirements`}
             className="text-xs font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-danger transition-colors px-2 py-2"
           >
             Cancel

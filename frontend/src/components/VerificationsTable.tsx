@@ -39,10 +39,12 @@ type VerificationTableEditCell = {
 
 export default function VerificationsTable({
   projectId,
+  basePath,
   globalSearch,
   viewMode,
 }: {
   projectId: number;
+  basePath: string;
   globalSearch: string;
   viewMode: ViewMode;
 }) {
@@ -267,7 +269,7 @@ export default function VerificationsTable({
     if (parentRow) {
       return (
         <Link
-          to={`/p/${projectId}/verifications/${v.parent_id}`}
+          to={`${basePath}/verifications/${v.parent_id}`}
           className="text-stitch-accent hover:underline font-mono text-xs line-clamp-2 min-w-0"
           title={parentTitle}
         >
@@ -335,7 +337,7 @@ export default function VerificationsTable({
           </button>
           {projectSlug ? (
             <a
-              href={`/p/${projectSlug}/verifications.xls`}
+              href={`${basePath}/verifications.xls`}
               title="Download Excel (classic)"
               className="p-2 text-stitch-muted hover:text-stitch-accent transition-colors"
             >
@@ -350,7 +352,7 @@ export default function VerificationsTable({
           <div className="rounded-xl border border-stitch-border bg-stitch-surface p-8 text-center text-stitch-muted text-sm">
             No verifications match filters.
             <Link
-              to={`/p/${projectId}/verifications/new`}
+              to={`${basePath}/verifications/new`}
               className="block mt-3 text-stitch-accent font-semibold hover:underline"
             >
               Create one
@@ -547,14 +549,14 @@ export default function VerificationsTable({
                   </div>
                   <div className="flex items-center gap-1 shrink-0 border-t sm:border-t-0 sm:border-l border-stitch-border/40 pt-3 sm:pt-0 sm:pl-3">
                     <Link
-                      to={`/p/${projectId}/verifications/${v.id}`}
+                      to={`${basePath}/verifications/${v.id}`}
                       className="p-1.5 text-stitch-muted hover:text-stitch-accent"
                       title="View"
                     >
                       <span className="material-symbols-outlined text-lg">visibility</span>
                     </Link>
                     <Link
-                      to={`/p/${projectId}/verifications/${v.id}/edit`}
+                      to={`${basePath}/verifications/${v.id}/edit`}
                       className="p-1.5 text-stitch-muted hover:text-stitch-accent"
                       title="Edit"
                     >
@@ -803,14 +805,14 @@ export default function VerificationsTable({
                     <td className="px-2 py-2 align-top sticky right-0 z-[1] bg-stitch-surface border-l border-stitch-border/60">
                       <div className="flex items-center gap-1">
                         <Link
-                          to={`/p/${projectId}/verifications/${v.id}`}
+                          to={`${basePath}/verifications/${v.id}`}
                           className="p-1.5 text-stitch-muted hover:text-stitch-accent"
                           title="View"
                         >
                           <span className="material-symbols-outlined text-lg">visibility</span>
                         </Link>
                         <Link
-                          to={`/p/${projectId}/verifications/${v.id}/edit`}
+                          to={`${basePath}/verifications/${v.id}/edit`}
                           className="p-1.5 text-stitch-muted hover:text-stitch-accent"
                           title="Edit"
                         >
@@ -827,7 +829,7 @@ export default function VerificationsTable({
             <p className="p-8 text-center text-stitch-muted text-sm">
               No verifications match filters.
               <Link
-                to={`/p/${projectId}/verifications/new`}
+                to={`${basePath}/verifications/new`}
                 className="block mt-3 text-stitch-accent font-semibold hover:underline"
               >
                 Create one

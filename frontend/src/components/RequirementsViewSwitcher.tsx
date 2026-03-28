@@ -1,9 +1,9 @@
-import { NavLink, useLocation, useParams } from 'react-router-dom';
+import { NavLink, useLocation, useOutletContext } from 'react-router-dom';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 export default function RequirementsViewSwitcher() {
-  const { projectId } = useParams();
+  const { basePath } = useOutletContext<ProjectOutletContext>();
   const loc = useLocation();
-  const pid = projectId ?? '';
 
   const sp = new URLSearchParams(loc.search);
   const listView = sp.get('view') === 'list';
@@ -24,21 +24,21 @@ export default function RequirementsViewSwitcher() {
   return (
     <div className="flex p-1 bg-stitch-surface rounded-lg gap-1 border border-stitch-border">
       <NavLink
-        to={`/p/${pid}/requirements`}
+        to={`${basePath}/requirements`}
         className={() => `${seg} ${tableActive ? active : inactive}`}
       >
         <span className="material-symbols-outlined text-sm">table_rows</span>
         Table
       </NavLink>
       <NavLink
-        to={`/p/${pid}/requirements?view=list`}
+        to={`${basePath}/requirements?view=list`}
         className={() => `${seg} ${listActive ? active : inactive}`}
       >
         <span className="material-symbols-outlined text-sm">view_list</span>
         List
       </NavLink>
       <NavLink
-        to={`/p/${pid}/traceability`}
+        to={`${basePath}/traceability`}
         className={() => `${seg} ${graphActive ? active : inactive}`}
       >
         <span className="material-symbols-outlined text-sm">hub</span>

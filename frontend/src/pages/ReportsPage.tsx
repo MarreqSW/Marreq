@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useOutletContext, useParams } from 'react-router-dom';
 import {
   getBaselineTraceability,
   getCoverageReport,
@@ -22,6 +22,7 @@ import type {
 import { ReportSection } from '@/components/reports/ReportSection';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 const NAV_SECTIONS = [
   { scrollId: 'report-coverage', label: 'Coverage' },
@@ -40,6 +41,7 @@ function pairKey(reqId: number, verId: number) {
 }
 
 export default function ReportsPage() {
+  const { basePath } = useOutletContext<ProjectOutletContext>();
   const { projectId: projectIdParam } = useParams();
   const pid = Number(projectIdParam);
   const location = useLocation();
@@ -450,7 +452,7 @@ export default function ReportsPage() {
                       <td className="px-4 py-2 text-stitch-muted">{reqById.get(id) ?? '—'}</td>
                       <td className="px-4 py-2 text-right">
                         <Link
-                          to={`/p/${pid}/requirements/${id}/edit`}
+                          to={`${basePath}/requirements/${id}/edit`}
                           className="text-xs font-bold text-stitch-accent hover:underline"
                         >
                           Open
@@ -479,7 +481,7 @@ export default function ReportsPage() {
                       <td className="px-4 py-2 text-stitch-muted">{verById.get(id) ?? '—'}</td>
                       <td className="px-4 py-2 text-right">
                         <Link
-                          to={`/p/${pid}/verifications/${id}/edit`}
+                          to={`${basePath}/verifications/${id}/edit`}
                           className="text-xs font-bold text-stitch-accent hover:underline"
                         >
                           Open
@@ -521,13 +523,13 @@ export default function ReportsPage() {
                       </td>
                       <td className="px-4 py-2 text-right">
                         <Link
-                          to={`/p/${pid}/matrix`}
+                          to={`${basePath}/matrix`}
                           className="text-xs font-bold text-stitch-accent hover:underline mr-2"
                         >
                           Matrix
                         </Link>
                         <Link
-                          to={`/p/${pid}/traceability`}
+                          to={`${basePath}/traceability`}
                           className="text-xs font-bold text-stitch-accent hover:underline"
                         >
                           Graph
@@ -548,31 +550,31 @@ export default function ReportsPage() {
           >
             <div className="p-4 flex flex-wrap gap-3 text-sm">
               <a
-                href={`/p/${projectSlug}/requirements.xls`}
+                href={`${basePath}/requirements.xls`}
                 className="text-stitch-accent font-bold hover:underline"
               >
                 Requirements (.xls)
               </a>
               <a
-                href={`/p/${projectSlug}/verifications.xls`}
+                href={`${basePath}/verifications.xls`}
                 className="text-stitch-accent font-bold hover:underline"
               >
                 Verifications (.xls)
               </a>
               <a
-                href={`/p/${projectSlug}/matrix.xls`}
+                href={`${basePath}/matrix.xls`}
                 className="text-stitch-accent font-bold hover:underline"
               >
                 Matrix (.xls)
               </a>
               <a
-                href={`/p/${projectSlug}/reports/requirements-pdf`}
+                href={`${basePath}/reports/requirements-pdf`}
                 className="text-stitch-accent font-bold hover:underline"
               >
                 Requirements PDF
               </a>
               <a
-                href={`/p/${projectSlug}/reports/pdf`}
+                href={`${basePath}/reports/pdf`}
                 className="text-stitch-accent font-bold hover:underline"
               >
                 Report PDF
@@ -598,7 +600,7 @@ export default function ReportsPage() {
                       <td className="px-4 py-2 font-mono text-stitch-accent">{reqById.get(id) ?? `#${id}`}</td>
                       <td className="px-4 py-2 text-right">
                         <Link
-                          to={`/p/${pid}/requirements/${id}/edit`}
+                          to={`${basePath}/requirements/${id}/edit`}
                           className="text-xs font-bold text-stitch-accent hover:underline"
                         >
                           Open
@@ -638,7 +640,7 @@ export default function ReportsPage() {
                       <td className="px-4 py-2 text-right tabular-nums">{count}</td>
                       <td className="px-4 py-2 text-right">
                         <Link
-                          to={`/p/${pid}/verifications/${verification_id}`}
+                          to={`${basePath}/verifications/${verification_id}`}
                           className="text-xs font-bold text-stitch-accent hover:underline"
                         >
                           View
@@ -729,7 +731,7 @@ export default function ReportsPage() {
                       <td className="px-4 py-2 text-stitch-muted text-xs">{row.reasons.join(' · ')}</td>
                       <td className="px-4 py-2 text-right">
                         <Link
-                          to={`/p/${pid}/requirements/${row.id}/edit`}
+                          to={`${basePath}/requirements/${row.id}/edit`}
                           className="text-xs font-bold text-stitch-accent hover:underline"
                         >
                           Edit
@@ -766,7 +768,7 @@ export default function ReportsPage() {
                       <td className="px-4 py-2 text-stitch-muted text-xs">{row.reasons.join(' · ')}</td>
                       <td className="px-4 py-2 text-right">
                         <Link
-                          to={`/p/${pid}/verifications/${row.id}/edit`}
+                          to={`${basePath}/verifications/${row.id}/edit`}
                           className="text-xs font-bold text-stitch-accent hover:underline"
                         >
                           Edit
@@ -794,7 +796,7 @@ export default function ReportsPage() {
                     <li key={r.id} className="px-3 py-1.5 flex justify-between gap-2">
                       <span className="font-mono text-stitch-accent truncate">{reqById.get(r.id)}</span>
                       <Link
-                        to={`/p/${pid}/requirements/${r.id}/edit`}
+                        to={`${basePath}/requirements/${r.id}/edit`}
                         className="text-xs font-bold text-stitch-accent hover:underline shrink-0"
                       >
                         Edit
@@ -819,7 +821,7 @@ export default function ReportsPage() {
                     <li key={r.id} className="px-3 py-1.5 flex justify-between gap-2">
                       <span className="font-mono text-stitch-accent truncate">{reqById.get(r.id)}</span>
                       <Link
-                        to={`/p/${pid}/requirements/${r.id}`}
+                        to={`${basePath}/requirements/${r.id}`}
                         className="text-xs font-bold text-stitch-accent hover:underline shrink-0"
                       >
                         View
@@ -844,7 +846,7 @@ export default function ReportsPage() {
                     <li key={r.id} className="px-3 py-1.5 flex justify-between gap-2">
                       <span className="font-mono text-stitch-accent truncate">{reqById.get(r.id)}</span>
                       <Link
-                        to={`/p/${pid}/requirements/${r.id}`}
+                        to={`${basePath}/requirements/${r.id}`}
                         className="text-xs font-bold text-stitch-accent hover:underline shrink-0"
                       >
                         View
@@ -867,7 +869,7 @@ export default function ReportsPage() {
             {baselines.length === 0 ? (
               <p className="text-sm text-stitch-muted">
                 No baselines for this project. Create one from the{' '}
-                <Link to={`/p/${pid}/baselines`} className="text-stitch-accent font-bold hover:underline">
+                <Link to={`${basePath}/baselines`} className="text-stitch-accent font-bold hover:underline">
                   Baselines
                 </Link>{' '}
                 page.

@@ -1,13 +1,14 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { createBaseline, listBaselines } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import type { Baseline } from '@/api/types';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 export default function BaselinesPage() {
-  const { projectId: projectIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { projectId, basePath } = useOutletContext<ProjectOutletContext>();
+  const pid = projectId;
   const { csrfToken, dashboard } = useDashboard();
 
   const [rows, setRows] = useState<Baseline[]>([]);
@@ -86,7 +87,7 @@ export default function BaselinesPage() {
         subtitle="Immutable snapshots of requirements and traceability. Same data as the classic baseline pages."
       >
         <a
-          href={`/p/${pid}/baselines`}
+          href={`${basePath}/baselines`}
           className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
         >
           Classic baselines
@@ -155,7 +156,7 @@ export default function BaselinesPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link
-                      to={`/p/${pid}/baselines/${b.id}`}
+                      to={`${basePath}/baselines/${b.id}`}
                       className="text-xs font-bold text-stitch-accent hover:underline"
                     >
                       Details

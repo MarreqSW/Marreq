@@ -6,7 +6,7 @@ import { useDashboard } from '@/context/DashboardContext';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 export default function VerificationsPage() {
-  const { projectId, globalSearch } = useOutletContext<ProjectOutletContext>();
+  const { projectId, globalSearch, basePath } = useOutletContext<ProjectOutletContext>();
   const [searchParams] = useSearchParams();
   const { dashboard } = useDashboard();
 
@@ -33,7 +33,7 @@ export default function VerificationsPage() {
         <VerificationsViewSwitcher />
       </div>
 
-      <VerificationsTable projectId={projectId} globalSearch={globalSearch} viewMode={viewMode} />
+      <VerificationsTable projectId={projectId} basePath={basePath} globalSearch={globalSearch} viewMode={viewMode} />
     </div>
   );
 }

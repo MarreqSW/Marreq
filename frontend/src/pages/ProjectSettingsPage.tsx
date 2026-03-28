@@ -1,5 +1,5 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import {
   getMyPermissions,
   listCustomFieldsByProject,
@@ -11,6 +11,7 @@ import {
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import type { CustomFieldDefinition, EffectivePermissions, User } from '@/api/types';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 function PermPill({ label, on }: { label: string; on: boolean }) {
   return (
@@ -34,8 +35,8 @@ const ROLES = [
 ];
 
 export default function ProjectSettingsPage() {
-  const { projectId: projectIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { projectId, basePath } = useOutletContext<ProjectOutletContext>();
+  const pid = projectId;
   const { dashboard, csrfToken } = useDashboard();
 
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
@@ -240,7 +241,7 @@ export default function ProjectSettingsPage() {
         {canManage && users === null && (
           <p className="text-xs text-amber-200/90 mb-4">
             User directory is admin-only.{' '}
-            <a href={`/p/${pid}/members`} className="text-stitch-accent underline font-semibold">
+            <a href={`${basePath}/members`} className="text-stitch-accent underline font-semibold">
               Open classic members page
             </a>{' '}
             to add people by account.
@@ -300,7 +301,7 @@ export default function ProjectSettingsPage() {
         {!canManage && (
           <p className="text-xs text-stitch-muted mt-3">
             You need “Manage members” to change roles here.{' '}
-            <a href={`/p/${pid}/members`} className="text-stitch-accent underline">
+            <a href={`${basePath}/members`} className="text-stitch-accent underline">
               Classic members UI
             </a>
           </p>

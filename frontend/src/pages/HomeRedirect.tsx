@@ -10,8 +10,9 @@ export default function HomeRedirect() {
     if (!dashboard?.projects?.length) return;
     const id =
       dashboard.selected_project_id ?? dashboard.projects[0]?.id ?? null;
-    if (id != null) {
-      navigate(`/p/${id}/dashboard`, { replace: true });
+    const project = dashboard.projects.find((p) => p.id === id) ?? dashboard.projects[0];
+    if (project) {
+      navigate(`${project.project_base_path}/dashboard`, { replace: true });
     }
   }, [dashboard, navigate]);
 

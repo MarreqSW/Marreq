@@ -167,6 +167,132 @@ export class MarreqClient {
     });
   }
 
+  /** GET /api/projects/:pid/verifications */
+  async listVerificationsByProject() {
+    return this.request(`/api/projects/${this.ctx.projectId}/verifications`);
+  }
+
+  /** GET /api/verifications/:id — caller should ensure the row belongs to MARREQ_PROJECT_ID. */
+  async getVerificationById(verificationId: number) {
+    return this.request(`/api/verifications/${verificationId}`);
+  }
+
+  /** GET /api/projects/:pid/baselines */
+  async listBaselinesByProject() {
+    return this.request(`/api/projects/${this.ctx.projectId}/baselines`);
+  }
+
+  async getRequirementActivity(requirementId: number) {
+    return this.request(
+      `/api/projects/${this.ctx.projectId}/requirements/${requirementId}/activity`
+    );
+  }
+
+  async getVerificationActivity(verificationId: number) {
+    return this.request(
+      `/api/projects/${this.ctx.projectId}/verifications/${verificationId}/activity`
+    );
+  }
+
+  async listRequirementComments(
+    requirementId: number,
+    versionId?: number | null
+  ) {
+    const q =
+      versionId != null && versionId > 0
+        ? `?version_id=${encodeURIComponent(String(versionId))}`
+        : "";
+    return this.request(`/api/requirements/${requirementId}/comments${q}`);
+  }
+
+  async getVerificationMatrix(verificationId: number) {
+    return this.request(
+      `/api/projects/${this.ctx.projectId}/verifications/${verificationId}/matrix`
+    );
+  }
+
+  async putVerificationMatrix(
+    verificationId: number,
+    requirementIds: number[]
+  ) {
+    return this.request(
+      `/api/projects/${this.ctx.projectId}/verifications/${verificationId}/matrix`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ requirement_ids: requirementIds }),
+      }
+    );
+  }
+
+  async clearSuspectLink(reqId: number, verificationId: number) {
+    return this.request("/api/traceability/clear_suspect", {
+      method: "POST",
+      body: JSON.stringify({
+        req_id: reqId,
+        verification_id: verificationId,
+      }),
+    });
+  }
+
+  async diffBaselineVsCurrent(baselineId: number, requirementId: number) {
+    return this.request(
+      `/api/projects/${this.ctx.projectId}/baselines/${baselineId}/requirements/${requirementId}/diff/current`
+    );
+  }
+
+  /** Aggregated catalog rows for MARREQ_PROJECT_ID (parallel GETs, filtered client-side where needed). */
+  async listProjectCatalog() {
+    const pid = this.ctx.projectId;
+    const [categories, applicability, reqStatuses, verifStatuses, methods, fields] =
+      await Promise.all([
+        this.request<unknown[]>("/api/categories"),
+        this.request<unknown[]>("/api/applicability"),
+        this.request<unknown[]>("/api/status"),
+        this.request<unknown[]>("/api/verification-status"),
+        this.request<unknown[]>(
+          `/api/projects/${pid}/verification-methods`
+        ),
+        this.request<unknown[]>(`/api/projects/${pid}/custom_fields`),
+      ]);
+
+    const byProject = (rows: unknown[]) =>
+      Array.isArray(rows)
+        ? rows.filter(
+            (r) =>
+              r &&
+              typeof r === "object" &&
+              "project_id" in r &&
+              (r as { project_id: number }).project_id === pid
+          )
+        : [];
+
+    return {
+      categories: byProject(categories),
+      applicability: byProject(applicability),
+      requirement_statuses: byProject(reqStatuses),
+      verification_statuses: byProject(verifStatuses),
+      verification_methods: Array.isArray(methods) ? methods : [],
+      custom_fields: Array.isArray(fields) ? fields : [],
+    };
+  }
+
+  async createRequirementComment(
+    requirementId: number,
+    body: string,
+    requirementVersionId?: number | null
+  ) {
+    return this.request(`/api/requirements/${requirementId}/comments`, {
+      method: "POST",
+      body: JSON.stringify({
+        body,
+        requirement_version_id:
+          requirementVersionId != null && requirementVersionId > 0
+            ? requirementVersionId
+            : null,
+      }),
+    });
+  }
+
   get projectId() {
     return this.ctx.projectId;
   }

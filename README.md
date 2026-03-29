@@ -55,11 +55,12 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 - **API tokens**: Bearer token auth for headless clients (e.g. MCP); tokens can be scoped to a project (see [MCP Setup](docs/developer/mcp-setup.md))
 
 ### 🤖 MCP (Model Context Protocol)
-- **MCP server**: Optional TypeScript MCP server in `mcp-server/` that exposes Marreq data as MCP tools for AI assistants (Cursor, Claude, etc.). Talks to the Marreq REST API with Bearer token; all tools are project-scoped.
-- **Read-only (default)**: get_requirement, list_requirements, get_versions, compare_versions, trace_up, trace_down, coverage_report, get_baseline, diff_baselines.
-- **Phase 2 (draft_write)**: When `MARREQ_MODE=draft_write`, additional tools: create_requirement, patch_requirement, set_approval, create_baseline.
-- **Audit**: Every tool call is logged to Marreq (POST /api/mcp/audit) for compliance.
-- See [MCP Setup](docs/developer/mcp-setup.md) for environment variables, tool list, and how to run the server.
+- **MCP server**: Optional TypeScript MCP server in `mcp-server/` that exposes a **subset** of the REST API as MCP tools for AI assistants (Cursor, Claude, etc.). Bearer token; project-scoped. Full parity matrix: [MCP Setup](docs/developer/mcp-setup.md).
+- **Core read (default)**: `MARREQ_MODE=read_only` — requirements, trace, coverage, baselines (get + diff).
+- **Extended read**: `MARREQ_MODE=read_extended` (or `draft_write`) — verifications, baseline list, audit activity, comments, matrix read, catalog, baseline-vs-current diff.
+- **Draft write**: `MARREQ_MODE=draft_write` — create/patch requirement, approvals, baselines, requirement comments.
+- **Trace write**: `MARREQ_TRACE_WRITE=true` — replace verification matrix links, clear suspect flags.
+- **Audit**: Every tool call is logged to Marreq (`POST /api/mcp/audit`).
 
 ### ✅ Requirement approval workflow (UI)
 - **Detail page**: Approval badge (draft / reviewed / approved), metadata (approved by, date), and contextual actions: *Mark as Reviewed* and *Approve Requirement* for users in the **project reviewers** list (or administrators). Confirmation modals before each transition.

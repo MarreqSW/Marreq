@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import {
   deleteVerificationGlobally,
   getMyPermissions,
@@ -28,11 +28,13 @@ import {
   RequirementMatrixPicker,
 } from '@/components/RequirementMatrixPicker';
 import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 const selectClass =
   'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
 
 export default function EditVerificationPage() {
+  const { basePath } = useOutletContext<ProjectOutletContext>();
   const { projectId: projectIdParam, verificationId: verificationIdParam } = useParams();
   const pid = Number(projectIdParam);
   const vid = Number(verificationIdParam);
@@ -237,7 +239,7 @@ export default function EditVerificationPage() {
     try {
       await deleteVerificationGlobally(vid, token);
       await refreshDashboard();
-      navigate(`/p/${pid}/verifications`);
+      navigate(`${basePath}/verifications`);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'Delete failed');
     } finally {
@@ -251,7 +253,7 @@ export default function EditVerificationPage() {
         {loadError}
         <div className="mt-3">
           <Link
-            to={`/p/${pid}/verifications`}
+            to={`${basePath}/verifications`}
             className="font-semibold text-stitch-accent underline"
           >
             Back to verifications
@@ -270,7 +272,7 @@ export default function EditVerificationPage() {
   return (
     <div className="pb-28 font-body text-stitch-fg text-stitch max-w-4xl">
       <nav className="flex items-center gap-2 text-[10px] font-semibold text-stitch-muted mb-6 uppercase tracking-widest">
-        <Link to={`/p/${pid}/verifications`} className="hover:text-stitch-accent transition-colors">
+        <Link to={`${basePath}/verifications`} className="hover:text-stitch-accent transition-colors">
           Verifications
         </Link>
         <span className="material-symbols-outlined text-sm text-stitch-muted">chevron_right</span>
@@ -288,6 +290,15 @@ export default function EditVerificationPage() {
         </h1>
         <p className="text-stitch-muted text-sm mt-2">
           Fields update via the API per changed column; traceability links save together with your changes.
+        </p>
+        <p className="text-stitch-muted text-xs mt-2">
+          <a
+            href={`${basePath}/verifications/show/${vid}`}
+            className="text-stitch-accent font-semibold hover:underline"
+          >
+            Classic verification page
+          </a>{' '}
+          — attachments and extra fields when available.
         </p>
       </div>
 
@@ -432,7 +443,7 @@ export default function EditVerificationPage() {
               {parentId !== '' ? (
                 <div className="mt-1.5">
                   <Link
-                    to={`/p/${pid}/verifications/${parentId}`}
+                    to={`${basePath}/verifications/${parentId}`}
                     className="text-xs font-mono font-semibold text-stitch-accent hover:underline"
                     title={selectedParent?.name?.trim() || undefined}
                   >
@@ -461,6 +472,7 @@ export default function EditVerificationPage() {
           </div>
           <RequirementMatrixPicker
             projectId={pid}
+            basePath={basePath}
             requirements={requirements}
             selectedIds={linkedReqIds}
             onChange={setLinkedReqIds}
@@ -485,7 +497,7 @@ export default function EditVerificationPage() {
               {deleteBusy ? 'Deleting…' : 'Delete verification'}
             </button>
             <Link
-              to={`/p/${pid}/verifications`}
+              to={`${basePath}/verifications`}
               className="text-xs font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-danger transition-colors px-2 py-2"
             >
               Back

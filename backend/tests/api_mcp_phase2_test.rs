@@ -978,6 +978,25 @@ async fn patch_status_forbidden_when_user_not_in_project_reviewer_pool() {
 }
 
 #[rocket::async_test]
+async fn patch_status_forbidden_for_site_admin_not_in_project_reviewer_pool() {
+    let mut repo = base_repo();
+    repo.project_reviewers.insert(PROJECT_ID, vec![3]);
+    insert_requirement_with_version_for_gates(&mut repo);
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .patch(format!("/api/projects/{PROJECT_ID}/requirements/1"))
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
+        .body(json!({ "status_id": 2 }).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
 async fn patch_status_ok_for_user_in_project_reviewer_pool() {
     let mut repo = base_repo();
     repo.project_reviewers.insert(PROJECT_ID, vec![3]);
@@ -1010,6 +1029,27 @@ async fn set_version_approval_forbidden_when_user_not_in_reviewer_pool() {
         ))
         .header(ContentType::JSON)
         .private_cookie(session_cookie(2))
+        .body(json!({ "state": "reviewed" }).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn set_version_approval_forbidden_for_site_admin_not_in_reviewer_pool() {
+    let mut repo = base_repo();
+    repo.project_reviewers.insert(PROJECT_ID, vec![3]);
+    insert_requirement_with_version_for_gates(&mut repo);
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .put(format!(
+            "/api/projects/{PROJECT_ID}/requirements/1/versions/1/approval"
+        ))
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(1))
         .body(json!({ "state": "reviewed" }).to_string())
         .dispatch()
         .await;

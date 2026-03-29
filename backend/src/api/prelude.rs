@@ -37,14 +37,14 @@ pub fn require_project_reviewer(
     user: &crate::models::User,
     project_id: i32,
 ) -> ApiResult<()> {
-    if user.is_admin {
-        return Ok(());
-    }
     let repo = state.repo_read();
     let reviewer_ids = repo
         .list_project_reviewer_ids(project_id)
         .map_err(ApiError::from)?;
     if reviewer_ids.is_empty() {
+        if user.is_admin {
+            return Ok(());
+        }
         return Err(ApiError::Forbidden(
             "no project reviewers configured; add reviewers in project settings".into(),
         ));

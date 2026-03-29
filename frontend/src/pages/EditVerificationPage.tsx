@@ -2,16 +2,27 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import {
   deleteVerificationGlobally,
+  getMyPermissions,
+  getProjectReviewers,
   getVerification,
   getVerificationMatrix,
+  listProjectMembers,
   listRequirements,
+  listUsersOptional,
   listVerificationStatuses,
   listVerifications,
   putVerificationMatrix,
   updateVerificationField,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
-import type { Requirement, Verification, VerificationStatus } from '@/api/types';
+import type {
+  EffectivePermissions,
+  ProjectMember,
+  Requirement,
+  User,
+  Verification,
+  VerificationStatus,
+} from '@/api/types';
 import {
   matrixSelectionEquals,
   RequirementMatrixPicker,
@@ -47,18 +58,32 @@ export default function EditVerificationPage() {
   const [source, setSource] = useState('');
   const [statusId, setStatusId] = useState(0);
   const [parentId, setParentId] = useState<string>('');
+  const [authorId, setAuthorId] = useState(0);
+  const [reviewerId, setReviewerId] = useState(0);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [projectReviewerIds, setProjectReviewerIds] = useState<number[]>([]);
+  const [users, setUsers] = useState<User[] | null>(null);
+  const [perms, setPerms] = useState<EffectivePermissions | null>(null);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid) || !Number.isFinite(vid)) return;
     setLoadError(null);
     try {
-      const [v, st, all, reqs, mx] = await Promise.all([
+      const [v, st, all, reqs, mx, mem, u, permRes, revPool] = await Promise.all([
         getVerification(vid),
         listVerificationStatuses(),
         listVerifications(),
         listRequirements(pid),
         getVerificationMatrix(pid, vid),
+        listProjectMembers(pid),
+        listUsersOptional(),
+        getMyPermissions(pid).catch(() => null),
+        getProjectReviewers(pid).catch(() => ({ user_ids: [] as number[] })),
       ]);
+      setProjectReviewerIds(revPool.user_ids);
+      setMembers(mem);
+      setUsers(u);
+      setPerms(permRes);
       if (v.project_id !== pid) {
         setLoadError('This verification belongs to another project.');
         return;
@@ -69,6 +94,8 @@ export default function EditVerificationPage() {
       setDescription(v.description);
       setSource(v.source);
       setStatusId(v.status_id);
+      setAuthorId(v.author_id);
+      setReviewerId(v.reviewer_id);
       setParentId(v.parent_id != null ? String(v.parent_id) : '');
       setStatuses(st);
       setSiblings(all.filter((x) => x.project_id === pid && x.id !== vid));
@@ -87,7 +114,6 @@ export default function EditVerificationPage() {
 
   const projectName =
     dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
-  const projectSlug = dashboard?.projects?.find((p) => p.id === pid)?.slug;
 
   const statusOptions = useMemo(() => {
     const forProject = statuses.filter((s) => s.project_id === pid);
@@ -95,6 +121,27 @@ export default function EditVerificationPage() {
   }, [statuses, pid]);
 
   const statusMeta = useMemo(() => statuses.find((s) => s.id === statusId), [statuses, statusId]);
+
+  const userLabel = useCallback(
+    (id: number) => {
+      const u = users?.find((x) => x.id === id);
+      if (u) return `${u.name} (${u.username})`;
+      return `User #${id}`;
+    },
+    [users],
+  );
+
+  const authorOptionIds = useMemo(() => {
+    const ids = new Set(members.map((m) => m.user_id));
+    if (authorId > 0) ids.add(authorId);
+    return [...ids].sort((a, b) => a - b);
+  }, [members, authorId]);
+
+  const reviewerOptionIds = useMemo(() => {
+    const ids = new Set(projectReviewerIds);
+    if (reviewerId > 0) ids.add(reviewerId);
+    return [...ids].sort((a, b) => a - b);
+  }, [projectReviewerIds, reviewerId]);
 
   const selectedParent = useMemo(() => {
     if (parentId === '') return null;
@@ -116,10 +163,12 @@ export default function EditVerificationPage() {
       description !== base.description ||
       source !== base.source ||
       statusId !== base.status_id ||
+      authorId !== base.author_id ||
+      reviewerId !== base.reviewer_id ||
       (parentId === '' ? null : Number(parentId)) !== base.parent_id ||
       matrixDirty
     );
-  }, [base, name, referenceCode, description, source, statusId, parentId, matrixDirty]);
+  }, [base, name, referenceCode, description, source, statusId, authorId, reviewerId, parentId, matrixDirty]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -143,6 +192,12 @@ export default function EditVerificationPage() {
       if (statusId !== base.status_id) {
         updates.push({ field: 'status_id', value: String(statusId) });
       }
+      if (authorId !== base.author_id) {
+        updates.push({ field: 'author_id', value: String(authorId) });
+      }
+      if (reviewerId !== base.reviewer_id) {
+        updates.push({ field: 'reviewer_id', value: String(reviewerId) });
+      }
       const newParent = parentId === '' ? null : Number(parentId);
       if (newParent !== base.parent_id) {
         updates.push({
@@ -151,7 +206,7 @@ export default function EditVerificationPage() {
         });
       }
       for (const u of updates) {
-        await updateVerificationField(vid, u.field, u.value, token);
+        await updateVerificationField(pid, vid, u.field, u.value, token);
       }
       if (matrixDirty) {
         await putVerificationMatrix(pid, vid, { requirement_ids: linkedReqIds }, token);
@@ -236,17 +291,15 @@ export default function EditVerificationPage() {
         <p className="text-stitch-muted text-sm mt-2">
           Fields update via the API per changed column; traceability links save together with your changes.
         </p>
-        {projectSlug ? (
-          <p className="text-stitch-muted text-xs mt-2">
-            <a
-              href={`${basePath}/verifications/show/${vid}`}
-              className="text-stitch-accent font-semibold hover:underline"
-            >
-              Classic verification page
-            </a>{' '}
-            — attachments and extra fields when available.
-          </p>
-        ) : null}
+        <p className="text-stitch-muted text-xs mt-2">
+          <a
+            href={`${basePath}/verifications/show/${vid}`}
+            className="text-stitch-accent font-semibold hover:underline"
+          >
+            Classic verification page
+          </a>{' '}
+          — attachments and extra fields when available.
+        </p>
       </div>
 
       <form onSubmit={onSubmit} className="space-y-8">
@@ -307,8 +360,14 @@ export default function EditVerificationPage() {
                   title={statusMeta?.tag_color ? 'Catalog color' : undefined}
                 />
                 <select
-                  className={`${selectClass} flex-1 min-w-0`}
+                  className={`${selectClass} flex-1 min-w-0 disabled:opacity-50`}
                   value={statusId}
+                  disabled={!perms?.is_project_reviewer}
+                  title={
+                    perms?.is_project_reviewer
+                      ? undefined
+                      : 'Only designated project reviewers can change verification status'
+                  }
                   onChange={(e) => setStatusId(Number(e.target.value))}
                 >
                   {statusOptions.map((s) => (
@@ -318,6 +377,49 @@ export default function EditVerificationPage() {
                   ))}
                 </select>
               </div>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+                Author
+              </label>
+              <select
+                className={selectClass}
+                value={authorId}
+                onChange={(e) => setAuthorId(Number(e.target.value))}
+              >
+                {authorOptionIds.map((id) => (
+                  <option key={id} value={id} className="bg-stitch-surface text-stitch-fg">
+                    {userLabel(id)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+                Reviewer
+              </label>
+              {reviewerOptionIds.length === 0 ? (
+                <p className="text-xs text-stitch-muted py-2">
+                  No project reviewers configured. Add them in{' '}
+                  <Link to={`/p/${pid}/settings`} className="text-stitch-accent underline font-semibold">
+                    Project settings
+                  </Link>
+                  .
+                </p>
+              ) : (
+                <select
+                  className={selectClass}
+                  value={reviewerId}
+                  onChange={(e) => setReviewerId(Number(e.target.value))}
+                >
+                  {reviewerOptionIds.map((id) => (
+                    <option key={`r-${id}`} value={id} className="bg-stitch-surface text-stitch-fg">
+                      {userLabel(id)}
+                      {!projectReviewerIds.includes(id) ? ' (not in reviewer list)' : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
             <div className="sm:col-span-2">
               <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">

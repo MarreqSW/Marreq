@@ -97,14 +97,16 @@ cp .env.example .env
 |-------|-------------|
 | `projects` | Multi-project support with project metadata |
 | `users` | User accounts with authentication and permissions |
+| `project_members` | Membership and role per project |
+| `project_reviewers` | Users allowed to change requirement/verification **status** and version **approval** for that project |
 | `requirements` | Requirement containers with immutable versions in `requirement_versions` |
-| `tests` | Test cases with status and source information |
-| `matrix` | Traceability links between requirements and tests |
+| `verifications` | Verification items (name, reference, status, author/reviewer, optional method) |
+| `matrix` | Traceability links between requirements and verifications |
 | `categories` | User-defined requirement categories |
 | `applicability` | Requirement applicability definitions |
-| `verification` | Verification methods for requirements |
+| `verification_methods` | Methods attachable to requirement versions and optionally to verifications |
+| `verification_status` | Per-project statuses for verifications |
 | `requirement_status` | Requirement status definitions |
-| `test_status` | Test status definitions |
 | `logs` | Audit trail for system activities |
 
 ### Key Features
@@ -139,8 +141,10 @@ cp .env.example .env
 - 6 applicability definitions
 - 4 verification methods
 - 5 requirements (with initial versions)
-- 5 tests
+- 5 verifications
 - 5 matrix links
+
+Seeds also populate **`project_reviewers`** (from Admin/Reviewer roles) so approval and status gates work for demo users; adjust via **Project settings → Reviewers** or `PUT /api/projects/<id>/reviewers`.
 
 ## Database Files
 

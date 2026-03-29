@@ -1,12 +1,12 @@
 # Testing the requirement version approval workflow
 
-This guide explains how to test the **approval workflow** for requirement versions as a user. The feature is exposed via the **REST API**; the web UI does not yet have approval buttons, so you use the API (e.g. curl or browser DevTools) after logging in.
+This guide explains how to test the **approval workflow** for requirement versions as a user. The feature is exposed via the **REST API** and in the React UI where enabled. Use the API (e.g. curl or browser DevTools) after logging in when testing headlessly.
 
 ## What the feature does
 
 - Each **requirement version** has an **approval state**: `draft` → `reviewed` → `approved`.
 - **Transitions**: only `draft`→`reviewed` and `reviewed`→`approved` are allowed (no backwards steps).
-- **Who can approve**: project **Owner** (role 1), **Manager** (role 2), or any **admin**. Contributors and viewers get 403.
+- **Who can transition approval / change requirement status**: users listed in **`project_reviewers`** for that project (see `GET/PUT /api/projects/<project_id>/reviewers`), or any **global admin**. The old rule “Owner or Manager role only” is replaced by this reviewer list (roles still control other permissions such as **Edit requirements**). If the reviewer list is **empty**, only admins can perform those transitions until someone with **Manage members** adds reviewers.
 - **Baselines**: when you create a baseline, **all** requirements in the project are included (current version snapshot). Approval state is tracked for workflow/reporting but does not filter baseline contents.
 
 ## Prerequisites
@@ -17,8 +17,7 @@ This guide explains how to test the **approval workflow** for requirement versio
 
 2. **Logged-in session**  
    - Open http://localhost:8000 (or your base URL) and log in (e.g. **alice** / **ChangeMe123!**).  
-   - You need a user that is **Owner** or **Manager** of the project (or admin).  
-   - Default data: **alice** is Owner of project 2 (Marreq Project), **admin** is Manager of project 2.
+   - You need a user that appears in **`GET /api/projects/<id>/reviewers`** for that project (or **admin**). After migrations, Admin/Reviewer roles are **seeded** into `project_reviewers`; adjust with `PUT /api/projects/<id>/reviewers` and body `{"user_ids":[...]}` if your test user is not listed.
 
 ## Step 1: Get requirement and version IDs
 
@@ -50,7 +49,7 @@ Example: for requirement `1`, you might get `version_id = 1`. Use that `requirem
 
 ## Step 2: Set version to “reviewed”
 
-Only **Owner**, **Manager**, or **admin** can call this. Replace `REQ_ID` and `VERSION_ID` (e.g. `1` and `1`):
+Only a **project reviewer** (or **admin**) can call this. Replace `REQ_ID` and `VERSION_ID` (e.g. `1` and `1`):
 
 ```bash
 curl -s -X PUT -b cookies.txt \

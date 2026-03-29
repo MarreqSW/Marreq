@@ -171,6 +171,10 @@ mod tests {
             parent_id: Some(1),
             project_id,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         }
     }
 
@@ -185,6 +189,8 @@ mod tests {
             parent_id: Some(1),
             project_id,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
         }
     }
 

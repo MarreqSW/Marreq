@@ -1,11 +1,13 @@
 # MCP (Model Context Protocol) Setup for Marreq
 
-Marreq can be used from AI assistants (Cursor, Claude, etc.) via an optional **MCP server** that exposes read-only tools. The MCP server talks to the Marreq REST API; it does not access the database directly.
+Marreq can be used from AI assistants (Cursor, Claude, etc.) via an optional **MCP server** that exposes tools mapped to the Marreq REST API. The MCP server does not access the database directly.
 
 ## Architecture
 
 - **AI client** (Cursor / Claude) ↔ **Marreq MCP server** (stdio) ↔ **Marreq REST API** (HTTP + Bearer token) ↔ **Database**
-- All access is project-scoped and permission-checked. Every tool call is audited.
+- All access is project-scoped and permission-checked. Every tool call is audited (see `postAudit` → `POST /api/mcp/audit`).
+
+The MCP server implements a **subset** of the HTTP API on purpose (smaller attack surface). A full route-by-route matrix is in [API parity (MCP vs REST)](#api-parity-mcp-vs-rest) below.
 
 ## Prerequisites
 
@@ -22,7 +24,7 @@ API tokens are stored in the `user_api_tokens` table. You need to insert a row w
 RAW_TOKEN="your-secret-token-here"
 
 # SHA-256 hex hash (e.g. with openssl)
-TOKEN_HASH=$(echo -n "$RAW_TOKEN" | sha256sum | cut -d' ' -f1)
+TOKEN_HASH=$(echo -n "$RAW_TOKEN" | sha256sum | cut -d ' ' -f1)
 
 # Insert token for user 1, optional project_id for scope (NULL = any project)
 psql $DATABASE_URL -c "
@@ -42,10 +44,22 @@ Set these before starting the MCP server (e.g. in a `.env` file or your shell):
 | `MARREQ_BASE_URL` | Yes | Marreq API base URL (e.g. `http://localhost:8000`) |
 | `MARREQ_API_TOKEN` | Yes | Raw API token (Bearer) |
 | `MARREQ_PROJECT_ID` | Yes | Project ID to scope all tools |
-| `MARREQ_MODE` | No | `read_only` (default) or `draft_write` (Phase 2) |
+| `MARREQ_MODE` | No | `read_only` (default), `read_extended`, or `draft_write` — see [Tool tiers](#tool-tiers) |
+| `MARREQ_TRACE_WRITE` | No | If `true` / `1` / `yes`, registers matrix replace and clear-suspect tools (see below) |
 | `MARREQ_USER_ID` | No | User ID (for audit display) |
 | `MARREQ_ROLE` | No | Role (for future use) |
 | `MARREQ_SESSION_ID` | No | Session identifier (for audit correlation) |
+
+### Tool tiers
+
+| Tier | Env | Tools |
+|------|-----|--------|
+| **Core read** | `MARREQ_MODE=read_only` (default) | Requirements (get/list/versions/diff), trace up/down, coverage report, baseline get + baseline diff |
+| **Extended read** | `MARREQ_MODE=read_extended` **or** `draft_write` | Core read **plus**: list/get verifications, list baselines, requirement/verification audit activity, requirement comments (list), verification matrix (read), project catalog (categories, applicability, statuses, methods, custom fields), diff baseline vs current requirement |
+| **Draft write** | `MARREQ_MODE=draft_write` | Extended read **plus**: create/patch requirement, set version approval, create baseline, create requirement comment |
+| **Trace / matrix write** | `MARREQ_TRACE_WRITE=true` (any mode) | `put_verification_matrix`, `clear_suspect` — still requires matching API permissions (`EditRequirements`, etc.) |
+
+`draft_write` implies extended read tools (same as `read_extended` for read surface).
 
 ## 3. Build and run the MCP server
 
@@ -89,7 +103,9 @@ Add the Marreq MCP server to your client config. Example for Cursor (in project 
       "env": {
         "MARREQ_BASE_URL": "http://localhost:8000",
         "MARREQ_API_TOKEN": "your-secret-token-here",
-        "MARREQ_PROJECT_ID": "1"
+        "MARREQ_PROJECT_ID": "1",
+        "MARREQ_MODE": "read_extended",
+        "MARREQ_TRACE_WRITE": "false"
       }
     }
   }
@@ -98,11 +114,11 @@ Add the Marreq MCP server to your client config. Example for Cursor (in project 
 
 Use the absolute path to `mcp-server/dist/index.js` and the same env vars as above.
 
-To enable Phase 2 write tools, set `MARREQ_MODE=draft_write` in the MCP server env (same config block). The server will then register `create_requirement`, `patch_requirement`, `set_approval`, and `create_baseline` in addition to the read-only tools.
+For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For traceability matrix edits without other draft tools, you can keep `read_only` or `read_extended` and set `MARREQ_TRACE_WRITE=true`.
 
-## 5. Available tools
+## 5. Available tools (by name)
 
-### Read-only (Phase 1, always available)
+### Core read (`read_only` and above)
 
 | Tool | Description |
 |------|-------------|
@@ -116,26 +132,74 @@ To enable Phase 2 write tools, set `MARREQ_MODE=draft_write` in the MCP server e
 | `get_baseline` | Baseline metadata, requirements snapshot, and traceability |
 | `diff_baselines` | Compare two baselines (requirements and traceability diff) |
 
-### Draft write (Phase 2, only when `MARREQ_MODE=draft_write`)
+### Extended read (`read_extended` or `draft_write`)
 
 | Tool | Description |
 |------|-------------|
-| `create_requirement` | Create a new requirement in the project (draft). Parameters: title, description, reference_code, author_id, reviewer_id, category_id, status_id, applicability_id, verification_method_ids; optional parent_id, justification, custom_fields. |
-| `patch_requirement` | Update a requirement (creates new version). Parameters: requirement_id, patch (title, description, status_id, etc. as needed). |
-| `set_approval` | Set requirement version approval to `reviewed` or `approved`. Requires project owner/manager role. Parameters: requirement_id, version_id, state. |
-| `create_baseline` | Create a new baseline snapshot for the project. Parameters: name, optional description. |
+| `list_verifications` | List verifications (tests) in the project |
+| `get_verification` | Get one verification; must belong to `MARREQ_PROJECT_ID` |
+| `list_baselines` | List baseline metadata rows for the project |
+| `get_requirement_activity` | Audit log entries for a requirement |
+| `get_verification_activity` | Audit log entries for a verification |
+| `list_requirement_comments` | Comments on a requirement; optional `requirement_version_id` |
+| `get_verification_matrix` | Requirement ids linked to a verification |
+| `list_project_catalog` | Categories, applicability, statuses, verification methods, custom fields (project-filtered) |
+| `diff_baseline_vs_current` | Diff baseline snapshot vs current requirement version |
 
-All tools are project-scoped to `MARREQ_PROJECT_ID`. Audit entries are written to Marreq (entity_type `MCP`, queryable in logs). Write tools are only registered when the server is started with `MARREQ_MODE=draft_write`.
+### Draft write (`draft_write` only)
 
-## 6. Security notes
+| Tool | Description |
+|------|-------------|
+| `create_requirement` | Create a new requirement in the project |
+| `patch_requirement` | Update a requirement (creates new version). Changing `status_id` requires project reviewer rules on the API |
+| `set_approval` | Set requirement version approval to `reviewed` or `approved` |
+| `create_baseline` | Create a new baseline snapshot |
+| `create_requirement_comment` | Add a comment on a requirement |
+
+### Trace write (`MARREQ_TRACE_WRITE=true`)
+
+| Tool | Description |
+|------|-------------|
+| `put_verification_matrix` | Replace all requirement links for a verification |
+| `clear_suspect` | Clear suspect flag on a matrix link (`req_id`, `verification_id`) |
+
+All tools are scoped to `MARREQ_PROJECT_ID` where the API provides a project path. Audit entries are written to Marreq (`POST /api/mcp/audit`).
+
+## 6. API parity (MCP vs REST)
+
+Reference: backend route list in `backend/src/api/mod.rs`. This table states whether an MCP tool exists for that capability.
+
+| REST area | MCP coverage |
+|-----------|----------------|
+| Auth (login, logout, CSRF, me) | **No** — use Bearer token |
+| Dashboard / session projects | **No** |
+| Requirements: list/get/versions/diff/patch/create/delete (global paths) | **Partial** — project-scoped get/list/versions/diff/patch/create; **no** delete via MCP |
+| Requirements: impacted tests | **No** |
+| Activity (`.../requirements/:id/activity`, `.../verifications/:id/activity`) | **Yes** (extended read) |
+| Comments list/create | **Yes** (extended / draft_write) |
+| Version parent links CRUD | **No** |
+| Verifications: list/get | **Yes** (extended); create/update/delete | **No** |
+| Matrix get/put | **Yes** (extended read; put with `MARREQ_TRACE_WRITE`) |
+| Trace up/down, coverage | **Yes** (core read) |
+| `clear_suspect` | **Yes** (`MARREQ_TRACE_WRITE`) |
+| Baselines: list/get/bundle/diff/diff_vs_current | **Yes** list/get bundle/diff/diff_vs_current; create via draft_write |
+| Categories, applicability, statuses, methods, custom fields | **Read** via `list_project_catalog`; **CRUD** | **No** |
+| Members, reviewers, permissions | **No** |
+| Users, groups, projects (admin) | **No** |
+| Semantic search / reindex | **No** |
+| Cache admin | **No** |
+| MCP audit endpoint | **Internal** (called after each tool) |
+
+## 7. Security notes
 
 - **Token**: Store `MARREQ_API_TOKEN` securely; never commit it. Use env or a secrets manager.
 - **Base URL**: For production, use HTTPS and a URL the MCP server can reach.
 - **Project scope**: Prefer creating tokens with `project_id` set so a compromised token only exposes one project.
-- **Read-only vs draft_write**: Default `MARREQ_MODE=read_only` exposes only read tools. Set `MARREQ_MODE=draft_write` to enable create/patch requirement, set approval, and create baseline (Phase 2).
+- **Modes**: Default `read_only` limits tools. Use `read_extended` only when assistants need verifications, audit trails, or catalog. Use `draft_write` and `MARREQ_TRACE_WRITE` only for trusted automation.
 
-## 7. Troubleshooting
+## 8. Troubleshooting
 
 - **Unauthorized (401)**: Check that `MARREQ_API_TOKEN` matches a token in `user_api_tokens` (compare SHA-256 hash of the raw token).
-- **Forbidden (403)**: The token’s project scope (if set) must match `MARREQ_PROJECT_ID`; or the user must be a member of the project.
+- **Forbidden (403)**: The token’s project scope (if set) must match `MARREQ_PROJECT_ID`; or the user must be a member of the project with permission for the action.
 - **Connection refused**: Ensure Marreq is running and `MARREQ_BASE_URL` is correct (e.g. `http://localhost:8000`).
+- **Tool not found**: Confirm `MARREQ_MODE` and `MARREQ_TRACE_WRITE` — extended and trace tools are only registered when those settings enable them.

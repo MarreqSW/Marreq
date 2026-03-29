@@ -128,7 +128,6 @@ export default function ReportsPage() {
 
   const project = dashboard?.projects?.find((p) => p.id === pid);
   const projectName = project?.name ?? 'Project';
-  const projectSlug = project?.slug;
 
   const reqById = useMemo(
     () => new Map(requirements.map((r) => [r.id, r.reference_code?.trim() || r.title])),
@@ -541,45 +540,15 @@ export default function ReportsPage() {
           </div>
         </ReportSection>
 
-        {projectSlug ? (
-          <ReportSection
-            title="Classic exports (same session)"
-            subtitle="Excel / PDF downloads served by the legacy HTML routes"
-          >
-            <div className="p-4 flex flex-wrap gap-3 text-sm">
-              <a
-                href={`/p/${projectSlug}/requirements.xls`}
-                className="text-stitch-accent font-bold hover:underline"
-              >
-                Requirements (.xls)
-              </a>
-              <a
-                href={`/p/${projectSlug}/verifications.xls`}
-                className="text-stitch-accent font-bold hover:underline"
-              >
-                Verifications (.xls)
-              </a>
-              <a
-                href={`/p/${projectSlug}/matrix.xls`}
-                className="text-stitch-accent font-bold hover:underline"
-              >
-                Matrix (.xls)
-              </a>
-              <a
-                href={`/p/${projectSlug}/reports/requirements-pdf`}
-                className="text-stitch-accent font-bold hover:underline"
-              >
-                Requirements PDF
-              </a>
-              <a
-                href={`/p/${projectSlug}/reports/pdf`}
-                className="text-stitch-accent font-bold hover:underline"
-              >
-                Report PDF
-              </a>
-            </div>
-          </ReportSection>
-        ) : null}
+        <ReportSection
+          title="Spreadsheet and PDF exports"
+          subtitle="Legacy browser downloads are not wired to this API-only backend; use CSV from the requirements and verifications lists where available."
+        >
+          <div className="p-4 text-sm text-stitch-muted">
+            Excel and PDF links were removed so clicks do not trigger a full-page request to routes the server does not
+            serve (which produced a 404 HTML page).
+          </div>
+        </ReportSection>
       </div>
 
       <div id="report-matrix" className="space-y-8 scroll-mt-24 mb-16">

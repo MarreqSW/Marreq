@@ -48,8 +48,7 @@ export default function VerificationsTable({
   globalSearch: string;
   viewMode: ViewMode;
 }) {
-  const { dashboard, csrfToken } = useDashboard();
-  const projectSlug = dashboard?.projects?.find((p) => p.id === projectId)?.slug;
+  const { csrfToken } = useDashboard();
 
   const [rows, setRows] = useState<Verification[]>([]);
   const [statuses, setStatuses] = useState<VerificationStatus[]>([]);
@@ -362,15 +361,6 @@ export default function VerificationsTable({
           >
             <span className="material-symbols-outlined">file_download</span>
           </button>
-          {projectSlug ? (
-            <a
-              href={`/p/${projectSlug}/verifications.xls`}
-              title="Download Excel (classic)"
-              className="p-2 text-stitch-muted hover:text-stitch-accent transition-colors"
-            >
-              <span className="material-symbols-outlined">table_chart</span>
-            </a>
-          ) : null}
         </div>
       </div>
 

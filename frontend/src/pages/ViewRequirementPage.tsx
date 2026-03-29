@@ -75,11 +75,6 @@ export default function ViewRequirementPage() {
   const rid = Number(requirementIdParam);
   const { dashboard } = useDashboard();
 
-  const projectSlug = useMemo(
-    () => dashboard?.projects?.find((p) => p.id === pid)?.slug,
-    [dashboard?.projects, pid],
-  );
-
   const [detail, setDetail] = useState<RequirementDetailPayload | null>(null);
   const [versions, setVersions] = useState<RequirementVersion[]>([]);
   const [comments, setComments] = useState<RequirementCommentItem[]>([]);
@@ -276,15 +271,6 @@ export default function ViewRequirementPage() {
           <span className="text-stitch-muted font-normal normal-case tracking-normal">· View</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {projectSlug ? (
-            <a
-              href={`/p/${projectSlug}/requirements/show/${rid}`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-stitch-border text-stitch-muted hover:text-stitch-accent hover:border-stitch-accent/40 text-[10px] font-bold uppercase tracking-wider transition-colors"
-            >
-              <span className="material-symbols-outlined text-sm">open_in_new</span>
-              Classic
-            </a>
-          ) : null}
           {canEdit ? (
             <Link
               to={`/p/${pid}/requirements/${rid}/edit`}
@@ -593,14 +579,6 @@ export default function ViewRequirementPage() {
               </p>
             </div>
           </div>
-          {projectSlug ? (
-            <a
-              href={`/p/${projectSlug}/requirements/show/${rid}`}
-              className="text-[10px] font-bold uppercase tracking-wide text-stitch-accent hover:underline shrink-0"
-            >
-              Full diffs in classic →
-            </a>
-          ) : null}
         </div>
         <div className="p-4 md:p-6 max-h-[min(520px,55vh)] overflow-y-auto">
           {versions.length === 0 ? (

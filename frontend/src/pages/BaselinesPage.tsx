@@ -85,12 +85,6 @@ export default function BaselinesPage() {
         title="Baselines"
         subtitle="Immutable snapshots of requirements and traceability. Same data as the classic baseline pages."
       >
-        <a
-          href={`/p/${pid}/baselines`}
-          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
-        >
-          Classic baselines
-        </a>
       </StitchPageHeader>
 
       <form

@@ -408,12 +408,6 @@ export default function MatrixPage() {
         title="Traceability matrix"
         subtitle="Requirements in rows, verifications in columns. Click any column header to sort rows (↑↓). Symbols show link + test status; empty cells are not linked."
       >
-        <a
-          href={`/p/${pid}/matrix`}
-          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
-        >
-          Classic matrix
-        </a>
         <button
           type="button"
           onClick={() => void load()}

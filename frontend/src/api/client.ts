@@ -10,6 +10,7 @@ import type {
   DashboardPayloadWire,
   DashboardProject,
   EffectivePermissions,
+  EntityActivityItem,
   MatrixLink,
   NewVerificationBody,
   ProjectMember,
@@ -235,6 +236,20 @@ export async function listRequirementVersionsByProject(
   return fetchJson<RequirementVersion[]>(
     `/api/projects/${projectId}/requirements/${requirementId}/versions`,
   );
+}
+
+export async function listRequirementActivityByProject(
+  projectId: number,
+  requirementId: number,
+): Promise<EntityActivityItem[]> {
+  return fetchJson(`/api/projects/${projectId}/requirements/${requirementId}/activity`);
+}
+
+export async function listVerificationActivityByProject(
+  projectId: number,
+  verificationId: number,
+): Promise<EntityActivityItem[]> {
+  return fetchJson(`/api/projects/${projectId}/verifications/${verificationId}/activity`);
 }
 
 export async function listCategories(): Promise<Category[]> {

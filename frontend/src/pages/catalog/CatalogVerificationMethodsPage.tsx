@@ -15,7 +15,6 @@ export default function CatalogVerificationMethodsPage() {
   const { projectId: projectIdParam } = useParams();
   const pid = Number(projectIdParam);
   const { csrfToken, dashboard } = useDashboard();
-  const projectSlug = dashboard?.projects?.find((p) => p.id === pid)?.slug;
   const [rows, setRows] = useState<VerificationMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -126,19 +125,6 @@ export default function CatalogVerificationMethodsPage() {
       {!canEdit ? (
         <p className="text-xs text-stitch-muted">
           You need <strong className="text-stitch-accent">edit requirements</strong> permission.
-        </p>
-      ) : null}
-
-      {projectSlug ? (
-        <p className="text-xs text-stitch-muted">
-          Classic UI:{' '}
-          <a
-            href={`/p/${projectSlug}/verification`}
-            className="text-stitch-accent font-semibold hover:underline"
-          >
-            open legacy verification methods page
-          </a>{' '}
-          (same data; this SPA uses the JSON API).
         </p>
       ) : null}
 

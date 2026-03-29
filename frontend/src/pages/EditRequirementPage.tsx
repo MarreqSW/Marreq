@@ -69,11 +69,6 @@ export default function EditRequirementPage() {
   const navigate = useNavigate();
   const { csrfToken, dashboard, refresh: refreshDashboard } = useDashboard();
 
-  const projectSlug = useMemo(
-    () => dashboard?.projects?.find((p) => p.id === pid)?.slug,
-    [dashboard?.projects, pid],
-  );
-
   const [detail, setDetail] = useState<RequirementDetailPayload | null>(null);
   const [versions, setVersions] = useState<RequirementVersion[]>([]);
   const [statuses, setStatuses] = useState<RequirementStatus[]>([]);
@@ -912,14 +907,6 @@ export default function EditRequirementPage() {
                         {versions.length} snapshot(s). Latest:{' '}
                         {latestVersionCreatedAt ? formatTs(latestVersionCreatedAt) : '—'}.
                       </p>
-                      {projectSlug ? (
-                        <a
-                          href={`/p/${projectSlug}/requirements/show/${rid}`}
-                          className="text-[10px] font-bold text-stitch-accent hover:underline mt-2 inline-block uppercase tracking-wide"
-                        >
-                          Full diffs in classic UI →
-                        </a>
-                      ) : null}
                     </div>
                   </div>
                 ) : null}
@@ -973,23 +960,13 @@ export default function EditRequirementPage() {
             <div className="bg-stitch-surface rounded-xl shadow-sm border border-stitch-border p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold font-headline text-stitch-accent">Attachments</h3>
-                <span className="material-symbols-outlined text-stitch-muted" title="Manage in classic UI">
+                <span className="material-symbols-outlined text-stitch-muted" title="Not available in this UI">
                   add_circle
                 </span>
               </div>
               <p className="text-xs text-stitch-muted mb-2">
-                Upload and manage files on the classic requirement page.
+                File attachments are not managed through this API-backed UI yet.
               </p>
-              {projectSlug ? (
-                <a
-                  href={`/p/${projectSlug}/requirements/show/${rid}`}
-                  className="text-xs font-bold text-stitch-accent hover:underline"
-                >
-                  Open classic requirement →
-                </a>
-              ) : (
-                <p className="text-xs text-stitch-muted">Project slug unavailable.</p>
-              )}
             </div>
           </aside>
         </div>

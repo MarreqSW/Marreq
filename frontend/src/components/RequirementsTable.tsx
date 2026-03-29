@@ -112,10 +112,12 @@ type ViewMode = 'table' | 'list';
 
 export default function RequirementsTable({
   projectId,
+  basePath,
   globalSearch,
   viewMode,
 }: {
   projectId: number;
+  basePath: string;
   globalSearch: string;
   viewMode: ViewMode;
 }) {
@@ -447,6 +449,13 @@ export default function RequirementsTable({
           >
             <span className="material-symbols-outlined">file_download</span>
           </button>
+          <a
+            href={`${basePath}/requirements.xls`}
+            title="Download Excel (classic)"
+            className="p-2 text-stitch-muted hover:text-stitch-accent transition-colors"
+          >
+            <span className="material-symbols-outlined">table_chart</span>
+          </a>
         </div>
       </div>
 
@@ -603,7 +612,7 @@ export default function RequirementsTable({
                             {parentIds.map((parentId) => (
                               <li key={parentId}>
                                 <Link
-                                  to={`/p/${projectId}/requirements/${parentId}`}
+                                  to={`${basePath}/requirements/${parentId}`}
                                   className="text-stitch-accent hover:underline block font-mono text-xs"
                                   title={reqTitleById.get(parentId) ?? undefined}
                                 >
@@ -709,14 +718,14 @@ export default function RequirementsTable({
                   </div>
                   <div className="flex items-center gap-1 shrink-0 border-t sm:border-t-0 sm:border-l border-stitch-border/40 pt-3 sm:pt-0 sm:pl-3">
                     <Link
-                      to={`/p/${projectId}/requirements/${req.id}`}
+                      to={`${basePath}/requirements/${req.id}`}
                       className="p-1.5 text-stitch-muted hover:text-stitch-accent"
                       title="View"
                     >
                       <span className="material-symbols-outlined text-lg">visibility</span>
                     </Link>
                     <Link
-                      to={`/p/${projectId}/requirements/${req.id}/edit`}
+                      to={`${basePath}/requirements/${req.id}/edit`}
                       className="p-1.5 text-stitch-muted hover:text-stitch-accent"
                       title="Edit"
                     >
@@ -866,7 +875,7 @@ export default function RequirementsTable({
                           {parentIds.map((parentId) => (
                             <li key={parentId}>
                               <Link
-                                to={`/p/${projectId}/requirements/${parentId}`}
+                                to={`${basePath}/requirements/${parentId}`}
                                 className="text-stitch-accent hover:underline line-clamp-2 block font-mono text-xs"
                                 title={reqTitleById.get(parentId) ?? undefined}
                               >
@@ -1039,14 +1048,14 @@ export default function RequirementsTable({
                     <td className="px-2 py-2 align-top sticky right-0 z-[1] bg-stitch-surface border-l border-stitch-border/60">
                       <div className="flex items-center gap-1">
                         <Link
-                          to={`/p/${projectId}/requirements/${req.id}`}
+                          to={`${basePath}/requirements/${req.id}`}
                           className="p-1.5 text-stitch-muted hover:text-stitch-accent"
                           title="View"
                         >
                           <span className="material-symbols-outlined text-lg">visibility</span>
                         </Link>
                         <Link
-                          to={`/p/${projectId}/requirements/${req.id}/edit`}
+                          to={`${basePath}/requirements/${req.id}/edit`}
                           className="p-1.5 text-stitch-muted hover:text-stitch-accent"
                           title="Edit"
                         >

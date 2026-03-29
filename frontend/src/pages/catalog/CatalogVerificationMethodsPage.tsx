@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import {
   createVerificationMethod,
   deleteVerificationMethod,
@@ -9,11 +9,12 @@ import {
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import type { VerificationMethod, VerificationMethodWriteBody } from '@/api/types';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { btnDanger, btnPrimary, inp } from './catalogUi';
 
 export default function CatalogVerificationMethodsPage() {
-  const { projectId: projectIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { projectId, basePath } = useOutletContext<ProjectOutletContext>();
+  const pid = projectId;
   const { csrfToken, dashboard } = useDashboard();
   const [rows, setRows] = useState<VerificationMethod[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,6 +128,14 @@ export default function CatalogVerificationMethodsPage() {
           You need <strong className="text-stitch-accent">edit requirements</strong> permission.
         </p>
       ) : null}
+
+      <p className="text-xs text-stitch-muted">
+        Classic UI:{' '}
+        <a href={`${basePath}/verification`} className="text-stitch-accent font-semibold hover:underline">
+          open legacy verification methods page
+        </a>{' '}
+        (same data; this SPA uses the JSON API).
+      </p>
 
       <form
         onSubmit={addRow}

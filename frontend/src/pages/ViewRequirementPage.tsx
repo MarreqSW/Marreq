@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useOutletContext, useParams } from 'react-router-dom';
 import {
   getMyPermissions,
   getRequirementByProject,
@@ -31,6 +31,7 @@ import type {
   Verification,
   VerificationStatus,
 } from '@/api/types';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 function approvalLabel(state: string): string {
   return state.replace(/_/g, ' ').toUpperCase();
@@ -96,6 +97,7 @@ function formatRelativeTime(iso: string): string {
 }
 
 export default function ViewRequirementPage() {
+  const { basePath } = useOutletContext<ProjectOutletContext>();
   const { projectId: projectIdParam, requirementId: requirementIdParam } = useParams();
   const pid = Number(projectIdParam);
   const rid = Number(requirementIdParam);
@@ -267,7 +269,7 @@ export default function ViewRequirementPage() {
       <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-800 dark:text-red-100">
         {loadError}
         <div className="mt-3">
-          <Link to={`/p/${pid}/requirements`} className="font-semibold text-stitch-accent underline">
+          <Link to={`${basePath}/requirements`} className="font-semibold text-stitch-accent underline">
             Back to requirements
           </Link>
         </div>
@@ -290,7 +292,7 @@ export default function ViewRequirementPage() {
     <div className="max-w-7xl mx-auto pb-12">
       <nav className="flex flex-wrap items-center justify-between gap-3 text-xs font-semibold text-stitch-muted mb-6 uppercase tracking-widest">
         <div className="flex items-center gap-2 min-w-0">
-          <Link to={`/p/${pid}/requirements`} className="hover:text-stitch-accent transition-colors shrink-0">
+          <Link to={`${basePath}/requirements`} className="hover:text-stitch-accent transition-colors shrink-0">
             Requirements
           </Link>
           <span className="material-symbols-outlined text-sm">chevron_right</span>
@@ -300,9 +302,16 @@ export default function ViewRequirementPage() {
           <span className="text-stitch-muted font-normal normal-case tracking-normal">· View</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={`${basePath}/requirements/show/${rid}`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-stitch-border text-stitch-muted hover:text-stitch-accent hover:border-stitch-accent/40 text-[10px] font-bold uppercase tracking-wider transition-colors"
+          >
+            <span className="material-symbols-outlined text-sm">open_in_new</span>
+            Classic
+          </a>
           {canEdit ? (
             <Link
-              to={`/p/${pid}/requirements/${rid}/edit`}
+              to={`${basePath}/requirements/${rid}/edit`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gradient-to-br from-[#000666] to-[#1a237e] text-white text-[10px] font-bold uppercase tracking-wider shadow-lg hover:opacity-95 transition-opacity"
             >
               <span className="material-symbols-outlined text-sm">edit</span>
@@ -383,7 +392,7 @@ export default function ViewRequirementPage() {
                           >
                             {parentReq ? (
                               <Link
-                                to={`/p/${pid}/requirements/${parentReq.id}`}
+                                to={`${basePath}/requirements/${parentReq.id}`}
                                 className="font-mono font-semibold text-stitch-accent hover:underline min-w-0"
                                 title={parentReq.title?.trim() || undefined}
                               >
@@ -448,7 +457,7 @@ export default function ViewRequirementPage() {
                         <li key={l.id}>
                           {parentReq ? (
                             <Link
-                              to={`/p/${pid}/requirements/${parentReq.id}`}
+                              to={`${basePath}/requirements/${parentReq.id}`}
                               className="block p-3 rounded-lg border border-stitch-border bg-stitch-elevated hover:bg-stitch-higher transition-colors"
                               title={parentReq.title?.trim() || undefined}
                             >
@@ -478,7 +487,7 @@ export default function ViewRequirementPage() {
                     {ts.child_ids.map((cid) => (
                       <li key={cid}>
                         <Link
-                          to={`/p/${pid}/requirements/${cid}`}
+                          to={`${basePath}/requirements/${cid}`}
                           className="flex items-center justify-between p-3 rounded-lg border border-stitch-border bg-stitch-elevated hover:bg-stitch-higher transition-colors"
                         >
                           <div className="min-w-0">
@@ -510,7 +519,7 @@ export default function ViewRequirementPage() {
                       return (
                         <li key={vid}>
                           <Link
-                            to={`/p/${pid}/verifications/${vid}`}
+                            to={`${basePath}/verifications/${vid}`}
                             className="flex items-center justify-between gap-2 p-3 rounded-lg border border-stitch-border border-l-2 bg-stitch-elevated hover:bg-stitch-higher transition-colors"
                             style={borderColor ? { borderLeftColor: borderColor } : undefined}
                           >
@@ -587,7 +596,7 @@ export default function ViewRequirementPage() {
         {canEdit ? (
           <div className="px-4 py-3 border-t border-stitch-border bg-stitch-elevated">
             <Link
-              to={`/p/${pid}/requirements/${rid}/edit`}
+              to={`${basePath}/requirements/${rid}/edit`}
               className="text-xs font-bold text-stitch-accent hover:underline inline-flex items-center gap-1"
             >
               <span className="material-symbols-outlined text-sm">add_comment</span>
@@ -608,6 +617,12 @@ export default function ViewRequirementPage() {
               </p>
             </div>
           </div>
+          <a
+            href={`${basePath}/requirements/show/${rid}`}
+            className="text-[10px] font-bold uppercase tracking-wide text-stitch-accent hover:underline shrink-0"
+          >
+            Full diffs in classic →
+          </a>
         </div>
         <div className="p-4 md:p-6 max-h-[min(640px,70vh)] overflow-y-auto space-y-8">
           <div>

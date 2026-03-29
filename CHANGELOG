@@ -26,9 +26,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Optional MCP server integration with read-only and controlled draft-write tool modes plus audit logging.
 - Semantic search infrastructure with embedding storage, indexing queue, and reindex utility script.
 - Audit/event logging for core user and entity operations.
+- Group management with full CRUD operations and role-based member access control (Owner, Maintainer, Contributor, Viewer).
+- Group-scoped project creation and listing with inline UI within group view page.
+- Slug-based URL routing (`/:namespace/:projectSlug`) replacing numeric project IDs in all frontend routes.
+- React pages for group management: list, create, view, edit, and member management.
+- `POST /api/projects` endpoint for programmatic project creation with optional group assignment.
 
 ### Removed
+- Legacy SSR-based group pages (static assets removed).
 
 ### Changed
+- Frontend URL scheme from `/p/:projectId` to namespace-scoped `/:namespace/:projectSlug` across all pages.
+- ProjectLayout to resolve projects dynamically by namespace and slug using `getProjectFromPath()` API fallback.
+- All child pages updated to use `basePath` from outlet context instead of hardcoded numeric ID patterns.
 
 ### Fixed

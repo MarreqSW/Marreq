@@ -8,9 +8,10 @@ use crate::namespaces::project_namespace_segment;
 use crate::repository::errors::RepoError;
 use crate::repository::{
     ApiTokensRepository, BaselineRepository, CustomFieldRepository, LogRepository,
-    LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectsRepository, Repository,
-    RequirementCommentsRepository, RequirementVersionLinksRepository, RequirementsRepository,
-    UserRepository, VerificationsRepository,
+    LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectReviewersRepository,
+    ProjectsRepository, Repository, RequirementCommentsRepository,
+    RequirementVersionLinksRepository, RequirementsRepository, UserRepository,
+    VerificationsRepository,
 };
 use serde::{de::DeserializeOwned, Serialize};
 use std::sync::Arc;
@@ -439,6 +440,26 @@ impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
     }
 }
 
+impl<R: Repository> ProjectReviewersRepository for CacheRepository<R> {
+    fn is_project_reviewer(&self, project_id: i32, user_id: i32) -> Result<bool, RepoError> {
+        self.inner.is_project_reviewer(project_id, user_id)
+    }
+
+    fn list_project_reviewer_ids(&self, project_id: i32) -> Result<Vec<i32>, RepoError> {
+        self.inner.list_project_reviewer_ids(project_id)
+    }
+
+    fn replace_project_reviewers(
+        &mut self,
+        project_id: i32,
+        user_ids: &[i32],
+    ) -> Result<(), RepoError> {
+        self.inner.replace_project_reviewers(project_id, user_ids)?;
+        self.cache.invalidate_project(project_id);
+        Ok(())
+    }
+}
+
 impl<R: Repository> VerificationsRepository for CacheRepository<R> {
     fn get_verification_by_id(&self, verification_id: i32) -> Result<Verification, RepoError> {
         let key = keys::Verifications::by_id(verification_id);
@@ -535,6 +556,25 @@ impl<R: Repository> VerificationsRepository for CacheRepository<R> {
         if let Some(pid) = project_id {
             self.cache
                 .remove(&super::cache::keys::Matrix::by_project(pid));
+        }
+        Ok(())
+    }
+
+    fn record_verification_status_audit(
+        &mut self,
+        verification_id: i32,
+        actor_id: i32,
+    ) -> Result<(), RepoError> {
+        let project_id = self
+            .inner
+            .get_verification_by_id(verification_id)
+            .ok()
+            .map(|v| v.project_id);
+        self.inner
+            .record_verification_status_audit(verification_id, actor_id)?;
+        self.cache.invalidate_verification(verification_id);
+        if let Some(pid) = project_id {
+            self.cache.invalidate_project(pid);
         }
         Ok(())
     }
@@ -1308,6 +1348,10 @@ mod tests {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         };
         let matrix = MatrixLink {
             req_id: 1,
@@ -1361,6 +1405,7 @@ mod tests {
             projects,
             matrices: vec![matrix],
             project_members: Vec::new(),
+            project_reviewers: HashMap::new(),
             force_err: false,
             baselines: Vec::new(),
             baseline_requirements: Vec::new(),
@@ -1656,6 +1701,8 @@ mod tests {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
         };
         let tid = repo.insert_verification(&new_test).unwrap();
         assert!(cache.get(&keys::Verifications::by_id(tid)).is_none());
@@ -1670,6 +1717,8 @@ mod tests {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
         };
         repo.edit_verification(&edit_test).unwrap();
         assert!(cache.get(&keys::Verifications::by_id(tid)).is_none());

@@ -10,6 +10,7 @@ import type {
   DashboardPayloadWire,
   DashboardProject,
   EffectivePermissions,
+  EntityActivityItem,
   GroupMemberResponse,
   GroupResponse,
   MatrixLink,
@@ -17,6 +18,7 @@ import type {
   Project,
   ProjectFromPath,
   ProjectMember,
+  ProjectReviewersResponse,
   Requirement,
   RequirementCommentItem,
   RequirementCreateBody,
@@ -56,6 +58,18 @@ function normalizeDashboard(wire: DashboardPayloadWire): DashboardPayload {
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
+function friendlyNonJsonError(status: number, text: string): string {
+  const t = text.trim();
+  if (
+    t.startsWith('<!DOCTYPE') ||
+    t.startsWith('<html') ||
+    t.toLowerCase().includes('<title>404 not found</title>')
+  ) {
+    return `Server returned ${status} with an HTML error page (typical of opening the API port directly). Use the Vite URL (e.g. http://127.0.0.1:5173) or the nginx frontend so /p/… routes load the React app; only /api/… should hit Rocket.`;
+  }
+  return t || `Request failed (${status})`;
+}
+
 async function parseJson<T>(res: Response): Promise<T> {
   const text = await res.text();
   if (!res.ok) {
@@ -64,7 +78,7 @@ async function parseJson<T>(res: Response): Promise<T> {
       const j = JSON.parse(text) as { message?: string; error?: string };
       msg = (j.message ?? j.error ?? text) || msg;
     } catch {
-      msg = text || msg;
+      msg = friendlyNonJsonError(res.status, text);
     }
     throw new Error(msg);
   }
@@ -232,6 +246,20 @@ export async function listRequirementVersionsByProject(
   );
 }
 
+export async function listRequirementActivityByProject(
+  projectId: number,
+  requirementId: number,
+): Promise<EntityActivityItem[]> {
+  return fetchJson(`/api/projects/${projectId}/requirements/${requirementId}/activity`);
+}
+
+export async function listVerificationActivityByProject(
+  projectId: number,
+  verificationId: number,
+): Promise<EntityActivityItem[]> {
+  return fetchJson(`/api/projects/${projectId}/verifications/${verificationId}/activity`);
+}
+
 export async function listCategories(): Promise<Category[]> {
   return fetchJson<Category[]>('/api/categories');
 }
@@ -242,6 +270,32 @@ export async function listApplicability(): Promise<Applicability[]> {
 
 export async function listProjectMembers(projectId: number): Promise<ProjectMember[]> {
   return fetchJson<ProjectMember[]>(`/api/projects/${projectId}/members`);
+}
+
+export async function getProjectReviewers(
+  projectId: number,
+): Promise<ProjectReviewersResponse> {
+  return fetchJson<ProjectReviewersResponse>(
+    `/api/projects/${projectId}/reviewers`,
+  );
+}
+
+export async function putProjectReviewers(
+  projectId: number,
+  userIds: number[],
+  csrfToken: string,
+): Promise<ProjectReviewersResponse> {
+  return fetchJson<ProjectReviewersResponse>(
+    `/api/projects/${projectId}/reviewers`,
+    {
+      method: 'PUT',
+      headers: {
+        ...JSON_HEADERS,
+        'X-CSRF-Token': csrfToken,
+      },
+      body: JSON.stringify({ user_ids: userIds }),
+    },
+  );
 }
 
 export async function getCoverageReport(projectId: number): Promise<CoverageReport> {
@@ -267,19 +321,23 @@ export async function getVerification(verificationId: number): Promise<Verificat
 }
 
 export async function updateVerificationField(
+  projectId: number,
   verificationId: number,
   field: string,
   value: string,
   csrfToken: string,
 ): Promise<void> {
-  await fetchJson(`/api/verifications/${verificationId}/field`, {
-    method: 'POST',
-    headers: {
-      ...JSON_HEADERS,
-      'X-CSRF-Token': csrfToken,
+  await fetchJson(
+    `/api/projects/${projectId}/verifications/${verificationId}/field`,
+    {
+      method: 'POST',
+      headers: {
+        ...JSON_HEADERS,
+        'X-CSRF-Token': csrfToken,
+      },
+      body: JSON.stringify({ field, value }),
     },
-    body: JSON.stringify({ field, value }),
-  });
+  );
 }
 
 export async function listRequirementComments(

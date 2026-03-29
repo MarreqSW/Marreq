@@ -130,7 +130,6 @@ export default function ReportsPage() {
 
   const project = dashboard?.projects?.find((p) => p.id === pid);
   const projectName = project?.name ?? 'Project';
-  const projectSlug = project?.slug;
 
   const reqById = useMemo(
     () => new Map(requirements.map((r) => [r.id, r.reference_code?.trim() || r.title])),
@@ -543,45 +542,31 @@ export default function ReportsPage() {
           </div>
         </ReportSection>
 
-        {projectSlug ? (
-          <ReportSection
-            title="Classic exports (same session)"
-            subtitle="Excel / PDF downloads served by the legacy HTML routes"
-          >
-            <div className="p-4 flex flex-wrap gap-3 text-sm">
-              <a
-                href={`${basePath}/requirements.xls`}
-                className="text-stitch-accent font-bold hover:underline"
-              >
-                Requirements (.xls)
-              </a>
-              <a
-                href={`${basePath}/verifications.xls`}
-                className="text-stitch-accent font-bold hover:underline"
-              >
-                Verifications (.xls)
-              </a>
-              <a
-                href={`${basePath}/matrix.xls`}
-                className="text-stitch-accent font-bold hover:underline"
-              >
-                Matrix (.xls)
-              </a>
-              <a
-                href={`${basePath}/reports/requirements-pdf`}
-                className="text-stitch-accent font-bold hover:underline"
-              >
-                Requirements PDF
-              </a>
-              <a
-                href={`${basePath}/reports/pdf`}
-                className="text-stitch-accent font-bold hover:underline"
-              >
-                Report PDF
-              </a>
-            </div>
-          </ReportSection>
-        ) : null}
+        <ReportSection
+          title="Classic exports (same session)"
+          subtitle="Excel / PDF downloads served by the legacy HTML routes"
+        >
+          <div className="p-4 flex flex-wrap gap-3 text-sm">
+            <a href={`${basePath}/requirements.xls`} className="text-stitch-accent font-bold hover:underline">
+              Requirements (.xls)
+            </a>
+            <a href={`${basePath}/verifications.xls`} className="text-stitch-accent font-bold hover:underline">
+              Verifications (.xls)
+            </a>
+            <a href={`${basePath}/matrix.xls`} className="text-stitch-accent font-bold hover:underline">
+              Matrix (.xls)
+            </a>
+            <a
+              href={`${basePath}/reports/requirements-pdf`}
+              className="text-stitch-accent font-bold hover:underline"
+            >
+              Requirements PDF
+            </a>
+            <a href={`${basePath}/reports/pdf`} className="text-stitch-accent font-bold hover:underline">
+              Report PDF
+            </a>
+          </div>
+        </ReportSection>
       </div>
 
       <div id="report-matrix" className="space-y-8 scroll-mt-24 mb-16">

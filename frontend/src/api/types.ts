@@ -76,6 +76,10 @@ export interface Verification {
   parent_id: number | null;
   project_id: number;
   verification_method_id: number | null;
+  author_id: number;
+  reviewer_id: number;
+  status_set_by?: number | null;
+  status_set_at?: string | null;
 }
 
 export interface VerificationStatus {
@@ -127,6 +131,8 @@ export type NewVerificationBody = {
   parent_id: number | null;
   project_id: number;
   verification_method_id: number | null;
+  author_id: number;
+  reviewer_id: number;
 };
 
 /** Normalized for UI; `id` / `slug` mirror Rocket `Project` fields. */
@@ -246,8 +252,15 @@ export interface EffectivePermissions {
   view_requirements: boolean;
   edit_requirements: boolean;
   approve_versions: boolean;
+  /** May change requirement/verification status and version approval (project reviewer pool). */
+  is_project_reviewer: boolean;
   manage_custom_fields: boolean;
   manage_project_members: boolean;
+}
+
+/** GET/PUT `/api/projects/:id/reviewers` */
+export interface ProjectReviewersResponse {
+  user_ids: number[];
 }
 
 export interface CustomFieldDefinition {
@@ -269,6 +282,24 @@ export interface RequirementCommentItem {
   author_name: string;
   body: string;
   created_at: string;
+}
+
+/** GET `/api/projects/:pid/requirements/:id/activity` and `.../verifications/:id/activity` */
+export interface EntityActivityChange {
+  field: string;
+  old_value: string;
+  new_value: string;
+}
+
+export interface EntityActivityItem {
+  log_id: number;
+  user_id: number;
+  username: string;
+  action_type: string;
+  summary: string;
+  description: string | null;
+  created_at: string;
+  changes: EntityActivityChange[];
 }
 
 export interface Baseline {
@@ -300,6 +331,8 @@ export interface BaselineVerificationSnapshot {
   parent_id: number | null;
   project_id: number;
   verification_method_id: number | null;
+  author_id?: number;
+  reviewer_id?: number;
 }
 
 export interface User {

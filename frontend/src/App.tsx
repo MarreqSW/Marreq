@@ -35,6 +35,11 @@ import CatalogRequirementStatusesPage from '@/pages/catalog/CatalogRequirementSt
 import CatalogVerificationStatusesPage from '@/pages/catalog/CatalogVerificationStatusesPage';
 import CatalogCustomFieldsPage from '@/pages/catalog/CatalogCustomFieldsPage';
 import CatalogVerificationMethodsPage from '@/pages/catalog/CatalogVerificationMethodsPage';
+import GroupsListPage from '@/pages/groups/GroupsListPage';
+import GroupCreatePage from '@/pages/groups/GroupCreatePage';
+import GroupViewPage from '@/pages/groups/GroupViewPage';
+import GroupEditPage from '@/pages/groups/GroupEditPage';
+import GroupMembersPage from '@/pages/groups/GroupMembersPage';
 
 function ProtectedShell() {
   const { refresh, loading, dashboard, error } = useDashboard();
@@ -65,14 +70,6 @@ function ProtectedShell() {
     return null;
   }
 
-  if (dashboard && (dashboard.projects?.length ?? 0) === 0) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-stitch-canvas text-stitch-muted">
-        <p>No projects available for your account.</p>
-      </div>
-    );
-  }
-
   return <Outlet />;
 }
 
@@ -88,7 +85,14 @@ export default function App() {
         }
       >
         <Route index element={<HomeRedirect />} />
-        <Route path="p/:projectId" element={<ProjectLayout />}>
+        {/* Groups routes (reserved namespace — matched before :namespace catch-all) */}
+        <Route path="groups" element={<GroupsListPage />} />
+        <Route path="groups/new" element={<GroupCreatePage />} />
+        <Route path="groups/:groupId" element={<GroupViewPage />} />
+        <Route path="groups/:groupId/edit" element={<GroupEditPage />} />
+        <Route path="groups/:groupId/members" element={<GroupMembersPage />} />
+        {/* Namespace-scoped project routes: /:namespace/:projectSlug */}
+        <Route path=":namespace/:projectSlug" element={<ProjectLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="requirements/new" element={<CreateRequirementPage />} />

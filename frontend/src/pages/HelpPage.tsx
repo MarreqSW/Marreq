@@ -1,6 +1,7 @@
-import { Link, useParams } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 const blocks: { title: string; body: string }[] = [
   {
@@ -31,8 +32,8 @@ const blocks: { title: string; body: string }[] = [
 ];
 
 export default function HelpPage() {
-  const { projectId: projectIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { projectId, basePath } = useOutletContext<ProjectOutletContext>();
+  const pid = projectId;
   const { dashboard } = useDashboard();
 
   const projectName =
@@ -64,19 +65,19 @@ export default function HelpPage() {
           <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-wide mb-3">Shortcuts</h3>
           <ul className="text-sm text-stitch-muted space-y-2">
             <li>
-              <Link to={`/p/${pid}/dashboard`} className="text-stitch-accent font-semibold hover:underline">
+              <Link to={`${basePath}/dashboard`} className="text-stitch-accent font-semibold hover:underline">
                 Dashboard
               </Link>{' '}
               — project KPIs
             </li>
             <li>
-              <Link to={`/p/${pid}/reports`} className="text-stitch-accent font-semibold hover:underline">
+              <Link to={`${basePath}/reports`} className="text-stitch-accent font-semibold hover:underline">
                 Reports
               </Link>{' '}
               — coverage gaps
             </li>
             <li>
-              <Link to={`/p/${pid}/settings`} className="text-stitch-accent font-semibold hover:underline">
+              <Link to={`${basePath}/settings`} className="text-stitch-accent font-semibold hover:underline">
                 Settings
               </Link>{' '}
               — permissions & fields

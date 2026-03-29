@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useOutletContext, useParams } from 'react-router-dom';
 import {
   getMyPermissions,
   getVerification,
@@ -22,6 +22,7 @@ import type {
   User,
   VerificationStatus,
 } from '@/api/types';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 function formatTs(iso: string): string {
   try {
@@ -74,6 +75,7 @@ function formatVerificationActivityValue(
 }
 
 export default function ViewVerificationPage() {
+  const { basePath } = useOutletContext<ProjectOutletContext>();
   const { projectId: projectIdParam, verificationId: verificationIdParam } = useParams();
   const pid = Number(projectIdParam);
   const vid = Number(verificationIdParam);
@@ -171,7 +173,7 @@ export default function ViewVerificationPage() {
       <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-800 dark:text-red-100">
         {loadError}
         <div className="mt-3">
-          <Link to={`/p/${pid}/verifications`} className="font-semibold text-stitch-accent underline">
+          <Link to={`${basePath}/verifications`} className="font-semibold text-stitch-accent underline">
             Back to verifications
           </Link>
         </div>
@@ -195,7 +197,7 @@ export default function ViewVerificationPage() {
     <div className="max-w-4xl pb-12">
       <nav className="flex flex-wrap items-center justify-between gap-3 text-[10px] font-semibold text-stitch-muted mb-6 uppercase tracking-widest">
         <div className="flex items-center gap-2 min-w-0">
-          <Link to={`/p/${pid}/verifications`} className="hover:text-stitch-accent transition-colors">
+          <Link to={`${basePath}/verifications`} className="hover:text-stitch-accent transition-colors">
             Verifications
           </Link>
           <span className="material-symbols-outlined text-sm">chevron_right</span>
@@ -203,9 +205,16 @@ export default function ViewVerificationPage() {
           <span className="text-stitch-muted font-normal normal-case tracking-normal">· View</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={`${basePath}/verifications/show/${vid}`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-stitch-border text-stitch-muted hover:text-stitch-accent text-[10px] font-bold uppercase tracking-wider transition-colors"
+          >
+            <span className="material-symbols-outlined text-sm">open_in_new</span>
+            Classic
+          </a>
           {canEdit ? (
             <Link
-              to={`/p/${pid}/verifications/${vid}/edit`}
+              to={`${basePath}/verifications/${vid}/edit`}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gradient-to-br from-[#000666] to-[#1a237e] text-white text-[10px] font-bold uppercase tracking-wider shadow-lg hover:opacity-95 transition-opacity"
             >
               <span className="material-symbols-outlined text-sm">edit</span>
@@ -278,7 +287,7 @@ export default function ViewVerificationPage() {
                 <span className="text-stitch-muted">—</span>
               ) : parentRow ? (
                 <Link
-                  to={`/p/${pid}/verifications/${row.parent_id}`}
+                  to={`${basePath}/verifications/${row.parent_id}`}
                   className="font-mono font-semibold text-stitch-accent hover:underline"
                   title={parentRow.name?.trim() || undefined}
                 >
@@ -303,7 +312,7 @@ export default function ViewVerificationPage() {
           </div>
           {canEdit ? (
             <Link
-              to={`/p/${pid}/verifications/${vid}/edit`}
+              to={`${basePath}/verifications/${vid}/edit`}
               className="text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline"
             >
               Edit links
@@ -316,7 +325,7 @@ export default function ViewVerificationPage() {
             {canEdit ? (
               <>
                 {' '}
-                <Link to={`/p/${pid}/verifications/${vid}/edit`} className="text-stitch-accent font-semibold hover:underline">
+                <Link to={`${basePath}/verifications/${vid}/edit`} className="text-stitch-accent font-semibold hover:underline">
                   Add links in the editor
                 </Link>
                 .
@@ -328,7 +337,7 @@ export default function ViewVerificationPage() {
             {linkedRequirements.map((r) => (
               <li key={r.id}>
                 <Link
-                  to={`/p/${pid}/requirements/${r.id}`}
+                  to={`${basePath}/requirements/${r.id}`}
                   className="group flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm"
                 >
                   <span className="font-mono text-stitch-accent font-semibold group-hover:underline">
@@ -362,7 +371,7 @@ export default function ViewVerificationPage() {
         <div className="p-4 md:p-6 text-sm text-stitch-muted leading-relaxed space-y-3">
           <p>
             To discuss this verification with your team, link it from related{' '}
-            <Link to={`/p/${pid}/requirements`} className="text-stitch-accent font-semibold hover:underline">
+            <Link to={`${basePath}/requirements`} className="text-stitch-accent font-semibold hover:underline">
               requirements
             </Link>{' '}
             (comments on the requirement) or your team&apos;s usual process outside this app.
@@ -370,7 +379,7 @@ export default function ViewVerificationPage() {
           {canEdit ? (
             <p>
               <Link
-                to={`/p/${pid}/verifications/${vid}/edit`}
+                to={`${basePath}/verifications/${vid}/edit`}
                 className="text-stitch-accent font-bold hover:underline inline-flex items-center gap-1"
               >
                 <span className="material-symbols-outlined text-base">edit</span>
@@ -392,6 +401,12 @@ export default function ViewVerificationPage() {
               </p>
             </div>
           </div>
+          <a
+            href={`${basePath}/verifications/show/${vid}`}
+            className="text-[10px] font-bold uppercase tracking-wide text-stitch-accent hover:underline shrink-0"
+          >
+            Activity in classic →
+          </a>
         </div>
         <div className="p-4 md:p-6 max-h-[min(520px,55vh)] overflow-y-auto">
           {activityLog.length === 0 ? (
@@ -440,6 +455,13 @@ export default function ViewVerificationPage() {
               ))}
             </ul>
           )}
+          <p className="mt-4 text-[10px] text-stitch-muted leading-relaxed">
+            Need historical snapshots, baseline comparisons, or attachments?{' '}
+            <a href={`${basePath}/verifications/show/${vid}`} className="text-stitch-accent font-semibold hover:underline">
+              Open the classic verification page
+            </a>
+            .
+          </p>
         </div>
       </section>
     </div>

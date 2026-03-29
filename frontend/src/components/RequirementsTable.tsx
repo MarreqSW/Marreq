@@ -119,8 +119,7 @@ export default function RequirementsTable({
   globalSearch: string;
   viewMode: ViewMode;
 }) {
-  const { dashboard, csrfToken } = useDashboard();
-  const projectSlug = dashboard?.projects?.find((p) => p.id === projectId)?.slug;
+  const { csrfToken } = useDashboard();
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [statuses, setStatuses] = useState<RequirementStatus[]>([]);
   const [users, setUsers] = useState<User[] | null>(null);
@@ -448,15 +447,6 @@ export default function RequirementsTable({
           >
             <span className="material-symbols-outlined">file_download</span>
           </button>
-          {projectSlug ? (
-            <a
-              href={`/p/${projectSlug}/requirements.xls`}
-              title="Download Excel (classic)"
-              className="p-2 text-stitch-muted hover:text-stitch-accent transition-colors"
-            >
-              <span className="material-symbols-outlined">table_chart</span>
-            </a>
-          ) : null}
         </div>
       </div>
 

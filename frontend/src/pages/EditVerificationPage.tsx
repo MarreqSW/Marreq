@@ -112,7 +112,6 @@ export default function EditVerificationPage() {
 
   const projectName =
     dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
-  const projectSlug = dashboard?.projects?.find((p) => p.id === pid)?.slug;
 
   const statusOptions = useMemo(() => {
     const forProject = statuses.filter((s) => s.project_id === pid);
@@ -290,17 +289,6 @@ export default function EditVerificationPage() {
         <p className="text-stitch-muted text-sm mt-2">
           Fields update via the API per changed column; traceability links save together with your changes.
         </p>
-        {projectSlug ? (
-          <p className="text-stitch-muted text-xs mt-2">
-            <a
-              href={`/p/${projectSlug}/verifications/show/${vid}`}
-              className="text-stitch-accent font-semibold hover:underline"
-            >
-              Classic verification page
-            </a>{' '}
-            — attachments and extra fields when available.
-          </p>
-        ) : null}
       </div>
 
       <form onSubmit={onSubmit} className="space-y-8">

@@ -93,7 +93,8 @@ pub fn build() -> Rocket<Build> {
             "/",
             catchers![
                 crate::routes::catchers::unauthorized,
-                crate::routes::catchers::forbidden
+                crate::routes::catchers::forbidden,
+                crate::routes::catchers::not_found,
             ],
         )
         .attach(crate::fairings::SecurityHeadersFairing)

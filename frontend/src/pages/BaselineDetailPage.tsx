@@ -96,12 +96,6 @@ export default function BaselineDetailPage() {
         title={meta.name}
         subtitle={meta.description ?? 'Snapshot contents from the API.'}
       >
-        <a
-          href={`/p/${pid}/baselines/${bid}`}
-          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
-        >
-          Classic view
-        </a>
       </StitchPageHeader>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">

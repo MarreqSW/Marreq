@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import {
   createRequirementComment,
   createRequirementVersionLink,
@@ -39,6 +39,7 @@ import type {
   VerificationStatus,
 } from '@/api/types';
 import { StatusBadge, statusTagColorSwatchStyle } from '@/components/StatusBadge';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 function approvalLabel(state: string): string {
   return state.replace(/_/g, ' ').toUpperCase();
@@ -63,6 +64,7 @@ function formatRelativeTime(iso: string): string {
 }
 
 export default function EditRequirementPage() {
+  const { basePath } = useOutletContext<ProjectOutletContext>();
   const { projectId: projectIdParam, requirementId: requirementIdParam } = useParams();
   const pid = Number(projectIdParam);
   const rid = Number(requirementIdParam);
@@ -349,7 +351,7 @@ export default function EditRequirementPage() {
     try {
       await deleteRequirementGlobally(rid, token);
       await refreshDashboard();
-      navigate(`/p/${pid}/requirements`);
+      navigate(`${basePath}/requirements`);
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'Delete failed');
     } finally {
@@ -478,7 +480,7 @@ export default function EditRequirementPage() {
       <div className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-800 dark:text-red-100">
         {loadError}
         <div className="mt-3">
-          <Link to={`/p/${pid}/requirements`} className="font-semibold text-stitch-accent underline">
+          <Link to={`${basePath}/requirements`} className="font-semibold text-stitch-accent underline">
             Back to requirements
           </Link>
         </div>
@@ -501,7 +503,7 @@ export default function EditRequirementPage() {
   return (
     <div className="font-body text-stitch-fg -mx-6 md:-mx-8 -mt-6 md:-mt-8 px-6 md:px-8 pt-6 md:pt-8 pb-36 min-h-full bg-stitch-canvas">
       <nav className="flex items-center gap-2 text-xs font-semibold text-stitch-muted mb-6 uppercase tracking-widest max-w-7xl mx-auto">
-        <Link to={`/p/${pid}/requirements`} className="hover:text-stitch-accent transition-colors">
+        <Link to={`${basePath}/requirements`} className="hover:text-stitch-accent transition-colors">
           Requirements
         </Link>
         <span className="material-symbols-outlined text-sm text-stitch-muted">chevron_right</span>
@@ -733,7 +735,7 @@ export default function EditRequirementPage() {
                             <div className="min-w-0 flex-1">
                               {parentReq ? (
                                 <Link
-                                  to={`/p/${pid}/requirements/${parentReq.id}/edit`}
+                                  to={`${basePath}/requirements/${parentReq.id}/edit`}
                                   className="block hover:opacity-90 transition-opacity"
                                   title={parentReq.title?.trim() || undefined}
                                 >
@@ -754,7 +756,7 @@ export default function EditRequirementPage() {
                             <div className="flex items-center gap-1 shrink-0">
                               {parentReq ? (
                                 <Link
-                                  to={`/p/${pid}/requirements/${parentReq.id}/edit`}
+                                  to={`${basePath}/requirements/${parentReq.id}/edit`}
                                   className="p-1 text-stitch-muted hover:text-stitch-accent transition-colors"
                                   title="Open parent"
                                 >
@@ -828,7 +830,7 @@ export default function EditRequirementPage() {
                       {ts.child_ids.map((cid) => (
                         <Link
                           key={cid}
-                          to={`/p/${pid}/requirements/${cid}/edit`}
+                          to={`${basePath}/requirements/${cid}/edit`}
                           className="flex items-center justify-between p-3 bg-stitch-elevated rounded-lg hover:bg-stitch-higher transition-colors"
                         >
                           <div className="min-w-0">
@@ -859,7 +861,7 @@ export default function EditRequirementPage() {
                         return (
                           <Link
                             key={vid}
-                            to={`/p/${pid}/verifications/${vid}/edit`}
+                            to={`${basePath}/verifications/${vid}/edit`}
                             className="flex items-center justify-between p-3 bg-stitch-elevated rounded-lg border-l-2 border-stitch-muted hover:bg-stitch-higher transition-colors gap-2"
                             style={borderColor ? { borderLeftColor: borderColor } : undefined}
                           >
@@ -907,6 +909,12 @@ export default function EditRequirementPage() {
                         {versions.length} snapshot(s). Latest:{' '}
                         {latestVersionCreatedAt ? formatTs(latestVersionCreatedAt) : '—'}.
                       </p>
+                      <a
+                        href={`${basePath}/requirements/show/${rid}`}
+                        className="text-[10px] font-bold text-stitch-accent hover:underline mt-2 inline-block uppercase tracking-wide"
+                      >
+                        Full diffs in classic UI →
+                      </a>
                     </div>
                   </div>
                 ) : null}
@@ -967,6 +975,12 @@ export default function EditRequirementPage() {
               <p className="text-xs text-stitch-muted mb-2">
                 File attachments are not managed through this API-backed UI yet.
               </p>
+              <a
+                href={`${basePath}/requirements/show/${rid}`}
+                className="text-xs font-bold text-stitch-accent hover:underline"
+              >
+                Open classic requirement →
+              </a>
             </div>
           </aside>
         </div>
@@ -991,7 +1005,7 @@ export default function EditRequirementPage() {
             <button
               type="button"
               className="text-xs font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-fg px-3 py-2"
-              onClick={() => navigate(`/p/${pid}/requirements`)}
+              onClick={() => navigate(`${basePath}/requirements`)}
             >
               Cancel
             </button>

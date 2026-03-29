@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import { useTheme, type ThemePreference } from '@/context/ThemeContext';
+import { getProjectFromPath } from '@/api/client';
 import type { User } from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 
@@ -27,9 +28,8 @@ function userInitials(u: User): string {
 }
 
 export default function ProjectLayout() {
-  const { projectId } = useParams();
+  const { namespace, projectSlug } = useParams();
   const location = useLocation();
-  const pid = Number(projectId);
   const navigate = useNavigate();
   const { dashboard, setSelectedProjectId, refresh, logout } = useDashboard();
   const { preference, setPreference } = useTheme();
@@ -37,6 +37,26 @@ export default function ProjectLayout() {
   const [globalSearch, setGlobalSearch] = useState('');
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
   const createMenuRef = useRef<HTMLDivElement | null>(null);
+  const [resolvedPid, setResolvedPid] = useState<number | null>(null);
+
+  const projects = dashboard?.projects ?? [];
+  const compositeSlug = `${namespace}/${projectSlug}`;
+  const basePath = `/${compositeSlug}`;
+
+  const currentProject = projects.find((p) => p.slug === compositeSlug);
+  const pid = currentProject?.id ?? resolvedPid;
+
+  useEffect(() => {
+    if (currentProject || !namespace || !projectSlug) return;
+    getProjectFromPath(namespace, projectSlug)
+      .then((p) => setResolvedPid(p.id))
+      .catch(() => {
+        if (projects.length > 0) {
+          const fallback = projects[0]!;
+          navigate(`${fallback.project_base_path}/dashboard`, { replace: true });
+        }
+      });
+  }, [namespace, projectSlug, currentProject, projects, navigate]);
 
   const onVerificationsSection = /\/verifications(\/|$)/.test(location.pathname);
 
@@ -45,13 +65,13 @@ export default function ProjectLayout() {
       onVerificationsSection
         ? [
             {
-              to: `/p/${pid}/verifications/new`,
+              to: `${basePath}/verifications/new`,
               label: 'Create verification',
               compact: 'Verification',
               icon: 'verified' as const,
             },
             {
-              to: `/p/${pid}/requirements/new`,
+              to: `${basePath}/requirements/new`,
               label: 'Create requirement',
               compact: 'Requirement',
               icon: 'list_alt' as const,
@@ -59,19 +79,19 @@ export default function ProjectLayout() {
           ]
         : [
             {
-              to: `/p/${pid}/requirements/new`,
+              to: `${basePath}/requirements/new`,
               label: 'Create requirement',
               compact: 'Requirement',
               icon: 'list_alt' as const,
             },
             {
-              to: `/p/${pid}/verifications/new`,
+              to: `${basePath}/verifications/new`,
               label: 'Create verification',
               compact: 'Verification',
               icon: 'verified' as const,
             },
           ],
-    [onVerificationsSection, pid],
+    [onVerificationsSection, basePath],
   );
 
   const primaryCreate = createMenuItems[0];
@@ -93,21 +113,20 @@ export default function ProjectLayout() {
     };
   }, [createMenuOpen]);
 
-  const projects = dashboard?.projects ?? [];
-  const invalid =
-    Number.isNaN(pid) || (projects.length > 0 && !projects.some((p) => p.id === pid));
-
-  const currentProject = projects.find((p) => p.id === pid);
+  const invalid = pid == null && projects.length > 0 && !currentProject;
   const user = useMemo(() => parseUser(dashboard?.user), [dashboard?.user]);
 
-  if (invalid && projects.length > 0) {
-    const fallback = projects[0]!.id;
-    navigate(`/p/${fallback}/dashboard`, { replace: true });
-    return null;
+  if (pid == null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-stitch-canvas text-stitch-muted text-sm">
+        Loading project…
+      </div>
+    );
   }
 
   const outletContext: ProjectOutletContext = {
     projectId: pid,
+    basePath,
     globalSearch,
     setGlobalSearch,
   };
@@ -137,7 +156,7 @@ export default function ProjectLayout() {
 
   return (
     <div className="stitch-app min-h-screen flex bg-stitch-canvas text-stitch-fg text-stitch font-sans antialiased">
-      {/* SideNavBar — structure from Image 2.html, Stitch dark palette */}
+      {/* SideNavBar */}
       <aside
         className={`flex flex-col h-screen sticky top-0 shrink-0 border-r border-stitch-border bg-stitch-surface z-50 transition-[width] duration-200 ${
           sidebarWide ? 'w-64' : 'w-[4.5rem]'
@@ -159,48 +178,48 @@ export default function ProjectLayout() {
           </div>
           <nav className="flex flex-col space-y-1">
             {sideLink({
-              to: `/p/${pid}/dashboard`,
+              to: `${basePath}/dashboard`,
               icon: 'dashboard',
               label: 'Dashboard',
               end: true,
             })}
             {sideLink({
-              to: `/p/${pid}/requirements`,
+              to: `${basePath}/requirements`,
               icon: 'list_alt',
               label: 'Requirements',
             })}
             {sideLink({
-              to: `/p/${pid}/verifications`,
+              to: `${basePath}/verifications`,
               icon: 'verified',
               label: 'Verification',
             })}
             {sideLink({
-              to: `/p/${pid}/traceability`,
+              to: `${basePath}/traceability`,
               icon: 'account_tree',
               label: 'Traceability',
             })}
             {sideLink({
-              to: `/p/${pid}/matrix`,
+              to: `${basePath}/matrix`,
               icon: 'grid_on',
               label: 'Matrix',
             })}
             {sideLink({
-              to: `/p/${pid}/baselines`,
+              to: `${basePath}/baselines`,
               icon: 'history_edu',
               label: 'Baselines',
             })}
             {sideLink({
-              to: `/p/${pid}/reports`,
+              to: `${basePath}/reports`,
               icon: 'description',
               label: 'Reports',
             })}
             {sideLink({
-              to: `/p/${pid}/catalog`,
+              to: `${basePath}/catalog`,
               icon: 'tune',
               label: 'Catalog',
             })}
             {sideLink({
-              to: `/p/${pid}/admin`,
+              to: `${basePath}/admin`,
               icon: 'admin_panel_settings',
               label: 'Admin',
             })}
@@ -208,15 +227,23 @@ export default function ProjectLayout() {
         </div>
         <div className={`mt-auto px-6 py-6 space-y-2 border-t border-stitch-border ${!sidebarWide ? 'px-2' : ''}`}>
           {sideLink({
-            to: `/p/${pid}/settings`,
+            to: `${basePath}/settings`,
             icon: 'settings',
             label: 'Settings',
           })}
           {sideLink({
-            to: `/p/${pid}/help`,
+            to: `${basePath}/help`,
             icon: 'help',
             label: 'Help',
           })}
+          <Link
+            to="/groups"
+            className={`flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider font-bold transition-all rounded-r-md border-l-4 border-transparent text-stitch-muted hover:bg-stitch-elevated hover:text-stitch-fg ${!sidebarWide ? 'justify-center px-2' : ''}`}
+            title={!sidebarWide ? 'Groups' : undefined}
+          >
+            <span className="material-symbols-outlined text-lg shrink-0">workspaces</span>
+            {sidebarWide ? <span className="truncate">Groups</span> : null}
+          </Link>
           <button
             type="button"
             onClick={() => setSidebarWide((w) => !w)}
@@ -240,13 +267,19 @@ export default function ProjectLayout() {
               </h1>
               <select
                 className="text-stitch max-w-[160px] sm:max-w-[220px] border border-stitch-border rounded-md px-2 py-1.5 bg-stitch-elevated text-stitch-fg text-xs focus:outline-none focus:ring-1 focus:ring-stitch-accent/50"
-                value={Number.isFinite(pid) ? pid : ''}
+                value={pid}
                 onChange={(e) => {
                   const id = Number(e.target.value);
                   setSelectedProjectId(id);
                   void refresh();
-                  const sub = location.pathname.replace(/^\/p\/\d+/, `/p/${id}`);
-                  navigate(sub || `/p/${id}/requirements`);
+                  const selectedProject = projects.find((p) => p.id === id);
+                  if (selectedProject) {
+                    const currentBase = basePath;
+                    const subPath = location.pathname.startsWith(currentBase)
+                      ? location.pathname.slice(currentBase.length)
+                      : '/dashboard';
+                    navigate(`${selectedProject.project_base_path}${subPath || '/dashboard'}`);
+                  }
                 }}
               >
                 {projects.map((p) => (
@@ -307,7 +340,7 @@ export default function ProjectLayout() {
                 <span className="material-symbols-outlined text-xl">notifications</span>
               </button>
               <Link
-                to={`/p/${pid}/settings`}
+                to={`${basePath}/settings`}
                 className="hover:bg-stitch-elevated p-2 rounded-full transition-colors text-stitch-muted"
                 title="Settings"
               >

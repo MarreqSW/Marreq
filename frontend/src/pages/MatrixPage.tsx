@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useOutletContext, useParams } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import {
   clearTraceabilitySuspect,
   listMatrix,
@@ -100,9 +100,8 @@ function statusGlyph(
 }
 
 export default function MatrixPage() {
-  const { globalSearch } = useOutletContext<ProjectOutletContext>();
-  const { projectId: projectIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { globalSearch, basePath, projectId } = useOutletContext<ProjectOutletContext>();
+  const pid = projectId;
   const { csrfToken, dashboard } = useDashboard();
 
   const [matrix, setMatrix] = useState<MatrixLink[]>([]);
@@ -408,6 +407,12 @@ export default function MatrixPage() {
         title="Traceability matrix"
         subtitle="Requirements in rows, verifications in columns. Click any column header to sort rows (↑↓). Symbols show link + test status; empty cells are not linked."
       >
+        <a
+          href={`${basePath}/matrix`}
+          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
+        >
+          Classic matrix
+        </a>
         <button
           type="button"
           onClick={() => void load()}
@@ -530,7 +535,7 @@ export default function MatrixPage() {
                         </span>
                       </button>
                       <Link
-                        to={`/p/${pid}/verifications/${v.id}`}
+                        to={`${basePath}/verifications/${v.id}`}
                         title={`Open ${refLabel}`}
                         className="shrink-0 py-0.5 text-[8px] font-bold uppercase tracking-tighter text-center text-stitch-muted hover:text-stitch-accent border-t border-stitch-border/40"
                       >
@@ -567,7 +572,7 @@ export default function MatrixPage() {
                       className="sticky left-0 z-10 bg-stitch-surface border-r border-stitch-border pl-2 pr-2 py-2 text-left align-middle shadow-[2px_0_8px_rgba(0,0,0,0.08)] overflow-hidden"
                     >
                       <Link
-                        to={`/p/${pid}/requirements/${r.id}`}
+                        to={`${basePath}/requirements/${r.id}`}
                         className="font-mono text-xs text-stitch-accent hover:underline block truncate"
                         title={r.reference_code ?? undefined}
                       >

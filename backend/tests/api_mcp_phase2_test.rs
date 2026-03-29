@@ -175,6 +175,66 @@ mod test_support {
             "custom_fields": []
         })
     }
+
+    pub fn add_non_draft_requirement_status(repo: &mut DieselRepoMock, project_id: i32) {
+        repo.requirement_statuses.insert(
+            2,
+            RequirementStatus {
+                id: 2,
+                title: "Reviewed".into(),
+                description: "".into(),
+                tag: "R".into(),
+                project_id,
+                is_system: false,
+                tag_color: None,
+            },
+        );
+    }
+
+    pub fn add_verification_statuses_and_row(repo: &mut DieselRepoMock, project_id: i32) {
+        repo.verification_statuses.insert(
+            1,
+            VerificationStatus {
+                id: 1,
+                title: "Not Run".into(),
+                description: "".into(),
+                tag: "NR".into(),
+                project_id,
+                is_system: false,
+                tag_color: None,
+            },
+        );
+        repo.verification_statuses.insert(
+            2,
+            VerificationStatus {
+                id: 2,
+                title: "Passed".into(),
+                description: "".into(),
+                tag: "P".into(),
+                project_id,
+                is_system: false,
+                tag_color: None,
+            },
+        );
+        repo.verifications.insert(
+            1,
+            Verification {
+                id: 1,
+                name: "Test case".into(),
+                reference_code: "VER-1".into(),
+                description: "".into(),
+                source: "manual".into(),
+                status_id: 1,
+                parent_id: None,
+                project_id,
+                verification_method_id: None,
+                author_id: 2,
+                reviewer_id: 2,
+                status_set_by: None,
+                status_set_at: None,
+            },
+        );
+    }
 }
 
 use test_support::*;
@@ -978,4 +1038,82 @@ async fn set_version_approval_ok_for_user_in_reviewer_pool() {
     assert_eq!(response.status(), Status::Ok);
     let version: RequirementVersion = response.into_json().await.expect("json");
     assert_eq!(version.approval_state, "reviewed");
+}
+
+#[rocket::async_test]
+async fn create_by_project_draft_status_ok_for_non_reviewer_when_not_in_reviewer_pool() {
+    let mut repo = base_repo();
+    repo.project_reviewers.insert(PROJECT_ID, vec![3]);
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .post(format!("/api/projects/{PROJECT_ID}/requirements"))
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(2))
+        .body(create_requirement_payload(PROJECT_ID, "REQ-DRAFT-NR").to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+}
+
+#[rocket::async_test]
+async fn create_by_project_non_draft_status_forbidden_for_non_reviewer() {
+    let mut repo = base_repo();
+    repo.project_reviewers.insert(PROJECT_ID, vec![3]);
+    test_support::add_non_draft_requirement_status(&mut repo, PROJECT_ID);
+
+    let client = test_client(repo).await;
+
+    let mut payload = create_requirement_payload(PROJECT_ID, "REQ-STATUS2");
+    payload["status_id"] = json!(2);
+
+    let response = client
+        .post(format!("/api/projects/{PROJECT_ID}/requirements"))
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(2))
+        .body(payload.to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn verification_field_status_forbidden_when_user_not_in_reviewer_pool() {
+    let mut repo = base_repo();
+    repo.project_reviewers.insert(PROJECT_ID, vec![3]);
+    test_support::add_verification_statuses_and_row(&mut repo, PROJECT_ID);
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .post(format!("/api/projects/{PROJECT_ID}/verifications/1/field"))
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(2))
+        .body(json!({ "field": "status_id", "value": "2" }).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn verification_field_status_ok_for_user_in_reviewer_pool() {
+    let mut repo = base_repo();
+    repo.project_reviewers.insert(PROJECT_ID, vec![3]);
+    test_support::add_verification_statuses_and_row(&mut repo, PROJECT_ID);
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .post(format!("/api/projects/{PROJECT_ID}/verifications/1/field"))
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(3))
+        .body(json!({ "field": "status_id", "value": "2" }).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
 }

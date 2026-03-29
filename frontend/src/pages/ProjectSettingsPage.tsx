@@ -1,5 +1,5 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import {
   getMyPermissions,
   getProjectReviewers,
@@ -227,7 +227,7 @@ export default function ProjectSettingsPage() {
         ) : null}
       </section>
 
-      <section className="mb-10">
+      <section id="project-members" className="mb-10 scroll-mt-8">
         <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-widest mb-4">
           Project members
         </h3>
@@ -285,9 +285,12 @@ export default function ProjectSettingsPage() {
         {canManage && users === null && (
           <p className="text-xs text-amber-200/90 mb-4">
             User directory is admin-only.{' '}
-            <a href={`/p/${pid}/members`} className="text-stitch-accent underline font-semibold">
+            <Link
+              to={`/p/${pid}/settings#project-members`}
+              className="text-stitch-accent underline font-semibold"
+            >
               Open classic members page
-            </a>{' '}
+            </Link>{' '}
             to add people by account.
           </p>
         )}
@@ -345,14 +348,14 @@ export default function ProjectSettingsPage() {
         {!canManage && (
           <p className="text-xs text-stitch-muted mt-3">
             You need “Manage members” to change roles here.{' '}
-            <a href={`/p/${pid}/members`} className="text-stitch-accent underline">
+            <Link to={`/p/${pid}/settings#project-members`} className="text-stitch-accent underline">
               Classic members UI
-            </a>
+            </Link>
           </p>
         )}
       </section>
 
-      <section className="mb-10">
+      <section id="project-reviewers" className="mb-10 scroll-mt-8">
         <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-widest mb-2">
           Project reviewers
         </h3>
@@ -373,16 +376,22 @@ export default function ProjectSettingsPage() {
                   className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-white/[0.03]"
                 >
                   <span className="text-stitch-fg">{userLabel(m.user_id)}</span>
-                  <label className="flex items-center gap-2 text-xs text-stitch-muted shrink-0 cursor-pointer">
+                  <div className="flex items-center gap-2 text-xs text-stitch-muted shrink-0">
                     <input
+                      id={`project-reviewer-${m.user_id}`}
                       type="checkbox"
-                      className="rounded border-stitch-border"
+                      className="rounded border-stitch-border cursor-pointer"
                       checked={reviewerDraft.has(m.user_id)}
                       disabled={!canManage || reviewerBusy}
                       onChange={(e) => toggleReviewerDraft(m.user_id, e.target.checked)}
                     />
-                    Reviewer
-                  </label>
+                    <label
+                      htmlFor={`project-reviewer-${m.user_id}`}
+                      className={`cursor-pointer select-none ${!canManage || reviewerBusy ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      Reviewer
+                    </label>
+                  </div>
                 </li>
               ))
             )}

@@ -105,6 +105,8 @@ export default function App() {
           <Route path="baselines" element={<BaselinesPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="settings" element={<ProjectSettingsPage />} />
+          {/* Old / classic URL; avoid full-page navigation to Rocket (404 on :8000). */}
+          <Route path="members" element={<Navigate to="settings" replace />} />
           <Route path="catalog" element={<ProjectCatalogLayout />}>
             <Route index element={<Navigate to="categories" replace />} />
             <Route path="categories" element={<CatalogCategoriesPage />} />

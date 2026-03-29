@@ -58,8 +58,21 @@ pub async fn create(
     state: &State<AppState>,
     payload: Json<NewVerification>,
 ) -> ApiResult<Value> {
+    let payload = payload.into_inner();
+    require_project_permission(
+        state,
+        user.user(),
+        payload.project_id,
+        Permission::EditRequirements,
+    )?;
+    require_project_reviewer_unless_verification_create_status_is_initial(
+        state,
+        user.user(),
+        payload.project_id,
+        payload.status_id,
+    )?;
     let service = VerificationService::new(state.inner());
-    let id = service.create(user.user(), payload.into_inner())?;
+    let id = service.create(user.user(), payload)?;
 
     Ok(json!({ "status": "ok", "id": id }))
 }

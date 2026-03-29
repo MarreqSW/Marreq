@@ -327,6 +327,18 @@ pub async fn create(
     payload: Json<RequirementCreateRequest>,
 ) -> ApiResult<Value> {
     let payload = payload.into_inner();
+    require_project_permission(
+        state,
+        user.user(),
+        payload.project_id,
+        Permission::EditRequirements,
+    )?;
+    require_project_reviewer_unless_requirement_create_status_is_draft_like(
+        state,
+        user.user(),
+        payload.project_id,
+        payload.status_id,
+    )?;
     let verification_method_ids: Vec<i32> = payload
         .verification_method_ids
         .into_iter()
@@ -487,6 +499,12 @@ pub async fn create_by_project(
             "payload.project_id must match route project_id".into(),
         ));
     }
+    require_project_reviewer_unless_requirement_create_status_is_draft_like(
+        state,
+        access.user(),
+        project_id,
+        payload.status_id,
+    )?;
     let verification_method_ids: Vec<i32> = payload
         .verification_method_ids
         .into_iter()

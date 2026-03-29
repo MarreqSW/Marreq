@@ -27,10 +27,6 @@ export default function ViewVerificationPage() {
   const vid = Number(verificationIdParam);
   const { dashboard } = useDashboard();
 
-  const projectSlug = useMemo(
-    () => dashboard?.projects?.find((p) => p.id === pid)?.slug,
-    [dashboard?.projects, pid],
-  );
   const projectName = useMemo(
     () => dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project',
     [dashboard?.projects, pid],
@@ -152,15 +148,6 @@ export default function ViewVerificationPage() {
           <span className="text-stitch-muted font-normal normal-case tracking-normal">· View</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {projectSlug ? (
-            <a
-              href={`/p/${projectSlug}/verifications/show/${vid}`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-stitch-border text-stitch-muted hover:text-stitch-accent text-[10px] font-bold uppercase tracking-wider transition-colors"
-            >
-              <span className="material-symbols-outlined text-sm">open_in_new</span>
-              Classic
-            </a>
-          ) : null}
           {canEdit ? (
             <Link
               to={`/p/${pid}/verifications/${vid}/edit`}
@@ -323,7 +310,7 @@ export default function ViewVerificationPage() {
             <Link to={`/p/${pid}/requirements`} className="text-stitch-accent font-semibold hover:underline">
               requirements
             </Link>{' '}
-            (comments on the requirement) or continue using your project&apos;s classic workflows if configured.
+            (comments on the requirement) or your team&apos;s usual process outside this app.
           </p>
           {canEdit ? (
             <p>
@@ -350,30 +337,11 @@ export default function ViewVerificationPage() {
               </p>
             </div>
           </div>
-          {projectSlug ? (
-            <a
-              href={`/p/${projectSlug}/verifications/show/${vid}`}
-              className="text-[10px] font-bold uppercase tracking-wide text-stitch-accent hover:underline shrink-0"
-            >
-              Activity in classic →
-            </a>
-          ) : null}
         </div>
         <div className="p-4 md:p-6 text-sm text-stitch-muted leading-relaxed">
           <p>
-            Use the{' '}
-            {projectSlug ? (
-              <a
-                href={`/p/${projectSlug}/verifications/show/${vid}`}
-                className="text-stitch-accent font-semibold hover:underline"
-              >
-                classic verification page
-              </a>
-            ) : (
-              <span className="text-stitch-fg">classic verification page</span>
-            )}{' '}
-            to review historical snapshots, baseline comparisons, attachments, and any audit-style activity your
-            deployment records there.
+            Historical snapshots, baseline comparisons, attachments, and audit-style activity for verifications are not
+            available in this API-backed UI yet.
           </p>
         </div>
       </section>

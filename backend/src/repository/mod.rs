@@ -129,6 +129,13 @@ pub trait VerificationsRepository {
         verification_id: i32,
         requirement_ids: &[i32],
     ) -> Result<(), RepoError>;
+
+    /// Record which project reviewer last changed verification status (after `status_id` update).
+    fn record_verification_status_audit(
+        &mut self,
+        verification_id: i32,
+        actor_id: i32,
+    ) -> Result<(), RepoError>;
 }
 
 pub trait LookupRepository {
@@ -263,6 +270,17 @@ pub trait ProjectMembersRepository {
         role: i32,
     ) -> Result<(), RepoError>;
     fn remove_project_member(&mut self, project_id: i32, user_id: i32) -> Result<(), RepoError>;
+}
+
+/// Users designated as reviewers for a project (status / approval gates).
+pub trait ProjectReviewersRepository {
+    fn is_project_reviewer(&self, project_id: i32, user_id: i32) -> Result<bool, RepoError>;
+    fn list_project_reviewer_ids(&self, project_id: i32) -> Result<Vec<i32>, RepoError>;
+    fn replace_project_reviewers(
+        &mut self,
+        project_id: i32,
+        user_ids: &[i32],
+    ) -> Result<(), RepoError>;
 }
 
 pub trait MatrixRepository {
@@ -429,6 +447,7 @@ pub trait Repository:
     + GroupMembersRepository
     + ProjectsRepository
     + ProjectMembersRepository
+    + ProjectReviewersRepository
     + MatrixRepository
     + CustomFieldRepository
     + BaselineRepository
@@ -448,6 +467,7 @@ impl<T> Repository for T where
         + GroupMembersRepository
         + ProjectsRepository
         + ProjectMembersRepository
+        + ProjectReviewersRepository
         + MatrixRepository
         + CustomFieldRepository
         + BaselineRepository
@@ -697,6 +717,8 @@ mod tests {
                 approval_state: "draft".into(),
                 approved_by: None,
                 approved_at: None,
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
         repo.requirements.insert(

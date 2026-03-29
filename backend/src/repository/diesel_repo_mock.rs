@@ -36,6 +36,8 @@ pub struct DieselRepoMock {
     pub projects: HashMap<i32, Project>,
     pub matrices: Vec<MatrixLink>,
     pub project_members: Vec<ProjectMember>,
+    /// project_id -> reviewer user ids
+    pub project_reviewers: HashMap<i32, Vec<i32>>,
     pub logs: Vec<Log>,
     pub force_err: bool,
     pub baselines: Vec<crate::models::Baseline>,
@@ -84,6 +86,7 @@ impl Default for DieselRepoMock {
             projects: HashMap::new(),
             matrices: Vec::new(),
             project_members: Vec::new(),
+            project_reviewers: HashMap::new(),
             logs: Vec::new(),
             force_err: false,
             baselines: Vec::new(),
@@ -126,6 +129,7 @@ impl DieselRepoMock {
             projects: HashMap::new(),
             matrices: Vec::new(),
             project_members: Vec::new(),
+            project_reviewers: HashMap::new(),
             logs: Vec::new(),
             force_err: false,
             baselines: Vec::new(),
@@ -161,6 +165,7 @@ impl DieselRepoMock {
             projects: HashMap::new(),
             matrices: Vec::new(),
             project_members: Vec::new(),
+            project_reviewers: HashMap::new(),
             logs: Vec::new(),
             force_err: true,
             baselines: Vec::new(),
@@ -895,6 +900,8 @@ impl RequirementsRepository for DieselRepoMock {
             approval_state: "draft".to_string(),
             approved_by: None,
             approved_at: None,
+            reviewed_by: None,
+            reviewed_at: None,
         };
         self.requirement_versions.insert(version_id, version);
         let req = Requirement {
@@ -949,6 +956,8 @@ impl RequirementsRepository for DieselRepoMock {
                     approval_state: "draft".to_string(),
                     approved_by: None,
                     approved_at: None,
+                    reviewed_by: None,
+                    reviewed_at: None,
                 };
                 self.requirement_versions.insert(version_id, version);
                 if let Some(old_vid) = old_version_id {
@@ -1052,6 +1061,10 @@ impl RequirementsRepository for DieselRepoMock {
             return Ok(version);
         }
         version.approval_state = target.to_db_string().to_string();
+        if target == ApprovalState::Reviewed {
+            version.reviewed_by = Some(approved_by_user_id);
+            version.reviewed_at = Some(epoch());
+        }
         if target == ApprovalState::Approved {
             version.approved_by = Some(approved_by_user_id);
             version.approved_at = Some(epoch());
@@ -1161,6 +1174,10 @@ impl VerificationsRepository for DieselRepoMock {
             parent_id: _new.parent_id,
             project_id: _new.project_id,
             verification_method_id: _new.verification_method_id,
+            author_id: _new.author_id,
+            reviewer_id: _new.reviewer_id,
+            status_set_by: None,
+            status_set_at: None,
         };
         self.verifications.insert(id, verification);
         Ok(id)
@@ -1177,6 +1194,8 @@ impl VerificationsRepository for DieselRepoMock {
                 verification.parent_id = _new.parent_id;
                 verification.project_id = _new.project_id;
                 verification.verification_method_id = _new.verification_method_id;
+                verification.author_id = _new.author_id;
+                verification.reviewer_id = _new.reviewer_id;
                 Ok(true)
             }
             None => Err(RepoError::NotFound),
@@ -1223,6 +1242,18 @@ impl VerificationsRepository for DieselRepoMock {
                 triggering_version_id: None,
                 triggering_user_id: None,
             });
+        }
+        Ok(())
+    }
+
+    fn record_verification_status_audit(
+        &mut self,
+        verification_id: i32,
+        actor_id: i32,
+    ) -> Result<(), RepoError> {
+        if let Some(v) = self.verifications.get_mut(&verification_id) {
+            v.status_set_by = Some(actor_id);
+            v.status_set_at = Some(epoch());
         }
         Ok(())
     }
@@ -1796,6 +1827,8 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
                     parent_id: v.parent_id,
                     project_id: v.project_id,
                     verification_method_id: v.verification_method_id,
+                    author_id: v.author_id,
+                    reviewer_id: v.reviewer_id,
                 });
         }
         Ok(baseline)
@@ -1970,8 +2003,49 @@ impl ProjectMembersRepository for DieselRepoMock {
         if self.project_members.len() == len_before {
             Err(RepoError::NotFound)
         } else {
+            if let Some(ids) = self.project_reviewers.get_mut(&project_id) {
+                ids.retain(|&uid| uid != id);
+            }
             Ok(())
         }
+    }
+}
+
+impl ProjectReviewersRepository for DieselRepoMock {
+    fn is_project_reviewer(&self, project_id: i32, user_id: i32) -> Result<bool, RepoError> {
+        Ok(self
+            .project_reviewers
+            .get(&project_id)
+            .map(|ids| ids.contains(&user_id))
+            .unwrap_or(false))
+    }
+
+    fn list_project_reviewer_ids(&self, project_id: i32) -> Result<Vec<i32>, RepoError> {
+        Ok(self
+            .project_reviewers
+            .get(&project_id)
+            .cloned()
+            .unwrap_or_default())
+    }
+
+    fn replace_project_reviewers(
+        &mut self,
+        project_id: i32,
+        user_ids: &[i32],
+    ) -> Result<(), RepoError> {
+        for &uid in user_ids {
+            let ok = self
+                .project_members
+                .iter()
+                .any(|pm| pm.project_id == project_id && pm.user_id == uid);
+            if !ok {
+                return Err(RepoError::BadInput(format!(
+                    "user {uid} is not a member of project {project_id}"
+                )));
+            }
+        }
+        self.project_reviewers.insert(project_id, user_ids.to_vec());
+        Ok(())
     }
 }
 

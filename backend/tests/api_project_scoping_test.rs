@@ -377,10 +377,10 @@ async fn get_requirement_from_unauthorized_project_returns_forbidden() {
 }
 
 #[rocket::async_test]
-async fn create_requirement_works_for_any_authenticated_user() {
+async fn create_requirement_forbidden_when_user_not_project_member() {
     let client = test_client(base_repo()).await;
 
-    // User 3 tries to create requirement in project 1 (not a member, but API allows it)
+    // User 3 is not a member of project 1 — create requires EditRequirements in that project.
     let payload = json!({
         "title": "New Requirement",
         "description": "Description",
@@ -403,9 +403,7 @@ async fn create_requirement_works_for_any_authenticated_user() {
         .dispatch()
         .await;
 
-    // API doesn't check project membership, so this succeeds
-    let status = response.status();
-    assert!(status == Status::Ok || status == Status::Created);
+    assert_eq!(response.status(), Status::Forbidden);
 }
 
 #[rocket::async_test]
@@ -472,6 +470,10 @@ async fn list_tests_returns_only_user_projects() {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         },
     );
 
@@ -487,6 +489,10 @@ async fn list_tests_returns_only_user_projects() {
             parent_id: None,
             project_id: 2,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         },
     );
 
@@ -502,6 +508,10 @@ async fn list_tests_returns_only_user_projects() {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         },
     );
 
@@ -544,6 +554,10 @@ async fn get_test_works_for_any_authenticated_user() {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         },
     );
 

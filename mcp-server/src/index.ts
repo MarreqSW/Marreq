@@ -289,7 +289,7 @@ async function main() {
       "patch_requirement",
       {
         description:
-          "Update a requirement (creates new version). Requires draft_write mode.",
+          "Update a requirement (creates new version). Requires draft_write mode. Changing status_id requires the token user to be in the project's reviewer list (or admin).",
         inputSchema: z.object({
           requirement_id: z.string(),
           patch: z.object({
@@ -324,7 +324,7 @@ async function main() {
       "set_approval",
       {
         description:
-          "Set requirement version approval state (reviewed or approved). Requires draft_write mode and project owner/manager role.",
+          "Set requirement version approval state (reviewed or approved). Requires draft_write mode; the token user must be a designated project reviewer (or admin).",
         inputSchema: z.object({
           requirement_id: z.string(),
           version_id: z.number(),

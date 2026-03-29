@@ -229,6 +229,10 @@ mod tests {
             parent_id: Some(parent),
             project_id: 99,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
         }
     }
 
@@ -494,6 +498,8 @@ mod tests {
             parent_id: None,
             project_id: 1,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
         };
 
         let id = service.create(&actor, payload).unwrap();
@@ -519,6 +525,8 @@ mod tests {
             parent_id: None,
             project_id: 99,
             verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
         };
 
         let updated = service.update(&actor, 1, payload).unwrap();

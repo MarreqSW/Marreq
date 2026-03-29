@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+pub mod activity;
 pub mod applicability;
 pub mod auth;
 pub mod baselines;
@@ -53,6 +54,7 @@ pub fn routes() -> Vec<Route> {
         requirements::list_by_project,
         requirements::get,
         requirements::get_by_project,
+        activity::requirement_activity_by_project,
         requirements::list_versions,
         requirements::list_versions_by_project,
         requirements::get_version,
@@ -73,6 +75,7 @@ pub fn routes() -> Vec<Route> {
         verifications::list,
         verifications::list_by_project,
         verifications::get,
+        activity::verification_activity_by_project,
         verification_methods::list_by_project,
         verification_methods::create_by_project,
         verification_methods::update_by_project,
@@ -80,6 +83,7 @@ pub fn routes() -> Vec<Route> {
         verifications::create,
         verifications::delete,
         verifications::update_field,
+        verifications::update_field_by_project,
         categories::list,
         categories::get,
         categories::create,
@@ -125,6 +129,8 @@ pub fn routes() -> Vec<Route> {
         members::list_members,
         members::set_member_role,
         members::remove_member,
+        members::list_project_reviewers,
+        members::put_project_reviewers,
         cache::stats,
         cache::clear,
         cache::cleanup,

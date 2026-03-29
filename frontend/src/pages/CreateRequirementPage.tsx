@@ -2,6 +2,8 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import {
   createRequirementByProject,
+  getMyPermissions,
+  getProjectReviewers,
   listApplicability,
   listCategories,
   listProjectMembers,
@@ -12,6 +14,7 @@ import { useDashboard } from '@/context/DashboardContext';
 import type {
   Applicability,
   Category,
+  EffectivePermissions,
   ProjectMember,
   RequirementStatus,
   User,
@@ -19,6 +22,7 @@ import type {
 } from '@/api/types';
 import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
+import { authorDefaultRequirementStatusId } from '@/statusAuthorDefaults';
 
 const selectClass =
   'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
@@ -41,6 +45,8 @@ export default function CreateRequirementPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [applicability, setApplicability] = useState<Applicability[]>([]);
   const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [projectReviewerIds, setProjectReviewerIds] = useState<number[]>([]);
+  const [perms, setPerms] = useState<EffectivePermissions | null>(null);
   const [methods, setMethods] = useState<VerificationMethod[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -61,18 +67,22 @@ export default function CreateRequirementPage() {
     if (!Number.isFinite(pid)) return;
     setLoadError(null);
     try {
-      const [st, cat, app, mem, meth] = await Promise.all([
+      const [st, cat, app, mem, meth, revPool, p] = await Promise.all([
         listRequirementStatuses(),
         listCategories(),
         listApplicability(),
         listProjectMembers(pid),
         listVerificationMethodsByProject(pid),
+        getProjectReviewers(pid).catch(() => ({ user_ids: [] as number[] })),
+        getMyPermissions(pid).catch(() => null),
       ]);
+      setPerms(p);
       setStatuses(st);
       setCategories(cat.filter((c) => c.project_id === pid));
       setApplicability(app.filter((a) => a.project_id === pid));
       setMembers(mem);
       setMethods(meth);
+      setProjectReviewerIds(revPool.user_ids);
       const statusOpts = st.filter((s) => s.project_id === pid);
       const useStatuses = statusOpts.length > 0 ? statusOpts : st;
       if (useStatuses[0]) setStatusId((id) => (id === 0 ? useStatuses[0]!.id : id));
@@ -93,9 +103,18 @@ export default function CreateRequirementPage() {
   useEffect(() => {
     if (me?.id) {
       setAuthorId((a) => (a === 0 ? me.id : a));
-      setReviewerId((r) => (r === 0 ? me.id : r));
     }
   }, [me?.id]);
+
+  useEffect(() => {
+    setReviewerId((r) => {
+      if (projectReviewerIds.length === 0) return 0;
+      if (r !== 0 && projectReviewerIds.includes(r)) return r;
+      const uid = me?.id;
+      if (uid != null && projectReviewerIds.includes(uid)) return uid;
+      return [...projectReviewerIds].sort((a, b) => a - b)[0] ?? 0;
+    });
+  }, [me?.id, projectReviewerIds]);
 
   const userLabel = useCallback(
     (id: number) => {
@@ -105,18 +124,35 @@ export default function CreateRequirementPage() {
     [me],
   );
 
-  const memberOptionIds = useMemo(() => {
+  const authorOptionIds = useMemo(() => {
     const ids = new Set(members.map((m) => m.user_id));
     if (me?.id) ids.add(me.id);
-    ids.add(authorId);
-    ids.add(reviewerId);
+    if (authorId > 0) ids.add(authorId);
     return [...ids].sort((a, b) => a - b);
-  }, [members, me?.id, authorId, reviewerId]);
+  }, [members, me?.id, authorId]);
 
   const statusOptions = useMemo(() => {
     const forProject = statuses.filter((s) => s.project_id === pid);
     return forProject.length > 0 ? forProject : statuses;
   }, [statuses, pid]);
+
+  const defaultAuthorRequirementStatusId = useMemo(
+    () => authorDefaultRequirementStatusId(statusOptions),
+    [statusOptions],
+  );
+
+  const statusChoicesForForm = useMemo(() => {
+    if (!perms || perms.is_project_reviewer) return statusOptions;
+    if (defaultAuthorRequirementStatusId == null) return statusOptions;
+    return statusOptions.filter((s) => s.id === defaultAuthorRequirementStatusId);
+  }, [perms, statusOptions, defaultAuthorRequirementStatusId]);
+
+  useEffect(() => {
+    if (!perms || perms.is_project_reviewer) return;
+    if (defaultAuthorRequirementStatusId != null && defaultAuthorRequirementStatusId > 0) {
+      setStatusId(defaultAuthorRequirementStatusId);
+    }
+  }, [perms, perms?.is_project_reviewer, defaultAuthorRequirementStatusId]);
 
   const statusMeta = useMemo(() => statuses.find((s) => s.id === statusId), [statuses, statusId]);
 
@@ -137,13 +173,17 @@ export default function CreateRequirementPage() {
     setSaveError(null);
     setSaving(true);
     try {
+      const resolvedStatusId =
+        perms && !perms.is_project_reviewer && defaultAuthorRequirementStatusId != null
+          ? defaultAuthorRequirementStatusId
+          : statusId;
       const { id } = await createRequirementByProject(
         pid,
         {
           title: title.trim(),
           description: description.trim(),
           reference_code: referenceCode.trim(),
-          status_id: statusId,
+          status_id: resolvedStatusId,
           category_id: categoryId,
           applicability_id: applicabilityId,
           author_id: authorId,
@@ -276,6 +316,12 @@ export default function CreateRequirementPage() {
               <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                 Status
               </label>
+              {perms && !perms.is_project_reviewer ? (
+                <p className="text-[11px] text-stitch-muted mb-2">
+                  As a non-reviewer you can only create requirements in the default draft (initial) status. Ask a
+                  project reviewer to change it after creation.
+                </p>
+              ) : null}
               <div className="flex items-center gap-2">
                 <div
                   className="w-2 h-2 rounded-full shrink-0 bg-stitch-accent/40"
@@ -285,9 +331,10 @@ export default function CreateRequirementPage() {
                 <select
                   className={`${selectClass} flex-1 min-w-0`}
                   value={statusId}
+                  disabled={perms != null && !perms.is_project_reviewer}
                   onChange={(e) => setStatusId(Number(e.target.value))}
                 >
-                  {statusOptions.map((s) => (
+                  {statusChoicesForForm.map((s) => (
                     <option key={s.id} value={s.id} className="bg-stitch-surface text-stitch-fg">
                       {s.title}
                     </option>
@@ -347,7 +394,7 @@ export default function CreateRequirementPage() {
                 value={authorId}
                 onChange={(e) => setAuthorId(Number(e.target.value))}
               >
-                {memberOptionIds.map((id) => (
+                {authorOptionIds.map((id) => (
                   <option key={id} value={id} className="bg-stitch-surface text-stitch-fg">
                     {userLabel(id)}
                   </option>
@@ -358,17 +405,27 @@ export default function CreateRequirementPage() {
               <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                 Reviewer
               </label>
-              <select
-                className={selectClass}
-                value={reviewerId}
-                onChange={(e) => setReviewerId(Number(e.target.value))}
-              >
-                {memberOptionIds.map((id) => (
-                  <option key={`r-${id}`} value={id} className="bg-stitch-surface text-stitch-fg">
-                    {userLabel(id)}
-                  </option>
-                ))}
-              </select>
+              {projectReviewerIds.length === 0 ? (
+                <p className="text-xs text-stitch-muted py-2">
+                  No project reviewers configured. Add them in{' '}
+                  <Link to={`/p/${pid}/settings`} className="text-stitch-accent underline font-semibold">
+                    Project settings
+                  </Link>{' '}
+                  before assigning a reviewer.
+                </p>
+              ) : (
+                <select
+                  className={selectClass}
+                  value={reviewerId}
+                  onChange={(e) => setReviewerId(Number(e.target.value))}
+                >
+                  {[...projectReviewerIds].sort((a, b) => a - b).map((id) => (
+                    <option key={`r-${id}`} value={id} className="bg-stitch-surface text-stitch-fg">
+                      {userLabel(id)}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
         </section>
@@ -388,7 +445,7 @@ export default function CreateRequirementPage() {
           </Link>
           <button
             type="submit"
-            disabled={saving || methods.length === 0}
+            disabled={saving || methods.length === 0 || projectReviewerIds.length === 0}
             className="bg-stitch-accent text-stitch-canvas px-6 py-2.5 rounded-md text-xs font-bold uppercase tracking-widest shadow-stitch disabled:opacity-50 hover:bg-stitch-accent-dim transition-colors"
           >
             {saving ? 'Creating…' : 'Create requirement'}

@@ -61,6 +61,9 @@ test_output.html
 node_modules
 frontend/dist
 
+# MCP server: do not ship compiled Vitest sources
+mcp-server/dist/*.test.js
+
 # Export files
 exports/
 webpage/

@@ -2,7 +2,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { loadContext } from "./context.js";
+import { contextAllowsReadExtended, loadContext } from "./context.js";
 import { MarreqClient } from "./client.js";
 function jsonContent(data) {
     const text = typeof data === "string" ? data : JSON.stringify(data, null, 2);
@@ -129,6 +129,90 @@ async function main() {
         const out = await withAudit(client, "diff_baselines", JSON.stringify({ baseline_a, baseline_b }), false, () => client.diffBaselines(baseline_a, baseline_b));
         return { content: [jsonContent(out)] };
     });
+    // read_extended / draft_write: extra read tools (catalog, verifications, audit, matrix read, …)
+    if (contextAllowsReadExtended(ctx)) {
+        server.registerTool("list_verifications", {
+            description: "List verifications (tests) in the project. Requires MARREQ_MODE=read_extended or draft_write.",
+            inputSchema: z.object({}),
+        }, async () => {
+            const out = await withAudit(client, "list_verifications", "{}", false, () => client.listVerificationsByProject());
+            return { content: [jsonContent(out)] };
+        });
+        server.registerTool("get_verification", {
+            description: "Get one verification by id. The record must belong to MARREQ_PROJECT_ID. Requires read_extended or draft_write mode.",
+            inputSchema: z.object({ verification_id: z.string() }),
+        }, async ({ verification_id }) => {
+            const id = parseInt(verification_id, 10);
+            const out = await withAudit(client, "get_verification", JSON.stringify({ verification_id }), false, async () => {
+                const row = (await client.getVerificationById(id));
+                if (row?.project_id != null && row.project_id !== ctx.projectId) {
+                    throw new Error(`Verification ${id} is not in project ${ctx.projectId}`);
+                }
+                return row;
+            });
+            return { content: [jsonContent(out)] };
+        });
+        server.registerTool("list_baselines", {
+            description: "List baselines for the project (metadata only). Use get_baseline for full snapshot.",
+            inputSchema: z.object({}),
+        }, async () => {
+            const out = await withAudit(client, "list_baselines", "{}", false, () => client.listBaselinesByProject());
+            return { content: [jsonContent(out)] };
+        });
+        server.registerTool("get_requirement_activity", {
+            description: "Audit log entries for a requirement (create/update history with field summaries).",
+            inputSchema: z.object({ requirement_id: z.string() }),
+        }, async ({ requirement_id }) => {
+            const id = parseInt(requirement_id, 10);
+            const out = await withAudit(client, "get_requirement_activity", JSON.stringify({ requirement_id }), false, () => client.getRequirementActivity(id));
+            return { content: [jsonContent(out)] };
+        });
+        server.registerTool("get_verification_activity", {
+            description: "Audit log entries for a verification (test).",
+            inputSchema: z.object({ verification_id: z.string() }),
+        }, async ({ verification_id }) => {
+            const id = parseInt(verification_id, 10);
+            const out = await withAudit(client, "get_verification_activity", JSON.stringify({ verification_id }), false, () => client.getVerificationActivity(id));
+            return { content: [jsonContent(out)] };
+        });
+        server.registerTool("list_requirement_comments", {
+            description: "List comments for a requirement. Optional requirement_version_id filters by version.",
+            inputSchema: z.object({
+                requirement_id: z.string(),
+                requirement_version_id: z.number().optional(),
+            }),
+        }, async ({ requirement_id, requirement_version_id }) => {
+            const id = parseInt(requirement_id, 10);
+            const out = await withAudit(client, "list_requirement_comments", JSON.stringify({ requirement_id, requirement_version_id }), false, () => client.listRequirementComments(id, requirement_version_id ?? null));
+            return { content: [jsonContent(out)] };
+        });
+        server.registerTool("get_verification_matrix", {
+            description: "Requirement ids linked to a verification in the traceability matrix (read).",
+            inputSchema: z.object({ verification_id: z.string() }),
+        }, async ({ verification_id }) => {
+            const id = parseInt(verification_id, 10);
+            const out = await withAudit(client, "get_verification_matrix", JSON.stringify({ verification_id }), false, () => client.getVerificationMatrix(id));
+            return { content: [jsonContent(out)] };
+        });
+        server.registerTool("list_project_catalog", {
+            description: "Project-scoped catalog: categories, applicability, requirement/verification statuses, verification methods, custom field definitions.",
+            inputSchema: z.object({}),
+        }, async () => {
+            const out = await withAudit(client, "list_project_catalog", "{}", false, () => client.listProjectCatalog());
+            return { content: [jsonContent(out)] };
+        });
+        server.registerTool("diff_baseline_vs_current", {
+            description: "Structured diff between a requirement as captured in a baseline and its current version.",
+            inputSchema: z.object({
+                baseline_id: z.number(),
+                requirement_id: z.string(),
+            }),
+        }, async ({ baseline_id, requirement_id }) => {
+            const rid = parseInt(requirement_id, 10);
+            const out = await withAudit(client, "diff_baseline_vs_current", JSON.stringify({ baseline_id, requirement_id }), false, () => client.diffBaselineVsCurrent(baseline_id, rid));
+            return { content: [jsonContent(out)] };
+        });
+    }
     // Phase 2: draft_write tools (only when MARREQ_MODE=draft_write)
     if (ctx.mode === "draft_write") {
         server.registerTool("create_requirement", {
@@ -158,7 +242,7 @@ async function main() {
             return { content: [jsonContent(out)] };
         });
         server.registerTool("patch_requirement", {
-            description: "Update a requirement (creates new version). Requires draft_write mode.",
+            description: "Update a requirement (creates new version). Requires draft_write mode. Changing status_id requires the token user to be in the project's reviewer list (or admin).",
             inputSchema: z.object({
                 requirement_id: z.string(),
                 patch: z.object({
@@ -181,7 +265,7 @@ async function main() {
             return { content: [jsonContent(out)] };
         });
         server.registerTool("set_approval", {
-            description: "Set requirement version approval state (reviewed or approved). Requires draft_write mode and project owner/manager role.",
+            description: "Set requirement version approval state (reviewed or approved). Requires draft_write mode; the token user must be a designated project reviewer (or admin).",
             inputSchema: z.object({
                 requirement_id: z.string(),
                 version_id: z.number(),
@@ -204,6 +288,45 @@ async function main() {
                 description: args.description ?? null,
             };
             const out = await withAudit(client, "create_baseline", JSON.stringify(args), true, () => client.createBaseline(payload));
+            return { content: [jsonContent(out)] };
+        });
+        server.registerTool("create_requirement_comment", {
+            description: "Add a comment on a requirement. Optional requirement_version_id ties the comment to a version.",
+            inputSchema: z.object({
+                requirement_id: z.string(),
+                body: z.string(),
+                requirement_version_id: z.number().optional(),
+            }),
+        }, async ({ requirement_id, body, requirement_version_id }) => {
+            const id = parseInt(requirement_id, 10);
+            const out = await withAudit(client, "create_requirement_comment", JSON.stringify({
+                requirement_id,
+                body_len: body.length,
+                requirement_version_id,
+            }), true, () => client.createRequirementComment(id, body, requirement_version_id ?? null));
+            return { content: [jsonContent(out)] };
+        });
+    }
+    if (ctx.traceWrite) {
+        server.registerTool("put_verification_matrix", {
+            description: "Replace traceability links for a verification with the given requirement ids (full replace). Requires MARREQ_TRACE_WRITE=true and EditRequirements on the API.",
+            inputSchema: z.object({
+                verification_id: z.string(),
+                requirement_ids: z.array(z.number()),
+            }),
+        }, async ({ verification_id, requirement_ids }) => {
+            const vid = parseInt(verification_id, 10);
+            const out = await withAudit(client, "put_verification_matrix", JSON.stringify({ verification_id, requirement_ids }), true, () => client.putVerificationMatrix(vid, requirement_ids));
+            return { content: [jsonContent(out)] };
+        });
+        server.registerTool("clear_suspect", {
+            description: "Clear the suspect flag on a requirement↔verification matrix link. Requires MARREQ_TRACE_WRITE=true.",
+            inputSchema: z.object({
+                req_id: z.number(),
+                verification_id: z.number(),
+            }),
+        }, async ({ req_id, verification_id }) => {
+            const out = await withAudit(client, "clear_suspect", JSON.stringify({ req_id, verification_id }), true, () => client.clearSuspectLink(req_id, verification_id));
             return { content: [jsonContent(out)] };
         });
     }

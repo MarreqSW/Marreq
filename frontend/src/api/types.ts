@@ -276,6 +276,24 @@ export interface RequirementCommentItem {
   created_at: string;
 }
 
+/** GET `/api/projects/:pid/requirements/:id/activity` and `.../verifications/:id/activity` */
+export interface EntityActivityChange {
+  field: string;
+  old_value: string;
+  new_value: string;
+}
+
+export interface EntityActivityItem {
+  log_id: number;
+  user_id: number;
+  username: string;
+  action_type: string;
+  summary: string;
+  description: string | null;
+  created_at: string;
+  changes: EntityActivityChange[];
+}
+
 export interface Baseline {
   id: number;
   project_id: number;

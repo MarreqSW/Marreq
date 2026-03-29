@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   createVerification,
+  getMyPermissions,
   getProjectReviewers,
   listProjectMembers,
   listUsersOptional,
@@ -13,6 +14,7 @@ import {
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import type {
+  EffectivePermissions,
   ProjectMember,
   User,
   Requirement,
@@ -22,6 +24,7 @@ import type {
 } from '@/api/types';
 import { RequirementMatrixPicker } from '@/components/RequirementMatrixPicker';
 import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
+import { initialVerificationStatusIdForAuthor } from '@/statusAuthorDefaults';
 
 const selectClass =
   'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
@@ -50,6 +53,7 @@ export default function CreateVerificationPage() {
   const [methodId, setMethodId] = useState<string>(''); // "" = none
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [projectReviewerIds, setProjectReviewerIds] = useState<number[]>([]);
+  const [perms, setPerms] = useState<EffectivePermissions | null>(null);
   const [authorId, setAuthorId] = useState(0);
   const [reviewerId, setReviewerId] = useState(0);
   const [users, setUsers] = useState<User[] | null>(null);
@@ -58,7 +62,7 @@ export default function CreateVerificationPage() {
     if (!Number.isFinite(pid)) return;
     setLoadError(null);
     try {
-      const [st, meth, ver, reqs, mem, userList, revPool] = await Promise.all([
+      const [st, meth, ver, reqs, mem, userList, revPool, p] = await Promise.all([
         listVerificationStatuses(),
         listVerificationMethodsByProject(pid),
         listVerifications(),
@@ -66,7 +70,9 @@ export default function CreateVerificationPage() {
         listProjectMembers(pid),
         listUsersOptional(),
         getProjectReviewers(pid).catch(() => ({ user_ids: [] as number[] })),
+        getMyPermissions(pid).catch(() => null),
       ]);
+      setPerms(p);
       setProjectReviewerIds(revPool.user_ids);
       setUsers(userList);
       setStatuses(st);
@@ -107,6 +113,24 @@ export default function CreateVerificationPage() {
     return forProject.length > 0 ? forProject : statuses;
   }, [statuses, pid]);
 
+  const defaultAuthorVerificationStatusId = useMemo(
+    () => initialVerificationStatusIdForAuthor(statusOptions),
+    [statusOptions],
+  );
+
+  const statusChoicesForForm = useMemo(() => {
+    if (!perms || perms.is_project_reviewer) return statusOptions;
+    if (defaultAuthorVerificationStatusId == null) return statusOptions;
+    return statusOptions.filter((s) => s.id === defaultAuthorVerificationStatusId);
+  }, [perms, statusOptions, defaultAuthorVerificationStatusId]);
+
+  useEffect(() => {
+    if (!perms || perms.is_project_reviewer) return;
+    if (defaultAuthorVerificationStatusId != null && defaultAuthorVerificationStatusId > 0) {
+      setStatusId(defaultAuthorVerificationStatusId);
+    }
+  }, [perms, perms?.is_project_reviewer, defaultAuthorVerificationStatusId]);
+
   const statusMeta = useMemo(() => statuses.find((s) => s.id === statusId), [statuses, statusId]);
 
   const userLabel = useCallback(
@@ -140,13 +164,17 @@ export default function CreateVerificationPage() {
         setSaving(false);
         return;
       }
+      const resolvedStatusId =
+        perms && !perms.is_project_reviewer && defaultAuthorVerificationStatusId != null
+          ? defaultAuthorVerificationStatusId
+          : statusId;
       const { id: newId } = await createVerification(
         {
           name: name.trim(),
           reference_code: referenceCode.trim(),
           description: description.trim(),
           source: source.trim() || 'manual',
-          status_id: statusId,
+          status_id: resolvedStatusId,
           parent_id: parentId === '' ? null : Number(parentId),
           project_id: pid,
           verification_method_id: methodId === '' ? null : Number(methodId),
@@ -273,6 +301,12 @@ export default function CreateVerificationPage() {
               <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                 Status
               </label>
+              {perms && !perms.is_project_reviewer ? (
+                <p className="text-[11px] text-stitch-muted mb-2">
+                  As a non-reviewer you can only create verifications in the initial status (e.g. not run). Ask a
+                  project reviewer to change it after creation.
+                </p>
+              ) : null}
               <div className="flex items-center gap-2">
                 <div
                   className="w-2 h-2 rounded-full shrink-0 bg-stitch-accent/40"
@@ -282,9 +316,10 @@ export default function CreateVerificationPage() {
                 <select
                   className={`${selectClass} flex-1 min-w-0`}
                   value={statusId}
+                  disabled={perms != null && !perms.is_project_reviewer}
                   onChange={(e) => setStatusId(Number(e.target.value))}
                 >
-                  {statusOptions.map((s) => (
+                  {statusChoicesForForm.map((s) => (
                     <option key={s.id} value={s.id} className="bg-stitch-surface text-stitch-fg">
                       {s.title}
                     </option>

@@ -421,7 +421,7 @@ export default function ProjectLayout() {
         </main>
 
         <footer className="shrink-0 border-t border-stitch-border bg-stitch-surface px-4 py-2 flex flex-wrap justify-between items-center gap-2 font-mono text-[10px] tracking-tight text-stitch-muted">
-          <div>© {new Date().getFullYear()} RVM Systems | Marreq</div>
+          <div>© {new Date().getFullYear()} Marreq</div>
           <div className="flex gap-4 md:gap-6">
             <span className="hover:text-stitch-accent cursor-default">Privacy Policy</span>
             <span className="hover:text-stitch-accent cursor-default">Documentation</span>

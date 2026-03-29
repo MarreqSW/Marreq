@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- Integration coverage for successful `/api/auth/login` responses, including returned user data, session/CSRF cookies, and password-hash omission from JSON output.
+
+### Changed
+- Simplified `/api/auth/login` to return the already-authenticated user from the login flow instead of reloading it from the session, removing a redundant repository lookup and internal error path after successful authentication.
+
 ## [0.1.0] - 05/03/2026
 
 ### Added

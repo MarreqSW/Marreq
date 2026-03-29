@@ -280,6 +280,8 @@ mod tests {
                 approval_state: "approved".to_string(),
                 approved_by: Some(ADMIN_ID),
                 approved_at: Some(created),
+                reviewed_by: None,
+                reviewed_at: None,
             },
         );
         repo.requirements.insert(
@@ -327,6 +329,10 @@ mod tests {
                 parent_id: None,
                 project_id: PROJECT_ID,
                 verification_method_id: None,
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
             },
         );
         repo

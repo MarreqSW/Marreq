@@ -6,6 +6,8 @@ erDiagram
     projects ||--o{ project_members : "has"
     users ||--o{ project_members : "member of"
     projects }o--o| users : "owner_id"
+    projects ||--o{ project_reviewers : "reviewer pool"
+    users ||--o{ project_reviewers : "listed"
 
     projects {
         int id PK
@@ -36,6 +38,11 @@ erDiagram
         timestamp updated_at
     }
 
+    project_reviewers {
+        int project_id PK,FK
+        int user_id PK,FK
+    }
+
     %% ========== Requirements (container + versions) ==========
     projects ||--o{ requirements : "contains"
     requirements ||--o{ requirement_versions : "versions"
@@ -45,7 +52,7 @@ erDiagram
     applicability ||--o{ requirement_versions : "applicability"
     categories ||--o{ requirement_versions : "category"
     requirement_versions ||--o{ requirement_version_verification_methods : "has"
-    verification ||--o{ requirement_version_verification_methods : "used by"
+    verification_methods ||--o{ requirement_version_verification_methods : "used by"
 
     requirements {
         int id PK
@@ -71,6 +78,8 @@ erDiagram
         varchar approval_state
         int approved_by FK "nullable"
         timestamp approved_at "nullable"
+        int reviewed_by FK "nullable"
+        timestamp reviewed_at "nullable"
     }
 
     requirement_version_verification_methods {
@@ -80,20 +89,12 @@ erDiagram
 
     %% ========== Lookup / config (per project) ==========
     projects ||--o{ requirement_status : "has"
-    projects ||--o{ test_status : "has"
     projects ||--o{ categories : "has"
     projects ||--o{ applicability : "has"
-    projects ||--o{ verification : "has"
+    projects ||--o{ verification_methods : "has"
+    projects ||--o{ verification_status : "has"
 
     requirement_status {
-        int id PK
-        varchar title
-        varchar description
-        varchar tag
-        int project_id FK
-    }
-
-    test_status {
         int id PK
         varchar title
         varchar description
@@ -117,7 +118,7 @@ erDiagram
         int project_id FK
     }
 
-    verification {
+    verification_methods {
         int id PK
         varchar title
         varchar description
@@ -125,25 +126,42 @@ erDiagram
         int project_id FK
     }
 
-    %% ========== Tests ==========
-    projects ||--o{ tests : "contains"
-    test_status ||--o{ tests : "status"
-    tests }o--o| tests : "parent_id"
+    verification_status {
+        int id PK
+        varchar title
+        varchar description
+        varchar tag
+        int project_id FK
+        bool is_system
+        varchar tag_color "nullable"
+    }
 
-    tests {
+    %% ========== Verifications (project items, matrix rows) ==========
+    projects ||--o{ verifications : "contains"
+    verification_status ||--o{ verifications : "status"
+    verification_methods }o--o{ verifications : "method"
+    users ||--o{ verifications : "author or reviewer"
+    verifications }o--o| verifications : "parent_id"
+
+    verifications {
         int id PK
         varchar name
         varchar reference_code
-        text description
+        varchar description
         varchar source
         int status_id FK
         int parent_id FK "nullable"
         int project_id FK
+        int verification_method_id FK "nullable"
+        int author_id FK
+        int reviewer_id FK
+        int status_set_by FK "nullable"
+        timestamp status_set_at "nullable"
     }
 
     %% ========== Traceability (live matrix) ==========
     matrix }o--|| requirements : "req_id"
-    matrix }o--|| tests : "test_id"
+    matrix }o--|| verifications : "verification_id"
     matrix }o--|| projects : "project_id"
     matrix }o--o| requirement_versions : "triggering_version_id"
     matrix }o--o| users : "triggering_user_id"
@@ -151,7 +169,7 @@ erDiagram
 
     matrix {
         int req_id PK,FK
-        int test_id PK,FK
+        int verification_id PK,FK
         int project_id FK
         timestamp creation_date
         bool suspect
@@ -172,7 +190,7 @@ erDiagram
     baseline_requirements }o--|| requirements : "requirement_id"
     baseline_requirements }o--|| requirement_versions : "version_id"
     baseline_traceability }o--|| requirements : "requirement_id"
-    baseline_traceability }o--|| tests : "test_id"
+    baseline_traceability }o--|| verifications : "verification_id"
     baseline_verifications }o--|| projects : "project_id"
 
     baselines {
@@ -193,7 +211,7 @@ erDiagram
     baseline_traceability {
         int baseline_id PK,FK
         int requirement_id PK,FK
-        int test_id PK,FK
+        int verification_id PK,FK
         bool suspect
         timestamp suspect_at "nullable"
         text suspect_reason "nullable"
@@ -210,6 +228,8 @@ erDiagram
         int parent_id "nullable"
         int project_id FK
         int verification_method_id "nullable"
+        int author_id
+        int reviewer_id
     }
 
     %% ========== Audit ==========

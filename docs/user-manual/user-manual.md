@@ -468,6 +468,17 @@ You see the list of members with names, usernames, roles (e.g. owner, manager), 
 - **Add member**: Submit the form with user and role.
 - **Remove member**: Use the remove action for a member (e.g. **Remove** button); confirm if prompted.
 
+### 11.1 Project reviewers (workflow gates)
+
+Some actions are limited to a **designated reviewer list** for the project (not the same as the “Reviewer” role alone):
+
+- **Who**: In the React app, open **Settings** for the project (project-scoped **Settings** in the nav). Users with **Manage members** can check which **project members** act as **project reviewers**. Only members of the project can be reviewers.
+- **What they control**: **Requirement status** (from the requirements table or requirement editor), **verification (test) status**, and **version approval** transitions (**draft → reviewed → approved**). Other editors can still change most requirement or verification fields if they have **Edit requirements**, but not those gates unless they are in the reviewer list.
+- **Verifications**: Each verification has an assigned **author** and **reviewer** (users). The **status** of the verification is still changed only by **project reviewers** (or an administrator).
+- **Audit**: Version **reviewed** / **approved** and verification status changes record **who** performed the action where the product exposes it (and in server logs).
+
+If **no project reviewers** are configured, only **administrators** can change those statuses and approvals until at least one reviewer is added.
+
 ---
 
 ## 12. Profile & Account

@@ -11,12 +11,14 @@
 //! - Expired sessions are handled
 //! - Admin vs regular user permissions
 
-use marreq::auth::session::SESSION_COOKIE;
+use marreq::auth::csrf::CSRF_COOKIE;
+use marreq::auth::hash_password;
+use marreq::auth::session::{session_cookie_name_for_request, SESSION_COOKIE};
 use marreq::models::*;
 use marreq::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
-use serde_json::json;
+use serde_json::{json, Value};
 
 mod test_support {
     use super::*;
@@ -121,6 +123,51 @@ mod test_support {
 }
 
 use test_support::*;
+
+// ============================================================================
+// Auth API - Login Tests
+// ============================================================================
+
+#[rocket::async_test]
+async fn auth_login_returns_authenticated_user_and_sets_cookies() {
+    let mut repo = base_repo();
+    let mut admin = repo.users.get(&1).cloned().expect("admin user");
+    admin.password_hash = hash_password("Voyager!Marble_2026").expect("hashed password");
+    repo.users.insert(1, admin);
+
+    let client = test_client(repo).await;
+
+    let response = client
+        .post("/api/auth/login")
+        .header(ContentType::JSON)
+        .body(
+            json!({
+                "username": "admin",
+                "password": "Voyager!Marble_2026",
+            })
+            .to_string(),
+        )
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+
+    let body: Value = response.into_json().await.expect("json");
+    assert_eq!(body["status"], "ok");
+    assert_eq!(body["user"]["id"], 1);
+    assert_eq!(body["user"]["username"], "admin");
+    assert!(body["user"].get("password_hash").is_none());
+
+    let jar = client.cookies();
+    let session_cookie = jar
+        .get_private(session_cookie_name_for_request())
+        .expect("session cookie");
+    assert_eq!(session_cookie.value(), "1");
+
+    let csrf_cookie = jar.get_private(CSRF_COOKIE).expect("csrf cookie");
+    assert_eq!(csrf_cookie.value().len(), 64);
+    assert!(csrf_cookie.value().chars().all(|c| c.is_ascii_hexdigit()));
+}
 
 // ============================================================================
 // Requirements API - Authentication Tests

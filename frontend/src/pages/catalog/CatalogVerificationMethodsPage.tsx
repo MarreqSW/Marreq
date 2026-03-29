@@ -16,7 +16,6 @@ export default function CatalogVerificationMethodsPage() {
   const { projectId, basePath } = useOutletContext<ProjectOutletContext>();
   const pid = projectId;
   const { csrfToken, dashboard } = useDashboard();
-  const projectSlug = dashboard?.projects?.find((p) => p.id === pid)?.slug;
   const [rows, setRows] = useState<VerificationMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -130,18 +129,13 @@ export default function CatalogVerificationMethodsPage() {
         </p>
       ) : null}
 
-      {projectSlug ? (
-        <p className="text-xs text-stitch-muted">
-          Classic UI:{' '}
-          <a
-            href={`${basePath}/verification`}
-            className="text-stitch-accent font-semibold hover:underline"
-          >
-            open legacy verification methods page
-          </a>{' '}
-          (same data; this SPA uses the JSON API).
-        </p>
-      ) : null}
+      <p className="text-xs text-stitch-muted">
+        Classic UI:{' '}
+        <a href={`${basePath}/verification`} className="text-stitch-accent font-semibold hover:underline">
+          open legacy verification methods page
+        </a>{' '}
+        (same data; this SPA uses the JSON API).
+      </p>
 
       <form
         onSubmit={addRow}

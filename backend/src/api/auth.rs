@@ -13,10 +13,8 @@ use crate::api::prelude::*;
 use crate::auth::login::login_user;
 use crate::auth::logout::logout_user;
 use crate::auth::rate_limiter::LoginRateLimiter;
-use crate::auth::session::read_session_user_id;
 use crate::auth::AuthError;
 use crate::models::forms::LoginForm;
-use crate::repository::UserRepository;
 
 /// Mint or return the CSRF token for the current anonymous or authenticated session.
 /// Safe method — no CSRF body required. SPA calls this before `POST /api/auth/login`.
@@ -50,13 +48,8 @@ pub fn auth_login(
     let mut repo = state.repo_write();
 
     match login_user(&mut *repo, &form, cookies) {
-        Ok(()) => {
+        Ok(user) => {
             limiter.record_success(&form.username, ip);
-            let user_id = read_session_user_id(cookies)
-                .ok_or_else(|| ApiError::Internal("session not set after login".into()))?;
-            let user = repo
-                .get_user_by_id(user_id)
-                .map_err(|_| ApiError::Internal("failed to load user".into()))?;
             Ok((
                 Status::Ok,
                 Json(json!({

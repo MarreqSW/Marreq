@@ -12,14 +12,13 @@ use rocket::http::CookieJar;
 // API
 // --------------------------------
 
-/// Process a login attempt. On success, session cookies are set and an empty
-/// Ok is returned. On failure a rendered `Template` with the corresponding
-/// error is returned.
+/// Process a login attempt. On success, session + CSRF cookies are set and the
+/// authenticated user is returned. On failure an auth error is returned.
 pub fn login_user<R: Repository>(
     repo: &mut R,
     login_form: &LoginForm,
     cookies: &CookieJar<'_>,
-) -> Result<(), AuthError> {
+) -> Result<User, AuthError> {
     let user = authenticate_user(&*repo, &login_form.username, login_form.password.trim())?;
 
     // Store session information.
@@ -44,7 +43,7 @@ pub fn login_user<R: Repository>(
     };
     let _ = repo.insert_log(&log);
 
-    Ok(())
+    Ok(user)
 }
 
 fn authenticate_user<R: Repository>(

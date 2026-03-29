@@ -28,6 +28,28 @@ pub fn forbidden(_req: &Request<'_>) -> (Status, Json<serde_json::Value>) {
     )
 }
 
+/// Rocket’s built-in 404 page is HTML and confuses people who open SPA paths on the API port (`:8000`).
+/// This catcher only runs when **no route matches** (not when a handler returns its own 404 JSON).
+#[catch(404)]
+pub fn not_found(req: &Request<'_>) -> (Status, Json<serde_json::Value>) {
+    let path = req.uri().path().as_str();
+    let message = if path.starts_with("/p/") {
+        "This path looks like a React app route. This process is the JSON API only (GET / and /api/*). Open the UI on the Vite dev server (http://127.0.0.1:5173) or your nginx/frontend URL — not the API port."
+    } else if path.starts_with("/api/") {
+        "No API route matched this path and method."
+    } else {
+        "No route matched. The Marreq web UI is served separately from this API (e.g. Vite :5173 or the docker frontend container)."
+    };
+    (
+        Status::NotFound,
+        Json(json!({
+            "error": "not_found",
+            "message": message,
+            "path": path,
+        })),
+    )
+}
+
 impl From<RepoError> for rocket::http::Status {
     fn from(err: RepoError) -> Self {
         println!("Mapping RepoError to HTTP status: {}", err);

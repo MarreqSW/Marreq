@@ -5,6 +5,7 @@ import {
   getRequirementByProject,
   listApplicability,
   listCategories,
+  listRequirementActivityByProject,
   listRequirementComments,
   listRequirementStatuses,
   listRequirementVersionsByProject,
@@ -19,6 +20,7 @@ import type {
   Applicability,
   Category,
   EffectivePermissions,
+  EntityActivityItem,
   Requirement,
   RequirementCommentItem,
   RequirementDetailPayload,
@@ -52,6 +54,30 @@ function formatTs(iso: string): string {
   }
 }
 
+function formatActivityChangeValue(
+  field: string,
+  raw: string,
+  statusById: Map<number, RequirementStatus>,
+  categoryById: Map<number, string>,
+  applicabilityById: Map<number, string>,
+): string {
+  const t = raw.trim();
+  if (t === '—' || t === '') return t || '—';
+  if (field === 'Status') {
+    const id = Number(t);
+    if (Number.isFinite(id)) return statusById.get(id)?.title ?? raw;
+  }
+  if (field === 'Category') {
+    const id = Number(t);
+    if (Number.isFinite(id)) return categoryById.get(id) ?? raw;
+  }
+  if (field === 'Applicability') {
+    const id = Number(t);
+    if (Number.isFinite(id)) return applicabilityById.get(id) ?? raw;
+  }
+  return raw;
+}
+
 function formatRelativeTime(iso: string): string {
   try {
     const d = new Date(iso);
@@ -77,11 +103,6 @@ export default function ViewRequirementPage() {
   const rid = Number(requirementIdParam);
   const { dashboard } = useDashboard();
 
-  const projectSlug = useMemo(
-    () => dashboard?.projects?.find((p) => p.id === pid)?.slug,
-    [dashboard?.projects, pid],
-  );
-
   const [detail, setDetail] = useState<RequirementDetailPayload | null>(null);
   const [versions, setVersions] = useState<RequirementVersion[]>([]);
   const [comments, setComments] = useState<RequirementCommentItem[]>([]);
@@ -93,13 +114,14 @@ export default function ViewRequirementPage() {
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [users, setUsers] = useState<User[] | null>(null);
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
+  const [activityLog, setActivityLog] = useState<EntityActivityItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid) || !Number.isFinite(rid)) return;
     setLoadError(null);
     try {
-      const [d, v, st, vst, cat, app, reqs, ver, u, cmts, p] = await Promise.all([
+      const [d, v, st, vst, cat, app, reqs, ver, u, cmts, p, act] = await Promise.all([
         getRequirementByProject(pid, rid),
         listRequirementVersionsByProject(pid, rid),
         listRequirementStatuses(),
@@ -111,6 +133,7 @@ export default function ViewRequirementPage() {
         listUsersOptional(),
         listRequirementComments(rid),
         getMyPermissions(pid).catch(() => null),
+        listRequirementActivityByProject(pid, rid).catch(() => [] as EntityActivityItem[]),
       ]);
       if (d.project_id !== pid) {
         setLoadError('This requirement belongs to another project.');
@@ -127,6 +150,7 @@ export default function ViewRequirementPage() {
       setUsers(u);
       setComments(cmts);
       setPerms(p);
+      setActivityLog(act);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load requirement');
     }
@@ -278,15 +302,13 @@ export default function ViewRequirementPage() {
           <span className="text-stitch-muted font-normal normal-case tracking-normal">· View</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {projectSlug ? (
-            <a
-              href={`${basePath}/requirements/show/${rid}`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-stitch-border text-stitch-muted hover:text-stitch-accent hover:border-stitch-accent/40 text-[10px] font-bold uppercase tracking-wider transition-colors"
-            >
-              <span className="material-symbols-outlined text-sm">open_in_new</span>
-              Classic
-            </a>
-          ) : null}
+          <a
+            href={`${basePath}/requirements/show/${rid}`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-stitch-border text-stitch-muted hover:text-stitch-accent hover:border-stitch-accent/40 text-[10px] font-bold uppercase tracking-wider transition-colors"
+          >
+            <span className="material-symbols-outlined text-sm">open_in_new</span>
+            Classic
+          </a>
           {canEdit ? (
             <Link
               to={`${basePath}/requirements/${rid}/edit`}
@@ -591,23 +613,25 @@ export default function ViewRequirementPage() {
             <div>
               <h2 className="text-sm font-bold font-headline text-stitch-accent">Changelog</h2>
               <p className="text-[10px] text-stitch-muted mt-0.5">
-                Requirement version snapshots (newest first). Compare fields between consecutive revisions.
+                Version history and saved snapshots, plus the audit log of create/update actions (newest first).
               </p>
             </div>
           </div>
-          {projectSlug ? (
-            <a
-              href={`${basePath}/requirements/show/${rid}`}
-              className="text-[10px] font-bold uppercase tracking-wide text-stitch-accent hover:underline shrink-0"
-            >
-              Full diffs in classic →
-            </a>
-          ) : null}
+          <a
+            href={`${basePath}/requirements/show/${rid}`}
+            className="text-[10px] font-bold uppercase tracking-wide text-stitch-accent hover:underline shrink-0"
+          >
+            Full diffs in classic →
+          </a>
         </div>
-        <div className="p-4 md:p-6 max-h-[min(520px,55vh)] overflow-y-auto">
-          {versions.length === 0 ? (
-            <p className="text-xs text-stitch-muted">No version snapshots yet.</p>
-          ) : (
+        <div className="p-4 md:p-6 max-h-[min(640px,70vh)] overflow-y-auto space-y-8">
+          <div>
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-stitch-muted mb-3">
+              Version snapshots
+            </h3>
+            {versions.length === 0 ? (
+              <p className="text-xs text-stitch-muted">No version snapshots yet.</p>
+            ) : (
             <ul className="space-y-0 divide-y divide-stitch-border">
               {changelogEntries.map(({ ver, revNum, changes, isLatest, older }) => {
                 const vstRow = statusById.get(ver.status_id);
@@ -668,7 +692,75 @@ export default function ViewRequirementPage() {
                 );
               })}
             </ul>
-          )}
+            )}
+          </div>
+
+          <div className="border-t border-stitch-border pt-6">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-stitch-muted mb-3">
+              Historic activity (audit)
+            </h3>
+            <p className="text-[10px] text-stitch-muted mb-4">
+              Field-level changes recorded when this requirement is created or updated through the API.
+            </p>
+            {activityLog.length === 0 ? (
+              <p className="text-xs text-stitch-muted">No audit entries yet.</p>
+            ) : (
+              <ul className="space-y-0 divide-y divide-stitch-border">
+                {activityLog.map((entry) => (
+                  <li key={entry.log_id} className="py-4 first:pt-0">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+                      <span className="text-sm font-semibold text-stitch-fg">{entry.summary}</span>
+                      <span className="text-[10px] font-mono text-stitch-muted">
+                        {formatTs(entry.created_at)}
+                        {formatRelativeTime(entry.created_at) ? ` · ${formatRelativeTime(entry.created_at)}` : ''}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-stitch-muted mb-2">
+                      <span className="font-semibold text-stitch-fg/90">{entry.username}</span>
+                      <span className="mx-1">·</span>
+                      <span className="uppercase tracking-wide">{entry.action_type}</span>
+                    </p>
+                    {entry.description ? (
+                      <p className="text-xs text-stitch-fg/80 mb-2 whitespace-pre-wrap">{entry.description}</p>
+                    ) : null}
+                    {entry.changes.length > 0 ? (
+                      <ul className="mt-2 space-y-1.5 text-[11px]">
+                        {entry.changes.map((ch, idx) => (
+                          <li
+                            key={`${entry.log_id}-${idx}-${ch.field}`}
+                            className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-2 text-stitch-fg/90"
+                          >
+                            <span className="font-bold text-stitch-muted">{ch.field}</span>
+                            <span className="text-stitch-muted line-clamp-3 sm:col-span-2">
+                              <span className="text-red-300/90 line-through decoration-stitch-border">
+                                {formatActivityChangeValue(
+                                  ch.field,
+                                  ch.old_value,
+                                  statusById,
+                                  categoryById,
+                                  applicabilityById,
+                                )}
+                              </span>
+                              <span className="mx-1 text-stitch-border">→</span>
+                              <span className="text-emerald-200/90">
+                                {formatActivityChangeValue(
+                                  ch.field,
+                                  ch.new_value,
+                                  statusById,
+                                  categoryById,
+                                  applicabilityById,
+                                )}
+                              </span>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </section>
     </div>

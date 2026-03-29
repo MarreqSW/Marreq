@@ -11,6 +11,7 @@ use crate::repository::{
 use anyhow::{anyhow, Result};
 use calamine::{open_workbook, DataType, Reader, Xlsx};
 use csv::ReaderBuilder;
+use diesel::prelude::*;
 use diesel::{Connection, PgConnection};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -437,6 +438,14 @@ impl ExcelImporter {
             None
         };
 
+        use crate::schema::projects::dsl::{id as proj_pk, owner_id, projects};
+        let author_reviewer: i32 = projects
+            .filter(proj_pk.eq(project_id))
+            .select(owner_id)
+            .first::<Option<i32>>(conn)
+            .map_err(|e| anyhow!("{}", e))?
+            .unwrap_or(1);
+
         // Create new test
         let new_verification = NewVerification {
             id: None,
@@ -457,6 +466,8 @@ impl ExcelImporter {
             parent_id,
             project_id,
             verification_method_id: None,
+            author_id: author_reviewer,
+            reviewer_id: author_reviewer,
         };
 
         DieselRepo::new()

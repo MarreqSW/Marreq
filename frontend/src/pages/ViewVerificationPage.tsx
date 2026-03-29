@@ -5,6 +5,7 @@ import {
   getVerification,
   getVerificationMatrix,
   listRequirements,
+  listVerificationActivityByProject,
   listVerificationMethodsByProject,
   listVerificationStatuses,
   listUsersOptional,
@@ -14,12 +15,63 @@ import { useDashboard } from '@/context/DashboardContext';
 import { StatusBadge } from '@/components/StatusBadge';
 import type {
   EffectivePermissions,
+  EntityActivityItem,
   Requirement,
   Verification,
   VerificationMethod,
   User,
   VerificationStatus,
 } from '@/api/types';
+
+function formatTs(iso: string): string {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return iso;
+    return d.toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' });
+  } catch {
+    return iso;
+  }
+}
+
+function formatRelativeTime(iso: string): string {
+  try {
+    const d = new Date(iso);
+    const ms = Date.now() - d.getTime();
+    if (Number.isNaN(d.getTime()) || ms < 0) return '';
+    const minutes = Math.floor(ms / 60000);
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days}d ago`;
+    return d.toLocaleDateString(undefined, { dateStyle: 'short' });
+  } catch {
+    return '';
+  }
+}
+
+function formatVerificationActivityValue(
+  field: string,
+  raw: string,
+  statusById: Map<number, VerificationStatus>,
+  methodById: Map<number, VerificationMethod>,
+): string {
+  const t = raw.trim();
+  if (t === '—' || t === '') return t || '—';
+  if (field === 'Status') {
+    const id = Number(t);
+    if (Number.isFinite(id)) return statusById.get(id)?.title ?? raw;
+  }
+  if (field === 'Verification type') {
+    const id = Number(t);
+    if (Number.isFinite(id)) {
+      if (id === 0) return '—';
+      return methodById.get(id)?.title ?? raw;
+    }
+  }
+  return raw;
+}
 
 export default function ViewVerificationPage() {
   const { projectId: projectIdParam, verificationId: verificationIdParam } = useParams();
@@ -41,12 +93,13 @@ export default function ViewVerificationPage() {
   const [linkedReqIds, setLinkedReqIds] = useState<number[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [users, setUsers] = useState<User[] | null>(null);
+  const [activityLog, setActivityLog] = useState<EntityActivityItem[]>([]);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid) || !Number.isFinite(vid)) return;
     setLoadError(null);
     try {
-      const [v, st, m, all, p, reqs, mx, u] = await Promise.all([
+      const [v, st, m, all, p, reqs, mx, u, act] = await Promise.all([
         getVerification(vid),
         listVerificationStatuses(),
         listVerificationMethodsByProject(pid),
@@ -55,6 +108,7 @@ export default function ViewVerificationPage() {
         listRequirements(pid),
         getVerificationMatrix(pid, vid),
         listUsersOptional(),
+        listVerificationActivityByProject(pid, vid).catch(() => [] as EntityActivityItem[]),
       ]);
       setUsers(u);
       if (v.project_id !== pid) {
@@ -68,6 +122,7 @@ export default function ViewVerificationPage() {
       setPerms(p);
       setRequirements(reqs);
       setLinkedReqIds([...mx.requirement_ids].sort((a, b) => a - b));
+      setActivityLog(act);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load verification');
     }
@@ -333,16 +388,58 @@ export default function ViewVerificationPage() {
             <div>
               <h2 className="text-sm font-bold font-headline text-stitch-accent">Changelog</h2>
               <p className="text-[10px] text-stitch-muted mt-0.5">
-                Version history, baselines, and detailed diffs for verifications are not exposed via this API yet.
+                Historic activity from the audit log: creates and field updates (newest first).
               </p>
             </div>
           </div>
         </div>
-        <div className="p-4 md:p-6 text-sm text-stitch-muted leading-relaxed">
-          <p>
-            Historical snapshots, baseline comparisons, attachments, and audit-style activity for verifications are not
-            available in this API-backed UI yet.
-          </p>
+        <div className="p-4 md:p-6 max-h-[min(520px,55vh)] overflow-y-auto">
+          {activityLog.length === 0 ? (
+            <p className="text-xs text-stitch-muted">No audit entries yet.</p>
+          ) : (
+            <ul className="space-y-0 divide-y divide-stitch-border">
+              {activityLog.map((entry) => (
+                <li key={entry.log_id} className="py-4 first:pt-0">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1">
+                    <span className="text-sm font-semibold text-stitch-fg">{entry.summary}</span>
+                    <span className="text-[10px] font-mono text-stitch-muted">
+                      {formatTs(entry.created_at)}
+                      {formatRelativeTime(entry.created_at) ? ` · ${formatRelativeTime(entry.created_at)}` : ''}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-stitch-muted mb-2">
+                    <span className="font-semibold text-stitch-fg/90">{entry.username}</span>
+                    <span className="mx-1">·</span>
+                    <span className="uppercase tracking-wide">{entry.action_type}</span>
+                  </p>
+                  {entry.description ? (
+                    <p className="text-xs text-stitch-fg/80 mb-2 whitespace-pre-wrap">{entry.description}</p>
+                  ) : null}
+                  {entry.changes.length > 0 ? (
+                    <ul className="mt-2 space-y-1.5 text-[11px]">
+                      {entry.changes.map((ch, idx) => (
+                        <li
+                          key={`${entry.log_id}-${idx}-${ch.field}`}
+                          className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-2 text-stitch-fg/90"
+                        >
+                          <span className="font-bold text-stitch-muted">{ch.field}</span>
+                          <span className="text-stitch-muted line-clamp-3 sm:col-span-2">
+                            <span className="text-red-300/90 line-through decoration-stitch-border">
+                              {formatVerificationActivityValue(ch.field, ch.old_value, statusById, methodById)}
+                            </span>
+                            <span className="mx-1 text-stitch-border">→</span>
+                            <span className="text-emerald-200/90">
+                              {formatVerificationActivityValue(ch.field, ch.new_value, statusById, methodById)}
+                            </span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </section>
     </div>

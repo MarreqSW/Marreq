@@ -78,20 +78,19 @@ fn user_is_project_reviewer<R>(repo: &R, user: &User, project_id: i32) -> bool
 where
     R: ProjectReviewersRepository,
 {
-    if user.is_admin {
-        return true;
-    }
     let Ok(ids) = repo.list_project_reviewer_ids(project_id) else {
         return false;
     };
     if ids.is_empty() {
-        return false;
+        // No explicit pool: only site admins (same rule as `require_project_reviewer`).
+        return user.is_admin;
     }
     repo.is_project_reviewer(project_id, user.id)
         .unwrap_or(false)
 }
 
-/// Whether the user may change requirement/verification status and version approval (reviewer set or admin).
+/// Whether the user may change requirement/verification status and version approval
+/// (member of the project's reviewer list, or site admin when that list is still empty).
 pub fn may_change_review_gates<R>(repo: &R, user: &User, project_id: i32) -> bool
 where
     R: ProjectReviewersRepository,

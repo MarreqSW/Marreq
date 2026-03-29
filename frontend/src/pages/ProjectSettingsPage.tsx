@@ -361,8 +361,9 @@ export default function ProjectSettingsPage() {
         </h3>
         <p className="text-xs text-stitch-muted mb-4 max-w-2xl">
           Only users checked here can change requirement and verification status and move requirement versions through
-          draft → reviewed → approved. They must be project members. If the list is empty, only administrators can
-          perform those actions until you add at least one reviewer.
+          draft → reviewed → approved. They must be project members. If the list is empty, only site administrators can
+          perform those actions until you add at least one reviewer. Once the list is non-empty, being a site
+          administrator does not bypass it—you must check yourself if you need those powers.
         </p>
         {reviewerErr && <p className="text-sm text-red-300 mb-3">{reviewerErr}</p>}
         <div className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch mb-4">

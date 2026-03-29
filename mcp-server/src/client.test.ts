@@ -12,6 +12,7 @@ const baseContext: SessionContext = {
   apiToken: "test-token",
   projectId: 1,
   mode: "read_only",
+  traceWrite: false,
 };
 
 function makeClient(overrides?: Partial<SessionContext>): MarreqClient {
@@ -244,6 +245,74 @@ describe("MarreqClient", () => {
       const client = makeClient();
       await expect(client.getRequirement(1)).rejects.toThrow(
         /Marreq API 401/
+      );
+    });
+  });
+
+  describe("read_extended client methods", () => {
+    it("listVerificationsByProject uses project-scoped URL", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+      const client = makeClient();
+      await client.listVerificationsByProject();
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "http://localhost:8000/api/projects/1/verifications",
+        expect.any(Object)
+      );
+    });
+
+    it("getRequirementActivity uses activity URL", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify([]), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+      const client = makeClient();
+      await client.getRequirementActivity(9);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "http://localhost:8000/api/projects/1/requirements/9/activity",
+        expect.any(Object)
+      );
+    });
+
+    it("putVerificationMatrix sends PUT with requirement_ids", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+      const client = makeClient();
+      await client.putVerificationMatrix(3, [10, 11]);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "http://localhost:8000/api/projects/1/verifications/3/matrix",
+        expect.objectContaining({
+          method: "PUT",
+          body: JSON.stringify({ requirement_ids: [10, 11] }),
+        })
+      );
+    });
+
+    it("clearSuspectLink POSTs to traceability endpoint", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ status: "ok" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+      const client = makeClient();
+      await client.clearSuspectLink(5, 7);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "http://localhost:8000/api/traceability/clear_suspect",
+        expect.objectContaining({
+          method: "POST",
+          body: JSON.stringify({ req_id: 5, verification_id: 7 }),
+        })
       );
     });
   });

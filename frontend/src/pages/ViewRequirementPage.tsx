@@ -97,9 +97,8 @@ function formatRelativeTime(iso: string): string {
 }
 
 export default function ViewRequirementPage() {
-  const { basePath } = useOutletContext<ProjectOutletContext>();
-  const { projectId: projectIdParam, requirementId: requirementIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();
+  const { requirementId: requirementIdParam } = useParams();
   const rid = Number(requirementIdParam);
   const { dashboard } = useDashboard();
 

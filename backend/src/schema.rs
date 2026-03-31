@@ -212,6 +212,42 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    notification_preferences (id) {
+        id -> Int4,
+        user_id -> Int4,
+        project_id -> Int4,
+        notify_in_app -> Bool,
+        notify_email -> Bool,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
+    notifications (id) {
+        id -> Int4,
+        user_id -> Int4,
+        project_id -> Nullable<Int4>,
+        #[max_length = 50]
+        notification_type -> Varchar,
+        #[max_length = 255]
+        title -> Varchar,
+        body -> Nullable<Text>,
+        #[max_length = 50]
+        entity_type -> Nullable<Varchar>,
+        entity_id -> Nullable<Int4>,
+        actor_id -> Nullable<Int4>,
+        read -> Bool,
+        emailed -> Bool,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     project_members (project_id, user_id) {
         project_id -> Int4,
         user_id -> Int4,
@@ -475,6 +511,9 @@ diesel::joinable!(matrix -> projects (project_id));
 diesel::joinable!(matrix -> requirement_versions (triggering_version_id));
 diesel::joinable!(matrix -> requirements (req_id));
 diesel::joinable!(matrix -> verifications (verification_id));
+diesel::joinable!(notification_preferences -> projects (project_id));
+diesel::joinable!(notification_preferences -> users (user_id));
+diesel::joinable!(notifications -> projects (project_id));
 diesel::joinable!(project_members -> projects (project_id));
 diesel::joinable!(project_members -> users (user_id));
 diesel::joinable!(project_reviewers -> projects (project_id));
@@ -493,7 +532,6 @@ diesel::joinable!(requirement_version_verification_methods -> verification_metho
 diesel::joinable!(requirement_versions -> applicability (applicability_id));
 diesel::joinable!(requirement_versions -> categories (category_id));
 diesel::joinable!(requirement_versions -> requirement_status (status_id));
-diesel::joinable!(requirement_versions -> users (reviewed_by));
 diesel::joinable!(requirements -> projects (project_id));
 diesel::joinable!(user_api_tokens -> projects (project_id));
 diesel::joinable!(user_api_tokens -> users (user_id));
@@ -517,6 +555,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     groups,
     logs,
     matrix,
+    notification_preferences,
+    notifications,
     project_members,
     project_reviewers,
     projects,

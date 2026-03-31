@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import { listUsersOptional } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import type { User } from '@/api/types';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 function parseUser(u: unknown): User | null {
   if (u && typeof u === 'object' && 'username' in u) return u as User;
@@ -11,8 +12,7 @@ function parseUser(u: unknown): User | null {
 }
 
 export default function AdminPage() {
-  const { projectId: projectIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { projectId: pid } = useOutletContext<ProjectOutletContext>();
   const { dashboard } = useDashboard();
 
   const me = parseUser(dashboard?.user);

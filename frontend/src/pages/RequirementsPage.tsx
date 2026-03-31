@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useOutletContext, useParams, useSearchParams } from 'react-router-dom';
+import { useOutletContext, useSearchParams } from 'react-router-dom';
 import RequirementsTable from '@/components/RequirementsTable';
 import RequirementsViewSwitcher from '@/components/RequirementsViewSwitcher';
 import { useDashboard } from '@/context/DashboardContext';
@@ -8,9 +8,8 @@ import type { ProjectOutletContext } from '@/types/projectOutlet';
 export default function RequirementsPage() {
   const { projectId, globalSearch, basePath } = useOutletContext<ProjectOutletContext>();
   const [searchParams] = useSearchParams();
-  const { projectId: projectIdParam } = useParams();
   const { dashboard } = useDashboard();
-  const pid = Number(projectIdParam);
+  const pid = projectId;
 
   const projectName = useMemo(() => {
     const p = dashboard?.projects?.find((x) => x.id === pid);

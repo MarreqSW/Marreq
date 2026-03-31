@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import {
   createApplicability,
   deleteApplicability,
@@ -9,11 +9,11 @@ import {
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import type { Applicability, TaggedMetadataBody } from '@/api/types';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { btnDanger, btnPrimary, inp } from './catalogUi';
 
 export default function CatalogApplicabilityPage() {
-  const { projectId: projectIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { projectId: pid } = useOutletContext<ProjectOutletContext>();
   const { csrfToken } = useDashboard();
   const [rows, setRows] = useState<Applicability[]>([]);
   const [loading, setLoading] = useState(true);

@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import {
   createVerificationStatus,
   deleteVerificationStatus,
@@ -11,11 +11,11 @@ import { useDashboard } from '@/context/DashboardContext';
 import type { VerificationStatus, VerificationStatusWriteBody } from '@/api/types';
 import { StatusBadge } from '@/components/StatusBadge';
 import TagColorPicker from '@/components/TagColorPicker';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { btnDanger, btnPrimary, inp } from './catalogUi';
 
 export default function CatalogVerificationStatusesPage() {
-  const { projectId: projectIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { projectId: pid } = useOutletContext<ProjectOutletContext>();
   const { csrfToken } = useDashboard();
   const [rows, setRows] = useState<VerificationStatus[]>([]);
   const [loading, setLoading] = useState(true);

@@ -1,6 +1,7 @@
-import { NavLink, Outlet, useParams } from 'react-router-dom';
+import { NavLink, Outlet, useOutletContext } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 const tabs: { path: string; label: string }[] = [
   { path: 'categories', label: 'Categories' },
@@ -12,8 +13,8 @@ const tabs: { path: string; label: string }[] = [
 ];
 
 export default function ProjectCatalogLayout() {
-  const { projectId: projectIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const projectContext = useOutletContext<ProjectOutletContext>();
+  const { projectId: pid } = projectContext;
   const { dashboard } = useDashboard();
   const projectName =
     dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
@@ -43,7 +44,7 @@ export default function ProjectCatalogLayout() {
           </NavLink>
         ))}
       </nav>
-      <Outlet />
+      <Outlet context={projectContext} />
     </div>
   );
 }

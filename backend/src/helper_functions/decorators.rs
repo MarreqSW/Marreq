@@ -214,7 +214,7 @@ fn decorate_requirements_impl<R: Repository>(
 }
 
 /// Maps test status title to CSS class variant: passed, failed, proposal, draft, default.
-fn test_status_title_to_variant(title: &str) -> &'static str {
+pub fn test_status_title_to_variant(title: &str) -> &'static str {
     match title.trim().to_lowercase().as_str() {
         "passed" => "passed",
         "failed" => "failed",

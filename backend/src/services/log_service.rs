@@ -563,31 +563,24 @@ impl<'a> LogService<'a> {
 
     /// Retrieve aggregated analytics for recent log activity.
     pub fn analytics(&self) -> Result<LogAnalytics, LogServiceError> {
-        // This is a bit inefficient with the current trait, but works for now.
-        // Ideally we'd add a count_logs method to the trait.
-        let last_7_days = self
-            .state
-            .repo_read()
-            .get_logs_recent(10000)?
-            .iter()
-            .filter(|l| l.created_at > chrono::Utc::now().naive_utc() - chrono::Duration::days(7))
-            .count() as i64;
+        let logs = self.state.repo_read().get_logs_recent(10000)?;
+        let now = chrono::Utc::now().naive_utc();
+        let cutoff_7 = now - chrono::Duration::days(7);
+        let cutoff_30 = now - chrono::Duration::days(30);
+        let cutoff_90 = now - chrono::Duration::days(90);
 
-        let last_30_days = self
-            .state
-            .repo_read()
-            .get_logs_recent(10000)?
-            .iter()
-            .filter(|l| l.created_at > chrono::Utc::now().naive_utc() - chrono::Duration::days(30))
-            .count() as i64;
-
-        let last_90_days = self
-            .state
-            .repo_read()
-            .get_logs_recent(10000)?
-            .iter()
-            .filter(|l| l.created_at > chrono::Utc::now().naive_utc() - chrono::Duration::days(90))
-            .count() as i64;
+        let (mut last_7_days, mut last_30_days, mut last_90_days) = (0i64, 0i64, 0i64);
+        for log in &logs {
+            if log.created_at > cutoff_90 {
+                last_90_days += 1;
+                if log.created_at > cutoff_30 {
+                    last_30_days += 1;
+                    if log.created_at > cutoff_7 {
+                        last_7_days += 1;
+                    }
+                }
+            }
+        }
 
         Ok(LogAnalytics {
             last_7_days,

@@ -159,12 +159,12 @@ impl<'a> MatrixService<'a> {
         req_id: i32,
         verification_id: i32,
     ) -> Result<bool, RepoError> {
-        let (updated, _project_id) = {
+        let (updated, project_id) = {
             let mut repo = self.state.repo_write();
             repo.clear_suspect(req_id, verification_id, actor.id)?
         };
         if updated {
-            self.log_suspect_cleared(actor, req_id, verification_id);
+            self.log_suspect_cleared(actor, req_id, verification_id, project_id);
         }
         Ok(updated)
     }
@@ -201,7 +201,13 @@ impl<'a> MatrixService<'a> {
         }
     }
 
-    fn log_suspect_cleared(&self, actor: &User, req_id: i32, verification_id: i32) {
+    fn log_suspect_cleared(
+        &self,
+        actor: &User,
+        req_id: i32,
+        verification_id: i32,
+        project_id: Option<i32>,
+    ) {
         if let Ok(mut conn) = self.db_connection() {
             let ctx = LogCtx::new(actor.id);
             let description = format!(
@@ -214,7 +220,7 @@ impl<'a> MatrixService<'a> {
                 ActionType::Update,
                 EntityType::MatrixLink,
                 None,
-                None,
+                project_id,
                 None,
                 None,
                 Some(description),

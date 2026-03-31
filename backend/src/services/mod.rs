@@ -6,6 +6,68 @@
 //! This module provides business logic services that abstract database operations
 //! and provide a clean interface for route handlers.
 
+use crate::app::{AppState, DieselCachedRepo};
+use crate::logger::{LogCtx, Loggable, Logger};
+use crate::models::User;
+use crate::repository::errors::RepoError;
+use crate::repository::PooledConnectionWrapper;
+
+/// Trait providing reusable audit logging helpers for services.
+///
+/// Implementors only need to supply access to the shared [`AppState`]; the
+/// default methods handle connection acquisition, context creation, and
+/// best-effort error handling so that individual services do not duplicate
+/// the same boilerplate.
+pub trait AuditLog {
+    fn app_state(&self) -> &AppState<DieselCachedRepo>;
+
+    fn audit_conn(&self) -> Result<PooledConnectionWrapper, RepoError> {
+        self.app_state().repo_read().inner_repo().get_conn()
+    }
+
+    fn audit_created<T: serde::Serialize + Loggable>(&self, actor: &User, id: i32, entity: &T) {
+        if let Ok(mut conn) = self.audit_conn() {
+            let ctx = LogCtx::new(actor.id);
+            if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "audit: failed to log {} creation {id}: {_err}",
+                    T::entity_type()
+                );
+            }
+        }
+    }
+
+    fn audit_updated<T: serde::Serialize + Loggable>(&self, actor: &User, before: &T, after: &T) {
+        if let Ok(mut conn) = self.audit_conn() {
+            let ctx = LogCtx::new(actor.id);
+            if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "audit: failed to log {} update {} -> {}: {_err}",
+                    T::entity_type(),
+                    before.id(),
+                    after.id()
+                );
+            }
+        }
+    }
+
+    fn audit_deleted<T: serde::Serialize + Loggable>(&self, actor: &User, entity: &T) {
+        if let Ok(mut conn) = self.audit_conn() {
+            let ctx = LogCtx::new(actor.id);
+            if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "audit: failed to log {} deletion {}: {_err}",
+                    T::entity_type(),
+                    entity.id()
+                );
+            }
+        }
+    }
+}
+
 pub mod applicability_service;
 pub mod base_service;
 pub mod baseline_service;

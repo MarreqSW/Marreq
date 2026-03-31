@@ -427,6 +427,31 @@ export interface GroupMemberResponse {
   role_label: string;
 }
 
+/* ——— Notifications ——— */
+
+export interface Notification {
+  id: number;
+  user_id: number;
+  project_id: number | null;
+  notification_type: string;
+  title: string;
+  body: string | null;
+  entity_type: string | null;
+  entity_id: number | null;
+  actor_id: number | null;
+  read: boolean;
+  emailed: boolean;
+  created_at: string;
+}
+
+export interface NotificationPreference {
+  id: number;
+  user_id: number;
+  project_id: number;
+  notify_in_app: boolean;
+  notify_email: boolean;
+}
+
 export interface ProjectFromPath {
   id: number;
   name: string;

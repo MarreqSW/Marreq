@@ -77,18 +77,8 @@ fn changed_field_labels(old_json: Option<&str>, new_json: Option<&str>) -> Vec<S
     };
 
     let mut labels = Vec::new();
-    let skip_keys = [
-        "id",
-        "author_id",
-        "reviewer_id",
-        "project_id",
-        "creation_date",
-        "update_date",
-        "current_version_id",
-        "same_as_current",
-    ];
     for (key, new_val) in new_obj.iter() {
-        if skip_keys.contains(&key.as_str()) {
+        if SKIP_KEYS.contains(&key.as_str()) {
             continue;
         }
         let old_val = old_obj.get(key);
@@ -97,7 +87,7 @@ fn changed_field_labels(old_json: Option<&str>, new_json: Option<&str>) -> Vec<S
         }
     }
     for key in old_obj.keys() {
-        if !new_obj.contains_key(key) && !skip_keys.contains(&key.as_str()) {
+        if !new_obj.contains_key(key) && !SKIP_KEYS.contains(&key.as_str()) {
             labels.push(field_label(key).to_string());
         }
     }
@@ -114,6 +104,18 @@ fn changed_field_labels(old_json: Option<&str>, new_json: Option<&str>) -> Vec<S
     labels.dedup();
     labels
 }
+
+/// Internal keys excluded from change summaries and detail views.
+const SKIP_KEYS: &[&str] = &[
+    "id",
+    "author_id",
+    "reviewer_id",
+    "project_id",
+    "creation_date",
+    "update_date",
+    "current_version_id",
+    "same_as_current",
+];
 
 /// Maximum length for a displayed value in change details (longer values are truncated).
 const CHANGE_VALUE_MAX_LEN: usize = 120;
@@ -155,17 +157,6 @@ pub fn log_change_details(log: &Log) -> Vec<ChangeDetail> {
         .as_deref()
         .and_then(|s| serde_json::from_str::<JsonValue>(s).ok());
 
-    let skip_keys = [
-        "id",
-        "author_id",
-        "reviewer_id",
-        "project_id",
-        "creation_date",
-        "update_date",
-        "current_version_id",
-        "same_as_current",
-    ];
-
     match action.as_str() {
         "CREATE" => {
             let new_obj = match new_obj {
@@ -174,7 +165,7 @@ pub fn log_change_details(log: &Log) -> Vec<ChangeDetail> {
             };
             let mut out: Vec<ChangeDetail> = new_obj
                 .iter()
-                .filter(|(k, _)| !skip_keys.contains(&k.as_str()))
+                .filter(|(k, _)| !SKIP_KEYS.contains(&k.as_str()))
                 .map(|(k, v)| ChangeDetail {
                     field: field_label(k).to_string(),
                     old_value: "—".to_string(),
@@ -191,7 +182,7 @@ pub fn log_change_details(log: &Log) -> Vec<ChangeDetail> {
             };
             let mut out: Vec<ChangeDetail> = old_obj
                 .iter()
-                .filter(|(k, _)| !skip_keys.contains(&k.as_str()))
+                .filter(|(k, _)| !SKIP_KEYS.contains(&k.as_str()))
                 .map(|(k, v)| ChangeDetail {
                     field: field_label(k).to_string(),
                     old_value: value_to_display(Some(v)),
@@ -209,7 +200,7 @@ pub fn log_change_details(log: &Log) -> Vec<ChangeDetail> {
             let parents_diff = parent_requirement_ids_differs(&old_obj, &new_obj);
             let mut out = Vec::new();
             for (key, new_val) in new_obj.iter() {
-                if skip_keys.contains(&key.as_str()) {
+                if SKIP_KEYS.contains(&key.as_str()) {
                     continue;
                 }
                 if key == "parent_id" && parents_diff {
@@ -225,7 +216,7 @@ pub fn log_change_details(log: &Log) -> Vec<ChangeDetail> {
                 }
             }
             for key in old_obj.keys() {
-                if !new_obj.contains_key(key) && !skip_keys.contains(&key.as_str()) {
+                if !new_obj.contains_key(key) && !SKIP_KEYS.contains(&key.as_str()) {
                     if key == "parent_id" && parents_diff {
                         continue;
                     }
@@ -591,12 +582,22 @@ impl<'a> LogService<'a> {
 
     fn enrich_with_usernames(&self, logs: Vec<Log>) -> Result<Vec<LogWithUser>, RepoError> {
         let repo = self.state.repo_read();
-        logs.into_iter()
+        let unique_ids: std::collections::HashSet<i32> = logs.iter().map(|l| l.user_id).collect();
+        let user_map: HashMap<i32, String> = unique_ids
+            .into_iter()
+            .filter_map(|id| repo.get_user_by_id(id).ok().map(|u| (id, u.username)))
+            .collect();
+
+        Ok(logs
+            .into_iter()
             .map(|log| {
-                let username = repo.get_user_by_id(log.user_id)?.username;
-                Ok(LogWithUser { log, username })
+                let username = user_map
+                    .get(&log.user_id)
+                    .cloned()
+                    .unwrap_or_else(|| format!("Unknown ({})", log.user_id));
+                LogWithUser { log, username }
             })
-            .collect()
+            .collect())
     }
 }
 
@@ -604,7 +605,6 @@ impl<'a> LogService<'a> {
 mod tests {
     use super::*;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
-    use crate::repository::errors::RepoError;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
 
@@ -654,16 +654,17 @@ mod tests {
     }
 
     #[test]
-    fn enrich_with_usernames_propagates_repo_errors() {
+    fn enrich_with_usernames_handles_missing_users_gracefully() {
         let repo = DieselRepoMock::default();
         let state = state_with_repo(repo);
         let service = LogService::new(&state);
 
-        let err = service
+        let enriched = service
             .enrich_with_usernames(vec![sample_log(2, 99)])
-            .expect_err("missing user should propagate error");
+            .expect("missing user should not fail the batch");
 
-        assert!(matches!(err, RepoError::NotFound));
+        assert_eq!(enriched.len(), 1);
+        assert_eq!(enriched[0].username, "Unknown (99)");
     }
 
     #[test]

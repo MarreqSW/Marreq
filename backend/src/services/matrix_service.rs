@@ -30,8 +30,7 @@ impl<'a> MatrixService<'a> {
     pub fn list_all(&self) -> Result<Vec<MatrixLink>, RepoError> {
         use crate::repository::ProjectsRepository;
 
-        let repo = self.state.repo_write();
-        // Collect matrix links from all projects
+        let repo = self.state.repo_read();
         let projects = repo.get_projects_all()?;
         let mut all_links = Vec::new();
         for project in projects {

@@ -65,15 +65,18 @@ impl<R: Repository> CacheRepository<R> {
     /// Populates the cache with common queries to improve initial performance.
     /// Note: This function may copy significant amounts of data; use with caution.
     pub fn warm_cache(&self) {
-        // Warm up projects cache
         if let Ok(projects) = self.inner.get_projects_all() {
             if let Ok(json_data) = serde_json::to_string(&projects) {
+                self.cache.set_with_ttl(
+                    keys::PROJECTS_ALL,
+                    json_data.clone(),
+                    Duration::from_secs(600),
+                );
                 self.cache
-                    .set_with_ttl(keys::PROJECTS_ALL, json_data, Duration::from_secs(600));
+                    .set_with_ttl(keys::PROJECTS_NAV, json_data, Duration::from_secs(300));
             }
         }
 
-        // Warm up status cache
         if let Ok(statuses) = self.inner.get_requirement_status_all() {
             if let Ok(json_data) = serde_json::to_string(&statuses) {
                 self.cache.set_with_ttl(
@@ -84,7 +87,6 @@ impl<R: Repository> CacheRepository<R> {
             }
         }
 
-        // Warm up categories cache
         if let Ok(categories) = self.inner.get_categories_all() {
             if let Ok(json_data) = serde_json::to_string(&categories) {
                 self.cache
@@ -92,19 +94,10 @@ impl<R: Repository> CacheRepository<R> {
             }
         }
 
-        // Warm up users cache
         if let Ok(users) = self.inner.get_users_all() {
             if let Ok(json_data) = serde_json::to_string(&users) {
                 self.cache
                     .set_with_ttl(keys::USERS_ALL, json_data, Duration::from_secs(600));
-            }
-        }
-
-        // Warm up projects navigation cache
-        if let Ok(projects) = self.inner.get_projects_all() {
-            if let Ok(json_data) = serde_json::to_string(&projects) {
-                self.cache
-                    .set_with_ttl(keys::PROJECTS_NAV, json_data, Duration::from_secs(300));
             }
         }
     }

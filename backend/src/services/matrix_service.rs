@@ -9,9 +9,8 @@ use crate::models::{
     ActionType, EntityType, MatrixLink, NewMatrixLink, Requirement, User, Verification,
 };
 use crate::repository::errors::RepoError;
-use crate::repository::{
-    MatrixRepository, PooledConnectionWrapper, RequirementsRepository, VerificationsRepository,
-};
+use crate::repository::{MatrixRepository, RequirementsRepository, VerificationsRepository};
+use crate::services::AuditLog;
 use std::collections::HashSet;
 
 /// High level matrix operations backed by the shared [`AppState`].
@@ -169,12 +168,8 @@ impl<'a> MatrixService<'a> {
         Ok(updated)
     }
 
-    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
-        self.state.repo_read().inner_repo().get_conn()
-    }
-
     fn log_link_created(&self, actor: &User, entity: &NewMatrixLink) {
-        if let Ok(mut conn) = self.db_connection() {
+        if let Ok(mut conn) = self.audit_conn() {
             let ctx = LogCtx::new(actor.id);
             let description = format!(
                 "Linked requirement {} with verification {}",
@@ -208,7 +203,7 @@ impl<'a> MatrixService<'a> {
         verification_id: i32,
         project_id: Option<i32>,
     ) {
-        if let Ok(mut conn) = self.db_connection() {
+        if let Ok(mut conn) = self.audit_conn() {
             let ctx = LogCtx::new(actor.id);
             let description = format!(
                 "Suspect flag cleared for traceability link requirement {} – verification {}",
@@ -398,6 +393,12 @@ impl<'a> MatrixService<'a> {
         if desc {
             reqs.reverse();
         }
+    }
+}
+
+impl AuditLog for MatrixService<'_> {
+    fn app_state(&self) -> &AppState<DieselCachedRepo> {
+        self.state
     }
 }
 

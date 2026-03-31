@@ -6,11 +6,11 @@
 use crate::app::{AppState, DieselCachedRepo};
 use crate::auth::password::hash_password;
 use crate::auth::password_policy::{validate_password, PasswordContext};
-use crate::logger::{LogCtx, Logger};
 use crate::models::{NewUser, UpdateUser, User, UserCreateRequest};
 use crate::namespaces::{ensure_namespace_segment_available, NamespaceAvailabilityOptions};
 use crate::repository::errors::RepoError;
-use crate::repository::{PooledConnectionWrapper, UserRepository};
+use crate::repository::UserRepository;
+use crate::services::AuditLog;
 use crate::validation::{sanitize_string, validate_user};
 
 /// High level user operations backed by the shared [`AppState`].
@@ -88,7 +88,7 @@ impl<'a> UserService<'a> {
             repo.insert_user(&payload)?
         };
 
-        self.log_created(actor, id, &payload);
+        self.audit_created(actor, id, &payload);
         Ok(id)
     }
 
@@ -99,7 +99,7 @@ impl<'a> UserService<'a> {
             repo.delete_user(id)?
         };
 
-        self.log_deleted(actor, &removed);
+        self.audit_deleted(actor, &removed);
         Ok(removed)
     }
 
@@ -142,22 +142,11 @@ impl<'a> UserService<'a> {
         };
 
         if updated {
-            if let Ok(mut conn) = self.db_connection() {
-                let ctx = LogCtx::new(actor.id);
-                if let Err(_err) =
-                    Logger::updated(conn.as_mut(), &ctx, &old, &self.get_by_id(old.id)?)
-                {
-                    #[cfg(debug_assertions)]
-                    eprintln!("Failed to log user update {}: {_err}", old.id);
-                }
-            }
+            let after = self.get_by_id(old.id)?;
+            self.audit_updated(actor, &old, &after);
         }
 
         Ok(updated)
-    }
-
-    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
-        self.state.repo_read().inner_repo().get_conn()
     }
 
     fn ensure_username_namespace_available(
@@ -175,25 +164,11 @@ impl<'a> UserService<'a> {
             },
         )
     }
+}
 
-    fn log_created(&self, actor: &User, id: i32, entity: &NewUser) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.id);
-            if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log user creation {id}: {_err}");
-            }
-        }
-    }
-
-    fn log_deleted(&self, actor: &User, entity: &User) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.id);
-            if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log user deletion {}: {_err}", entity.id);
-            }
-        }
+impl AuditLog for UserService<'_> {
+    fn app_state(&self) -> &AppState<DieselCachedRepo> {
+        self.state
     }
 }
 

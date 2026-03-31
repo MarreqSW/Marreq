@@ -5,7 +5,6 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::helper_functions::generate_unique_project_slug;
-use crate::logger::{LogCtx, Logger};
 use crate::models::NewVerificationMethod;
 use crate::models::{
     NewApplicability, NewCategory, NewProject, NewProjectMember, NewProjectRow, Project,
@@ -13,10 +12,9 @@ use crate::models::{
 };
 use crate::namespaces::{resolve_project_namespace_entity, NamespaceEntity};
 use crate::repository::errors::RepoError;
-use crate::repository::{
-    LookupRepository, PooledConnectionWrapper, ProjectMembersRepository, ProjectsRepository,
-};
+use crate::repository::{LookupRepository, ProjectMembersRepository, ProjectsRepository};
 use crate::services::status_service::StatusService;
+use crate::services::AuditLog;
 use crate::services::{ApplicabilityService, CategoryService};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_project};
 
@@ -187,7 +185,7 @@ impl<'a> ProjectService<'a> {
         )?;
 
         if let Ok(project) = self.get_by_id(id) {
-            self.log_created(actor, id, &project);
+            self.audit_created(actor, id, &project);
         }
         Ok(id)
     }
@@ -231,7 +229,7 @@ impl<'a> ProjectService<'a> {
         }
 
         let after = self.get_by_id(id)?;
-        self.log_updated(actor, &before, &after);
+        self.audit_updated(actor, &before, &after);
         Ok(after)
     }
 
@@ -242,7 +240,7 @@ impl<'a> ProjectService<'a> {
             repo.delete_project(id)?
         };
 
-        self.log_deleted(actor, &removed);
+        self.audit_deleted(actor, &removed);
         Ok(removed)
     }
 
@@ -319,42 +317,11 @@ impl<'a> ProjectService<'a> {
         before.group_id != payload.group_id
             || (payload.group_id.is_none() && before.owner_id != payload.owner_id)
     }
+}
 
-    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
-        self.state.repo_read().inner_repo().get_conn()
-    }
-
-    fn log_created(&self, actor: &User, id: i32, entity: &Project) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.id);
-            if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log project creation {id}: {_err}");
-            }
-        }
-    }
-
-    fn log_updated(&self, actor: &User, before: &Project, after: &Project) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.id);
-            if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
-                #[cfg(debug_assertions)]
-                eprintln!(
-                    "Failed to log project update {} -> {}: {_err}",
-                    before.id, after.id
-                );
-            }
-        }
-    }
-
-    fn log_deleted(&self, actor: &User, entity: &Project) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.id);
-            if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log project deletion {}: {_err}", entity.id);
-            }
-        }
+impl AuditLog for ProjectService<'_> {
+    fn app_state(&self) -> &AppState<DieselCachedRepo> {
+        self.state
     }
 }
 

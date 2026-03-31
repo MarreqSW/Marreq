@@ -13,7 +13,8 @@ const tabs: { path: string; label: string }[] = [
 ];
 
 export default function ProjectCatalogLayout() {
-  const { projectId: pid } = useOutletContext<ProjectOutletContext>();
+  const projectContext = useOutletContext<ProjectOutletContext>();
+  const { projectId: pid } = projectContext;
   const { dashboard } = useDashboard();
   const projectName =
     dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
@@ -43,7 +44,7 @@ export default function ProjectCatalogLayout() {
           </NavLink>
         ))}
       </nav>
-      <Outlet />
+      <Outlet context={projectContext} />
     </div>
   );
 }

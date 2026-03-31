@@ -34,9 +34,8 @@ const selectClass =
   'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
 
 export default function EditVerificationPage() {
-  const { basePath } = useOutletContext<ProjectOutletContext>();
-  const { projectId: projectIdParam, verificationId: verificationIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();
+  const { verificationId: verificationIdParam } = useParams();
   const vid = Number(verificationIdParam);
   const navigate = useNavigate();
   const { csrfToken, dashboard, refresh: refreshDashboard } = useDashboard();

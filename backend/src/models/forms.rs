@@ -544,6 +544,30 @@ impl_loggable!(NewUser, EntityType::User, username, no_project);
 impl_loggable!(NewRequirementStatus, EntityType::Requirement, title);
 impl_loggable!(NewVerificationStatus, EntityType::Verification, title);
 
+/// Payload for creating a notification.
+#[derive(Insertable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::notifications)]
+pub struct NewNotification {
+    pub user_id: i32,
+    pub project_id: Option<i32>,
+    pub notification_type: String,
+    pub title: String,
+    pub body: Option<String>,
+    pub entity_type: Option<String>,
+    pub entity_id: Option<i32>,
+    pub actor_id: Option<i32>,
+}
+
+/// Payload for creating or updating a notification preference.
+#[derive(Insertable, AsChangeset, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::notification_preferences)]
+pub struct NewNotificationPreference {
+    pub user_id: i32,
+    pub project_id: i32,
+    pub notify_in_app: bool,
+    pub notify_email: bool,
+}
+
 #[cfg(test)]
 mod forms_tests {
     use super::*;

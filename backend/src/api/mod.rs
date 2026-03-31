@@ -17,6 +17,7 @@ pub mod matrix;
 pub mod mcp;
 pub mod members;
 pub mod meta;
+pub mod notifications;
 pub mod prelude;
 pub mod projects;
 pub mod projects_session;
@@ -145,6 +146,14 @@ pub fn routes() -> Vec<Route> {
         semantic_search::index_status,
         semantic_search::search_status,
         mcp::audit,
+        // Notifications
+        notifications::list,
+        notifications::unread_count,
+        notifications::mark_read,
+        notifications::mark_all_read,
+        notifications::get_preferences,
+        notifications::set_preference,
+        notifications::delete_preference,
         // Project creation
         projects::create,
         // Group endpoints

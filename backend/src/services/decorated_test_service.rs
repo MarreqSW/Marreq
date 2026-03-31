@@ -9,6 +9,7 @@
 
 use super::{RequirementService, StatusService, VerificationService};
 use crate::app::{AppState, DieselCachedRepo};
+use crate::helper_functions::decorators::test_status_title_to_variant;
 use crate::models::{DecoratedVerification, NewVerification, User, Verification};
 use crate::repository::errors::RepoError;
 
@@ -102,13 +103,7 @@ impl<'a> DecoratedTestService<'a> {
             .map(|s| (s.title, s.tag_color))
             .unwrap_or_else(|_| (format!("Unknown Status ({})", verification.status_id), None));
 
-        let status_variant = match status.trim().to_lowercase().as_str() {
-            "passed" => "passed",
-            "failed" => "failed",
-            "pending" => "proposal",
-            "in progress" => "draft",
-            _ => "default",
-        };
+        let status_variant = test_status_title_to_variant(&status);
 
         let (
             parent_title,
@@ -126,13 +121,7 @@ impl<'a> DecoratedTestService<'a> {
                         .get_verification_status(p.status_id)
                         .map(|s| (s.title, s.tag_color))
                         .unwrap_or_else(|_| (format!("Unknown Status ({})", p.status_id), None));
-                    let p_variant = match p_status.trim().to_lowercase().as_str() {
-                        "passed" => "passed",
-                        "failed" => "failed",
-                        "pending" => "proposal",
-                        "in progress" => "draft",
-                        _ => "default",
-                    };
+                    let p_variant = test_status_title_to_variant(&p_status);
                     (
                         p.name,
                         p.reference_code,

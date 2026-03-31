@@ -317,6 +317,12 @@ pub async fn set_version_approval(
     let updated = state
         .repo_write()
         .set_requirement_version_approval(version_id, new_state, u.id)?;
+
+    if new_state == "reviewed" {
+        let ns = crate::services::NotificationService::new(state.inner());
+        ns.notify_approval_requested(u, &requirement, requirement.project_id);
+    }
+
     Ok(Json(updated))
 }
 
@@ -686,6 +692,12 @@ pub async fn set_version_approval_by_project(
     let updated = state
         .repo_write()
         .set_requirement_version_approval(version_id, new_state, u.id)?;
+
+    if new_state == "reviewed" {
+        let ns = crate::services::NotificationService::new(state.inner());
+        ns.notify_approval_requested(u, &requirement, requirement.project_id);
+    }
+
     Ok(Json(updated))
 }
 

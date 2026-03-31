@@ -488,6 +488,12 @@ impl<'a> RequirementService<'a> {
 
         self.audit_created(actor, id, &payload);
         self.queue_for_indexing(id, project_id);
+
+        if let Ok(req) = self.get_by_id(id) {
+            let ns = super::NotificationService::new(self.state);
+            ns.notify_project_event(actor, project_id, "requirement_created", &req);
+        }
+
         Ok(id)
     }
 
@@ -593,6 +599,15 @@ impl<'a> RequirementService<'a> {
             },
         );
         self.queue_for_indexing(id, after.project_id);
+
+        {
+            let ns = super::NotificationService::new(self.state);
+            if before.reviewer_id != after.reviewer_id {
+                ns.notify_review_assigned(actor, &after, after.reviewer_id);
+            }
+            ns.notify_project_event(actor, after.project_id, "requirement_updated", &after);
+        }
+
         Ok(after)
     }
 
@@ -604,6 +619,12 @@ impl<'a> RequirementService<'a> {
         };
 
         self.audit_deleted(actor, &removed);
+
+        {
+            let ns = super::NotificationService::new(self.state);
+            ns.notify_project_event(actor, removed.project_id, "requirement_deleted", &removed);
+        }
+
         Ok(removed)
     }
 

@@ -4,10 +4,10 @@
 //! Category service for managing requirement categories business logic.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::logger::{LogCtx, Logger};
 use crate::models::{Category, NewCategory, User};
 use crate::repository::errors::RepoError;
-use crate::repository::{LookupRepository, PooledConnectionWrapper};
+use crate::repository::LookupRepository;
+use crate::services::AuditLog;
 
 pub struct CategoryService<'a> {
     state: &'a AppState<DieselCachedRepo>,
@@ -46,7 +46,7 @@ impl<'a> CategoryService<'a> {
             repo.insert_new_category(&new_cat)?
         };
 
-        self.log_created(user, id, &new_cat);
+        self.audit_created(user, id, &new_cat);
         Ok(id)
     }
 
@@ -70,7 +70,7 @@ impl<'a> CategoryService<'a> {
         }
 
         let after = self.get_by_id(id)?;
-        self.log_updated(user, &before, &after);
+        self.audit_updated(user, &before, &after);
         Ok(after)
     }
 
@@ -81,45 +81,14 @@ impl<'a> CategoryService<'a> {
             repo.delete_category(id)?
         };
 
-        self.log_deleted(user, &deleted);
+        self.audit_deleted(user, &deleted);
         Ok(deleted)
     }
+}
 
-    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
-        self.state.repo_read().inner_repo().get_conn()
-    }
-
-    fn log_created(&self, user: &User, id: i32, entity: &NewCategory) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.id);
-            if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log category creation {id}: {_err}");
-            }
-        }
-    }
-
-    fn log_updated(&self, user: &User, before: &Category, after: &Category) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.id);
-            if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
-                #[cfg(debug_assertions)]
-                eprintln!(
-                    "Failed to log category update {} -> {}: {_err}",
-                    before.id, after.id
-                );
-            }
-        }
-    }
-
-    fn log_deleted(&self, user: &User, entity: &Category) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.id);
-            if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log category deletion {}: {_err}", entity.id);
-            }
-        }
+impl AuditLog for CategoryService<'_> {
+    fn app_state(&self) -> &AppState<DieselCachedRepo> {
+        self.state
     }
 }
 

@@ -7,12 +7,11 @@
 //! validation, caching, and audit logging.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::logger::{LogCtx, Logger};
 use crate::models::{NewVerification, User, Verification};
 use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
-use crate::repository::PooledConnectionWrapper;
 use crate::repository::VerificationsRepository;
+use crate::services::AuditLog;
 
 /// Service wrapper that provides verification operations backed by the shared AppState.
 pub struct VerificationService<'a> {
@@ -85,7 +84,7 @@ impl<'a> VerificationService<'a> {
             repo.insert_verification(&new_verification)?
         };
 
-        self.log_created(user, id, &new_verification);
+        self.audit_created(user, id, &new_verification);
         Ok(id)
     }
 
@@ -108,7 +107,7 @@ impl<'a> VerificationService<'a> {
         }
 
         let after = self.get_by_id(id)?;
-        self.log_updated(user, &before, &after);
+        self.audit_updated(user, &before, &after);
         Ok(after)
     }
 
@@ -119,45 +118,14 @@ impl<'a> VerificationService<'a> {
             repo.delete_verification(id)?
         };
 
-        self.log_deleted(user, &deleted);
+        self.audit_deleted(user, &deleted);
         Ok(deleted)
     }
+}
 
-    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
-        self.state.repo_read().inner_repo().get_conn()
-    }
-
-    fn log_created(&self, user: &User, id: i32, entity: &NewVerification) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.id);
-            if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log verification creation {id}: {_err}");
-            }
-        }
-    }
-
-    fn log_updated(&self, user: &User, before: &Verification, after: &Verification) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.id);
-            if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
-                #[cfg(debug_assertions)]
-                eprintln!(
-                    "Failed to log verification update {} -> {}: {_err}",
-                    before.id, after.id
-                );
-            }
-        }
-    }
-
-    fn log_deleted(&self, user: &User, entity: &Verification) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.id);
-            if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log verification deletion {}: {_err}", entity.id);
-            }
-        }
+impl AuditLog for VerificationService<'_> {
+    fn app_state(&self) -> &AppState<DieselCachedRepo> {
+        self.state
     }
 }
 

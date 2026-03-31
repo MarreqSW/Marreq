@@ -75,9 +75,8 @@ function formatVerificationActivityValue(
 }
 
 export default function ViewVerificationPage() {
-  const { basePath } = useOutletContext<ProjectOutletContext>();
-  const { projectId: projectIdParam, verificationId: verificationIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();
+  const { verificationId: verificationIdParam } = useParams();
   const vid = Number(verificationIdParam);
   const { dashboard } = useDashboard();
 

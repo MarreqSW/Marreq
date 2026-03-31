@@ -548,15 +548,23 @@ impl<'a> RequirementService<'a> {
         }?;
 
         if let Some((source_version_id, project_id, links)) = parent_links_to_create {
+            let mut first_err: Option<RepoError> = None;
             for (target_version_id, link_type) in links {
-                let _ = self.create_requirement_version_link(
+                if let Err(e) = self.create_requirement_version_link(
                     source_version_id,
                     target_version_id,
                     &link_type,
                     project_id,
                     None,
                     None,
-                );
+                ) {
+                    if first_err.is_none() {
+                        first_err = Some(e);
+                    }
+                }
+            }
+            if let Some(e) = first_err {
+                return Err(e);
             }
         }
 

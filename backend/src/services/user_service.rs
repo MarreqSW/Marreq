@@ -32,11 +32,11 @@ impl<'a> UserService<'a> {
     /// Retrieve a vector of users members of a project.
     pub fn get_by_project(&self, id: i32) -> Result<Vec<User>, RepoError> {
         use crate::repository::ProjectMembersRepository;
-        self.state
-            .repo_read()
-            .get_members_by_project(id)?
+        let repo = self.state.repo_read();
+        let members = repo.get_members_by_project(id)?;
+        members
             .into_iter()
-            .map(|member| self.get_by_id(member.user_id))
+            .map(|member| repo.get_user_by_id(member.user_id))
             .collect()
     }
 

@@ -9,9 +9,8 @@ use crate::models::{
     ActionType, EntityType, MatrixLink, NewMatrixLink, Requirement, User, Verification,
 };
 use crate::repository::errors::RepoError;
-use crate::repository::{
-    MatrixRepository, PooledConnectionWrapper, RequirementsRepository, VerificationsRepository,
-};
+use crate::repository::{MatrixRepository, RequirementsRepository, VerificationsRepository};
+use crate::services::AuditLog;
 use std::collections::HashSet;
 
 /// High level matrix operations backed by the shared [`AppState`].
@@ -30,8 +29,7 @@ impl<'a> MatrixService<'a> {
     pub fn list_all(&self) -> Result<Vec<MatrixLink>, RepoError> {
         use crate::repository::ProjectsRepository;
 
-        let repo = self.state.repo_write();
-        // Collect matrix links from all projects
+        let repo = self.state.repo_read();
         let projects = repo.get_projects_all()?;
         let mut all_links = Vec::new();
         for project in projects {
@@ -160,22 +158,18 @@ impl<'a> MatrixService<'a> {
         req_id: i32,
         verification_id: i32,
     ) -> Result<bool, RepoError> {
-        let (updated, _project_id) = {
+        let (updated, project_id) = {
             let mut repo = self.state.repo_write();
             repo.clear_suspect(req_id, verification_id, actor.id)?
         };
         if updated {
-            self.log_suspect_cleared(actor, req_id, verification_id);
+            self.log_suspect_cleared(actor, req_id, verification_id, project_id);
         }
         Ok(updated)
     }
 
-    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
-        self.state.repo_read().inner_repo().get_conn()
-    }
-
     fn log_link_created(&self, actor: &User, entity: &NewMatrixLink) {
-        if let Ok(mut conn) = self.db_connection() {
+        if let Ok(mut conn) = self.audit_conn() {
             let ctx = LogCtx::new(actor.id);
             let description = format!(
                 "Linked requirement {} with verification {}",
@@ -202,8 +196,14 @@ impl<'a> MatrixService<'a> {
         }
     }
 
-    fn log_suspect_cleared(&self, actor: &User, req_id: i32, verification_id: i32) {
-        if let Ok(mut conn) = self.db_connection() {
+    fn log_suspect_cleared(
+        &self,
+        actor: &User,
+        req_id: i32,
+        verification_id: i32,
+        project_id: Option<i32>,
+    ) {
+        if let Ok(mut conn) = self.audit_conn() {
             let ctx = LogCtx::new(actor.id);
             let description = format!(
                 "Suspect flag cleared for traceability link requirement {} – verification {}",
@@ -215,7 +215,7 @@ impl<'a> MatrixService<'a> {
                 ActionType::Update,
                 EntityType::MatrixLink,
                 None,
-                None,
+                project_id,
                 None,
                 None,
                 Some(description),
@@ -393,6 +393,12 @@ impl<'a> MatrixService<'a> {
         if desc {
             reqs.reverse();
         }
+    }
+}
+
+impl AuditLog for MatrixService<'_> {
+    fn app_state(&self) -> &AppState<DieselCachedRepo> {
+        self.state
     }
 }
 

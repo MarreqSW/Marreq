@@ -4,10 +4,10 @@
 //! Applicability service centralizing CRUD logic and logging.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::logger::{LogCtx, Logger};
 use crate::models::{Applicability, NewApplicability, User};
 use crate::repository::errors::RepoError;
-use crate::repository::{LookupRepository, PooledConnectionWrapper};
+use crate::repository::LookupRepository;
+use crate::services::AuditLog;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -53,7 +53,7 @@ impl<'a> ApplicabilityService<'a> {
             repo.insert_new_applicability(&new_app)?
         };
 
-        self.log_created(user, id, &new_app);
+        self.audit_created(user, id, &new_app);
         Ok(id)
     }
 
@@ -78,7 +78,7 @@ impl<'a> ApplicabilityService<'a> {
         }
 
         let after = self.get_by_id(id)?;
-        self.log_updated(user, &before, &after);
+        self.audit_updated(user, &before, &after);
         Ok(after)
     }
 
@@ -89,7 +89,7 @@ impl<'a> ApplicabilityService<'a> {
             repo.delete_applicability(id)?
         };
 
-        self.log_deleted(user, &deleted);
+        self.audit_deleted(user, &deleted);
         Ok(deleted)
     }
 
@@ -100,42 +100,11 @@ impl<'a> ApplicabilityService<'a> {
 
         validate(payload)
     }
+}
 
-    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
-        self.state.repo_read().inner_repo().get_conn()
-    }
-
-    fn log_created(&self, user: &User, id: i32, entity: &NewApplicability) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.id);
-            if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log applicability creation {id}: {_err}");
-            }
-        }
-    }
-
-    fn log_updated(&self, user: &User, before: &Applicability, after: &Applicability) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.id);
-            if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
-                #[cfg(debug_assertions)]
-                eprintln!(
-                    "Failed to log applicability update {} -> {}: {_err}",
-                    before.id, after.id
-                );
-            }
-        }
-    }
-
-    fn log_deleted(&self, user: &User, entity: &Applicability) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.id);
-            if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log applicability deletion {}: {_err}", entity.id);
-            }
-        }
+impl AuditLog for ApplicabilityService<'_> {
+    fn app_state(&self) -> &AppState<DieselCachedRepo> {
+        self.state
     }
 }
 

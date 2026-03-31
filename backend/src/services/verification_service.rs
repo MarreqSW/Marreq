@@ -7,12 +7,11 @@
 //! validation, caching, and audit logging.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::logger::{LogCtx, Logger};
 use crate::models::{NewVerification, User, Verification};
 use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
-use crate::repository::PooledConnectionWrapper;
 use crate::repository::VerificationsRepository;
+use crate::services::AuditLog;
 
 /// Service wrapper that provides verification operations backed by the shared AppState.
 pub struct VerificationService<'a> {
@@ -51,14 +50,31 @@ impl<'a> VerificationService<'a> {
             .map(|m| m.title)
     }
 
-    /// Get verifications by status
-    pub async fn get_by_status(&self, _status_id: i32) -> Result<Vec<Verification>, RepoError> {
-        todo!()
+    /// Get verifications by status.
+    pub fn get_by_status(&self, status_id: i32) -> Result<Vec<Verification>, RepoError> {
+        Ok(self
+            .state
+            .repo_read()
+            .get_verifications_all()?
+            .into_iter()
+            .filter(|v| v.status_id == status_id)
+            .collect())
     }
 
-    /// Get verifications by parent (hierarchical structure)
-    pub async fn get_by_parent(&self, _parent_id: i32) -> Result<Vec<Verification>, RepoError> {
-        todo!()
+    /// Get verifications by parent (hierarchical structure).
+    pub fn get_by_parent(&self, parent_id: i32) -> Result<Vec<Verification>, RepoError> {
+        let parent = match self.state.repo_read().get_verification_by_id(parent_id) {
+            Ok(p) => p,
+            Err(RepoError::NotFound) => return Ok(Vec::new()),
+            Err(e) => return Err(e),
+        };
+        Ok(self
+            .state
+            .repo_read()
+            .get_verifications_by_project(parent.project_id)?
+            .into_iter()
+            .filter(|v| v.parent_id == Some(parent_id))
+            .collect())
     }
 
     /// Create a new verification entry and log the action.
@@ -68,7 +84,7 @@ impl<'a> VerificationService<'a> {
             repo.insert_verification(&new_verification)?
         };
 
-        self.log_created(user, id, &new_verification);
+        self.audit_created(user, id, &new_verification);
         Ok(id)
     }
 
@@ -91,7 +107,7 @@ impl<'a> VerificationService<'a> {
         }
 
         let after = self.get_by_id(id)?;
-        self.log_updated(user, &before, &after);
+        self.audit_updated(user, &before, &after);
         Ok(after)
     }
 
@@ -102,45 +118,14 @@ impl<'a> VerificationService<'a> {
             repo.delete_verification(id)?
         };
 
-        self.log_deleted(user, &deleted);
+        self.audit_deleted(user, &deleted);
         Ok(deleted)
     }
+}
 
-    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
-        self.state.repo_read().inner_repo().get_conn()
-    }
-
-    fn log_created(&self, user: &User, id: i32, entity: &NewVerification) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.id);
-            if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log verification creation {id}: {_err}");
-            }
-        }
-    }
-
-    fn log_updated(&self, user: &User, before: &Verification, after: &Verification) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.id);
-            if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
-                #[cfg(debug_assertions)]
-                eprintln!(
-                    "Failed to log verification update {} -> {}: {_err}",
-                    before.id, after.id
-                );
-            }
-        }
-    }
-
-    fn log_deleted(&self, user: &User, entity: &Verification) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(user.id);
-            if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log verification deletion {}: {_err}", entity.id);
-            }
-        }
+impl AuditLog for VerificationService<'_> {
+    fn app_state(&self) -> &AppState<DieselCachedRepo> {
+        self.state
     }
 }
 

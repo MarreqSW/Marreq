@@ -5,13 +5,11 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::helper_functions::utils::slugify_project_name;
-use crate::logger::{LogCtx, Logger};
 use crate::models::{Group, GroupMember, NewGroup, NewGroupMember, NewGroupRow, UpdateGroup, User};
 use crate::namespaces::{ensure_namespace_segment_available, NamespaceAvailabilityOptions};
 use crate::repository::errors::RepoError;
-use crate::repository::{
-    GroupMembersRepository, GroupsRepository, PooledConnectionWrapper, UserRepository,
-};
+use crate::repository::{GroupMembersRepository, GroupsRepository, UserRepository};
+use crate::services::AuditLog;
 use crate::validation::{sanitize_optional_string, sanitize_string};
 
 /// High-level group operations backed by the shared [`AppState`].
@@ -90,7 +88,7 @@ impl<'a> GroupService<'a> {
         };
 
         if let Ok(group) = self.get_by_id(id) {
-            self.log_created(actor, id, &group);
+            self.audit_created(actor, id, &group);
         }
         Ok(id)
     }
@@ -119,7 +117,7 @@ impl<'a> GroupService<'a> {
         }
 
         let after = self.get_by_id(id)?;
-        self.log_updated(actor, &before, &after);
+        self.audit_updated(actor, &before, &after);
         Ok(after)
     }
 
@@ -137,7 +135,7 @@ impl<'a> GroupService<'a> {
             repo.delete_group(id)?
         };
 
-        self.log_deleted(actor, &removed);
+        self.audit_deleted(actor, &removed);
         Ok(removed)
     }
 
@@ -221,42 +219,11 @@ impl<'a> GroupService<'a> {
         ensure_namespace_segment_available(&*repo, &base, NamespaceAvailabilityOptions::default())?;
         Ok(base)
     }
+}
 
-    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
-        self.state.repo_read().inner_repo().get_conn()
-    }
-
-    fn log_created(&self, actor: &User, id: i32, entity: &Group) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.id);
-            if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log group creation {id}: {_err}");
-            }
-        }
-    }
-
-    fn log_updated(&self, actor: &User, before: &Group, after: &Group) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.id);
-            if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
-                #[cfg(debug_assertions)]
-                eprintln!(
-                    "Failed to log group update {} -> {}: {_err}",
-                    before.id, after.id
-                );
-            }
-        }
-    }
-
-    fn log_deleted(&self, actor: &User, entity: &Group) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.id);
-            if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log group deletion {}: {_err}", entity.id);
-            }
-        }
+impl AuditLog for GroupService<'_> {
+    fn app_state(&self) -> &AppState<DieselCachedRepo> {
+        self.state
     }
 }
 

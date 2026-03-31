@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import {
   createVerification,
   getMyPermissions,
@@ -31,9 +31,7 @@ const selectClass =
   'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
 
 export default function CreateVerificationPage() {
-  const { basePath } = useOutletContext<ProjectOutletContext>();
-  const { projectId: projectIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();
   const navigate = useNavigate();
   const { csrfToken, dashboard, refresh: refreshDashboard } = useDashboard();
 

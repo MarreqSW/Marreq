@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import {
   createRequirementByProject,
   getMyPermissions,
@@ -33,9 +33,7 @@ function parseUser(u: unknown): User | null {
 }
 
 export default function CreateRequirementPage() {
-  const { basePath } = useOutletContext<ProjectOutletContext>();
-  const { projectId: projectIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();
   const navigate = useNavigate();
   const { csrfToken, dashboard, refresh: refreshDashboard } = useDashboard();
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useOutletContext, useParams } from 'react-router-dom';
+import { Link, useLocation, useOutletContext } from 'react-router-dom';
 import {
   getBaselineTraceability,
   getCoverageReport,
@@ -41,9 +41,7 @@ function pairKey(reqId: number, verId: number) {
 }
 
 export default function ReportsPage() {
-  const { basePath } = useOutletContext<ProjectOutletContext>();
-  const { projectId: projectIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();
   const location = useLocation();
   const { dashboard } = useDashboard();
 

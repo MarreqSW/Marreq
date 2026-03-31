@@ -11,17 +11,18 @@
 //! embedding generation on create/update operations.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::logger::{LogCtx, Loggable, Logger};
+use crate::logger::Loggable;
 use crate::models::{
     CustomFieldValueInput, EntityType, NewRequirement, NewRequirementVersionLink, Requirement,
     RequirementVersion, RequirementVersionLink, User, Verification,
 };
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    CustomFieldRepository, LookupRepository, MatrixRepository, PooledConnectionWrapper,
-    RequirementVersionLinksRepository, RequirementsRepository, VerificationsRepository,
+    CustomFieldRepository, LookupRepository, MatrixRepository, RequirementVersionLinksRepository,
+    RequirementsRepository, VerificationsRepository,
 };
 use crate::services::semantic_search::{IndexingService, SemanticSearchConfig};
+use crate::services::AuditLog;
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
 use serde::Serialize;
 
@@ -485,7 +486,7 @@ impl<'a> RequirementService<'a> {
             id
         };
 
-        self.log_created(actor, id, &payload);
+        self.audit_created(actor, id, &payload);
         self.queue_for_indexing(id, project_id);
         Ok(id)
     }
@@ -578,7 +579,7 @@ impl<'a> RequirementService<'a> {
             .current_version_id
             .map(|vid| self.get_parent_requirement_ids_for_version(vid))
             .unwrap_or_default();
-        self.log_updated(
+        self.audit_updated(
             actor,
             &RequirementWithVerification {
                 requirement: &before,
@@ -602,7 +603,7 @@ impl<'a> RequirementService<'a> {
             repo.delete_requirement(id)?
         };
 
-        self.log_deleted(actor, &removed);
+        self.audit_deleted(actor, &removed);
         Ok(removed)
     }
 
@@ -673,10 +674,6 @@ impl<'a> RequirementService<'a> {
         validate_requirement(payload).map_err(|err| RepoError::BadInput(err.to_string()))
     }
 
-    fn db_connection(&self) -> Result<PooledConnectionWrapper, RepoError> {
-        self.state.repo_read().inner_repo().get_conn()
-    }
-
     /// Queue a requirement for semantic search indexing if enabled.
     ///
     /// This is a best-effort operation; failures are logged but don't affect
@@ -696,35 +693,11 @@ impl<'a> RequirementService<'a> {
             );
         }
     }
+}
 
-    fn log_created(&self, actor: &User, id: i32, entity: &NewRequirement) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.id);
-            if let Err(_err) = Logger::created(conn.as_mut(), &ctx, id, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log requirement creation {id}: {_err}");
-            }
-        }
-    }
-
-    fn log_updated<T: serde::Serialize + Loggable>(&self, actor: &User, before: &T, after: &T) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.id);
-            if let Err(_err) = Logger::updated(conn.as_mut(), &ctx, before, after) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log requirement update: {_err}");
-            }
-        }
-    }
-
-    fn log_deleted(&self, actor: &User, entity: &Requirement) {
-        if let Ok(mut conn) = self.db_connection() {
-            let ctx = LogCtx::new(actor.id);
-            if let Err(_err) = Logger::deleted(conn.as_mut(), &ctx, entity) {
-                #[cfg(debug_assertions)]
-                eprintln!("Failed to log requirement deletion {}: {_err}", entity.id);
-            }
-        }
+impl AuditLog for RequirementService<'_> {
+    fn app_state(&self) -> &AppState<DieselCachedRepo> {
+        self.state
     }
 }
 

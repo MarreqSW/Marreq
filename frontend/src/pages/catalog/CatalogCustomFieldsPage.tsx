@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import {
   createCustomField,
   deleteCustomField,
@@ -9,6 +9,7 @@ import {
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import type { CustomFieldDefinition, CustomFieldWriteBody } from '@/api/types';
+import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { btnDanger, btnPrimary, inp } from './catalogUi';
 
 const FIELD_TYPES = ['text', 'enum', 'boolean', 'number'] as const;
@@ -20,8 +21,7 @@ function enumLinesFromApi(ev: unknown): string {
 }
 
 export default function CatalogCustomFieldsPage() {
-  const { projectId: projectIdParam } = useParams();
-  const pid = Number(projectIdParam);
+  const { projectId: pid } = useOutletContext<ProjectOutletContext>();
   const { csrfToken } = useDashboard();
   const [rows, setRows] = useState<CustomFieldDefinition[]>([]);
   const [loading, setLoading] = useState(true);

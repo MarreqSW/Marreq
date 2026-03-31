@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useOutletContext, useParams } from 'react-router-dom';
+import { useOutletContext } from 'react-router-dom';
 import TraceabilityGraph from '@/components/TraceabilityGraph';
 import RequirementsViewSwitcher from '@/components/RequirementsViewSwitcher';
 import { useDashboard } from '@/context/DashboardContext';
@@ -9,9 +9,8 @@ type Ctx = ProjectOutletContext;
 
 export default function TraceabilityPage() {
   const { projectId } = useOutletContext<Ctx>();
-  const { projectId: projectIdParam } = useParams();
   const { dashboard } = useDashboard();
-  const pid = Number(projectIdParam);
+  const pid = projectId;
 
   const projectName = useMemo(() => {
     const p = dashboard?.projects?.find((x) => x.id === pid);

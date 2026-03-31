@@ -53,12 +53,7 @@ impl<'a> DecoratedTestService<'a> {
         &self,
         parent_id: i32,
     ) -> Result<Vec<DecoratedVerification>, RepoError> {
-        let children: Vec<Verification> = self
-            .verification_service
-            .list_all()?
-            .into_iter()
-            .filter(|t| t.parent_id == Some(parent_id))
-            .collect();
+        let children = self.verification_service.get_by_parent(parent_id)?;
         self.decorate_vec(children)
     }
 

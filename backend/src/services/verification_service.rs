@@ -51,14 +51,31 @@ impl<'a> VerificationService<'a> {
             .map(|m| m.title)
     }
 
-    /// Get verifications by status
-    pub async fn get_by_status(&self, _status_id: i32) -> Result<Vec<Verification>, RepoError> {
-        todo!()
+    /// Get verifications by status.
+    pub fn get_by_status(&self, status_id: i32) -> Result<Vec<Verification>, RepoError> {
+        Ok(self
+            .state
+            .repo_read()
+            .get_verifications_all()?
+            .into_iter()
+            .filter(|v| v.status_id == status_id)
+            .collect())
     }
 
-    /// Get verifications by parent (hierarchical structure)
-    pub async fn get_by_parent(&self, _parent_id: i32) -> Result<Vec<Verification>, RepoError> {
-        todo!()
+    /// Get verifications by parent (hierarchical structure).
+    pub fn get_by_parent(&self, parent_id: i32) -> Result<Vec<Verification>, RepoError> {
+        let parent = match self.state.repo_read().get_verification_by_id(parent_id) {
+            Ok(p) => p,
+            Err(RepoError::NotFound) => return Ok(Vec::new()),
+            Err(e) => return Err(e),
+        };
+        Ok(self
+            .state
+            .repo_read()
+            .get_verifications_by_project(parent.project_id)?
+            .into_iter()
+            .filter(|v| v.parent_id == Some(parent_id))
+            .collect())
     }
 
     /// Create a new verification entry and log the action.

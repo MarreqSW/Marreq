@@ -318,14 +318,25 @@ SET
 WHERE r.current_version_id IS NULL;
 
 -- Verifications (test cases) for Space Project
-INSERT INTO verifications (reference_code, name, description, status_id, source, project_id) VALUES
+INSERT INTO verifications (
+    reference_code,
+    name,
+    description,
+    status_id,
+    source,
+    project_id,
+    author_id,
+    reviewer_id
+) VALUES
     (
         'TEST-PWR-001',
         'Solar Array Power Output Test',
         'Verify solar array generates 500W under AM0 illumination in thermal vacuum chamber',
         (SELECT id FROM verification_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
         'Solar array testing in thermal vacuum chamber',
-        (SELECT id FROM projects WHERE name = 'Space Project')
+        (SELECT id FROM projects WHERE name = 'Space Project'),
+        (SELECT id FROM users WHERE username = 'eng_jones' ORDER BY id LIMIT 1),
+        (SELECT id FROM users WHERE username = 'dr_smith' ORDER BY id LIMIT 1)
     ),
     (
         'TEST-PWR-002',
@@ -333,7 +344,9 @@ INSERT INTO verifications (reference_code, name, description, status_id, source,
         'Verify battery provides 200W for 45 minutes during discharge test cycle',
         (SELECT id FROM verification_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
         'Battery cycle testing and capacity verification',
-        (SELECT id FROM projects WHERE name = 'Space Project')
+        (SELECT id FROM projects WHERE name = 'Space Project'),
+        (SELECT id FROM users WHERE username = 'eng_jones' ORDER BY id LIMIT 1),
+        (SELECT id FROM users WHERE username = 'dr_smith' ORDER BY id LIMIT 1)
     ),
     (
         'TEST-COMM-001',
@@ -341,7 +354,9 @@ INSERT INTO verifications (reference_code, name, description, status_id, source,
         'Verify S-band communication link performance and data rate capabilities',
         (SELECT id FROM verification_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
         'RF testing in anechoic chamber',
-        (SELECT id FROM projects WHERE name = 'Space Project')
+        (SELECT id FROM projects WHERE name = 'Space Project'),
+        (SELECT id FROM users WHERE username = 'tech_lee' ORDER BY id LIMIT 1),
+        (SELECT id FROM users WHERE username = 'dr_smith' ORDER BY id LIMIT 1)
     ),
     (
         'TEST-ACS-001',
@@ -349,7 +364,9 @@ INSERT INTO verifications (reference_code, name, description, status_id, source,
         'Verify star tracker pointing accuracy and attitude determination',
         (SELECT id FROM verification_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
         'Star tracker calibration and pointing accuracy testing',
-        (SELECT id FROM projects WHERE name = 'Space Project')
+        (SELECT id FROM projects WHERE name = 'Space Project'),
+        (SELECT id FROM users WHERE username = 'tech_lee' ORDER BY id LIMIT 1),
+        (SELECT id FROM users WHERE username = 'dr_smith' ORDER BY id LIMIT 1)
     ),
     (
         'TEST-THERM-001',
@@ -357,7 +374,9 @@ INSERT INTO verifications (reference_code, name, description, status_id, source,
         'Verify thermal control system performance in vacuum environment',
         (SELECT id FROM verification_status WHERE project_id = (SELECT id FROM projects WHERE name = 'Space Project') AND tag = 'Pass' ORDER BY id LIMIT 1),
         'Thermal vacuum testing and temperature cycling',
-        (SELECT id FROM projects WHERE name = 'Space Project')
+        (SELECT id FROM projects WHERE name = 'Space Project'),
+        (SELECT id FROM users WHERE username = 'qa_wilson' ORDER BY id LIMIT 1),
+        (SELECT id FROM users WHERE username = 'dr_smith' ORDER BY id LIMIT 1)
     );
 
 -- Traceability matrix (requirements to verifications mapping)

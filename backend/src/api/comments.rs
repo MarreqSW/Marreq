@@ -114,9 +114,9 @@ pub async fn create(
         }
     }
     let comment = CommentService::new(state.inner()).create_comment(
+        u,
         requirement_id,
         payload.requirement_version_id,
-        u.id,
         payload.body.clone(),
     )?;
     let author_name = UserService::new(state.inner())

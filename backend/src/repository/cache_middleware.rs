@@ -1250,6 +1250,56 @@ impl<R: RequirementVersionLinksRepository> RequirementVersionLinksRepository
     }
 }
 
+impl<R: super::NotificationRepository> super::NotificationRepository for CacheRepository<R> {
+    fn insert_notification(&mut self, new: &NewNotification) -> Result<i32, RepoError> {
+        self.inner.insert_notification(new)
+    }
+    fn get_notifications_for_user(
+        &self,
+        user_id: i32,
+        limit: i64,
+        unread_only: bool,
+    ) -> Result<Vec<Notification>, RepoError> {
+        self.inner
+            .get_notifications_for_user(user_id, limit, unread_only)
+    }
+    fn count_unread_notifications(&self, user_id: i32) -> Result<i64, RepoError> {
+        self.inner.count_unread_notifications(user_id)
+    }
+    fn mark_notification_read(&mut self, id: i32, user_id: i32) -> Result<bool, RepoError> {
+        self.inner.mark_notification_read(id, user_id)
+    }
+    fn mark_all_read(&mut self, user_id: i32) -> Result<usize, RepoError> {
+        self.inner.mark_all_read(user_id)
+    }
+    fn get_notification_preferences(
+        &self,
+        user_id: i32,
+    ) -> Result<Vec<NotificationPreference>, RepoError> {
+        self.inner.get_notification_preferences(user_id)
+    }
+    fn upsert_notification_preference(
+        &mut self,
+        pref: &NewNotificationPreference,
+    ) -> Result<(), RepoError> {
+        self.inner.upsert_notification_preference(pref)
+    }
+    fn delete_notification_preference(
+        &mut self,
+        user_id: i32,
+        project_id: i32,
+    ) -> Result<(), RepoError> {
+        self.inner
+            .delete_notification_preference(user_id, project_id)
+    }
+    fn get_project_subscribers(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<NotificationPreference>, RepoError> {
+        self.inner.get_project_subscribers(project_id)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1412,6 +1462,10 @@ mod tests {
             next_comment_id: 1,
             requirement_version_links: Vec::new(),
             next_link_id: 1,
+            notifications: Vec::new(),
+            next_notification_id: 1,
+            notification_preferences: Vec::new(),
+            next_notification_pref_id: 1,
         }
     }
 

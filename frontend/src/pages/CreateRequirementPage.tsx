@@ -8,6 +8,7 @@ import {
   listCategories,
   listProjectMembers,
   listRequirementStatuses,
+  listUsersOptional,
   listVerificationMethodsByProject,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
@@ -46,6 +47,7 @@ export default function CreateRequirementPage() {
   const [projectReviewerIds, setProjectReviewerIds] = useState<number[]>([]);
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
   const [methods, setMethods] = useState<VerificationMethod[]>([]);
+  const [users, setUsers] = useState<User[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -65,7 +67,7 @@ export default function CreateRequirementPage() {
     if (!Number.isFinite(pid)) return;
     setLoadError(null);
     try {
-      const [st, cat, app, mem, meth, revPool, p] = await Promise.all([
+      const [st, cat, app, mem, meth, revPool, p, u] = await Promise.all([
         listRequirementStatuses(),
         listCategories(),
         listApplicability(),
@@ -73,6 +75,7 @@ export default function CreateRequirementPage() {
         listVerificationMethodsByProject(pid),
         getProjectReviewers(pid).catch(() => ({ user_ids: [] as number[] })),
         getMyPermissions(pid).catch(() => null),
+        listUsersOptional(),
       ]);
       setPerms(p);
       setStatuses(st);
@@ -80,6 +83,7 @@ export default function CreateRequirementPage() {
       setApplicability(app.filter((a) => a.project_id === pid));
       setMembers(mem);
       setMethods(meth);
+      setUsers(u);
       setProjectReviewerIds(revPool.user_ids);
       const statusOpts = st.filter((s) => s.project_id === pid);
       const useStatuses = statusOpts.length > 0 ? statusOpts : st;
@@ -116,10 +120,16 @@ export default function CreateRequirementPage() {
 
   const userLabel = useCallback(
     (id: number) => {
+      if (users?.length) {
+        const u = users.find((x) => x.id === id);
+        if (u) return `${u.name} (${u.username})`;
+      }
+      const mb = members.find((m) => m.user_id === id);
+      if (mb) return `${mb.name} (${mb.username})`;
       if (me && me.id === id) return `${me.name} (${me.username})`;
       return `User #${id}`;
     },
-    [me],
+    [users, members, me],
   );
 
   const authorOptionIds = useMemo(() => {

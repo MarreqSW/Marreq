@@ -2,12 +2,15 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState } from 'react
 import { useOutletContext } from 'react-router-dom';
 import {
   getMyPermissions,
+  getNotificationPreferences,
   getProjectReviewers,
   listCustomFieldsByProject,
   listProjectMembers,
   listUsersOptional,
   putProjectReviewers,
   removeProjectMember,
+  setNotificationPreference,
+  deleteNotificationPreference,
   setProjectMemberRole,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
@@ -55,18 +58,22 @@ export default function ProjectSettingsPage() {
   const [reviewerDraft, setReviewerDraft] = useState<Set<number>>(() => new Set());
   const [reviewerErr, setReviewerErr] = useState<string | null>(null);
   const [reviewerBusy, setReviewerBusy] = useState(false);
+  const [notifInApp, setNotifInApp] = useState(false);
+  const [notifEmail, setNotifEmail] = useState(false);
+  const [notifBusy, setNotifBusy] = useState(false);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid)) return;
     setLoading(true);
     setErr(null);
     try {
-      const [p, m, f, u, rev] = await Promise.all([
+      const [p, m, f, u, rev, notifPrefs] = await Promise.all([
         getMyPermissions(pid),
         listProjectMembers(pid),
         listCustomFieldsByProject(pid),
         listUsersOptional(),
         getProjectReviewers(pid).catch(() => ({ user_ids: [] as number[] })),
+        getNotificationPreferences().catch(() => []),
       ]);
       setPerms(p);
       setMembers(m);
@@ -74,6 +81,9 @@ export default function ProjectSettingsPage() {
       setUsers(u);
       setReviewerIds(rev.user_ids);
       setReviewerDraft(new Set(rev.user_ids));
+      const myPref = notifPrefs.find((np) => np.project_id === pid);
+      setNotifInApp(myPref?.notify_in_app ?? false);
+      setNotifEmail(myPref?.notify_email ?? false);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load settings');
     } finally {
@@ -455,6 +465,66 @@ export default function ProjectSettingsPage() {
               )}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      {/* ── Notification preferences ───────────────────────────────────── */}
+      <section>
+        <h2 className="text-lg font-semibold text-stitch-fg mb-4 mt-2">Notifications</h2>
+        <p className="text-sm text-stitch-muted mb-4">
+          Subscribe to project events to receive notifications when requirements are created, updated, or deleted.
+        </p>
+        <div className="flex flex-col gap-3">
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={notifInApp}
+              disabled={notifBusy}
+              className="h-4 w-4 rounded border-stitch-border bg-stitch-bg text-stitch-accent focus:ring-stitch-accent"
+              onChange={async (e) => {
+                const checked = e.target.checked;
+                setNotifInApp(checked);
+                setNotifBusy(true);
+                try {
+                  if (!checked && !notifEmail) {
+                    await deleteNotificationPreference(pid, csrfToken ?? '');
+                  } else {
+                    await setNotificationPreference(pid, { notify_in_app: checked, notify_email: notifEmail }, csrfToken ?? '');
+                  }
+                } catch {
+                  setNotifInApp(!checked);
+                } finally {
+                  setNotifBusy(false);
+                }
+              }}
+            />
+            <span className="text-sm text-stitch-fg">In-app notifications for this project</span>
+          </label>
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={notifEmail}
+              disabled={notifBusy}
+              className="h-4 w-4 rounded border-stitch-border bg-stitch-bg text-stitch-accent focus:ring-stitch-accent"
+              onChange={async (e) => {
+                const checked = e.target.checked;
+                setNotifEmail(checked);
+                setNotifBusy(true);
+                try {
+                  if (!checked && !notifInApp) {
+                    await deleteNotificationPreference(pid, csrfToken ?? '');
+                  } else {
+                    await setNotificationPreference(pid, { notify_in_app: notifInApp, notify_email: checked }, csrfToken ?? '');
+                  }
+                } catch {
+                  setNotifEmail(!checked);
+                } finally {
+                  setNotifBusy(false);
+                }
+              }}
+            />
+            <span className="text-sm text-stitch-fg">Email notifications for this project</span>
+          </label>
         </div>
       </section>
     </div>

@@ -436,6 +436,36 @@ pub trait RequirementVersionLinksRepository {
     ) -> Result<RequirementVersionLink, RepoError>;
 }
 
+pub trait NotificationRepository {
+    fn insert_notification(&mut self, new: &NewNotification) -> Result<i32, RepoError>;
+    fn get_notifications_for_user(
+        &self,
+        user_id: i32,
+        limit: i64,
+        unread_only: bool,
+    ) -> Result<Vec<Notification>, RepoError>;
+    fn count_unread_notifications(&self, user_id: i32) -> Result<i64, RepoError>;
+    fn mark_notification_read(&mut self, id: i32, user_id: i32) -> Result<bool, RepoError>;
+    fn mark_all_read(&mut self, user_id: i32) -> Result<usize, RepoError>;
+    fn get_notification_preferences(
+        &self,
+        user_id: i32,
+    ) -> Result<Vec<NotificationPreference>, RepoError>;
+    fn upsert_notification_preference(
+        &mut self,
+        pref: &NewNotificationPreference,
+    ) -> Result<(), RepoError>;
+    fn delete_notification_preference(
+        &mut self,
+        user_id: i32,
+        project_id: i32,
+    ) -> Result<(), RepoError>;
+    fn get_project_subscribers(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<NotificationPreference>, RepoError>;
+}
+
 pub trait Repository:
     ApiTokensRepository
     + UserRepository
@@ -453,6 +483,7 @@ pub trait Repository:
     + BaselineRepository
     + LogRepository
     + RequirementCommentsRepository
+    + NotificationRepository
 {
 }
 
@@ -473,6 +504,7 @@ impl<T> Repository for T where
         + BaselineRepository
         + LogRepository
         + RequirementCommentsRepository
+        + NotificationRepository
 {
 }
 

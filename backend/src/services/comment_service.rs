@@ -8,7 +8,7 @@
 //! delegates to the repository.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{NewRequirementComment, RequirementComment};
+use crate::models::{NewRequirementComment, RequirementComment, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{RequirementCommentsRepository, RequirementsRepository};
 
@@ -26,12 +26,12 @@ impl<'a> CommentService<'a> {
     /// version exist and that the version belongs to the requirement.
     pub fn create_comment(
         &self,
+        actor: &User,
         requirement_id: i32,
         requirement_version_id: Option<i32>,
-        author_id: i32,
         body: String,
     ) -> Result<RequirementComment, RepoError> {
-        let _req = self.repo_read().get_requirement_by_id(requirement_id)?;
+        let req = self.repo_read().get_requirement_by_id(requirement_id)?;
         if let Some(version_id) = requirement_version_id {
             let version = self.repo_read().get_requirement_version_by_id(version_id)?;
             if version.requirement_id != requirement_id {
@@ -47,10 +47,15 @@ impl<'a> CommentService<'a> {
         let new = NewRequirementComment {
             requirement_id,
             requirement_version_id,
-            author_id,
+            author_id: actor.id,
             body: body.to_string(),
         };
-        self.repo_write().insert_requirement_comment(&new)
+        let comment = self.repo_write().insert_requirement_comment(&new)?;
+
+        let ns = super::NotificationService::new(self.state);
+        ns.notify_comment_added(actor, &req, &comment.body);
+
+        Ok(comment)
     }
 
     /// List comments for a requirement, optionally filtered to a version (comments for that

@@ -184,10 +184,12 @@ export default function RequirementsTable({
   }, [statuses]);
 
   const userById = useMemo(() => {
-    const m = new Map<number, User>();
+    const m = new Map<number, { name: string; username: string }>();
+    // members are always available; users (admin-only) can override with the same data
+    for (const mb of members) m.set(mb.user_id, { name: mb.name, username: mb.username });
     if (users) for (const u of users) m.set(u.id, u);
     return m;
-  }, [users]);
+  }, [users, members]);
 
   const userLabel = useCallback(
     (id: number) => {

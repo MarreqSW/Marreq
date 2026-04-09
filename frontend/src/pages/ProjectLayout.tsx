@@ -4,6 +4,7 @@ import { useDashboard } from '@/context/DashboardContext';
 import { useTheme, type ThemePreference } from '@/context/ThemeContext';
 import { getProjectFromPath } from '@/api/client';
 import type { User } from '@/api/types';
+import NotificationPanel from '@/components/NotificationPanel';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 const APP_VERSION = 'v0.1.0';
@@ -332,13 +333,7 @@ export default function ProjectLayout() {
               ))}
             </div>
             <div className="hidden sm:flex items-center gap-1 text-stitch-muted">
-              <button
-                type="button"
-                className="hover:bg-stitch-elevated p-2 rounded-full transition-colors"
-                title="Notifications"
-              >
-                <span className="material-symbols-outlined text-xl">notifications</span>
-              </button>
+              <NotificationPanel />
               <Link
                 to={`${basePath}/settings`}
                 className="hover:bg-stitch-elevated p-2 rounded-full transition-colors text-stitch-muted"

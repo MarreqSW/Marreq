@@ -240,6 +240,8 @@ export interface ProjectMember {
   user_id: number;
   role: number;
   role_label: string;
+  username: string;
+  name: string;
 }
 
 export interface CoverageReport {

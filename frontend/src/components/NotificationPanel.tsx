@@ -1,6 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '@/hooks/useNotifications';
-import type { Notification } from '@/api/types';
+import { useDashboard } from '@/context/DashboardContext';
+import type { DashboardProject, Notification } from '@/api/types';
+
+function notificationEntityPath(n: Notification, projects: DashboardProject[]): string | null {
+  if (!n.entity_type || !n.entity_id) return null;
+  const project = n.project_id != null ? projects.find((p) => p.id === n.project_id) : null;
+  if (!project) return null;
+  const base = project.project_base_path;
+  switch (n.entity_type) {
+    case 'requirement':
+      return `${base}/requirements/${n.entity_id}`;
+    case 'verification':
+      return `${base}/verifications/${n.entity_id}`;
+    default:
+      return null;
+  }
+}
 
 function timeAgo(dateStr: string): string {
   const now = Date.now();
@@ -37,6 +54,9 @@ function notificationIcon(type: string): string {
 export default function NotificationPanel() {
   const { unreadCount, notifications, loading, refreshList, markRead, markAllRead } =
     useNotifications();
+  const { dashboard } = useDashboard();
+  const navigate = useNavigate();
+  const projects = dashboard?.projects ?? [];
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -70,8 +90,10 @@ export default function NotificationPanel() {
     (n: Notification) => {
       if (!n.read) markRead(n.id);
       setOpen(false);
+      const path = notificationEntityPath(n, projects);
+      if (path) navigate(path);
     },
-    [markRead],
+    [markRead, navigate, projects],
   );
 
   return (

@@ -53,6 +53,10 @@ pub struct DieselRepoMock {
     pub next_comment_id: i32,
     pub requirement_version_links: Vec<RequirementVersionLink>,
     pub next_link_id: i32,
+    pub notifications: Vec<Notification>,
+    pub next_notification_id: i32,
+    pub notification_preferences: Vec<NotificationPreference>,
+    pub next_notification_pref_id: i32,
 }
 
 fn epoch() -> NaiveDateTime {
@@ -101,6 +105,10 @@ impl Default for DieselRepoMock {
             next_comment_id: 1,
             requirement_version_links: Vec::new(),
             next_link_id: 1,
+            notifications: Vec::new(),
+            next_notification_id: 1,
+            notification_preferences: Vec::new(),
+            next_notification_pref_id: 1,
         }
     }
 }
@@ -144,6 +152,10 @@ impl DieselRepoMock {
             next_comment_id: 1,
             requirement_version_links: Vec::new(),
             next_link_id: 1,
+            notifications: Vec::new(),
+            next_notification_id: 1,
+            notification_preferences: Vec::new(),
+            next_notification_pref_id: 1,
         }
     }
     pub fn with_error() -> Self {
@@ -180,6 +192,10 @@ impl DieselRepoMock {
             next_comment_id: 1,
             requirement_version_links: Vec::new(),
             next_link_id: 1,
+            notifications: Vec::new(),
+            next_notification_id: 1,
+            notification_preferences: Vec::new(),
+            next_notification_pref_id: 1,
         }
     }
 
@@ -2291,5 +2307,136 @@ impl RequirementVersionLinksRepository for DieselRepoMock {
             .find(|l| l.id == link_id)
             .cloned()
             .ok_or(RepoError::NotFound)
+    }
+}
+
+impl super::NotificationRepository for DieselRepoMock {
+    fn insert_notification(&mut self, new: &NewNotification) -> Result<i32, RepoError> {
+        let id = self.next_notification_id;
+        self.next_notification_id += 1;
+        self.notifications.push(Notification {
+            id,
+            user_id: new.user_id,
+            project_id: new.project_id,
+            notification_type: new.notification_type.clone(),
+            title: new.title.clone(),
+            body: new.body.clone(),
+            entity_type: new.entity_type.clone(),
+            entity_id: new.entity_id,
+            actor_id: new.actor_id,
+            read: false,
+            emailed: false,
+            created_at: chrono::Utc::now().naive_utc(),
+        });
+        Ok(id)
+    }
+
+    fn get_notifications_for_user(
+        &self,
+        user_id: i32,
+        limit: i64,
+        unread_only: bool,
+    ) -> Result<Vec<Notification>, RepoError> {
+        let mut out: Vec<Notification> = self
+            .notifications
+            .iter()
+            .filter(|n| n.user_id == user_id && (!unread_only || !n.read))
+            .cloned()
+            .collect();
+        out.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+        out.truncate(limit as usize);
+        Ok(out)
+    }
+
+    fn count_unread_notifications(&self, user_id: i32) -> Result<i64, RepoError> {
+        let count = self
+            .notifications
+            .iter()
+            .filter(|n| n.user_id == user_id && !n.read)
+            .count();
+        Ok(count as i64)
+    }
+
+    fn mark_notification_read(&mut self, id: i32, user_id: i32) -> Result<bool, RepoError> {
+        if let Some(n) = self
+            .notifications
+            .iter_mut()
+            .find(|n| n.id == id && n.user_id == user_id)
+        {
+            n.read = true;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
+    fn mark_all_read(&mut self, user_id: i32) -> Result<usize, RepoError> {
+        let mut count = 0;
+        for n in &mut self.notifications {
+            if n.user_id == user_id && !n.read {
+                n.read = true;
+                count += 1;
+            }
+        }
+        Ok(count)
+    }
+
+    fn get_notification_preferences(
+        &self,
+        user_id: i32,
+    ) -> Result<Vec<NotificationPreference>, RepoError> {
+        Ok(self
+            .notification_preferences
+            .iter()
+            .filter(|p| p.user_id == user_id)
+            .cloned()
+            .collect())
+    }
+
+    fn upsert_notification_preference(
+        &mut self,
+        pref: &NewNotificationPreference,
+    ) -> Result<(), RepoError> {
+        if let Some(existing) = self
+            .notification_preferences
+            .iter_mut()
+            .find(|p| p.user_id == pref.user_id && p.project_id == pref.project_id)
+        {
+            existing.notify_in_app = pref.notify_in_app;
+            existing.notify_email = pref.notify_email;
+        } else {
+            let id = self.next_notification_pref_id;
+            self.next_notification_pref_id += 1;
+            self.notification_preferences.push(NotificationPreference {
+                id,
+                user_id: pref.user_id,
+                project_id: pref.project_id,
+                notify_in_app: pref.notify_in_app,
+                notify_email: pref.notify_email,
+            });
+        }
+        Ok(())
+    }
+
+    fn delete_notification_preference(
+        &mut self,
+        user_id: i32,
+        project_id: i32,
+    ) -> Result<(), RepoError> {
+        self.notification_preferences
+            .retain(|p| !(p.user_id == user_id && p.project_id == project_id));
+        Ok(())
+    }
+
+    fn get_project_subscribers(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<NotificationPreference>, RepoError> {
+        Ok(self
+            .notification_preferences
+            .iter()
+            .filter(|p| p.project_id == project_id && p.notify_in_app)
+            .cloned()
+            .collect())
     }
 }

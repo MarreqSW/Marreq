@@ -483,6 +483,7 @@ pub enum EntityType {
     /// Verification method (e.g. Test, Analysis, Review) attached to requirement versions.
     VerificationMethod,
     Comment,
+    Notification,
 }
 
 impl std::fmt::Display for EntityType {
@@ -498,6 +499,7 @@ impl std::fmt::Display for EntityType {
             EntityType::Verification => write!(f, "VERIFICATION"),
             EntityType::VerificationMethod => write!(f, "VERIFICATION_METHOD"),
             EntityType::Comment => write!(f, "COMMENT"),
+            EntityType::Notification => write!(f, "NOTIFICATION"),
         }
     }
 }
@@ -516,6 +518,7 @@ impl EntityType {
             EntityType::Verification => "verification",
             EntityType::VerificationMethod => "verification method",
             EntityType::Comment => "comment",
+            EntityType::Notification => "notification",
         }
     }
 }
@@ -634,3 +637,32 @@ impl_loggable!(
     title
 );
 impl_loggable!(User, EntityType::User, username, no_project);
+
+/// A user notification stored in the database.
+#[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::notifications)]
+pub struct Notification {
+    pub id: i32,
+    pub user_id: i32,
+    pub project_id: Option<i32>,
+    pub notification_type: String,
+    pub title: String,
+    pub body: Option<String>,
+    pub entity_type: Option<String>,
+    pub entity_id: Option<i32>,
+    pub actor_id: Option<i32>,
+    pub read: bool,
+    pub emailed: bool,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+/// Per-project notification subscription for a user.
+#[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::notification_preferences)]
+pub struct NotificationPreference {
+    pub id: i32,
+    pub user_id: i32,
+    pub project_id: i32,
+    pub notify_in_app: bool,
+    pub notify_email: bool,
+}

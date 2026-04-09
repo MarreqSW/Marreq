@@ -21,6 +21,8 @@ pub struct MemberResponse {
     pub user_id: i32,
     pub role: i32,
     pub role_label: &'static str,
+    pub username: String,
+    pub name: String,
 }
 
 /// GET /api/projects/<project_id>/me/permissions — effective permissions for the current user.
@@ -55,10 +57,18 @@ pub async fn list_members(
         .map_err(ApiError::from)?;
     let out: Vec<MemberResponse> = members
         .into_iter()
-        .map(|m| MemberResponse {
-            user_id: m.user_id,
-            role: m.role,
-            role_label: role_label(m.role),
+        .map(|m| {
+            let user = repo.get_user_by_id(m.user_id).ok();
+            MemberResponse {
+                user_id: m.user_id,
+                role: m.role,
+                role_label: role_label(m.role),
+                username: user
+                    .as_ref()
+                    .map(|u| u.username.clone())
+                    .unwrap_or_default(),
+                name: user.as_ref().map(|u| u.name.clone()).unwrap_or_default(),
+            }
         })
         .collect();
     Ok(Json(out))
@@ -92,7 +102,7 @@ pub async fn set_member_role(
         ));
     }
     let mut repo = state.repo_write();
-    let _user = repo.get_user_by_id(user_id).map_err(ApiError::from)?;
+    let user = repo.get_user_by_id(user_id).map_err(ApiError::from)?;
     let _project = repo.get_project_by_id(project_id).map_err(ApiError::from)?;
     repo.add_project_member(&NewProjectMember {
         project_id,
@@ -103,6 +113,8 @@ pub async fn set_member_role(
         user_id,
         role,
         role_label: role_label(role),
+        username: user.username,
+        name: user.name,
     }))
 }
 

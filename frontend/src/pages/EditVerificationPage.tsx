@@ -125,9 +125,11 @@ export default function EditVerificationPage() {
     (id: number) => {
       const u = users?.find((x) => x.id === id);
       if (u) return `${u.name} (${u.username})`;
+      const mb = members.find((m) => m.user_id === id);
+      if (mb) return `${mb.name} (${mb.username})`;
       return `User #${id}`;
     },
-    [users],
+    [users, members],
   );
 
   const authorOptionIds = useMemo(() => {

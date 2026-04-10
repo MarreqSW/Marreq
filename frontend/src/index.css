@@ -42,6 +42,70 @@ body {
   @apply antialiased bg-stitch-canvas text-stitch-fg;
 }
 
+/*
+ * Catalog form fields (.marreq-catalog-field): force readable text.
+ * Tailwind preflight uses color:inherit; WebKit autofill sets -webkit-text-fill-color;
+ * some builds/orderings can still leave white text on light backgrounds. !important +
+ * html theme selectors (not .stitch-app) keeps this reliable. color-scheme nudges native UI.
+ */
+html[data-theme='light'] .marreq-catalog-field,
+html:not(.dark) .marreq-catalog-field {
+  color-scheme: light;
+  color: var(--stitch-fg) !important;
+  caret-color: var(--stitch-fg) !important;
+  -webkit-text-fill-color: var(--stitch-fg) !important;
+}
+
+html[data-theme='light'] .marreq-catalog-field::placeholder,
+html:not(.dark) .marreq-catalog-field::placeholder {
+  color: var(--stitch-muted) !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: var(--stitch-muted) !important;
+}
+
+html[data-theme='light'] .marreq-catalog-field:-webkit-autofill,
+html[data-theme='light'] .marreq-catalog-field:-webkit-autofill:hover,
+html[data-theme='light'] .marreq-catalog-field:-webkit-autofill:focus,
+html[data-theme='light'] .marreq-catalog-field:-webkit-autofill:active,
+html:not(.dark) .marreq-catalog-field:-webkit-autofill,
+html:not(.dark) .marreq-catalog-field:-webkit-autofill:hover,
+html:not(.dark) .marreq-catalog-field:-webkit-autofill:focus,
+html:not(.dark) .marreq-catalog-field:-webkit-autofill:active {
+  color: var(--stitch-fg) !important;
+  -webkit-text-fill-color: var(--stitch-fg) !important;
+  caret-color: var(--stitch-fg) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--stitch-elevated) inset !important;
+  box-shadow: 0 0 0 1000px var(--stitch-elevated) inset !important;
+  transition: background-color 99999s ease-out 0s;
+}
+
+html[data-theme='dark'].dark .marreq-catalog-field,
+html.dark .marreq-catalog-field {
+  color-scheme: dark;
+  color: var(--stitch-fg) !important;
+  caret-color: var(--stitch-fg) !important;
+  -webkit-text-fill-color: var(--stitch-fg) !important;
+}
+
+html[data-theme='dark'].dark .marreq-catalog-field::placeholder,
+html.dark .marreq-catalog-field::placeholder {
+  color: var(--stitch-muted) !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: var(--stitch-muted) !important;
+}
+
+html.dark .marreq-catalog-field:-webkit-autofill,
+html.dark .marreq-catalog-field:-webkit-autofill:hover,
+html.dark .marreq-catalog-field:-webkit-autofill:focus,
+html.dark .marreq-catalog-field:-webkit-autofill:active {
+  color: var(--stitch-fg) !important;
+  -webkit-text-fill-color: var(--stitch-fg) !important;
+  caret-color: var(--stitch-fg) !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--stitch-elevated) inset !important;
+  box-shadow: 0 0 0 1000px var(--stitch-elevated) inset !important;
+  transition: background-color 99999s ease-out 0s;
+}
+
 /* Stitch dark shell: React Flow chrome (always dark controls for contrast on graph) */
 .stitch-flow {
   color-scheme: dark;

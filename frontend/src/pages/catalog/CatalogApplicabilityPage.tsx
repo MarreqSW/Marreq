@@ -118,7 +118,7 @@ export default function CatalogApplicabilityPage() {
   return (
     <div className="space-y-6">
       {err ? (
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 text-red-100 text-sm px-4 py-2">
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 text-red-800 dark:text-red-100 text-sm px-4 py-2">
           {err}
         </div>
       ) : null}
@@ -172,7 +172,7 @@ export default function CatalogApplicabilityPage() {
           </thead>
           <tbody className="divide-y divide-stitch-border">
             {sorted.map((c) => (
-              <tr key={c.id} className="hover:bg-white/[0.02]">
+              <tr key={c.id} className="hover:bg-stitch-higher/40">
                 <td className="px-3 py-2 align-top">
                   <input
                     className={inp}

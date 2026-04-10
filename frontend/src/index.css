@@ -7,16 +7,17 @@
   color-scheme: light;
   --stitch-canvas: #eef0f4;
   --stitch-surface: #ffffff;
-  --stitch-elevated: #e4e6ec;
-  --stitch-higher: #d8dae2;
-  --stitch-muted: #5f6368;
-  --stitch-subtle: rgba(0, 0, 0, 0.45);
-  --stitch-border: rgba(0, 0, 0, 0.12);
+  /* Slightly stronger panel separation vs surface for clearer hierarchy */
+  --stitch-elevated: #e2e5ed;
+  --stitch-higher: #d4d8e2;
+  --stitch-muted: #3c4043;
+  --stitch-subtle: rgba(0, 0, 0, 0.6);
+  --stitch-border: rgba(0, 0, 0, 0.18);
   --stitch-accent: #1a237e;
   --stitch-accent-dim: #3949ab;
   --stitch-danger: #c5221f;
-  --stitch-fg: #1c1b1f;
-  --stitch-fg-secondary: rgba(28, 27, 31, 0.78);
+  --stitch-fg: #121316;
+  --stitch-fg-secondary: rgba(18, 19, 22, 0.9);
   --stitch-on-accent: #ffffff;
 }
 

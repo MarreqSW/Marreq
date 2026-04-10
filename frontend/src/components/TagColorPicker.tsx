@@ -21,7 +21,7 @@ export default function TagColorPicker({
   const swatchValue = validHex ? raw : '#64748b';
 
   const defaultInp =
-    'w-full min-w-0 text-sm bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none disabled:opacity-45';
+    'marreq-catalog-field w-full min-w-0 text-sm bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg placeholder:text-stitch-muted focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none disabled:opacity-45';
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>

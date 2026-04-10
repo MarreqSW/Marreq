@@ -23,8 +23,8 @@ function PermPill({ label, on }: { label: string; on: boolean }) {
     <span
       className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border ${
         on
-          ? 'bg-emerald-500/15 text-emerald-200 border-emerald-500/30'
-          : 'bg-white/[0.05] text-stitch-muted border-stitch-border'
+          ? 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-200 border-emerald-600/35 dark:border-emerald-500/30'
+          : 'bg-stitch-elevated/80 dark:bg-white/[0.05] text-stitch-muted border-stitch-border'
       }`}
     >
       {label}

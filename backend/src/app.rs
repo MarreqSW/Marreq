@@ -55,7 +55,15 @@ impl AppState<DieselCachedRepo> {
 #[rocket_sync_db_pools::database("my_db")]
 pub struct MyDbConn(rocket_sync_db_pools::diesel::PgConnection);
 
-pub fn build() -> Rocket<Build> {
+pub fn build_with(
+    mode: &'static dyn crate::deployment::DeploymentMode,
+    extra_routes: Vec<rocket::Route>,
+    extra_fairings: Vec<std::sync::Arc<dyn rocket::fairing::Fairing>>,
+) -> Rocket<Build> {
+    // Register the mode into the OnceLock so `deployment::current()` works
+    // without per-call lookups.
+    crate::deployment::set_current(mode);
+
     #[cfg(not(any(test, feature = "test-helpers")))]
     let inner = {
         crate::repository::diesel_repo::init_connection_pool().unwrap_or_else(|e| {
@@ -78,8 +86,12 @@ pub fn build() -> Rocket<Build> {
         repo_guard.cache().start_cache_maintenance();
     }
 
-    let rocket = rocket::build()
+    let mut api_routes = crate::api::routes();
+    api_routes.extend(extra_routes);
+
+    let mut rocket = rocket::build()
         .manage(AppState { repo })
+        .manage(mode)
         .manage(crate::auth::rate_limiter::LoginRateLimiter::new())
         .mount(
             "/",
@@ -88,7 +100,7 @@ pub fn build() -> Rocket<Build> {
                 crate::routes::api_info::root_index,
             ],
         )
-        .mount("/api", crate::api::routes())
+        .mount("/api", api_routes)
         .register(
             "/",
             catchers![
@@ -104,10 +116,17 @@ pub fn build() -> Rocket<Build> {
         .attach(crate::fairings::SemanticIndexFairing)
         .attach(crate::app::MyDbConn::fairing());
 
-    #[cfg(feature = "cloud")]
-    let rocket = rocket.attach(crate::fairings::CloudAdminBootstrapFairing);
+    for fairing in extra_fairings {
+        rocket = rocket.attach(fairing);
+    }
 
     rocket
+}
+
+/// Legacy entrypoint used by integration tests and the in-tree `backend/` binary
+/// until the binary crates own startup. Will be removed with `backend/`.
+pub fn build() -> Rocket<Build> {
+    build_with(crate::deployment::default_mode(), Vec::new(), Vec::new())
 }
 
 #[cfg(not(any(test, feature = "test-helpers")))]

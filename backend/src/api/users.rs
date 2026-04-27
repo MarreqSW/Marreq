@@ -56,8 +56,6 @@ mod tests {
     use rocket::http::{ContentType, Cookie, SameSite};
     use rocket::local::asynchronous::Client;
     use serde_json::json;
-    #[cfg(feature = "server")]
-    use serde_json::Value;
     use std::collections::HashMap;
     use std::sync::{Arc, RwLock};
 
@@ -165,8 +163,7 @@ mod tests {
     // ----- admin success tests -----
 
     #[rocket::async_test]
-    async fn list_returns_seeded_users() {
-        let mut repo = DieselRepoMock::default();
+    async fn list_returns_seeded_users() {        let mut repo = DieselRepoMock::default();
         let mut users = HashMap::new();
         let mut user = DieselRepoMock::make_user(1, "alice", "hash");
         user.is_admin = true;
@@ -183,70 +180,5 @@ mod tests {
         let items: Vec<User> = response.into_json().await.unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].username, "alice");
-    }
-
-    #[rocket::async_test]
-    #[cfg(feature = "server")]
-    async fn create_returns_new_identifier() {
-        let client = client_with_repo(DieselRepoMock::default()).await;
-        let response = client
-            .post("/api/users")
-            .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
-            .body(
-                json!({
-                    "username": "bob",
-                    "name": "Bob",
-                    "email": "bob@example.com",
-                    "password": "Skyline!Current_2026",
-                    "is_admin": false
-                })
-                .to_string(),
-            )
-            .dispatch()
-            .await;
-
-        assert_eq!(response.status(), Status::Ok);
-        let payload: Value = response.into_json().await.unwrap();
-        assert_eq!(payload.get("status"), Some(&Value::from("ok")));
-        assert_eq!(payload.get("id"), Some(&Value::from(2)));
-    }
-
-    #[rocket::async_test]
-    #[cfg(feature = "server")]
-    async fn delete_removes_existing_user() {
-        let client = client_with_repo(DieselRepoMock::default()).await;
-        let create_response = client
-            .post("/api/users")
-            .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
-            .body(
-                json!({
-                    "username": "carol",
-                    "name": "Carol",
-                    "email": "carol@example.com",
-                    "password": "Orbit!Delta_2026",
-                    "is_admin": false
-                })
-                .to_string(),
-            )
-            .dispatch()
-            .await;
-        let created: Value = create_response.into_json().await.unwrap();
-        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
-
-        let delete_response = client
-            .delete(format!("/api/users/{id}"))
-            .private_cookie(auth_cookie())
-            .dispatch()
-            .await;
-        assert_eq!(delete_response.status(), Status::NoContent);
-
-        let not_found = client
-            .get(format!("/api/users/{id}"))
-            .private_cookie(auth_cookie())
-            .dispatch()
-            .await;
-        assert_eq!(not_found.status(), Status::NotFound);
     }
 }

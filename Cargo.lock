@@ -1997,7 +1997,28 @@ dependencies = [
 ]
 
 [[package]]
-name = "marreq"
+name = "marreq-cloud"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "argon2",
+ "base64",
+ "chrono",
+ "diesel",
+ "lettre",
+ "marreq-core",
+ "rand 0.8.5",
+ "rocket",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 2.0.18",
+ "tokio",
+ "urlencoding",
+]
+
+[[package]]
+name = "marreq-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -2027,6 +2048,16 @@ dependencies = [
  "tokio",
  "urlencoding",
  "xlsxwriter",
+]
+
+[[package]]
+name = "marreq-server"
+version = "0.1.0"
+dependencies = [
+ "marreq-core",
+ "rocket",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

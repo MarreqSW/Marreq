@@ -3,10 +3,10 @@
 ## Overview
 
 Marreq now uses a single database strategy:
-- **Schema creation/evolution**: `backend/migrations/*/up.sql` (Diesel migrations)
-- **Sample/demo data**: `backend/scripts/init_complete.sql` (seed data only)
+- **Schema creation/evolution**: `marreq-core/migrations/*/up.sql` (Diesel migrations)
+- **Sample/demo data**: `marreq-core/scripts/init_complete.sql` (seed data only)
 
-`backend/scripts/init_complete.sql` does **not** create tables, indexes, triggers, or extensions.
+`marreq-core/scripts/init_complete.sql` does **not** create tables, indexes, triggers, or extensions.
 
 ## Environment variables
 
@@ -60,15 +60,15 @@ cp .env.example .env
    **`.env` is gitignored — never commit it.**
 4. Run the setup script:
    ```bash
-   ./backend/scripts/db_setup.sh
+   ./marreq-core/scripts/db_setup.sh
    ```
 5. (Optional) Load demo/test data:
    ```bash
-   ./backend/scripts/db_seed.sh
+   ./marreq-core/scripts/db_seed.sh
    ```
 6. Start the application:
    ```bash
-   cargo run --bin marreq
+   cargo run -p marreq-server
    ```
 7. Access the app at `http://localhost:8000` and log in with seeded users (password: `ChangeMe123!`).
 
@@ -84,10 +84,10 @@ cp .env.example .env
    ```
 3. Seed sample data:
    ```bash
-   docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq < backend/scripts/init_complete.sql
+   docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq < marreq-core/scripts/init_complete.sql
    ```
 
-> For the full scripts reference, see [backend/scripts/README.md](../../backend/scripts/README.md).
+> For the full scripts reference, see [marreq-core/scripts/README.md](../../marreq-core/scripts/README.md).
 
 ## Database Schema
 
@@ -155,14 +155,14 @@ Schema source of truth:
 - Triggers/functions
 - Extensions (including `vector`)
 
-### `backend/scripts/init_complete.sql`
+### `marreq-core/scripts/init_complete.sql`
 Seed data only:
 - Sample projects/users
 - Statuses/categories/applicability/verification
 - Sample requirements/tests/matrix links
 - Sample logs and custom-field data
 
-### `backend/scripts/db_setup.sh`
+### `marreq-core/scripts/db_setup.sh`
 Fresh install script that:
 - Starts the Docker `db` service if not running
 - Creates the `marreq` database if absent
@@ -170,20 +170,20 @@ Fresh install script that:
 
 Use `--seed` flag to also load demo data in one step.
 
-### `backend/scripts/db_seed.sh`
+### `marreq-core/scripts/db_seed.sh`
 Loads demo/test data from `init_complete.sql`. **Not for production.**
 
-### `backend/scripts/db_migrate.sh`
+### `marreq-core/scripts/db_migrate.sh`
 Wrapper for `diesel migration run / revert / list`.  Use after pulling updates:
 ```bash
-./backend/scripts/db_migrate.sh up     # apply pending migrations
-./backend/scripts/db_migrate.sh list   # check status
+./marreq-core/scripts/db_migrate.sh up     # apply pending migrations
+./marreq-core/scripts/db_migrate.sh list   # check status
 ```
 
-### `backend/scripts/db_backup.sh`
+### `marreq-core/scripts/db_backup.sh`
 Runs `pg_dump` and saves a compressed archive to `./backups/`.
 
-### `backend/scripts/db_reset.sh`
+### `marreq-core/scripts/db_reset.sh`
 Drops the `marreq` database entirely.  Development use only.
 
 ## Verification
@@ -217,18 +217,18 @@ docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq -c
      cargo install diesel_cli --no-default-features --features postgres
      ```
 4. Seed script fails with `projects table is not empty`:
-   - `backend/scripts/init_complete.sql` is seed-only for fresh DBs.
+   - `marreq-core/scripts/init_complete.sql` is seed-only for fresh DBs.
    - Reset with:
      ```bash
-     ./backend/scripts/db_reset.sh
-     ./backend/scripts/db_setup.sh --seed
+     ./marreq-core/scripts/db_reset.sh
+     ./marreq-core/scripts/db_setup.sh --seed
      ```
 
 ## Reset Database
 
 ```bash
-./backend/scripts/db_reset.sh
-./backend/scripts/db_setup.sh --seed
+./marreq-core/scripts/db_reset.sh
+./marreq-core/scripts/db_setup.sh --seed
 ```
 
 ## Security Notes
@@ -240,7 +240,7 @@ docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq -c
 
 ### Create Backup
 ```bash
-./backend/scripts/db_backup.sh
+./marreq-core/scripts/db_backup.sh
 # Saves to ./backups/marreq_<timestamp>.sql.gz
 ```
 

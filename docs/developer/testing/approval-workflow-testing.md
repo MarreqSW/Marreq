@@ -12,7 +12,7 @@ This guide explains how to test the **approval workflow** for requirement versio
 ## Prerequisites
 
 1. **App and DB running**  
-  - Database set up (e.g. `./backend/scripts/db_setup.sh --seed`)  
+  - Database set up (e.g. `./marreq-core/scripts/db_setup.sh --seed`)
    - App: `cargo run --bin marreq` (or your usual run)
 
 2. **Logged-in session**  

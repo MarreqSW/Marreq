@@ -31,6 +31,8 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      args:
+        MARREQ_BIN: marreq-server
     restart: always
     env_file:
       - ../.env
@@ -82,3 +84,31 @@ services:
 volumes:
   pgdata:
   ollama_data:
+
+# Uncomment to run marreq-cloud instead of (or alongside) marreq-server.
+# Start with: docker compose -f docker/docker-compose.yml --profile cloud up -d
+#
+# backend-cloud:
+#   build:
+#     context: ..
+#     dockerfile: docker/Dockerfile
+#     args:
+#       MARREQ_BIN: marreq-cloud
+#   profiles: [cloud]
+#   restart: always
+#   env_file:
+#     - ../.env
+#   depends_on:
+#     db:
+#       condition: service_healthy
+#     ollama:
+#       condition: service_started
+#   environment:
+#     DATABASE_URL: 'postgres://rust:rust@db:5432/marreq'
+#     ROCKET_DATABASES: '{my_db={url="postgres://rust:rust@db:5432/marreq"}}'
+#     ROCKET_ADDRESS: '0.0.0.0'
+#     ROCKET_PORT: '8001'
+#     ROCKET_SECRET_KEY: ${ROCKET_SECRET_KEY:-UT5jxByH2kV2h9j/620KVP2w5NwZUEGVREFBbIKHVZk=}
+#     OLLAMA_URL: 'http://ollama:11434'
+#   ports:
+#     - '127.0.0.1:8001:8001'

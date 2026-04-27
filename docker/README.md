@@ -13,7 +13,7 @@ cp .env.example .env
 - `docker-compose.yml`: Primary local stack — **`db`**, **`ollama`**, **`backend`** (Rocket API), **`frontend`** (nginx + SPA), **`adminer`**
 - `docker-compose.dev.yml`: Developer override for running Marreq via `cargo run` inside Docker (`marreq-dev` on host port **8000**)
 - `docker-compose.ci.yml`: CI-specific compose overrides
-- `Dockerfile`: **Backend** image (Rust binary; build context: repository root)
+- `Dockerfile`: **Backend** image (Rust binary; build context: repository root). Accepts `MARREQ_BIN` build-arg (`marreq-server` by default; `marreq-cloud` for the cloud variant).
 - `frontend/Dockerfile`: **Frontend** image (multi-stage: `npm run build` + nginx)
 - `frontend/nginx.conf`: SPA on `/` only; `/api/` + legacy SSR paths (`/p/`, `/static/`, `/user/`, `/admin`, …) reverse-proxied to `backend:8000` when using hybrid mode (`MARREQ_DOCKER_SSR_PROXY=1`)
 - `Dockerfile.dockerignore`: Build context exclusions for `Dockerfile`
@@ -61,7 +61,14 @@ docker compose \
   up --build db marreq-dev
 ```
 
-This override adds `marreq-dev` (bind-mounted checkout + Cargo caches). The app is exposed at **http://localhost:8000**. To work on the SPA locally, run `npm run dev` in `frontend/` against a Rocket instance (e.g. `marreq-dev` or `cargo run`) with CORS configured; see [doc/API.md](../doc/API.md).
+This override adds `marreq-dev` (bind-mounted checkout + Cargo caches). The app is exposed at **http://localhost:8000**. To work on the SPA locally, run `npm run dev` in `frontend/` against a Rocket instance (e.g. `marreq-dev` or `cargo run -p marreq-server`) with CORS configured; see [doc/API.md](../doc/API.md).
+
+For local development outside Docker, run either binary directly:
+
+```bash
+cargo run -p marreq-server   # standard server
+cargo run -p marreq-cloud    # cloud variant
+```
 
 View logs:
 
@@ -77,11 +84,26 @@ docker compose -f docker/docker-compose.yml down
 
 ## Build images directly
 
-Backend:
+Backend (`marreq-server`, the default):
 
 ```bash
-docker build -f docker/Dockerfile -t marreq-backend:local ..
+docker build -f docker/Dockerfile -t marreq-backend:local .
 ```
+
+To build the `marreq-cloud` binary instead:
+
+```bash
+docker build -f docker/Dockerfile --build-arg MARREQ_BIN=marreq-cloud -t marreq-cloud:local .
+```
+
+The `MARREQ_BIN` build-arg selects which workspace crate to compile. Valid values:
+
+| `MARREQ_BIN` | Binary compiled | `Rocket.toml` source |
+|---|---|---|
+| `marreq-server` (default) | `target/release/marreq-server` | `marreq-server/Rocket.toml` |
+| `marreq-cloud` | `target/release/marreq-cloud` | `marreq-cloud/Rocket.toml` |
+
+Diesel migrations are always sourced from `marreq-core/migrations/` and placed at `/app/migrations` in the container.
 
 Frontend (from repo root):
 
@@ -102,7 +124,7 @@ docker compose \
 
 ## Script Compatibility
 
-The DB helper scripts in `backend/scripts/` already use `docker/docker-compose.yml` internally, so existing commands like `./backend/scripts/db_setup.sh` keep working.
+The DB helper scripts in `marreq-core/scripts/` already use `docker/docker-compose.yml` internally, so existing commands like `./marreq-core/scripts/db_setup.sh` keep working.
 
 ## Troubleshooting
 
@@ -144,7 +166,7 @@ docker compose -f docker/docker-compose.yml restart db
 ```bash
 # Complete database reset
 docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d postgres -c "DROP DATABASE IF EXISTS marreq;"
-./backend/scripts/db_setup.sh --seed
+./marreq-core/scripts/db_setup.sh --seed
 ```
 
 ### Verification Commands

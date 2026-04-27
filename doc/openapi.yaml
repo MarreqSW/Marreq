@@ -3,7 +3,7 @@ info:
   title: Marreq API (partial contract)
   description: |
     Subset of the Marreq JSON API for interchangeable frontends.
-    All application routes are under `/api`. Many more paths exist; see `backend/src/api/mod.rs` and README.
+    All application routes are under `/api`. Many more paths exist; see `marreq-core/src/api/mod.rs` and README.
   version: 0.1.0
 servers:
   - url: /api

@@ -14,7 +14,7 @@ This repo’s documentation is organized by audience:
 
 ## Developers
 
-- [Backend layout & deployment modes](developer/backend-layout.md)
+- [Workspace layout & deployment modes](developer/workspace-layout.md)
 - [HTTP API contract (SPA / interchangeable clients)](../doc/API.md) — auth, CSRF, cookies; partial [OpenAPI](../doc/openapi.yaml)
 - [Database setup](developer/database-setup.md)
 - [MCP setup](developer/mcp-setup.md)

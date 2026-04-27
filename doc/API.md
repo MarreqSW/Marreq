@@ -12,7 +12,7 @@ Frontend builds can set `VITE_API_BASE` (empty or `/api`) if you centralize the 
 
 ## Cookies and CORS
 
-- Session authentication uses **HTTP-only private cookies** set by the server: typically **`session`** on HTTP (e.g. local dev) or **`__Host-session`** when `MARREQ_SECURE_SESSION_COOKIE=1` over HTTPS (see [`backend/src/auth/session.rs`](../backend/src/auth/session.rs)). Use `fetch(..., { credentials: 'include' })` for all API calls that need a session.
+- Session authentication uses **HTTP-only private cookies** set by the server: typically **`session`** on HTTP (e.g. local dev) or **`__Host-session`** when `MARREQ_SECURE_SESSION_COOKIE=1` over HTTPS (see `marreq-core/src/auth/session.rs`). Use `fetch(..., { credentials: 'include' })` for all API calls that need a session.
 - **Production:** Prefer a **single origin** (nginx serves SPA + proxies `/api`) so cookies are first-party and CORS is unnecessary.
 - **Development (split origins, e.g. Vite `5173` + Rocket `8000`):**
   - Add the dev UI origin to `CORS_ALLOWED_ORIGINS` (defaults include `http://localhost:5173`).
@@ -77,7 +77,7 @@ HTTP status matches the error class (400, 401, 403, 404, 409, 422, 500).
 
 ## Full route list
 
-Rocket mounts all JSON routes under `/api` in [`backend/src/api/mod.rs`](../backend/src/api/mod.rs). The project [README](../README.md) includes a human-maintained endpoint summary (requirements, tests, matrix, baselines, MCP audit, etc.).
+Rocket mounts all JSON routes under `/api` in `marreq-core/src/api/mod.rs` (shared routes) and the deployment crate's `src/routes.rs` (deployment-specific routes). The project [README](../README.md) includes a human-maintained endpoint summary (requirements, tests, matrix, baselines, MCP audit, etc.).
 
 A minimal **OpenAPI 3** sketch for auth and session project listing lives in [`openapi.yaml`](openapi.yaml) (extend or replace with generated spec later).
 

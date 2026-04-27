@@ -3,26 +3,16 @@
 
 //! Deployment-mode abstraction.
 //!
-//! Marreq is built as one of two mutually exclusive deployment modes:
+//! Behavioral differences between deployment variants (self-hosted server vs.
+//! hosted cloud) are expressed through the [`DeploymentMode`] trait so that
+//! services and routes can ask declarative questions (`allows_self_registration()`
+//! etc.) instead of scattering `cfg!` checks.
 //!
-//! - **Server** (default, `--features server`): self-hosted, admin-managed.
-//!   Public registration is disabled; an administrator creates accounts.
-//! - **Cloud** (`--no-default-features --features cloud`): hosted SaaS.
-//!   Anyone may self-register (with email verification); the single site
-//!   administrator is bootstrapped from environment variables and cannot be
-//!   granted via the API or UI.
-//!
-//! Behavioral differences are expressed through the [`DeploymentMode`] trait
-//! so that services and routes can ask declarative questions
-//! (`allows_self_registration()` etc.) instead of scattering `cfg!` checks.
+//! The concrete implementations live in the deployment-specific binary crates
+//! (`marreq-server`, `marreq-cloud`). At startup each binary calls
+//! [`app::build_with`] which registers the chosen impl via [`set_current`].
 
-#[cfg(all(feature = "server", feature = "cloud"))]
-compile_error!(
-    "features `server` and `cloud` are mutually exclusive; enable exactly one (default is `server`)"
-);
-
-#[cfg(not(any(feature = "server", feature = "cloud")))]
-compile_error!("no deployment mode selected; enable exactly one of `server` (default) or `cloud`");
+use std::sync::OnceLock;
 
 /// Behavioral toggles that differ between deployment modes.
 ///
@@ -59,75 +49,55 @@ pub trait DeploymentMode: Send + Sync {
     }
 }
 
-#[cfg(feature = "server")]
-mod server_mode {
-    use super::DeploymentMode;
+static CURRENT: OnceLock<&'static dyn DeploymentMode> = OnceLock::new();
 
-    /// Self-hosted Marreq Server: admin-managed, no public registration.
-    pub struct Server;
-
-    impl DeploymentMode for Server {
-        fn name(&self) -> &'static str {
-            "server"
-        }
-        fn allows_self_registration(&self) -> bool {
-            false
-        }
-        fn requires_email_verification(&self) -> bool {
-            false
-        }
-        fn allows_admin_promotion(&self) -> bool {
-            true
-        }
-        fn assigns_personal_workspace(&self) -> bool {
-            false
-        }
-    }
-
-    pub static INSTANCE: Server = Server;
+/// Register the active deployment mode.  Called exactly once by [`crate::app::build_with`].
+/// Subsequent calls (e.g. from parallel tests setting the same mode) are silently ignored.
+pub fn set_current(mode: &'static dyn DeploymentMode) {
+    let _ = CURRENT.set(mode);
 }
 
-#[cfg(feature = "cloud")]
-mod cloud_mode {
-    use super::DeploymentMode;
-
-    /// Hosted Marreq Cloud: public registration with email verification, single
-    /// env-bootstrapped site admin, personal workspace per user.
-    pub struct Cloud;
-
-    impl DeploymentMode for Cloud {
-        fn name(&self) -> &'static str {
-            "cloud"
-        }
-        fn allows_self_registration(&self) -> bool {
-            true
-        }
-        fn requires_email_verification(&self) -> bool {
-            true
-        }
-        fn allows_admin_promotion(&self) -> bool {
-            false
-        }
-        fn assigns_personal_workspace(&self) -> bool {
-            true
-        }
-    }
-
-    pub static INSTANCE: Cloud = Cloud;
-}
-
-/// Returns the deployment mode chosen at compile time.
+/// Returns the active deployment mode.
 ///
-/// This is a zero-cost reference into a `static` impl; callers can hold it for
-/// as long as they need.
+/// # Panics
+/// Panics if called before [`crate::app::build_with`] (or a test's explicit [`set_current`] call)
+/// has registered a mode.
 pub fn current() -> &'static dyn DeploymentMode {
-    #[cfg(feature = "server")]
-    {
-        &server_mode::INSTANCE
+    *CURRENT
+        .get()
+        .expect("deployment::current() called before app::build_with set the mode")
+}
+
+/// Fallback mode used by the legacy `backend/` binary and in-tree unit tests
+/// until the binary crates take over startup.  Mirrors the self-hosted Server
+/// defaults.
+///
+/// # Note
+/// This function will be deleted along with the `backend/` crate once the
+/// `marreq-server` / `marreq-cloud` split is complete.
+#[doc(hidden)]
+pub fn default_mode() -> &'static dyn DeploymentMode {
+    static DEFAULT: DefaultMode = DefaultMode;
+    &DEFAULT
+}
+
+struct DefaultMode;
+
+impl DeploymentMode for DefaultMode {
+    fn name(&self) -> &'static str {
+        "server"
     }
-    #[cfg(feature = "cloud")]
-    {
-        &cloud_mode::INSTANCE
+    fn allows_self_registration(&self) -> bool {
+        false
+    }
+    fn requires_email_verification(&self) -> bool {
+        false
+    }
+    fn allows_admin_promotion(&self) -> bool {
+        true
+    }
+    fn assigns_personal_workspace(&self) -> bool {
+        false
     }
 }
 
@@ -137,29 +107,7 @@ mod tests {
 
     #[test]
     fn current_returns_a_known_mode() {
-        let mode = current();
+        let mode = default_mode();
         assert!(matches!(mode.name(), "server" | "cloud"));
-    }
-
-    #[cfg(feature = "server")]
-    #[test]
-    fn server_mode_is_admin_managed() {
-        let mode = current();
-        assert_eq!(mode.name(), "server");
-        assert!(!mode.allows_self_registration());
-        assert!(!mode.requires_email_verification());
-        assert!(mode.allows_admin_promotion());
-        assert!(!mode.assigns_personal_workspace());
-    }
-
-    #[cfg(feature = "cloud")]
-    #[test]
-    fn cloud_mode_is_self_service() {
-        let mode = current();
-        assert_eq!(mode.name(), "cloud");
-        assert!(mode.allows_self_registration());
-        assert!(mode.requires_email_verification());
-        assert!(!mode.allows_admin_promotion());
-        assert!(mode.assigns_personal_workspace());
     }
 }

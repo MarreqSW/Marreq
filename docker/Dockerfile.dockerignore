@@ -7,6 +7,8 @@ node_modules/
 .env.*
 *.md
 doc/
-backend/tests/
+marreq-core/tests/
+marreq-server/tests/
+marreq-cloud/tests/
 coverage.xml
 .gitignore

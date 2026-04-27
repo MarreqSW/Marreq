@@ -4,6 +4,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       target: builder
+      args:
+        MARREQ_BIN: marreq-server
     env_file:
       - ../.env
     depends_on:
@@ -13,8 +15,8 @@ services:
     working_dir: /workspace
     command: >
       bash -c
-      "cd /workspace/backend && diesel migration run &&
-      cd /workspace && cargo run -p marreq"
+      "diesel migration run --migration-dir /workspace/marreq-core/migrations &&
+      cd /workspace && cargo run -p marreq-server"
     environment:
       DATABASE_URL: 'postgres://rust:rust@db:5432/marreq'
       PATH: "/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"

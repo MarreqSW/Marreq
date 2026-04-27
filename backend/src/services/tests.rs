@@ -70,6 +70,7 @@ fn sample_user() -> User {
         last_login: timestamp(),
         password_hash: "secret".into(),
         is_admin: false,
+        email_verified: true,
     }
 }
 

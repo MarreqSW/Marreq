@@ -1,15 +1,30 @@
-import { FormEvent, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { getCsrfToken, loginJson } from '@/api/client';
-import { useTheme, type ThemePreference } from '@/context/ThemeContext';
+import { FormEvent, useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { getCsrfToken, getDeploymentInfo, loginJson } from '@/api/client';
+import type { DeploymentInfo } from '@/api/types';
+import AuthLayout from '@/components/AuthLayout';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { preference, setPreference } = useTheme();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deployment, setDeployment] = useState<DeploymentInfo | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    getDeploymentInfo()
+      .then((info) => {
+        if (alive) setDeployment(info);
+      })
+      .catch(() => {
+        if (alive) setDeployment(null);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -26,40 +41,34 @@ export default function LoginPage() {
     }
   }
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-stitch-canvas relative">
-      <div
-        className="absolute top-4 right-4 flex items-center rounded-lg border border-stitch-border p-0.5 gap-0.5"
-        role="group"
-        aria-label="Color scheme"
-      >
-        {(
-          [
-            ['light', 'light_mode', 'Light'] as const,
-            ['dark', 'dark_mode', 'Dark'] as const,
-            ['system', 'routine', 'Auto'] as const,
-          ] as const
-        ).map(([pref, icon, title]) => (
-          <button
-            key={pref}
-            type="button"
-            title={title}
-            aria-pressed={preference === pref}
-            onClick={() => setPreference(pref as ThemePreference)}
-            className={`p-1.5 rounded-md transition-colors ${
-              preference === pref
-                ? 'bg-stitch-elevated text-stitch-accent'
-                : 'text-stitch-muted hover:bg-stitch-elevated hover:text-stitch-fg'
-            }`}
-          >
-            <span className="material-symbols-outlined text-lg">{icon}</span>
-          </button>
-        ))}
-      </div>
-      <div className="w-full max-w-md rounded-xl border border-stitch-border bg-stitch-surface p-8 shadow-stitch">
-        <h1 className="text-2xl font-bold text-stitch-fg mb-1">Welcome to Marreq</h1>
-        <p className="text-stitch-muted text-sm mb-6">Sign in to continue</p>
+  const showSelfService = deployment?.allows_self_registration === true;
 
+  return (
+    <AuthLayout
+      title="Welcome to Marreq"
+      subtitle="Sign in to continue"
+      footer={
+        <>
+          {showSelfService ? (
+            <div className="space-y-3 text-center text-sm">
+              <Link to="/forgot-password" className="text-stitch-accent hover:underline">
+                Forgot your password?
+              </Link>
+              <p className="text-stitch-muted">
+                New to Marreq?{' '}
+                <Link to="/register" className="text-stitch-accent hover:underline">
+                  Create an account
+                </Link>
+              </p>
+            </div>
+          ) : (
+            <p className="text-center text-xs text-stitch-muted">
+              Default: alice / ChangeMe123!
+            </p>
+          )}
+        </>
+      }
+    >
         <form onSubmit={onSubmit} className="space-y-4">
           {error && (
             <div className="rounded-lg bg-red-500/10 border border-red-500/25 px-3 py-2 text-sm text-red-800 dark:text-red-200">
@@ -107,12 +116,6 @@ export default function LoginPage() {
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
-
-        <p className="mt-6 text-center text-xs text-stitch-muted">
-          Default: alice / ChangeMe123!
-        </p>
-      </div>
-      <p className="mt-8 text-xs text-stitch-muted">© Marreq</p>
-    </div>
+    </AuthLayout>
   );
 }

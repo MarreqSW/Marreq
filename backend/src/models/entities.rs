@@ -249,6 +249,14 @@ pub struct User {
     #[serde(skip_serializing, default)]
     pub password_hash: String,
     pub is_admin: bool,
+    /// Cloud-mode email-verification flag. Defaults to TRUE in the database so
+    /// existing rows and Server-mode deployments behave as before.
+    #[serde(default = "default_email_verified")]
+    pub email_verified: bool,
+}
+
+fn default_email_verified() -> bool {
+    true
 }
 
 /// A verification (formerly test case) that can verify one or more requirements.
@@ -665,4 +673,44 @@ pub struct NotificationPreference {
     pub project_id: i32,
     pub notify_in_app: bool,
     pub notify_email: bool,
+}
+
+/// A workspace (a.k.a. namespace) owned by a single user.
+///
+/// Cloud-mode deployments create one `personal` workspace per registered user
+/// to provide GitLab-style isolation; in Server-mode this table is unused.
+/// Future iterations may attach groups/projects to a `workspace_id` for
+/// per-workspace query isolation; for now the workspace exists as a logical
+/// container and is exposed via the registration response.
+#[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::workspaces)]
+pub struct Workspace {
+    pub id: i32,
+    pub slug: String,
+    pub name: String,
+    pub owner_user_id: i32,
+    pub kind: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+/// Single-use token sent by email for verification or password reset (Cloud-only).
+///
+/// `token_hash` stores a SHA-256 hex digest of the secret; the plain token is
+/// only present in the verification URL emailed to the user.
+#[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::email_tokens)]
+pub struct EmailToken {
+    pub id: i32,
+    pub user_id: i32,
+    pub token_hash: String,
+    pub purpose: String,
+    pub expires_at: chrono::NaiveDateTime,
+    pub used_at: Option<chrono::NaiveDateTime>,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+impl EmailToken {
+    pub const PURPOSE_VERIFY_EMAIL: &'static str = "verify_email";
+    pub const PURPOSE_RESET_PASSWORD: &'static str = "reset_password";
 }

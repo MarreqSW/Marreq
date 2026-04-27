@@ -432,6 +432,42 @@ diesel::table! {
         #[max_length = 255]
         password_hash -> Varchar,
         is_admin -> Bool,
+        email_verified -> Bool,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
+    workspaces (id) {
+        id -> Int4,
+        #[max_length = 255]
+        slug -> Varchar,
+        #[max_length = 255]
+        name -> Varchar,
+        owner_user_id -> Int4,
+        #[max_length = 32]
+        kind -> Varchar,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
+    email_tokens (id) {
+        id -> Int4,
+        user_id -> Int4,
+        #[max_length = 128]
+        token_hash -> Varchar,
+        #[max_length = 32]
+        purpose -> Varchar,
+        expires_at -> Timestamp,
+        used_at -> Nullable<Timestamp>,
+        created_at -> Timestamp,
     }
 }
 
@@ -540,6 +576,8 @@ diesel::joinable!(verification_status -> projects (project_id));
 diesel::joinable!(verifications -> projects (project_id));
 diesel::joinable!(verifications -> verification_methods (verification_method_id));
 diesel::joinable!(verifications -> verification_status (status_id));
+diesel::joinable!(workspaces -> users (owner_user_id));
+diesel::joinable!(email_tokens -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     applicability,
@@ -572,4 +610,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     verification_methods,
     verification_status,
     verifications,
+    workspaces,
+    email_tokens,
 );

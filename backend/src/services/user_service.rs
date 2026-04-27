@@ -50,6 +50,14 @@ impl<'a> UserService<'a> {
     /// This method validates input, hashes the password, and creates the user.
     /// Always provide plain text passwords - they will be hashed server-side.
     pub fn create(&self, actor: &User, request: UserCreateRequest) -> Result<i32, RepoError> {
+        // Cloud mode: API-driven user creation that grants admin is forbidden.
+        // The site admin is bootstrapped from environment variables instead.
+        if request.is_admin && !crate::deployment::current().allows_admin_promotion() {
+            return Err(RepoError::BadInput(
+                "admin promotion is disabled in this deployment mode".into(),
+            ));
+        }
+
         validate_password(
             &request.password,
             PasswordContext {
@@ -70,6 +78,7 @@ impl<'a> UserService<'a> {
             email: request.email,
             password_hash,
             is_admin: request.is_admin,
+            email_verified: None,
         };
 
         sanitize_string(&mut payload.username);
@@ -132,6 +141,7 @@ impl<'a> UserService<'a> {
             email: normalized.email.clone(),
             password_hash: old.password_hash.clone(),
             is_admin: normalized.is_admin,
+            email_verified: None,
         };
         validate_user(&validation_payload).map_err(|e| RepoError::BadInput(e.to_string()))?;
         self.ensure_username_namespace_available(&normalized.username, Some(id))?;

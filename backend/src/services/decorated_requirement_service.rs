@@ -399,6 +399,7 @@ mod tests {
                 last_login: timestamp(),
                 password_hash: "hash".into(),
                 is_admin: false,
+                email_verified: true,
             },
         );
         repo.users.insert(
@@ -412,6 +413,7 @@ mod tests {
                 last_login: timestamp(),
                 password_hash: "hash".into(),
                 is_admin: false,
+                email_verified: true,
             },
         );
 

@@ -12,6 +12,9 @@ SPA built with **React 19**, **TypeScript**, **Tailwind CSS**, and **React Flow*
 ## Routes (MVP)
 
 - `/login` — JSON login (`POST /api/auth/login` with CSRF)
+- `/register` — Cloud-mode self-service registration (`POST /api/auth/register`)
+- `/verify-email` — consumes Cloud-mode email verification links
+- `/forgot-password` and `/reset-password` — Cloud-mode password reset
 - `/` — redirects to `/p/{selectedOrFirstProjectId}/requirements`
 - `/p/:projectId/requirements` — requirements table (row opens editor)
 - `/p/:projectId/requirements/:requirementId/edit` — edit requirement (Stitch / Axiom-style layout)
@@ -28,6 +31,8 @@ SPA built with **React 19**, **TypeScript**, **Tailwind CSS**, and **React Flow*
 | Requirement status labels | `GET /api/status` (join `status_id` on each requirement) |
 | Verifications (for coverage denominator) | `GET /api/verifications` (filter by `project_id` client-side) |
 | Session + CSRF | `GET /api/dashboard`, `GET /api/auth/csrf`; mutating calls need `X-CSRF-Token` |
+| Deployment capabilities | `GET /api/meta/deployment` |
+| Cloud auth | `POST /api/auth/register`, `GET /api/auth/verify-email`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` |
 
 See [doc/API.md](../doc/API.md) for the full HTTP contract.
 

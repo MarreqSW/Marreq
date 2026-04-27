@@ -186,7 +186,7 @@ mod test_support {
 
     pub fn sample_requirement(id: i32, project_id: i32, title: &str) -> Requirement {
         Requirement {
-            id: id,
+            id,
             current_version_id: None,
             same_as_current: None,
             title: title.to_string(),

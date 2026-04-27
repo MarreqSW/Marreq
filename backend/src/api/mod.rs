@@ -4,6 +4,8 @@
 pub mod activity;
 pub mod applicability;
 pub mod auth;
+#[cfg(feature = "cloud")]
+pub mod auth_public;
 pub mod baselines;
 pub mod cache;
 pub mod categories;
@@ -35,8 +37,10 @@ pub mod verifications;
 use rocket::Route;
 
 pub fn routes() -> Vec<Route> {
-    routes![
+    #[cfg_attr(not(feature = "cloud"), allow(unused_mut))]
+    let mut r = routes![
         meta::api_root,
+        meta::deployment_info,
         auth::auth_csrf,
         auth::auth_login,
         auth::auth_logout,
@@ -166,5 +170,27 @@ pub fn routes() -> Vec<Route> {
         groups::list_members,
         groups::set_member_role,
         groups::remove_member,
-    ]
+    ];
+    #[cfg(feature = "cloud")]
+    {
+        r.extend(routes![
+            auth_public::auth_register,
+            auth_public::auth_verify_email,
+            auth_public::auth_forgot_password,
+            auth_public::auth_reset_password,
+        ]);
+    }
+    r
+}
+
+#[cfg(all(test, feature = "server"))]
+mod tests {
+    #[test]
+    #[cfg(feature = "server")]
+    fn server_mode_does_not_mount_public_registration() {
+        let has_registration_route = crate::api::routes()
+            .iter()
+            .any(|route| route.uri.path() == "/auth/register");
+        assert!(!has_registration_route);
+    }
 }

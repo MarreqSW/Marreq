@@ -98,7 +98,7 @@ mod test_support {
 
     pub fn sample_applicability(id: i32, project_id: i32, title: &str, tag: &str) -> Applicability {
         Applicability {
-            id: id,
+            id,
             title: title.to_string(),
             description: format!("{} description", title),
             tag: tag.to_string(),

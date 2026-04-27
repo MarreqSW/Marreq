@@ -98,7 +98,7 @@ mod test_support {
 
     pub fn sample_category(id: i32, project_id: i32, title: &str, tag: &str) -> Category {
         Category {
-            id: id,
+            id,
             title: title.to_string(),
             description: format!("{} description", title),
             tag: tag.to_string(),

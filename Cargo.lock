@@ -2002,6 +2002,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "argon2",
+ "base64",
  "calamine",
  "chrono",
  "csv",
@@ -2012,6 +2013,7 @@ dependencies = [
  "pgvector",
  "printpdf",
  "quick-xml 0.39.2",
+ "rand 0.8.5",
  "regex",
  "reqwest",
  "rocket",

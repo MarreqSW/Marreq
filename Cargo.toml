@@ -1,4 +1,14 @@
-# Virtual workspace: Rust crate lives in `backend/` (see backend/Cargo.toml).
+# Virtual workspace: three-crate split — marreq-core (lib), marreq-server (bin), marreq-cloud (bin).
 [workspace]
-members = ["backend"]
 resolver = "2"
+members = ["marreq-core", "marreq-server", "marreq-cloud"]
+
+# Centralised dependency versions; member crates reference these via { workspace = true }
+# in a follow-up; for now, members keep their inline versions.
+[workspace.package]
+edition = "2021"
+license = "AGPL-3.0-or-later"
+authors = [
+    "Màrius Montón <marius.monton@gmail.com>",
+    "Ramon Vallés <vallespuigramon@gmail.com>",
+]

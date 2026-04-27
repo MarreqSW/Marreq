@@ -25,7 +25,7 @@ export default defineConfig({
   test: {
     environment: 'happy-dom',
     globals: true,
-    setupFiles: ['./backend/tests/js/setup.js'],
+    setupFiles: ['./marreq-core/tests/js/setup.js'],
     exclude: ['**/node_modules/**', '**/dist/**'],
     coverage: {
       provider: 'v8',

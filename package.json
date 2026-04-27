@@ -6,7 +6,7 @@
   "main": "index.js",
   "directories": {
     "doc": "docs",
-    "test": "backend/tests"
+    "test": "marreq-core/tests"
   },
   "scripts": {
     "commit": "cz",
@@ -15,7 +15,10 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "check:unused-css": "node .github/workflows/purgecss-ci.mjs",
-    "screenshots:manual": "node docs/user-manual/capture_screenshots.mjs"
+    "screenshots:manual": "node docs/user-manual/capture_screenshots.mjs",
+    "backend:server": "cargo run -p marreq-server",
+    "backend:cloud": "cargo run -p marreq-cloud",
+    "backend:test": "cargo test --workspace"
   },
   "repository": {
     "type": "git",

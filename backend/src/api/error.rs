@@ -21,6 +21,9 @@ pub enum ApiError {
     Conflict(String),
     /// Returned when a row would cross a project boundary (HTTP 422).
     UnprocessableEntity(String),
+    /// Returned when a route is intentionally unavailable in the current
+    /// deployment mode (e.g. admin user creation in Cloud mode).
+    Gone(String),
     Internal(String),
 }
 
@@ -33,6 +36,7 @@ impl ApiError {
             | ApiError::Forbidden(msg)
             | ApiError::Conflict(msg)
             | ApiError::UnprocessableEntity(msg)
+            | ApiError::Gone(msg)
             | ApiError::Internal(msg) => msg,
         }
     }
@@ -45,6 +49,7 @@ impl ApiError {
             ApiError::Forbidden(_) => Status::Forbidden,
             ApiError::Conflict(_) => Status::Conflict,
             ApiError::UnprocessableEntity(_) => Status::UnprocessableEntity,
+            ApiError::Gone(_) => Status::Gone,
             ApiError::Internal(_) => Status::InternalServerError,
         }
     }

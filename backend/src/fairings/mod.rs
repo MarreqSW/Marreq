@@ -7,11 +7,15 @@
 //! of the Rocket lifecycle.
 
 pub mod cache_control;
+#[cfg(feature = "cloud")]
+pub mod cloud_admin_bootstrap;
 pub mod csrf;
 pub mod security_headers;
 pub mod semantic_index;
 
 pub use cache_control::AntiCacheFairing;
+#[cfg(feature = "cloud")]
+pub use cloud_admin_bootstrap::CloudAdminBootstrapFairing;
 pub use csrf::{csrf_denied, CsrfFairing};
 pub use security_headers::SecurityHeadersFairing;
 pub use semantic_index::SemanticIndexFairing;

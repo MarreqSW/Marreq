@@ -408,6 +408,7 @@ mod tests {
                 last_login: now,
                 password_hash: String::new(),
                 is_admin: false,
+                email_verified: true,
             },
         );
         repo.users.insert(
@@ -421,6 +422,7 @@ mod tests {
                 last_login: now,
                 password_hash: String::new(),
                 is_admin: false,
+                email_verified: true,
             },
         );
 

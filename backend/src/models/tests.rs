@@ -360,6 +360,7 @@ mod tests {
                 last_login: test_timestamp(),
                 password_hash: "hash".to_string(),
                 is_admin: false,
+                email_verified: true,
             };
 
             assert_eq!(User::entity_type(), EntityType::User);
@@ -433,6 +434,7 @@ mod tests {
                 last_login: test_timestamp(),
                 password_hash: "hash123".to_string(),
                 is_admin: true,
+                email_verified: true,
             };
 
             assert_eq!(user.id, 1);
@@ -564,6 +566,7 @@ mod tests {
                 last_login: test_timestamp(),
                 password_hash: "secret_hash".to_string(),
                 is_admin: false,
+                email_verified: true,
             };
 
             let json = serde_json::to_string(&user).unwrap();
@@ -727,6 +730,7 @@ mod tests {
                 email: "test@example.com".to_string(),
                 password_hash: "hash".to_string(),
                 is_admin: false,
+                email_verified: None,
             };
 
             assert_eq!(NewUser::entity_type(), EntityType::User);
@@ -1008,6 +1012,7 @@ mod tests {
                 email: "email@test.com".to_string(),
                 password_hash: "secret_hash".to_string(),
                 is_admin: false,
+                email_verified: None,
             };
 
             let json = serde_json::to_string(&new_user).unwrap();
@@ -1337,6 +1342,7 @@ mod tests {
                 last_login: test_timestamp(),
                 password_hash: "hash".to_string(),
                 is_admin: true,
+                email_verified: true,
             };
 
             let cloned = user.clone();

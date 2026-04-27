@@ -21,6 +21,11 @@ pub fn login_user<R: Repository>(
 ) -> Result<User, AuthError> {
     let user = authenticate_user(&*repo, &login_form.username, login_form.password.trim())?;
 
+    // Cloud mode: refuse login until the user has confirmed their email.
+    if crate::deployment::current().requires_email_verification() && !user.email_verified {
+        return Err(AuthError::EmailNotVerified);
+    }
+
     // Store session information.
     set_session_cookie(cookies, user.id);
 

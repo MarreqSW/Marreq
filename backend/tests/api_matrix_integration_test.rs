@@ -142,7 +142,7 @@ mod test_support {
 
     pub fn sample_requirement(id: i32, project_id: i32, title: &str) -> Requirement {
         Requirement {
-            id: id,
+            id,
             current_version_id: None,
             same_as_current: None,
             title: title.to_string(),
@@ -168,7 +168,7 @@ mod test_support {
 
     pub fn sample_test(id: i32, project_id: i32, name: &str) -> Verification {
         Verification {
-            id: id,
+            id,
             name: name.to_string(),
             reference_code: format!("TST-{:03}", id),
             description: format!("{} description", name),
@@ -498,8 +498,10 @@ fn matrix_view_filters_by_requirement_status() {
     let state = managed_state(repo);
     let service = MatrixService::new(&state);
 
-    let mut filters = MatrixFilters::default();
-    filters.req_status = Some(2); // Filter for Accepted
+    let filters = MatrixFilters {
+        req_status: Some(2), // Filter for Accepted
+        ..Default::default()
+    };
     let pagination = MatrixPagination::default();
 
     let view = service.get_matrix_view(1, filters, pagination).unwrap();
@@ -526,8 +528,10 @@ fn matrix_view_filters_by_verification_status() {
     let state = managed_state(repo);
     let service = MatrixService::new(&state);
 
-    let mut filters = MatrixFilters::default();
-    filters.status_id = Some(2); // Filter for Passed
+    let filters = MatrixFilters {
+        status_id: Some(2), // Filter for Passed
+        ..Default::default()
+    };
     let pagination = MatrixPagination::default();
 
     let view = service.get_matrix_view(1, filters, pagination).unwrap();
@@ -550,8 +554,10 @@ fn matrix_view_searches_requirements() {
     let state = managed_state(repo);
     let service = MatrixService::new(&state);
 
-    let mut filters = MatrixFilters::default();
-    filters.search = Some("auth".to_string());
+    let filters = MatrixFilters {
+        search: Some("auth".to_string()),
+        ..Default::default()
+    };
     let pagination = MatrixPagination::default();
 
     let view = service.get_matrix_view(1, filters, pagination).unwrap();
@@ -575,9 +581,11 @@ fn matrix_view_paginates_results() {
     let service = MatrixService::new(&state);
 
     let filters = MatrixFilters::default();
-    let mut pagination = MatrixPagination::default();
-    pagination.per_page = 10;
-    pagination.page = 2; // Get second page
+    let pagination = MatrixPagination {
+        per_page: 10,
+        page: 2, // Get second page
+        ..Default::default()
+    };
 
     let view = service.get_matrix_view(1, filters, pagination).unwrap();
 
@@ -601,9 +609,11 @@ fn matrix_view_sorts_by_title() {
     let service = MatrixService::new(&state);
 
     let filters = MatrixFilters::default();
-    let mut pagination = MatrixPagination::default();
-    pagination.sort_by = "title".to_string();
-    pagination.sort_order = SortOrder::Asc;
+    let pagination = MatrixPagination {
+        sort_by: "title".to_string(),
+        sort_order: SortOrder::Asc,
+        ..Default::default()
+    };
 
     let view = service.get_matrix_view(1, filters, pagination).unwrap();
 
@@ -625,9 +635,11 @@ fn matrix_view_sorts_descending() {
     let service = MatrixService::new(&state);
 
     let filters = MatrixFilters::default();
-    let mut pagination = MatrixPagination::default();
-    pagination.sort_by = "req_id".to_string();
-    pagination.sort_order = SortOrder::Desc;
+    let pagination = MatrixPagination {
+        sort_by: "req_id".to_string(),
+        sort_order: SortOrder::Desc,
+        ..Default::default()
+    };
 
     let view = service.get_matrix_view(1, filters, pagination).unwrap();
 

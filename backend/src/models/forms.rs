@@ -271,6 +271,11 @@ pub struct NewUser {
     #[serde(skip_serializing, default)]
     pub password_hash: String,
     pub is_admin: bool,
+    /// Optional override for `email_verified`. Omit (`None`) to fall back to
+    /// the database default (`TRUE`); set to `Some(false)` for Cloud-mode
+    /// self-registration where the user must verify their email first.
+    #[serde(default)]
+    pub email_verified: Option<bool>,
 }
 
 /// Partial user information used when editing an existing user.
@@ -636,6 +641,7 @@ mod forms_tests {
             email: "a@b.com".into(),
             password_hash: "hash".into(),
             is_admin: false,
+            email_verified: None,
         };
         assert_eq!(NewUser::entity_type(), EntityType::User);
         assert_eq!(u.id(), 2);
@@ -904,4 +910,52 @@ mod forms_tests {
         assert_eq!(log.entity_id, Some(5));
         assert_eq!(log.new_values.as_deref(), Some("{}"));
     }
+}
+
+/// Insertable row for the `workspaces` table.
+#[derive(Insertable, Clone, Debug)]
+#[diesel(table_name = workspaces)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewWorkspace {
+    pub slug: String,
+    pub name: String,
+    pub owner_user_id: i32,
+    /// `personal` or `shared`.
+    pub kind: String,
+}
+
+/// Insertable row for the `email_tokens` table.
+#[derive(Insertable, Clone, Debug)]
+#[diesel(table_name = email_tokens)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewEmailToken {
+    pub user_id: i32,
+    pub token_hash: String,
+    pub purpose: String,
+    pub expires_at: chrono::NaiveDateTime,
+}
+
+/// Public registration payload (Cloud-only).
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "rocket::serde")]
+pub struct RegistrationRequest {
+    pub username: String,
+    pub name: String,
+    pub email: String,
+    pub password: String,
+}
+
+/// Body for `POST /api/auth/forgot-password` (Cloud-only).
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "rocket::serde")]
+pub struct ForgotPasswordRequest {
+    pub email: String,
+}
+
+/// Body for `POST /api/auth/reset-password` (Cloud-only).
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "rocket::serde")]
+pub struct ResetPasswordRequest {
+    pub token: String,
+    pub new_password: String,
 }

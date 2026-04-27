@@ -384,6 +384,58 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
         }
         Ok(user)
     }
+
+    fn get_user_by_email(&self, email: &str) -> Result<Option<User>, RepoError> {
+        // Bypass cache: used during login/registration where freshness matters.
+        self.inner.get_user_by_email(email)
+    }
+
+    fn set_user_email_verified(&mut self, user_id: i32, verified: bool) -> Result<(), RepoError> {
+        self.inner.set_user_email_verified(user_id, verified)?;
+        self.cache.invalidate_user(user_id);
+        Ok(())
+    }
+}
+
+impl<R: Repository> super::WorkspacesRepository for CacheRepository<R> {
+    fn insert_workspace(&mut self, new: &crate::models::NewWorkspace) -> Result<i32, RepoError> {
+        self.inner.insert_workspace(new)
+    }
+
+    fn get_workspace_by_id(&self, id: i32) -> Result<crate::models::Workspace, RepoError> {
+        self.inner.get_workspace_by_id(id)
+    }
+
+    fn get_workspace_by_slug(
+        &self,
+        slug: &str,
+    ) -> Result<Option<crate::models::Workspace>, RepoError> {
+        self.inner.get_workspace_by_slug(slug)
+    }
+
+    fn get_personal_workspace_for_user(
+        &self,
+        user_id: i32,
+    ) -> Result<Option<crate::models::Workspace>, RepoError> {
+        self.inner.get_personal_workspace_for_user(user_id)
+    }
+}
+
+impl<R: Repository> super::EmailTokensRepository for CacheRepository<R> {
+    fn insert_email_token(&mut self, new: &crate::models::NewEmailToken) -> Result<i32, RepoError> {
+        self.inner.insert_email_token(new)
+    }
+
+    fn find_email_token_by_hash(
+        &self,
+        token_hash: &str,
+    ) -> Result<Option<crate::models::EmailToken>, RepoError> {
+        self.inner.find_email_token_by_hash(token_hash)
+    }
+
+    fn mark_email_token_used(&mut self, id: i32) -> Result<(), RepoError> {
+        self.inner.mark_email_token_used(id)
+    }
 }
 
 impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
@@ -1466,6 +1518,10 @@ mod tests {
             next_notification_id: 1,
             notification_preferences: Vec::new(),
             next_notification_pref_id: 1,
+            workspaces: Vec::new(),
+            next_workspace_id: 1,
+            email_tokens: Vec::new(),
+            next_email_token_id: 1,
         }
     }
 
@@ -1487,6 +1543,7 @@ mod tests {
             email: "eve@example.com".into(),
             password_hash: "pw".into(),
             is_admin: false,
+            email_verified: None,
         };
         let _new_id = repo.insert_user(&new_user).unwrap();
 
@@ -1580,6 +1637,7 @@ mod tests {
             email: "charlie@example.com".into(),
             password_hash: "pw".into(),
             is_admin: false,
+            email_verified: None,
         };
         repo.insert_user(&new_user).unwrap();
 
@@ -1634,6 +1692,7 @@ mod tests {
             email: "b@example.com".into(),
             password_hash: "pw".into(),
             is_admin: false,
+            email_verified: None,
         };
         let new_id = repo.insert_user(&new_user).unwrap();
         assert!(cache.get(keys::USERS_ALL).is_none());
@@ -1649,6 +1708,7 @@ mod tests {
             email: "b@example.com".into(),
             password_hash: "pw".into(),
             is_admin: false,
+            email_verified: None,
         };
         repo.update_user(&upd).unwrap();
         assert!(cache.get(&keys::Users::by_id(new_id)).is_none());
@@ -1942,6 +2002,7 @@ mod tests {
             email: "test@example.com".into(),
             password_hash: "hash".into(),
             is_admin: false,
+            email_verified: None,
         };
 
         let result = repo.insert_user(&new_user);

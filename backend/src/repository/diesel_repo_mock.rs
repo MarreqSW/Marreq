@@ -5,10 +5,10 @@
 
 use super::*;
 use crate::models::{
-    CustomFieldDefinition, CustomFieldDefinitionPayload, Group, GroupMember, NewGroupMember,
-    NewGroupRow, NewRequirementComment, NewRequirementVersionLink, NewVerification,
-    NewVerificationStatus, RequirementComment, RequirementVersion, RequirementVersionLink,
-    UpdateGroup, Verification, VerificationStatus,
+    CustomFieldDefinition, CustomFieldDefinitionPayload, EmailToken, Group, GroupMember,
+    NewEmailToken, NewGroupMember, NewGroupRow, NewRequirementComment, NewRequirementVersionLink,
+    NewVerification, NewVerificationStatus, NewWorkspace, RequirementComment, RequirementVersion,
+    RequirementVersionLink, UpdateGroup, Verification, VerificationStatus, Workspace,
 };
 use crate::namespaces::TAKEN_NAMESPACE_MESSAGE;
 use crate::repository::errors::RepoError;
@@ -57,6 +57,10 @@ pub struct DieselRepoMock {
     pub next_notification_id: i32,
     pub notification_preferences: Vec<NotificationPreference>,
     pub next_notification_pref_id: i32,
+    pub workspaces: Vec<Workspace>,
+    pub next_workspace_id: i32,
+    pub email_tokens: Vec<EmailToken>,
+    pub next_email_token_id: i32,
 }
 
 fn epoch() -> NaiveDateTime {
@@ -109,6 +113,10 @@ impl Default for DieselRepoMock {
             next_notification_id: 1,
             notification_preferences: Vec::new(),
             next_notification_pref_id: 1,
+            workspaces: Vec::new(),
+            next_workspace_id: 1,
+            email_tokens: Vec::new(),
+            next_email_token_id: 1,
         }
     }
 }
@@ -156,6 +164,10 @@ impl DieselRepoMock {
             next_notification_id: 1,
             notification_preferences: Vec::new(),
             next_notification_pref_id: 1,
+            workspaces: Vec::new(),
+            next_workspace_id: 1,
+            email_tokens: Vec::new(),
+            next_email_token_id: 1,
         }
     }
     pub fn with_error() -> Self {
@@ -196,6 +208,10 @@ impl DieselRepoMock {
             next_notification_id: 1,
             notification_preferences: Vec::new(),
             next_notification_pref_id: 1,
+            workspaces: Vec::new(),
+            next_workspace_id: 1,
+            email_tokens: Vec::new(),
+            next_email_token_id: 1,
         }
     }
 
@@ -216,6 +232,7 @@ impl DieselRepoMock {
             last_login: epoch(),
             password_hash: stored_pw.into(),
             is_admin: false,
+            email_verified: true,
         }
     }
 
@@ -300,6 +317,7 @@ impl UserRepository for DieselRepoMock {
             last_login: epoch(),
             password_hash: new.password_hash.clone(),
             is_admin: new.is_admin,
+            email_verified: new.email_verified.unwrap_or(true),
         };
         self.users.insert(id, user);
         Ok(id)
@@ -314,6 +332,9 @@ impl UserRepository for DieselRepoMock {
                 user.email = user_data.email.clone();
                 user.password_hash = user_data.password_hash.clone();
                 user.is_admin = user_data.is_admin;
+                if let Some(email_verified) = user_data.email_verified {
+                    user.email_verified = email_verified;
+                }
                 Ok(true)
             }
             None => Err(RepoError::NotFound),
@@ -354,6 +375,106 @@ impl UserRepository for DieselRepoMock {
         let user = self.users.remove(&user_id).ok_or(RepoError::NotFound)?;
         self.project_members.retain(|pm| pm.user_id != user_id);
         Ok(user)
+    }
+
+    fn get_user_by_email(&self, email: &str) -> Result<Option<User>, RepoError> {
+        if self.force_err {
+            return Err(RepoError::Pool("forced test error".into()));
+        }
+        let lower = email.trim().to_lowercase();
+        Ok(self
+            .users
+            .values()
+            .find(|u| u.email.to_lowercase() == lower)
+            .cloned())
+    }
+
+    fn set_user_email_verified(&mut self, user_id: i32, verified: bool) -> Result<(), RepoError> {
+        match self.users.get_mut(&user_id) {
+            Some(user) => {
+                user.email_verified = verified;
+                Ok(())
+            }
+            None => Err(RepoError::NotFound),
+        }
+    }
+}
+
+impl WorkspacesRepository for DieselRepoMock {
+    fn insert_workspace(&mut self, new: &NewWorkspace) -> Result<i32, RepoError> {
+        if self.workspaces.iter().any(|w| w.slug == new.slug) {
+            return Err(RepoError::Duplicate("workspace slug already in use".into()));
+        }
+        let id = self.next_workspace_id;
+        self.next_workspace_id += 1;
+        self.workspaces.push(Workspace {
+            id,
+            slug: new.slug.clone(),
+            name: new.name.clone(),
+            owner_user_id: new.owner_user_id,
+            kind: new.kind.clone(),
+            created_at: epoch(),
+            updated_at: epoch(),
+        });
+        Ok(id)
+    }
+
+    fn get_workspace_by_id(&self, id: i32) -> Result<Workspace, RepoError> {
+        self.workspaces
+            .iter()
+            .find(|w| w.id == id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn get_workspace_by_slug(&self, slug: &str) -> Result<Option<Workspace>, RepoError> {
+        Ok(self.workspaces.iter().find(|w| w.slug == slug).cloned())
+    }
+
+    fn get_personal_workspace_for_user(
+        &self,
+        user_id: i32,
+    ) -> Result<Option<Workspace>, RepoError> {
+        Ok(self
+            .workspaces
+            .iter()
+            .find(|w| w.owner_user_id == user_id && w.kind == "personal")
+            .cloned())
+    }
+}
+
+impl EmailTokensRepository for DieselRepoMock {
+    fn insert_email_token(&mut self, new: &NewEmailToken) -> Result<i32, RepoError> {
+        let id = self.next_email_token_id;
+        self.next_email_token_id += 1;
+        self.email_tokens.push(EmailToken {
+            id,
+            user_id: new.user_id,
+            token_hash: new.token_hash.clone(),
+            purpose: new.purpose.clone(),
+            expires_at: new.expires_at,
+            used_at: None,
+            created_at: epoch(),
+        });
+        Ok(id)
+    }
+
+    fn find_email_token_by_hash(&self, token_hash: &str) -> Result<Option<EmailToken>, RepoError> {
+        Ok(self
+            .email_tokens
+            .iter()
+            .find(|t| t.token_hash == token_hash)
+            .cloned())
+    }
+
+    fn mark_email_token_used(&mut self, id: i32) -> Result<(), RepoError> {
+        let now = chrono::Utc::now().naive_utc();
+        if let Some(t) = self.email_tokens.iter_mut().find(|t| t.id == id) {
+            t.used_at = Some(now);
+            Ok(())
+        } else {
+            Err(RepoError::NotFound)
+        }
     }
 }
 

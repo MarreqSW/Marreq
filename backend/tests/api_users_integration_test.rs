@@ -119,7 +119,7 @@ async fn get_user_by_id_returns_correct_user() {
     let user: User = response.into_json().await.expect("json");
     assert_eq!(user.id, 1);
     assert_eq!(user.username, "admin");
-    assert_eq!(user.is_admin, true);
+    assert!(user.is_admin);
 }
 
 #[rocket::async_test]
@@ -224,7 +224,7 @@ async fn post_user_creates_admin_user() {
         .await;
 
     let user: User = get_response.into_json().await.expect("json");
-    assert_eq!(user.is_admin, true);
+    assert!(user.is_admin);
 }
 
 #[rocket::async_test]
@@ -383,12 +383,12 @@ async fn list_users_shows_admin_flag() {
         .iter()
         .find(|u| u.username == "admin")
         .expect("admin user");
-    assert_eq!(admin.is_admin, true);
+    assert!(admin.is_admin);
 
     // Find regular user
     let regular = users
         .iter()
         .find(|u| u.username == "user")
         .expect("regular user");
-    assert_eq!(regular.is_admin, false);
+    assert!(!regular.is_admin);
 }

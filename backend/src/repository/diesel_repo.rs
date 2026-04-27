@@ -400,6 +400,14 @@ impl UserRepository for DieselRepo {
         diesel::delete(dsl::users.filter(dsl::id.eq(user_id))).execute(conn.as_mut())?;
         Ok(user)
     }
+
+    fn get_user_by_email(&self, email: &str) -> Result<Option<User>, RepoError> {
+        self.db_get_user_by_email(email)
+    }
+
+    fn set_user_email_verified(&mut self, user_id: i32, verified: bool) -> Result<(), RepoError> {
+        self.db_set_user_email_verified(user_id, verified)
+    }
 }
 
 impl ApiTokensRepository for DieselRepo {

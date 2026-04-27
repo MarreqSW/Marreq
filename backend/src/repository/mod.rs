@@ -4,6 +4,7 @@
 pub mod cache;
 pub mod cache_middleware;
 pub mod diesel_repo;
+pub mod diesel_repo_workspaces;
 // Make mock available for both unit tests and integration tests
 // This module is only used in test code and does not affect production builds
 pub mod diesel_repo_mock;
@@ -29,6 +30,29 @@ pub trait UserRepository {
     fn update_user(&mut self, user_data: &NewUser) -> Result<bool, RepoError>;
     fn update_user_without_password(&mut self, user_data: &UpdateUser) -> Result<bool, RepoError>;
     fn delete_user(&mut self, user_id: i32) -> Result<User, RepoError>;
+
+    /// Look up a user by (case-insensitive) email address. Used by the
+    /// Cloud-mode forgot-password flow.
+    fn get_user_by_email(&self, email: &str) -> Result<Option<User>, RepoError>;
+
+    /// Set the `email_verified` flag on a user. Cloud-only.
+    fn set_user_email_verified(&mut self, user_id: i32, verified: bool) -> Result<(), RepoError>;
+}
+
+/// Personal / shared workspaces (Cloud-only data, dormant in Server mode).
+pub trait WorkspacesRepository {
+    fn insert_workspace(&mut self, new: &NewWorkspace) -> Result<i32, RepoError>;
+    fn get_workspace_by_id(&self, id: i32) -> Result<Workspace, RepoError>;
+    fn get_workspace_by_slug(&self, slug: &str) -> Result<Option<Workspace>, RepoError>;
+    fn get_personal_workspace_for_user(&self, user_id: i32)
+        -> Result<Option<Workspace>, RepoError>;
+}
+
+/// Single-use email tokens for verification + password reset (Cloud-only).
+pub trait EmailTokensRepository {
+    fn insert_email_token(&mut self, new: &NewEmailToken) -> Result<i32, RepoError>;
+    fn find_email_token_by_hash(&self, token_hash: &str) -> Result<Option<EmailToken>, RepoError>;
+    fn mark_email_token_used(&mut self, id: i32) -> Result<(), RepoError>;
 }
 
 /// API token lookup for headless auth (e.g. MCP). Returns user and optional project scope.
@@ -484,6 +508,8 @@ pub trait Repository:
     + LogRepository
     + RequirementCommentsRepository
     + NotificationRepository
+    + WorkspacesRepository
+    + EmailTokensRepository
 {
 }
 
@@ -505,6 +531,8 @@ impl<T> Repository for T where
         + LogRepository
         + RequirementCommentsRepository
         + NotificationRepository
+        + WorkspacesRepository
+        + EmailTokensRepository
 {
 }
 

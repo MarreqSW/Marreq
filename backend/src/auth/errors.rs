@@ -26,6 +26,9 @@ pub enum AuthError {
     #[error("logging error: {0}")]
     Audit(String), // optional: login logging failed
 
+    #[error("email not verified")]
+    EmailNotVerified,
+
     #[error(transparent)]
     Repo(#[from] crate::repository::errors::RepoError),
 }

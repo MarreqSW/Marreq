@@ -32,6 +32,7 @@ mod tests {
             password_hash: "hashed_password".to_string(),
             project_id: Some(1),
             is_admin: false,
+            email_verified: true,
         }
     }
 
@@ -222,6 +223,7 @@ mod tests {
             password_hash: "hash".to_string(),
             project_id: Some(1),
             is_admin: false,
+            email_verified: None,
         };
 
         let result = repo.insert_user(&new_user);
@@ -249,6 +251,7 @@ mod tests {
             password_hash: "hash".to_string(),
             project_id: Some(1),
             is_admin: false,
+            email_verified: None,
         };
 
         let result = repo.update_user(&user_data);
@@ -1193,6 +1196,7 @@ mod tests {
             password_hash: "hash".to_string(),
             project_id: Some(1),
             is_admin: false,
+            email_verified: None,
         };
 
         let result = repo.update_user(&user_data);
@@ -2156,6 +2160,7 @@ mod tests {
             password_hash: "hash".to_string(),
             project_id: Some(1),
             is_admin: false,
+            email_verified: None,
         };
 
         let result = repo.update_user(&user_data);

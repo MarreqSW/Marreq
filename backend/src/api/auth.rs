@@ -69,6 +69,7 @@ pub fn auth_login(
                 AuthError::NotLoggedIn => "Not logged in",
                 AuthError::InvalidSession => "Invalid session",
                 AuthError::Repo(_) => "Internal server error",
+                AuthError::EmailNotVerified => "Email address has not been verified",
             };
             Err(ApiError::BadRequest(msg.into()))
         }

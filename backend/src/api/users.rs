@@ -28,6 +28,11 @@ pub async fn create(
     state: &State<AppState>,
     payload: Json<UserCreateRequest>,
 ) -> ApiResult<Value> {
+    if !crate::deployment::current().allows_self_administered_user_creation() {
+        return Err(ApiError::Gone(
+            "user creation is disabled in this deployment mode; users self-register".into(),
+        ));
+    }
     let service = UserService::new(state.inner());
     let id = service.create(&caller, payload.into_inner())?;
 
@@ -50,7 +55,9 @@ mod tests {
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use rocket::http::{ContentType, Cookie, SameSite};
     use rocket::local::asynchronous::Client;
-    use serde_json::{json, Value};
+    use serde_json::json;
+    #[cfg(feature = "server")]
+    use serde_json::Value;
     use std::collections::HashMap;
     use std::sync::{Arc, RwLock};
 
@@ -179,6 +186,7 @@ mod tests {
     }
 
     #[rocket::async_test]
+    #[cfg(feature = "server")]
     async fn create_returns_new_identifier() {
         let client = client_with_repo(DieselRepoMock::default()).await;
         let response = client
@@ -205,6 +213,7 @@ mod tests {
     }
 
     #[rocket::async_test]
+    #[cfg(feature = "server")]
     async fn delete_removes_existing_user() {
         let client = client_with_repo(DieselRepoMock::default()).await;
         let create_response = client

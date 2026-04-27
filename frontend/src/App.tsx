@@ -10,6 +10,10 @@ import {
 import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
 import HomeRedirect from '@/pages/HomeRedirect';
 import LoginPage from '@/pages/LoginPage';
+import RegisterPage from '@/pages/RegisterPage';
+import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
+import VerifyEmailPage from '@/pages/VerifyEmailPage';
 import ProjectLayout from '@/pages/ProjectLayout';
 import AdminPage from '@/pages/AdminPage';
 import CreateRequirementPage from '@/pages/CreateRequirementPage';
@@ -77,6 +81,10 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route
         element={
           <DashboardProvider>

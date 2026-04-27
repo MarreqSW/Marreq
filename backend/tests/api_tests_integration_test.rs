@@ -134,7 +134,7 @@ mod test_support {
 
     pub fn sample_test(id: i32, project_id: i32, name: &str) -> Verification {
         Verification {
-            id: id,
+            id,
             name: name.to_string(),
             reference_code: format!("TST-{:03}", id),
             description: format!("{} description", name),

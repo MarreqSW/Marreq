@@ -451,6 +451,7 @@ mod tests {
             last_login: test_datetime(),
             password_hash: "hash".to_string(),
             is_admin: false,
+            email_verified: true,
         }
     }
 

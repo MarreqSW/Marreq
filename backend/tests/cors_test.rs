@@ -95,7 +95,7 @@ async fn allowed_origin_has_vary_origin() {
 
     let vary = response.headers().get_one("Vary");
     assert!(
-        vary.map_or(false, |v| v.contains("Origin")),
+        vary.is_some_and(|v| v.contains("Origin")),
         "Vary header must contain `Origin` when the origin is echoed, got: {:?}",
         vary
     );
@@ -226,7 +226,7 @@ async fn preflight_allowed_origin_has_vary_origin() {
 
     let vary = response.headers().get_one("Vary");
     assert!(
-        vary.map_or(false, |v| v.contains("Origin")),
+        vary.is_some_and(|v| v.contains("Origin")),
         "Preflight response must contain Vary: Origin, got: {:?}",
         vary
     );

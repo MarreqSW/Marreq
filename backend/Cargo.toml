@@ -10,6 +10,13 @@ description = "Requirements management"
 license = "AGPL-3.0-or-later"
 
 [features]
+# Default deployment mode: self-hosted Marreq Server (admin-managed users, no public registration).
+default = ["server"]
+# Self-hosted deployment mode. Mutually exclusive with `cloud`.
+server = []
+# Hosted SaaS deployment mode (public registration with email verification, single env-bootstrapped site admin,
+# personal workspace per user). Mutually exclusive with `server`.
+cloud = []
 # Enable test helpers for integration tests
 test-helpers = []
 
@@ -43,6 +50,8 @@ quick-xml = { version = "0.39", features = ["serialize"] }
 similar = "2.7"
 urlencoding = "2.1"
 lettre = { version = "0.11.20", features = ["builder", "smtp-transport", "tokio1-native-tls"] }
+rand = "0.8"
+base64 = "0.22"
 
 # [dependencies.rocket_db_pools]
 # version = "0.1.0-rc.2"

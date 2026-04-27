@@ -78,7 +78,7 @@ pub fn build() -> Rocket<Build> {
         repo_guard.cache().start_cache_maintenance();
     }
 
-    rocket::build()
+    let rocket = rocket::build()
         .manage(AppState { repo })
         .manage(crate::auth::rate_limiter::LoginRateLimiter::new())
         .mount(
@@ -102,7 +102,12 @@ pub fn build() -> Rocket<Build> {
         .attach(crate::cors::CorsFairing(crate::cors::CorsPolicy::from_env()))
         .attach(crate::fairings::AntiCacheFairing)
         .attach(crate::fairings::SemanticIndexFairing)
-        .attach(crate::app::MyDbConn::fairing())
+        .attach(crate::app::MyDbConn::fairing());
+
+    #[cfg(feature = "cloud")]
+    let rocket = rocket.attach(crate::fairings::CloudAdminBootstrapFairing);
+
+    rocket
 }
 
 #[cfg(not(any(test, feature = "test-helpers")))]

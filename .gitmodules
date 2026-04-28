@@ -1,9 +1,0 @@
-[submodule "marreq-core"]
-	path = marreq-core
-	url = git@github.com:MarreqSW/marreq-core.git
-[submodule "marreq-cloud"]
-	path = marreq-cloud
-	url = git@github.com:MarreqSW/marreq-cloud.git
-[submodule "marreq-server"]
-	path = marreq-server
-	url = git@github.com:MarreqSW/marreq-server.git

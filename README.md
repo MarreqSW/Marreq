@@ -355,7 +355,7 @@ Marreq/
 ├── Cargo.toml              # Virtual workspace (marreq-core, marreq-server, marreq-cloud)
 ├── Cargo.lock              # Single lock-file for the whole workspace
 ├── Makefile                # make server / make cloud / make test / …
-├── marreq-core/            # Submodule: shared lib (domain, persistence, Rocket primitives)
+├── marreq-core/            # shared lib (domain, persistence, Rocket primitives)
 │   ├── Cargo.toml
 │   ├── src/                # Library source (api/, auth/, services/, models/, …)
 │   ├── migrations/         # Diesel migrations (schema source of truth)
@@ -369,14 +369,14 @@ Marreq/
 │       ├── run_checks.sh   # fmt, clippy, stylelint, purgecss, npm test
 │       ├── run_tests.sh
 │       └── init_complete.sql
-├── marreq-server/          # Submodule: self-hosted binary (admin-managed users)
+├── marreq-server/          # self-hosted binary (admin-managed users)
 │   ├── Cargo.toml
 │   └── src/
 │       ├── main.rs         # Rocket launch for server mode
 │       ├── deployment.rs   # impl DeploymentMode for Server
 │       ├── api/            # Server-only REST handlers
 │       └── routes.rs       # pub fn routes() for server-only routes
-├── marreq-cloud/           # Submodule: hosted/SaaS binary (self-registration)
+├── marreq-cloud/           # hosted/SaaS binary (self-registration)
 │   ├── Cargo.toml
 │   └── src/
 │       ├── main.rs         # Rocket launch for cloud mode

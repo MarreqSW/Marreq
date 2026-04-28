@@ -1,5 +1,5 @@
 # Marreq dev convenience targets. The Rust code lives in marreq-{core,server,cloud}
-# submodules; this Makefile wires the most common workspace commands.
+# crates within this Cargo workspace; this Makefile wires the most common commands.
 
 .PHONY: help server cloud build test fmt lint clean docker-server docker-cloud compose-server compose-cloud frontend frontend-test
 

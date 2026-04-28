@@ -185,7 +185,15 @@ pub async fn diff_baselines(
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
+    use crate::auth::session::test_session_cookie_for;
+
+    fn auth_cookie_for(
+        client: &rocket::local::asynchronous::Client,
+        user_id: i32,
+    ) -> rocket::http::Cookie<'static> {
+        let state = client.rocket().state::<TestState>().unwrap();
+        test_session_cookie_for(state, user_id)
+    }
     use crate::models::{
         Baseline, BaselineTraceability, BaselineVerification, Project, Requirement,
         RequirementVersion, Verification,
@@ -193,7 +201,7 @@ mod tests {
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use crate::status_enums::ProjectStatus;
     use chrono::NaiveDate;
-    use rocket::http::{ContentType, Cookie, SameSite, Status};
+    use rocket::http::{ContentType, Status};
     use rocket::local::asynchronous::Client;
     use serde_json::json;
     use std::sync::{Arc, RwLock};
@@ -226,13 +234,8 @@ mod tests {
         Client::tracked(rocket).await.unwrap()
     }
 
-    fn auth_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-        cookie.set_path("/");
-        cookie.set_http_only(true);
-        cookie.set_secure(true);
-        cookie.set_same_site(SameSite::Strict);
-        cookie
+    fn auth_cookie(client: &rocket::local::asynchronous::Client) -> rocket::http::Cookie<'static> {
+        auth_cookie_for(client, ADMIN_ID)
     }
 
     fn repo_with_project() -> DieselRepoMock {
@@ -343,7 +346,7 @@ mod tests {
         let client = client_with_repo(repo_with_project()).await;
         let response = client
             .get(format!("/api/projects/{PROJECT_ID}/baselines"))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);
@@ -357,7 +360,7 @@ mod tests {
         let response = client
             .post(format!("/api/projects/{PROJECT_ID}/baselines"))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(
                 json!({
                     "name": "Release 1.0",
@@ -386,7 +389,7 @@ mod tests {
         let create_resp = client
             .post(format!("/api/projects/{PROJECT_ID}/baselines"))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(json!({ "name": "Baseline A", "description": null }).to_string())
             .dispatch()
             .await;
@@ -398,7 +401,7 @@ mod tests {
             .get(format!(
                 "/api/projects/{PROJECT_ID}/baselines/{baseline_id}"
             ))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(get_resp.status(), Status::Ok);
@@ -413,7 +416,7 @@ mod tests {
         let create_resp = client
             .post(format!("/api/projects/{PROJECT_ID}/baselines"))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(json!({ "name": "Baseline A", "description": null }).to_string())
             .dispatch()
             .await;
@@ -426,7 +429,7 @@ mod tests {
             .get(format!(
                 "/api/projects/{other_project_id}/baselines/{baseline_id}"
             ))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(get_resp.status(), Status::NotFound);
@@ -438,7 +441,7 @@ mod tests {
         let create_resp = client
             .post(format!("/api/projects/{PROJECT_ID}/baselines"))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(json!({ "name": "Empty baseline", "description": null }).to_string())
             .dispatch()
             .await;
@@ -450,7 +453,7 @@ mod tests {
                 "/api/projects/{PROJECT_ID}/baselines/{}/requirements",
                 created.id
             ))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(req_resp.status(), Status::Ok);
@@ -464,7 +467,7 @@ mod tests {
         let create_resp = client
             .post(format!("/api/projects/{PROJECT_ID}/baselines"))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(json!({ "name": "With req", "description": null }).to_string())
             .dispatch()
             .await;
@@ -476,7 +479,7 @@ mod tests {
                 "/api/projects/{PROJECT_ID}/baselines/{}/requirements",
                 created.id
             ))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(req_resp.status(), Status::Ok);
@@ -499,7 +502,7 @@ mod tests {
         let create_resp = client
             .post(format!("/api/projects/{PROJECT_ID}/baselines"))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(json!({ "name": "Baseline", "description": null }).to_string())
             .dispatch()
             .await;
@@ -511,7 +514,7 @@ mod tests {
                 "/api/projects/{PROJECT_ID}/baselines/{}/traceability",
                 created.id
             ))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(trace_resp.status(), Status::Ok);
@@ -525,7 +528,7 @@ mod tests {
         let create_resp = client
             .post(format!("/api/projects/{PROJECT_ID}/baselines"))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(json!({ "name": "With verifications", "description": null }).to_string())
             .dispatch()
             .await;
@@ -537,7 +540,7 @@ mod tests {
                 "/api/projects/{PROJECT_ID}/baselines/{}/verifications",
                 created.id
             ))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(ver_resp.status(), Status::Ok);
@@ -553,21 +556,21 @@ mod tests {
         client
             .post(format!("/api/projects/{PROJECT_ID}/baselines"))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(json!({ "name": "First", "description": null }).to_string())
             .dispatch()
             .await;
         client
             .post(format!("/api/projects/{PROJECT_ID}/baselines"))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(json!({ "name": "Second", "description": null }).to_string())
             .dispatch()
             .await;
 
         let list_resp = client
             .get(format!("/api/projects/{PROJECT_ID}/baselines"))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(list_resp.status(), Status::Ok);

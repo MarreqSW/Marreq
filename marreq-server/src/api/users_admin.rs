@@ -17,9 +17,9 @@
 mod tests {
     use marreq_core::api::users::{create, delete, get, list};
     use marreq_core::app::AppState;
-    use marreq_core::auth::session::SESSION_COOKIE;
+    use marreq_core::auth::session::test_session_cookie_for;
     use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use rocket::http::{ContentType, Cookie, SameSite, Status};
+    use rocket::http::{ContentType, Cookie, Status};
     use rocket::local::asynchronous::Client;
     use rocket::routes;
     use serde_json::{json, Value};
@@ -47,13 +47,12 @@ mod tests {
         Client::tracked(rocket).await.unwrap()
     }
 
-    fn auth_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-        cookie.set_path("/");
-        cookie.set_http_only(true);
-        cookie.set_secure(true);
-        cookie.set_same_site(SameSite::Strict);
-        cookie
+    fn auth_cookie(client: &Client) -> Cookie<'static> {
+        let state = client
+            .rocket()
+            .state::<TestState>()
+            .expect("managed app state");
+        test_session_cookie_for(state, ADMIN_ID)
     }
 
     #[rocket::async_test]
@@ -62,7 +61,7 @@ mod tests {
         let response = client
             .post("/api/users")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(
                 json!({
                     "username": "bob",
@@ -88,7 +87,7 @@ mod tests {
         let create_response = client
             .post("/api/users")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(
                 json!({
                     "username": "carol",
@@ -106,14 +105,14 @@ mod tests {
 
         let delete_response = client
             .delete(format!("/api/users/{id}"))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(delete_response.status(), Status::NoContent);
 
         let not_found = client
             .get(format!("/api/users/{id}"))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(not_found.status(), Status::NotFound);

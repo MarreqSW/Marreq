@@ -6,7 +6,7 @@
 //! Integration tests for semantic search API endpoints.
 
 use marreq_core::app::AppState;
-use marreq_core::auth::session::SESSION_COOKIE;
+use marreq_core::auth::session::test_session_cookie_for;
 use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
@@ -32,10 +32,12 @@ async fn client_with_repo(repo: DieselRepoMock) -> Client {
     Client::tracked(rocket).await.unwrap()
 }
 
-fn auth_cookie() -> Cookie<'static> {
-    let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-    cookie.set_path("/");
-    cookie
+fn auth_cookie(client: &Client) -> Cookie<'static> {
+    let state = client
+        .rocket()
+        .state::<TestState>()
+        .expect("managed app state");
+    test_session_cookie_for(state, ADMIN_ID)
 }
 
 #[rocket::async_test]
@@ -46,7 +48,7 @@ async fn search_status_returns_config() {
             "/api/projects/{}/requirements/semantic_search/status",
             PROJECT_ID
         ))
-        .private_cookie(auth_cookie())
+        .private_cookie(auth_cookie(&client))
         .dispatch()
         .await;
 
@@ -68,7 +70,7 @@ async fn search_returns_disabled_message_when_not_configured() {
             "/api/projects/{}/requirements/semantic_search?q=test",
             PROJECT_ID
         ))
-        .private_cookie(auth_cookie())
+        .private_cookie(auth_cookie(&client))
         .dispatch()
         .await;
 
@@ -101,7 +103,7 @@ async fn ask_returns_error_when_rag_disabled() {
     let response = client
         .post(format!("/api/projects/{}/requirements/ask", PROJECT_ID))
         .header(ContentType::JSON)
-        .private_cookie(auth_cookie())
+        .private_cookie(auth_cookie(&client))
         .body(json!({ "query": "What are the safety requirements?" }).to_string())
         .dispatch()
         .await;
@@ -121,7 +123,7 @@ async fn reindex_returns_error_when_embeddings_disabled() {
     let client = client_with_repo(DieselRepoMock::default()).await;
     let response = client
         .post(format!("/api/projects/{}/requirements/reindex", PROJECT_ID))
-        .private_cookie(auth_cookie())
+        .private_cookie(auth_cookie(&client))
         .dispatch()
         .await;
 
@@ -142,7 +144,7 @@ async fn search_with_empty_query_returns_empty_results() {
             "/api/projects/{}/requirements/semantic_search?q=",
             PROJECT_ID
         ))
-        .private_cookie(auth_cookie())
+        .private_cookie(auth_cookie(&client))
         .dispatch()
         .await;
 

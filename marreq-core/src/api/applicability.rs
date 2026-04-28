@@ -63,9 +63,17 @@ pub async fn delete(user: ApiUser, state: &State<AppState>, id: i32) -> ApiResul
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
+    use crate::auth::session::test_session_cookie_for;
+
+    fn auth_cookie_for(
+        client: &rocket::local::asynchronous::Client,
+        user_id: i32,
+    ) -> rocket::http::Cookie<'static> {
+        let state = client.rocket().state::<TestState>().unwrap();
+        test_session_cookie_for(state, user_id)
+    }
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use rocket::http::{ContentType, Cookie, SameSite};
+    use rocket::http::ContentType;
     use rocket::local::asynchronous::{Client, LocalResponse};
     use serde_json::{json, Value};
     use std::sync::{Arc, RwLock};
@@ -88,13 +96,8 @@ mod tests {
         Client::tracked(rocket).await.unwrap()
     }
 
-    fn auth_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-        cookie.set_path("/");
-        cookie.set_http_only(true);
-        cookie.set_secure(true);
-        cookie.set_same_site(SameSite::Strict);
-        cookie
+    fn auth_cookie(client: &rocket::local::asynchronous::Client) -> rocket::http::Cookie<'static> {
+        auth_cookie_for(client, ADMIN_ID)
     }
 
     async fn post_with_body<'c>(
@@ -105,7 +108,7 @@ mod tests {
         client
             .post(path)
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(client))
             .body(body.to_string())
             .dispatch()
             .await
@@ -116,7 +119,7 @@ mod tests {
         let client = test_client().await;
         let response = client
             .get("/api/applicability")
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);
@@ -167,7 +170,7 @@ mod tests {
         let response = client
             .put(format!("/api/applicability/{id}"))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(
                 json!({
                     "id": id,
@@ -190,7 +193,7 @@ mod tests {
 
         let get_response = client
             .get(format!("/api/applicability/{id}"))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         let fetched: Applicability = get_response.into_json().await.unwrap();
@@ -218,14 +221,14 @@ mod tests {
 
         let delete_response = client
             .delete(format!("/api/applicability/{id}"))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(delete_response.status(), Status::NoContent);
 
         let not_found = client
             .get(format!("/api/applicability/{id}"))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(not_found.status(), Status::NotFound);

@@ -15,7 +15,7 @@ use marreq_core::auth::session::SESSION_COOKIE;
 use marreq_core::models::*;
 use marreq_core::repository::diesel_repo_mock::DieselRepoMock;
 use marreq_core::status_enums::ProjectStatus;
-use rocket::http::{ContentType, Cookie, SameSite, Status};
+use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::{json, Value};
 
@@ -23,7 +23,7 @@ mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
     use marreq_core::app::AppState;
-    use marreq_core::auth::session::SESSION_COOKIE;
+    use marreq_core::auth::session::test_session_cookie_for;
     use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
@@ -52,13 +52,12 @@ mod test_support {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
-    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
-        cookie.set_path("/");
-        cookie.set_http_only(true);
-        cookie.set_secure(true);
-        cookie.set_same_site(SameSite::Strict);
-        cookie
+    pub fn session_cookie(client: &Client, user_id: i32) -> Cookie<'static> {
+        let state = client
+            .rocket()
+            .state::<TestAppState>()
+            .expect("managed app state");
+        test_session_cookie_for(state, user_id)
     }
 
     pub fn base_repo() -> DieselRepoMock {
@@ -191,7 +190,7 @@ async fn get_matrix_with_valid_session_returns_ok() {
 
     let response = client
         .get("/api/matrix")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -234,7 +233,7 @@ async fn get_matrix_returns_json_array() {
 
     let response = client
         .get("/api/matrix")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -262,7 +261,7 @@ async fn get_matrix_handles_database_errors_gracefully() {
 
     let response = client
         .get("/api/matrix")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -282,7 +281,7 @@ async fn get_matrix_returns_empty_array_when_no_links() {
 
     let response = client
         .get("/api/matrix")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -309,7 +308,7 @@ async fn get_verification_matrix_returns_linked_requirement_ids() {
     let client = test_client(repo).await;
     let response = client
         .get("/api/projects/1/verifications/10/matrix")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -334,7 +333,7 @@ async fn put_verification_matrix_replaces_links() {
         .put("/api/projects/1/verifications/10/matrix")
         .header(ContentType::JSON)
         .body(json!({ "requirement_ids": [2] }).to_string())
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -346,7 +345,7 @@ async fn put_verification_matrix_replaces_links() {
 
     let check = client
         .get("/api/projects/1/verifications/10/matrix")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
     assert_eq!(check.status(), Status::Ok);
@@ -374,7 +373,7 @@ async fn put_verification_matrix_forbidden_for_viewer() {
         .put("/api/projects/1/verifications/10/matrix")
         .header(ContentType::JSON)
         .body(json!({ "requirement_ids": [1] }).to_string())
-        .private_cookie(session_cookie(2))
+        .private_cookie(session_cookie(&client, 2))
         .dispatch()
         .await;
 
@@ -393,7 +392,7 @@ async fn put_verification_matrix_not_found_when_verification_other_project() {
         .put("/api/projects/1/verifications/10/matrix")
         .header(ContentType::JSON)
         .body(json!({ "requirement_ids": [1] }).to_string())
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -413,7 +412,7 @@ async fn put_verification_matrix_bad_request_when_requirement_wrong_project() {
         .put("/api/projects/1/verifications/10/matrix")
         .header(ContentType::JSON)
         .body(json!({ "requirement_ids": [99] }).to_string())
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 

@@ -705,9 +705,17 @@ pub async fn set_version_approval_by_project(
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
+    use crate::auth::session::test_session_cookie_for;
+
+    fn auth_cookie_for(
+        client: &rocket::local::asynchronous::Client,
+        user_id: i32,
+    ) -> rocket::http::Cookie<'static> {
+        let state = client.rocket().state::<TestState>().unwrap();
+        test_session_cookie_for(state, user_id)
+    }
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use rocket::http::{ContentType, Cookie, SameSite};
+    use rocket::http::ContentType;
     use rocket::local::asynchronous::Client;
     use serde_json::{json, Value};
     use std::sync::{Arc, RwLock};
@@ -740,13 +748,8 @@ mod tests {
         Client::tracked(rocket).await.unwrap()
     }
 
-    fn auth_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-        cookie.set_path("/");
-        cookie.set_http_only(true);
-        cookie.set_secure(true);
-        cookie.set_same_site(SameSite::Strict);
-        cookie
+    fn auth_cookie(client: &rocket::local::asynchronous::Client) -> rocket::http::Cookie<'static> {
+        auth_cookie_for(client, ADMIN_ID)
     }
 
     fn sample_requirement(title: &str) -> Value {
@@ -770,7 +773,7 @@ mod tests {
         let client = client_with_repo(DieselRepoMock::default()).await;
         let response = client
             .get("/api/requirements")
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);
@@ -784,7 +787,7 @@ mod tests {
         let response = client
             .post("/api/requirements")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(sample_requirement("First").to_string())
             .dispatch()
             .await;
@@ -801,7 +804,7 @@ mod tests {
         let create_response = client
             .post("/api/requirements")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(sample_requirement("Original").to_string())
             .dispatch()
             .await;
@@ -811,7 +814,7 @@ mod tests {
         let response = client
             .patch(format!("/api/requirements/{id}"))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(
                 json!({
                     "title": "Updated",
@@ -828,7 +831,7 @@ mod tests {
 
         let get_response = client
             .get(format!("/api/requirements/{id}"))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         let requirement: Requirement = get_response.into_json().await.unwrap();
@@ -844,7 +847,7 @@ mod tests {
         let create_response = client
             .post("/api/requirements")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(req.to_string())
             .dispatch()
             .await;
@@ -861,7 +864,7 @@ mod tests {
 
         let versions_after_create = client
             .get(format!("/api/requirements/{id}/versions"))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(versions_after_create.status(), Status::Ok);
@@ -872,14 +875,14 @@ mod tests {
         client
             .patch(format!("/api/requirements/{id}"))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(json!({ "title": "V2 Updated" }).to_string())
             .dispatch()
             .await;
 
         let versions_after_patch = client
             .get(format!("/api/requirements/{id}/versions"))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(versions_after_patch.status(), Status::Ok);
@@ -893,7 +896,7 @@ mod tests {
             .get(format!(
                 "/api/requirements/{id}/versions/{first_version_id}"
             ))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(single.status(), Status::Ok);
@@ -909,7 +912,7 @@ mod tests {
         let create_response = client
             .post("/api/requirements")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(sample_requirement("Original").to_string())
             .dispatch()
             .await;
@@ -919,7 +922,7 @@ mod tests {
         let response = client
             .patch(format!("/api/requirements/{id}"))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(json!({}).to_string())
             .dispatch()
             .await;
@@ -938,7 +941,7 @@ mod tests {
         let create_response = client
             .post("/api/requirements")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(sample_requirement("Disposable").to_string())
             .dispatch()
             .await;
@@ -947,14 +950,14 @@ mod tests {
 
         let delete_response = client
             .delete(format!("/api/requirements/{id}"))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(delete_response.status(), Status::NoContent);
 
         let not_found = client
             .get(format!("/api/requirements/{id}"))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(not_found.status(), Status::NotFound);

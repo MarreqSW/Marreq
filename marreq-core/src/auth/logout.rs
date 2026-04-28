@@ -4,7 +4,7 @@
 use crate::auth::csrf::clear_csrf_cookie;
 use crate::auth::{clear_session_cookie, read_session_user_id};
 use crate::models::NewLog;
-use crate::repository::LogRepository;
+use crate::repository::{LogRepository, SessionRepository};
 use rocket::http::CookieJar;
 
 /// Clear session cookies and log the logout event.
@@ -12,13 +12,13 @@ use rocket::http::CookieJar;
 /// a cookie without any explicit path, and Rocket's add_private will add it to
 /// the response as-is. The default path is handled by the browser: if no Path
 /// is given, RFC 6265 says the default is the request's path up to the rightmost "/".
-pub fn logout_user<R: LogRepository>(cookies: &CookieJar<'_>, repo: &mut R) {
+pub fn logout_user<R: LogRepository + SessionRepository>(cookies: &CookieJar<'_>, repo: &mut R) {
     // Get user info before clearing cookies
-    let user_id = read_session_user_id(cookies);
+    let user_id = read_session_user_id(cookies, &*repo);
 
     // Remove the session cookie and the CSRF token cookie together so that
     // outstanding CSRF tokens cannot be replayed after logout.
-    clear_session_cookie(cookies);
+    clear_session_cookie(cookies, repo);
     clear_csrf_cookie(cookies);
 
     // Remove legacy cookies from previous versions if they exist

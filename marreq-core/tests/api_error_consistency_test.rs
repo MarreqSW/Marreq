@@ -21,7 +21,7 @@ mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
     use marreq_core::app::AppState;
-    use marreq_core::auth::session::SESSION_COOKIE;
+    use marreq_core::auth::session::test_session_cookie_for;
     use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
@@ -50,10 +50,12 @@ mod test_support {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
-    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
-        cookie.set_path("/");
-        cookie
+    pub fn session_cookie(client: &Client, user_id: i32) -> Cookie<'static> {
+        let state = client
+            .rocket()
+            .state::<TestAppState>()
+            .expect("managed app state");
+        test_session_cookie_for(state, user_id)
     }
 
     pub fn base_repo() -> DieselRepoMock {
@@ -177,14 +179,14 @@ async fn not_found_errors_return_404_status() {
             "GET" => {
                 client
                     .get(endpoint)
-                    .private_cookie(session_cookie(1))
+                    .private_cookie(session_cookie(&client, 1))
                     .dispatch()
                     .await
             }
             "DELETE" => {
                 client
                     .delete(endpoint)
-                    .private_cookie(session_cookie(1))
+                    .private_cookie(session_cookie(&client, 1))
                     .dispatch()
                     .await
             }
@@ -215,7 +217,7 @@ async fn bad_request_errors_return_400_status() {
     let response = client
         .patch("/api/requirements/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(patch.to_string())
         .dispatch()
         .await;
@@ -235,7 +237,7 @@ async fn unprocessable_entity_errors_return_422_status() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body("{ invalid json }")
         .dispatch()
         .await;
@@ -255,7 +257,7 @@ async fn error_responses_have_consistent_structure() {
     // Test 404 error response structure
     let response = client
         .get("/api/requirements/999")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -306,7 +308,7 @@ async fn bad_request_has_error_message() {
     let response = client
         .patch("/api/requirements/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(patch.to_string())
         .dispatch()
         .await;
@@ -332,7 +334,7 @@ async fn unsupported_methods_return_405_or_404() {
     let response = client
         .put("/api/requirements/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body("{}")
         .dispatch()
         .await;
@@ -363,7 +365,7 @@ async fn missing_content_type_on_post_handled_gracefully() {
 
     let response = client
         .post("/api/requirements")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -419,7 +421,7 @@ async fn error_messages_are_clear_and_actionable() {
     let response = client
         .patch("/api/requirements/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(patch.to_string())
         .dispatch()
         .await;
@@ -454,7 +456,7 @@ async fn same_error_conditions_return_same_status_codes() {
         let response = client
             .post(endpoint)
             .header(ContentType::JSON)
-            .private_cookie(session_cookie(1))
+            .private_cookie(session_cookie(&client, 1))
             .body(payload.to_string())
             .dispatch()
             .await;

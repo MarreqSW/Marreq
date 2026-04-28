@@ -438,6 +438,43 @@ impl<R: Repository> super::EmailTokensRepository for CacheRepository<R> {
     }
 }
 
+impl<R: Repository> super::SessionRepository for CacheRepository<R> {
+    fn create_session(
+        &mut self,
+        new: &crate::models::entities::NewSession,
+    ) -> Result<(), RepoError> {
+        self.inner.create_session(new)
+    }
+
+    fn find_active_session(
+        &self,
+        token_hash: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<Option<crate::models::entities::Session>, RepoError> {
+        self.inner.find_active_session(token_hash, now)
+    }
+
+    fn touch_session(
+        &mut self,
+        token_hash: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        self.inner.touch_session(token_hash, now)
+    }
+
+    fn delete_session(&mut self, token_hash: &str) -> Result<(), RepoError> {
+        self.inner.delete_session(token_hash)
+    }
+
+    fn delete_user_sessions(&mut self, user_id: i32) -> Result<(), RepoError> {
+        self.inner.delete_user_sessions(user_id)
+    }
+
+    fn purge_expired_sessions(&mut self, now: chrono::NaiveDateTime) -> Result<usize, RepoError> {
+        self.inner.purge_expired_sessions(now)
+    }
+}
+
 impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
     fn get_members_by_project(&self, project_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
         let key = keys::ProjectMembers::by_project(project_id);
@@ -1522,6 +1559,7 @@ mod tests {
             next_workspace_id: 1,
             email_tokens: Vec::new(),
             next_email_token_id: 1,
+            sessions: Vec::new(),
         }
     }
 

@@ -26,7 +26,7 @@ mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
     use marreq_core::app::AppState;
-    use marreq_core::auth::session::SESSION_COOKIE;
+    use marreq_core::auth::session::test_session_cookie_for;
     use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
@@ -55,10 +55,12 @@ mod test_support {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
-    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
-        cookie.set_path("/");
-        cookie
+    pub fn session_cookie(client: &Client, user_id: i32) -> Cookie<'static> {
+        let state = client
+            .rocket()
+            .state::<TestAppState>()
+            .expect("managed app state");
+        test_session_cookie_for(state, user_id)
     }
 
     pub fn base_repo() -> DieselRepoMock {
@@ -177,7 +179,7 @@ async fn create_requirement_with_invalid_project_id_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -218,7 +220,7 @@ async fn create_requirement_with_invalid_category_id_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -258,7 +260,7 @@ async fn create_requirement_with_invalid_applicability_id_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -298,7 +300,7 @@ async fn create_requirement_with_invalid_status_id_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -338,7 +340,7 @@ async fn create_requirement_with_invalid_verification_id_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -378,7 +380,7 @@ async fn create_requirement_with_invalid_author_id_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -418,7 +420,7 @@ async fn create_requirement_with_invalid_reviewer_id_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -476,7 +478,7 @@ async fn patch_requirement_with_invalid_foreign_keys_returns_error() {
     let response = client
         .patch("/api/requirements/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(patch.to_string())
         .dispatch()
         .await;
@@ -515,7 +517,7 @@ async fn create_test_with_invalid_project_id_returns_error() {
     let response = client
         .post("/api/verifications")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -550,7 +552,7 @@ async fn create_test_with_invalid_status_id_returns_error() {
     let response = client
         .post("/api/verifications")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -587,7 +589,7 @@ async fn create_category_with_invalid_project_id_returns_error() {
     let response = client
         .post("/api/categories")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -632,7 +634,7 @@ async fn update_category_with_invalid_project_id_returns_error() {
     let response = client
         .put("/api/categories/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -669,7 +671,7 @@ async fn create_applicability_with_invalid_project_id_returns_error() {
     let response = client
         .post("/api/applicability")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -712,7 +714,7 @@ async fn create_requirement_without_required_fields_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -735,7 +737,7 @@ async fn create_user_without_required_fields_returns_error() {
     let response = client
         .post("/api/users")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -758,7 +760,7 @@ async fn create_category_without_required_fields_returns_error() {
     let response = client
         .post("/api/categories")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -808,7 +810,7 @@ async fn delete_category_that_has_requirements_handles_gracefully() {
     // Try to delete category that has requirements
     let response = client
         .delete("/api/categories/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -857,7 +859,7 @@ async fn delete_applicability_that_has_requirements_handles_gracefully() {
     // Try to delete applicability that has requirements
     let response = client
         .delete("/api/applicability/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -907,7 +909,7 @@ async fn delete_status_that_has_requirements_handles_gracefully() {
     // For now, we just verify the requirement exists with that status
     let response = client
         .get("/api/requirements/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -942,7 +944,7 @@ async fn create_requirement_with_zero_project_id_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -982,7 +984,7 @@ async fn create_requirement_with_negative_project_id_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -1031,7 +1033,7 @@ async fn update_category_with_invalid_foreign_keys_returns_error() {
     let response = client
         .put("/api/categories/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -1076,7 +1078,7 @@ async fn update_applicability_with_invalid_foreign_keys_returns_error() {
     let response = client
         .put("/api/applicability/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -1120,7 +1122,7 @@ async fn constraint_violation_returns_proper_error_format() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;

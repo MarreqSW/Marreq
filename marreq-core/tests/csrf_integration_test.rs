@@ -16,11 +16,13 @@
 #[macro_use]
 extern crate rocket;
 
+use marreq_core::app::AppState;
 use marreq_core::auth::csrf::{CSRF_COOKIE, CSRF_HEADER};
-use marreq_core::auth::session::SESSION_COOKIE;
 use marreq_core::fairings::CsrfFairing;
+use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
 use rocket::http::{ContentType, Cookie, Header, Status};
 use rocket::local::asynchronous::Client;
+use std::sync::{Arc, RwLock};
 
 // ---------------------------------------------------------------------------
 // Test Rocket setup
@@ -44,7 +46,14 @@ fn unauthenticated_post() -> &'static str {
 
 /// Build an async test client with the CsrfFairing attached.
 async fn test_client() -> Client {
+    let mut repo = DieselRepoMock::default();
+    repo.users
+        .insert(1, DieselRepoMock::make_user(1, "alice", "password"));
+    let state = AppState {
+        repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+    };
     let rocket = rocket::build()
+        .manage(state)
         .mount(
             "/",
             routes![
@@ -61,10 +70,12 @@ async fn test_client() -> Client {
 // Helper – private session cookie (simulates an authenticated session)
 // ---------------------------------------------------------------------------
 
-fn session_cookie() -> Cookie<'static> {
-    let mut c = Cookie::new(SESSION_COOKIE, "1");
-    c.set_path("/");
-    c
+fn session_cookie(client: &Client) -> Cookie<'static> {
+    let state = client
+        .rocket()
+        .state::<AppState<CacheRepository<DieselRepoMock>>>()
+        .expect("managed app state");
+    marreq_core::auth::session::test_session_cookie_for(state, 1)
 }
 
 fn csrf_cookie() -> Cookie<'static> {
@@ -101,7 +112,7 @@ async fn authenticated_post_with_matching_origin_is_allowed() {
         .post("/protected")
         .header(ContentType::Form)
         .header(Header::new("Origin", TEST_ALLOWED_ORIGIN))
-        .private_cookie(session_cookie())
+        .private_cookie(session_cookie(&client))
         .body("") // empty form body
         .dispatch()
         .await;
@@ -115,7 +126,7 @@ async fn authenticated_post_with_mismatched_origin_is_forbidden() {
         .post("/protected")
         .header(ContentType::Form)
         .header(Header::new("Origin", EVIL_ORIGIN))
-        .private_cookie(session_cookie())
+        .private_cookie(session_cookie(&client))
         .body("")
         .dispatch()
         .await;
@@ -129,7 +140,7 @@ async fn authenticated_post_without_origin_is_forbidden() {
     let response = client
         .post("/protected")
         .header(ContentType::Form)
-        .private_cookie(session_cookie())
+        .private_cookie(session_cookie(&client))
         .body("")
         .dispatch()
         .await;
@@ -148,7 +159,7 @@ async fn post_with_valid_csrf_header_is_allowed() {
         .post("/protected")
         .header(ContentType::JSON)
         .header(Header::new(CSRF_HEADER, TOKEN))
-        .private_cookie(session_cookie())
+        .private_cookie(session_cookie(&client))
         .private_cookie(csrf_cookie())
         .body("{}")
         .dispatch()
@@ -163,7 +174,7 @@ async fn post_with_wrong_csrf_header_is_forbidden() {
         .post("/protected")
         .header(ContentType::JSON)
         .header(Header::new(CSRF_HEADER, "wrong-token-value"))
-        .private_cookie(session_cookie())
+        .private_cookie(session_cookie(&client))
         .private_cookie(csrf_cookie())
         .body("{}")
         .dispatch()
@@ -180,7 +191,7 @@ async fn post_with_mismatched_csrf_header_overrides_valid_origin() {
         .header(ContentType::JSON)
         .header(Header::new("Origin", TEST_ALLOWED_ORIGIN))
         .header(Header::new(CSRF_HEADER, "tampered-token"))
-        .private_cookie(session_cookie())
+        .private_cookie(session_cookie(&client))
         .private_cookie(csrf_cookie())
         .body("{}")
         .dispatch()
@@ -278,7 +289,7 @@ async fn authenticated_post_with_matching_referer_is_allowed() {
         .post("/protected")
         .header(ContentType::Form)
         .header(Header::new("Referer", referer_value))
-        .private_cookie(session_cookie())
+        .private_cookie(session_cookie(&client))
         .body("")
         .dispatch()
         .await;
@@ -293,7 +304,7 @@ async fn authenticated_post_with_mismatched_referer_is_forbidden() {
         .post("/protected")
         .header(ContentType::Form)
         .header(Header::new("Referer", referer_value))
-        .private_cookie(session_cookie())
+        .private_cookie(session_cookie(&client))
         .body("")
         .dispatch()
         .await;

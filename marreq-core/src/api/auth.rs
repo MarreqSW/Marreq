@@ -47,7 +47,11 @@ pub fn auth_login(
 
     let mut repo = state.repo_write();
 
-    match login_user(&mut *repo, &form, cookies) {
+    // Capture the client IP for the session row; User-Agent extraction would
+    // require an extra request guard and is left as a follow-up.
+    let ip_str: Option<String> = ip.map(|i| i.to_string());
+
+    match login_user(&mut *repo, &form, cookies, None, ip_str) {
         Ok(user) => {
             limiter.record_success(&form.username, ip);
             Ok((

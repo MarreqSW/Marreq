@@ -61,6 +61,7 @@ pub struct DieselRepoMock {
     pub next_workspace_id: i32,
     pub email_tokens: Vec<EmailToken>,
     pub next_email_token_id: i32,
+    pub sessions: Vec<crate::models::entities::Session>,
 }
 
 fn epoch() -> NaiveDateTime {
@@ -117,6 +118,7 @@ impl Default for DieselRepoMock {
             next_workspace_id: 1,
             email_tokens: Vec::new(),
             next_email_token_id: 1,
+            sessions: Vec::new(),
         }
     }
 }
@@ -168,6 +170,7 @@ impl DieselRepoMock {
             next_workspace_id: 1,
             email_tokens: Vec::new(),
             next_email_token_id: 1,
+            sessions: Vec::new(),
         }
     }
     pub fn with_error() -> Self {
@@ -212,6 +215,7 @@ impl DieselRepoMock {
             next_workspace_id: 1,
             email_tokens: Vec::new(),
             next_email_token_id: 1,
+            sessions: Vec::new(),
         }
     }
 
@@ -475,6 +479,68 @@ impl EmailTokensRepository for DieselRepoMock {
         } else {
             Err(RepoError::NotFound)
         }
+    }
+}
+
+impl super::SessionRepository for DieselRepoMock {
+    fn create_session(
+        &mut self,
+        new: &crate::models::entities::NewSession,
+    ) -> Result<(), RepoError> {
+        let now = chrono::Utc::now().naive_utc();
+        self.sessions.push(crate::models::entities::Session {
+            token_hash: new.token_hash.clone(),
+            user_id: new.user_id,
+            created_at: now,
+            expires_at: new.expires_at,
+            last_seen_at: now,
+            user_agent: new.user_agent.clone(),
+            ip_addr: new.ip_addr.clone(),
+        });
+        Ok(())
+    }
+
+    fn find_active_session(
+        &self,
+        token_hash: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<Option<crate::models::entities::Session>, RepoError> {
+        Ok(self
+            .sessions
+            .iter()
+            .find(|s| s.token_hash == token_hash && s.expires_at > now)
+            .cloned())
+    }
+
+    fn touch_session(
+        &mut self,
+        token_hash: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        if let Some(s) = self
+            .sessions
+            .iter_mut()
+            .find(|s| s.token_hash == token_hash)
+        {
+            s.last_seen_at = now;
+        }
+        Ok(())
+    }
+
+    fn delete_session(&mut self, token_hash: &str) -> Result<(), RepoError> {
+        self.sessions.retain(|s| s.token_hash != token_hash);
+        Ok(())
+    }
+
+    fn delete_user_sessions(&mut self, user_id: i32) -> Result<(), RepoError> {
+        self.sessions.retain(|s| s.user_id != user_id);
+        Ok(())
+    }
+
+    fn purge_expired_sessions(&mut self, now: chrono::NaiveDateTime) -> Result<usize, RepoError> {
+        let before = self.sessions.len();
+        self.sessions.retain(|s| s.expires_at > now);
+        Ok(before - self.sessions.len())
     }
 }
 

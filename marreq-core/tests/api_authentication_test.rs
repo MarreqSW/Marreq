@@ -24,7 +24,7 @@ mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
     use marreq_core::app::AppState;
-    use marreq_core::auth::session::SESSION_COOKIE;
+    use marreq_core::auth::session::test_session_cookie_for;
     use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
@@ -53,10 +53,12 @@ mod test_support {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
-    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
-        cookie.set_path("/");
-        cookie
+    pub fn session_cookie(client: &Client, user_id: i32) -> Cookie<'static> {
+        let state = client
+            .rocket()
+            .state::<TestAppState>()
+            .expect("managed app state");
+        test_session_cookie_for(state, user_id)
     }
 
     pub fn base_repo() -> DieselRepoMock {
@@ -163,11 +165,15 @@ async fn auth_login_returns_authenticated_user_and_sets_cookies() {
     let session_cookie = jar
         .get_private(session_cookie_name_for_request())
         .expect("session cookie");
-    assert_eq!(session_cookie.value(), "1");
+    assert_ne!(session_cookie.value(), "1");
+    assert!(session_cookie.value().len() >= 40);
 
     let csrf_cookie = jar.get_private(CSRF_COOKIE).expect("csrf cookie");
     assert_eq!(csrf_cookie.value().len(), 64);
     assert!(csrf_cookie.value().chars().all(|c| c.is_ascii_hexdigit()));
+
+    let me = client.get("/api/auth/me").dispatch().await;
+    assert_eq!(me.status(), Status::Ok);
 }
 
 // ============================================================================
@@ -696,7 +702,7 @@ async fn admin_can_access_all_endpoints() {
     // Admin should be able to list requirements
     let response = client
         .get("/api/requirements")
-        .private_cookie(session_cookie(1)) // Admin user
+        .private_cookie(session_cookie(&client, 1)) // Admin user
         .dispatch()
         .await;
 
@@ -738,7 +744,7 @@ async fn regular_user_can_access_endpoints() {
     // Regular user should be able to list requirements
     let response = client
         .get("/api/requirements")
-        .private_cookie(session_cookie(2)) // Regular user
+        .private_cookie(session_cookie(&client, 2)) // Regular user
         .dispatch()
         .await;
 

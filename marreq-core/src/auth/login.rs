@@ -18,6 +18,8 @@ pub fn login_user<R: Repository>(
     repo: &mut R,
     login_form: &LoginForm,
     cookies: &CookieJar<'_>,
+    user_agent: Option<String>,
+    ip_addr: Option<String>,
 ) -> Result<User, AuthError> {
     let user = authenticate_user(&*repo, &login_form.username, login_form.password.trim())?;
 
@@ -27,7 +29,7 @@ pub fn login_user<R: Repository>(
     }
 
     // Store session information.
-    set_session_cookie(cookies, user.id);
+    set_session_cookie(cookies, repo, user.id, user_agent, ip_addr);
 
     // Mint a fresh CSRF token on every login so that pre-login tokens are
     // invalidated (CSRF token rotation – mitigates session-fixation variants).

@@ -22,7 +22,7 @@ mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
     use marreq_core::app::AppState;
-    use marreq_core::auth::session::SESSION_COOKIE;
+    use marreq_core::auth::session::test_session_cookie_for;
     use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
@@ -51,10 +51,12 @@ mod test_support {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
-    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
-        cookie.set_path("/");
-        cookie
+    pub fn session_cookie(client: &Client, user_id: i32) -> Cookie<'static> {
+        let state = client
+            .rocket()
+            .state::<TestAppState>()
+            .expect("managed app state");
+        test_session_cookie_for(state, user_id)
     }
 
     pub fn base_repo() -> DieselRepoMock {
@@ -129,7 +131,7 @@ async fn get_categories_returns_empty_list_when_no_categories() {
 
     let response = client
         .get("/api/categories")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -152,7 +154,7 @@ async fn get_categories_returns_all_categories() {
 
     let response = client
         .get("/api/categories")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -184,7 +186,7 @@ async fn get_category_by_id_returns_correct_category() {
 
     let response = client
         .get("/api/categories/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -201,7 +203,7 @@ async fn get_category_with_nonexistent_id_returns_404() {
 
     let response = client
         .get("/api/categories/999")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -232,7 +234,7 @@ async fn post_category_creates_new_category() {
     let response = client
         .post("/api/categories")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(new_category_json("New Category", "NEW", 1).to_string())
         .dispatch()
         .await;
@@ -255,7 +257,7 @@ async fn post_category_with_missing_fields_returns_error() {
     let response = client
         .post("/api/categories")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(invalid_json.to_string())
         .dispatch()
         .await;
@@ -299,7 +301,7 @@ async fn put_category_updates_category() {
     let response = client
         .put("/api/categories/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(update.to_string())
         .dispatch()
         .await;
@@ -311,7 +313,7 @@ async fn put_category_updates_category() {
     // Verify the update
     let get_response = client
         .get("/api/categories/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -334,7 +336,7 @@ async fn put_nonexistent_category_returns_404() {
     let response = client
         .put("/api/categories/999")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(update.to_string())
         .dispatch()
         .await;
@@ -356,7 +358,7 @@ async fn delete_category_removes_category() {
 
     let response = client
         .delete("/api/categories/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -365,7 +367,7 @@ async fn delete_category_removes_category() {
     // Verify category is gone
     let get_response = client
         .get("/api/categories/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -378,7 +380,7 @@ async fn delete_nonexistent_category_returns_404() {
 
     let response = client
         .delete("/api/categories/999")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -414,7 +416,7 @@ async fn categories_are_project_scoped() {
 
     let response = client
         .get("/api/categories")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -434,7 +436,7 @@ async fn create_category_in_specific_project() {
     let response = client
         .post("/api/categories")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(new_category_json("Project Category", "PROJ", 2).to_string())
         .dispatch()
         .await;
@@ -446,7 +448,7 @@ async fn create_category_in_specific_project() {
     // Verify it was created with correct project_id
     let get_response = client
         .get(format!("/api/categories/{}", id))
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -466,7 +468,7 @@ async fn create_multiple_categories_sequentially() {
         let response = client
             .post("/api/categories")
             .header(ContentType::JSON)
-            .private_cookie(session_cookie(1))
+            .private_cookie(session_cookie(&client, 1))
             .body(
                 new_category_json(&format!("Category {}", i), &format!("CAT{}", i), 1).to_string(),
             )
@@ -481,7 +483,7 @@ async fn create_multiple_categories_sequentially() {
     // Verify all were created
     let list_response = client
         .get("/api/categories")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -507,14 +509,14 @@ async fn update_preserves_category_id() {
     client
         .put("/api/categories/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(update.to_string())
         .dispatch()
         .await;
 
     let get_response = client
         .get("/api/categories/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 

@@ -81,16 +81,14 @@ pub fn change_user_password<R: Repository>(
     new_password: &str,
     cookies: &CookieJar<'_>,
 ) -> Result<(), AuthError> {
-    // Get user ID from cookie
-    let user_id_cookie = cookies
-        .get_private(super::session::SESSION_COOKIE)
+    // Resolve session via DB lookup, then revoke other sessions on success
+    // so the user is forced to log in again on every other device.
+    let user_id = crate::auth::session::read_session_user_id(cookies, &*repo)
         .ok_or(AuthError::NotLoggedIn)?;
-    let user_id = user_id_cookie
-        .value()
-        .parse::<i32>()
-        .map_err(|_| AuthError::InvalidSession)?;
 
-    change_user_password_impl(repo, user_id, current_password, new_password)
+    change_user_password_impl(repo, user_id, current_password, new_password)?;
+    let _ = repo.delete_user_sessions(user_id);
+    Ok(())
 }
 
 /// Set a user's password as admin (no current password required).

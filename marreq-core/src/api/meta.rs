@@ -14,6 +14,20 @@ pub fn api_root() -> RawJson<&'static str> {
     RawJson(API_ROOT_JSON)
 }
 
+/// `GET /api/meta/health` — liveness probe.
+///
+/// Always returns 200 as long as the Rocket process can serve requests.
+/// No DB or cache access on purpose: this is a *liveness* signal, not
+/// readiness. Used by Docker `HEALTHCHECK`, Kubernetes liveness probes,
+/// and external uptime monitors.
+#[get("/meta/health")]
+pub fn health() -> Json<serde_json::Value> {
+    Json(json!({
+        "status": "ok",
+        "service": "marreq",
+    }))
+}
+
 /// `GET /api/meta/deployment` — exposes deployment-mode capabilities so the
 /// SPA can render or hide registration/admin UI accordingly.
 #[get("/meta/deployment")]

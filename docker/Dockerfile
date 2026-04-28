@@ -55,6 +55,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# Run the application as an unprivileged user.  The migration step in
+# docker-entrypoint.sh only needs DB access, so dropping privileges before
+# Rocket binds is safe.  UID/GID are stable so bind-mounted volumes from
+# docker-compose stay readable.
+RUN groupadd --system --gid 10001 marreq \
+    && useradd  --system --uid 10001 --gid marreq --home-dir /app --shell /usr/sbin/nologin marreq
+
 WORKDIR /app
 
 # Copy binary, migrations, scripts and diesel CLI from builder
@@ -69,10 +76,21 @@ COPY ${MARREQ_BIN}/Rocket.toml ./Rocket.toml
 # diesel CLI uses /app/diesel.toml + /app/migrations (see docker-entrypoint.sh)
 COPY marreq-core/diesel.toml ./diesel.toml
 
+RUN chown -R marreq:marreq /app
+
 EXPOSE 8000
 
 # Wait for DB, run migrations, then start the app
 COPY docker/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
+
+USER marreq
+
+# Liveness check used by Docker / Compose / Kubernetes.  /api/meta/health does
+# not touch the DB or cache so it stays green during transient backend issues
+# (use /api/cache/health for a readiness-style probe).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD curl --fail --silent --show-error http://127.0.0.1:8000/api/meta/health || exit 1
+
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["/usr/local/bin/marreq"]

@@ -6,15 +6,9 @@ import { getProjectFromPath } from '@/api/client';
 import type { User } from '@/api/types';
 import NotificationPanel from '@/components/NotificationPanel';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
+import { parseUser } from '@/utils/parseUser';
 
 const APP_VERSION = 'v0.1.0';
-
-function parseUser(u: unknown): User | null {
-  if (u && typeof u === 'object' && 'username' in u) {
-    return u as User;
-  }
-  return null;
-}
 
 function userInitials(u: User): string {
   const n = u.name?.trim();

@@ -1,7 +1,7 @@
 # Marreq dev convenience targets. The Rust code lives in marreq-{core,server,cloud}
 # crates within this Cargo workspace; this Makefile wires the most common commands.
 
-.PHONY: help server cloud build test fmt lint clean docker-server docker-cloud compose-server compose-cloud frontend frontend-test
+.PHONY: help server cloud build test fmt lint clean docker-server docker-cloud compose-server compose-cloud frontend frontend-test frontend-test-coverage
 
 help:           ## Show this help.
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-18s %s\n", $$1, $$2}'
@@ -42,5 +42,8 @@ compose-cloud:  ## Bring up the cloud stack (adds marreq-cloud via the `cloud` p
 frontend:       ## Run the Vite dev server.
 	cd frontend && npm run dev
 
-frontend-test:  ## Run frontend tests (vitest).
-	npm run test
+frontend-test:  ## Run frontend SPA tests (vitest + RTL).
+	cd frontend && npm test
+
+frontend-test-coverage: ## Run frontend SPA tests with coverage.
+	cd frontend && npm run test:coverage

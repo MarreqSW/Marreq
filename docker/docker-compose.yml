@@ -27,7 +27,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
 
-  backend:
+  marreq-server:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -68,7 +68,7 @@ services:
       dockerfile: docker/frontend/Dockerfile
     restart: always
     depends_on:
-      backend:
+      marreq-server:
         condition: service_healthy
     ports:
       - '8080:80'
@@ -81,34 +81,42 @@ services:
     ports:
       - '8081:8080'
 
+  # Run the cloud (SaaS) binary alongside or instead of marreq-server.
+  # Start with: docker compose -f docker/docker-compose.yml --profile cloud up -d marreq-cloud
+  # Reads cloud-only env vars (MARREQ_SITE_ADMIN_EMAIL, SMTP_*, MARREQ_PUBLIC_BASE_URL …) from ../.env.
+  marreq-cloud:
+    profiles: ["cloud"]
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        MARREQ_BIN: marreq-cloud
+    restart: always
+    env_file:
+      - ../.env
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    environment:
+      DATABASE_URL: 'postgres://rust:rust@db:5432/marreq'
+      ROCKET_DATABASES: '{my_db={url="postgres://rust:rust@db:5432/marreq"}}'
+      ROCKET_ADDRESS: '0.0.0.0'
+      ROCKET_PORT: '8001'
+      ROCKET_SECRET_KEY: ${ROCKET_SECRET_KEY:-UT5jxByH2kV2h9j/620KVP2w5NwZUEGVREFBbIKHVZk=}
+      OLLAMA_URL: 'http://ollama:11434'
+      MARREQ_PUBLIC_BASE_URL: ${MARREQ_PUBLIC_BASE_URL:-http://localhost:8080}
+      CSRF_ALLOWED_ORIGINS: 'http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:8001,http://localhost:8001'
+    ports:
+      - '127.0.0.1:8001:8001'
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -sf http://127.0.0.1:8001/api/auth/csrf >/dev/null']
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 120s
+
 volumes:
   pgdata:
   ollama_data:
-
-# Uncomment to run marreq-cloud instead of (or alongside) marreq-server.
-# Start with: docker compose -f docker/docker-compose.yml --profile cloud up -d
-#
-# backend-cloud:
-#   build:
-#     context: ..
-#     dockerfile: docker/Dockerfile
-#     args:
-#       MARREQ_BIN: marreq-cloud
-#   profiles: [cloud]
-#   restart: always
-#   env_file:
-#     - ../.env
-#   depends_on:
-#     db:
-#       condition: service_healthy
-#     ollama:
-#       condition: service_started
-#   environment:
-#     DATABASE_URL: 'postgres://rust:rust@db:5432/marreq'
-#     ROCKET_DATABASES: '{my_db={url="postgres://rust:rust@db:5432/marreq"}}'
-#     ROCKET_ADDRESS: '0.0.0.0'
-#     ROCKET_PORT: '8001'
-#     ROCKET_SECRET_KEY: ${ROCKET_SECRET_KEY:-UT5jxByH2kV2h9j/620KVP2w5NwZUEGVREFBbIKHVZk=}
-#     OLLAMA_URL: 'http://ollama:11434'
-#   ports:
-#     - '127.0.0.1:8001:8001'

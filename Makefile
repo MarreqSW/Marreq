@@ -1,7 +1,7 @@
 # Marreq dev convenience targets. The Rust code lives in marreq-{core,server,cloud}
 # submodules; this Makefile wires the most common workspace commands.
 
-.PHONY: help server cloud build test fmt lint clean docker-server docker-cloud frontend frontend-test
+.PHONY: help server cloud build test fmt lint clean docker-server docker-cloud compose-server compose-cloud frontend frontend-test
 
 help:           ## Show this help.
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-18s %s\n", $$1, $$2}'
@@ -32,6 +32,12 @@ docker-server:  ## Build the Docker image for marreq-server.
 
 docker-cloud:   ## Build the Docker image for marreq-cloud.
 	docker build -f docker/Dockerfile --build-arg MARREQ_BIN=marreq-cloud -t marreq:cloud .
+
+compose-server: ## Bring up the self-hosted Docker stack (db, ollama, marreq-server, frontend, adminer).
+	docker compose -f docker/docker-compose.yml up -d
+
+compose-cloud:  ## Bring up the cloud stack (adds marreq-cloud via the `cloud` profile).
+	docker compose -f docker/docker-compose.yml --profile cloud up -d
 
 frontend:       ## Run the Vite dev server.
 	cd frontend && npm run dev

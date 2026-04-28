@@ -7,6 +7,22 @@
 //! [`LoginRateLimiter`] is registered as Rocket managed state and consulted by
 //! the `POST /login` handler **before** any credential lookup.
 //!
+//! ## Architecture
+//!
+//! The limiter is split into two layers:
+//!
+//! * [`store::RateLimitStore`] — a small storage trait that owns per-subject
+//!   `(failures, locked_until)` records and provides atomic read-modify-write
+//!   access through [`store::RateLimitStore::with_record`].
+//! * [`LoginRateLimiter`] — the policy layer that knows about thresholds and
+//!   delays.  It holds an [`Arc<dyn RateLimitStore>`] and is therefore
+//!   trivially swappable in tests or when running behind an HA proxy.
+//!
+//! The default store is [`store::InMemoryRateLimitStore`], which mirrors the
+//! original two-`Mutex<HashMap>` design.  A future Postgres-backed store can
+//! be plugged in via [`LoginRateLimiter::with_store`] without touching the
+//! login handler or any tests.
+//!
 //! ## Policy
 //!
 //! | Trigger | Action |
@@ -19,10 +35,13 @@
 //! Delays are applied with `std::thread::sleep`, which is safe inside Rocket's
 //! synchronous route thread pool.
 
-use std::collections::HashMap;
+pub mod store;
+
 use std::net::IpAddr;
-use std::sync::Mutex;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
+
+pub use store::{AttemptRecord, InMemoryRateLimitStore, RateLimitStore, Scope};
 
 // ---------------------------------------------------------------------------
 // Policy constants
@@ -42,27 +61,6 @@ const IP_LOCKOUT_THRESHOLD: u32 = 20;
 const LOCKOUT_DURATION_SECS: u64 = 900;
 
 // ---------------------------------------------------------------------------
-// Internal tracking record
-// ---------------------------------------------------------------------------
-
-#[derive(Debug)]
-struct AttemptRecord {
-    /// Consecutive failure count (zeroed on success).
-    failures: u32,
-    /// When this subject is locked out until, if at all.
-    locked_until: Option<Instant>,
-}
-
-impl AttemptRecord {
-    fn new() -> Self {
-        Self {
-            failures: 0,
-            locked_until: None,
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Public types
 // ---------------------------------------------------------------------------
 
@@ -76,18 +74,24 @@ pub enum RateLimitOutcome {
 }
 
 /// Rocket managed state that enforces brute-force protections on login.
+///
+/// The limiter is a thin policy wrapper around a [`RateLimitStore`].  Use
+/// [`LoginRateLimiter::new`] for the in-memory default, or
+/// [`LoginRateLimiter::with_store`] to plug in a custom backend (e.g. a
+/// future Postgres-backed store for HA deployments).
 pub struct LoginRateLimiter {
-    by_username: Mutex<HashMap<String, AttemptRecord>>,
-    by_ip: Mutex<HashMap<IpAddr, AttemptRecord>>,
+    store: Arc<dyn RateLimitStore>,
 }
 
 impl LoginRateLimiter {
-    /// Create a new, empty limiter.
+    /// Create a new limiter backed by [`InMemoryRateLimitStore`].
     pub fn new() -> Self {
-        Self {
-            by_username: Mutex::new(HashMap::new()),
-            by_ip: Mutex::new(HashMap::new()),
-        }
+        Self::with_store(Arc::new(InMemoryRateLimitStore::new()))
+    }
+
+    /// Create a new limiter backed by a custom store.
+    pub fn with_store(store: Arc<dyn RateLimitStore>) -> Self {
+        Self { store }
     }
 
     /// Check whether a login attempt is allowed, applying a blocking delay if
@@ -100,40 +104,43 @@ impl LoginRateLimiter {
 
         // --- Per-IP check (fast path: reject without touching username state) ---
         if let Some(ip_addr) = ip {
-            let mut map = self.by_ip.lock().unwrap_or_else(|p| p.into_inner());
-            if let Some(rec) = map.get_mut(&ip_addr) {
+            let mut locked_remaining = None;
+            self.store.with_record(Scope::Ip(ip_addr), &mut |rec| {
                 if let Some(locked_until) = rec.locked_until {
                     if locked_until > now {
-                        return RateLimitOutcome::Locked(locked_until - now);
+                        locked_remaining = Some(locked_until - now);
+                    } else {
+                        // Lock expired – reset so it doesn't keep triggering.
+                        *rec = AttemptRecord::default();
                     }
-                    // Lock expired – reset so it doesn't keep triggering.
-                    *rec = AttemptRecord::new();
                 }
+            });
+            if let Some(remaining) = locked_remaining {
+                return RateLimitOutcome::Locked(remaining);
             }
         }
 
         // --- Per-username check with progressive delay ---
-        let delay = {
-            let mut map = self.by_username.lock().unwrap_or_else(|p| p.into_inner());
-            match map.get_mut(username) {
-                Some(rec) => {
-                    if let Some(locked_until) = rec.locked_until {
-                        if locked_until > now {
-                            return RateLimitOutcome::Locked(locked_until - now);
-                        }
-                        // Lock expired – reset.
-                        *rec = AttemptRecord::new();
-                        Duration::ZERO
-                    } else if rec.failures >= DELAY_THRESHOLD {
-                        let extra = (rec.failures - DELAY_THRESHOLD + 1) as u64;
-                        Duration::from_secs((extra * DELAY_BASE_SECS).min(MAX_DELAY_SECS))
-                    } else {
-                        Duration::ZERO
+        let mut delay = Duration::ZERO;
+        let mut locked_remaining = None;
+        self.store
+            .with_record(Scope::Username(username), &mut |rec| {
+                if let Some(locked_until) = rec.locked_until {
+                    if locked_until > now {
+                        locked_remaining = Some(locked_until - now);
+                        return;
                     }
+                    *rec = AttemptRecord::default();
                 }
-                None => Duration::ZERO,
-            }
-        };
+                if rec.failures >= DELAY_THRESHOLD {
+                    let extra = (rec.failures - DELAY_THRESHOLD + 1) as u64;
+                    delay = Duration::from_secs((extra * DELAY_BASE_SECS).min(MAX_DELAY_SECS));
+                }
+            });
+
+        if let Some(remaining) = locked_remaining {
+            return RateLimitOutcome::Locked(remaining);
+        }
 
         if !delay.is_zero() {
             std::thread::sleep(delay);
@@ -146,44 +153,36 @@ impl LoginRateLimiter {
     pub fn record_failure(&self, username: &str, ip: Option<IpAddr>) {
         let now = Instant::now();
 
-        {
-            let mut map = self.by_username.lock().unwrap_or_else(|p| p.into_inner());
-            let rec = map
-                .entry(username.to_string())
-                .or_insert_with(AttemptRecord::new);
-            // Do not increment if still within an active lockout window.
-            if rec.locked_until.map(|t| t > now).unwrap_or(false) {
-                return;
-            }
-            rec.failures += 1;
-            if rec.failures >= USERNAME_LOCKOUT_THRESHOLD {
-                rec.locked_until = Some(now + Duration::from_secs(LOCKOUT_DURATION_SECS));
-            }
-        }
+        self.store
+            .with_record(Scope::Username(username), &mut |rec| {
+                if rec.locked_until.map(|t| t > now).unwrap_or(false) {
+                    return;
+                }
+                rec.failures += 1;
+                if rec.failures >= USERNAME_LOCKOUT_THRESHOLD {
+                    rec.locked_until = Some(now + Duration::from_secs(LOCKOUT_DURATION_SECS));
+                }
+            });
 
         if let Some(ip_addr) = ip {
-            let mut map = self.by_ip.lock().unwrap_or_else(|p| p.into_inner());
-            let rec = map.entry(ip_addr).or_insert_with(AttemptRecord::new);
-            if rec.locked_until.map(|t| t > now).unwrap_or(false) {
-                return;
-            }
-            rec.failures += 1;
-            if rec.failures >= IP_LOCKOUT_THRESHOLD {
-                rec.locked_until = Some(now + Duration::from_secs(LOCKOUT_DURATION_SECS));
-            }
+            self.store.with_record(Scope::Ip(ip_addr), &mut |rec| {
+                if rec.locked_until.map(|t| t > now).unwrap_or(false) {
+                    return;
+                }
+                rec.failures += 1;
+                if rec.failures >= IP_LOCKOUT_THRESHOLD {
+                    rec.locked_until = Some(now + Duration::from_secs(LOCKOUT_DURATION_SECS));
+                }
+            });
         }
     }
 
     /// Clear all failure/lockout state for `username` and `ip` after a
     /// successful authentication.
     pub fn record_success(&self, username: &str, ip: Option<IpAddr>) {
-        {
-            let mut map = self.by_username.lock().unwrap_or_else(|p| p.into_inner());
-            map.remove(username);
-        }
+        self.store.clear(Scope::Username(username));
         if let Some(ip_addr) = ip {
-            let mut map = self.by_ip.lock().unwrap_or_else(|p| p.into_inner());
-            map.remove(&ip_addr);
+            self.store.clear(Scope::Ip(ip_addr));
         }
     }
 }
@@ -277,5 +276,38 @@ mod tests {
             }
             RateLimitOutcome::Allowed => panic!("expected lockout"),
         }
+    }
+
+    /// Custom store proves the trait seam works end-to-end without relying on
+    /// the in-memory default.
+    #[test]
+    fn limiter_works_with_custom_store() {
+        use std::sync::Mutex;
+
+        #[derive(Default)]
+        struct CountingStore {
+            inner: InMemoryRateLimitStore,
+            with_record_calls: Mutex<u32>,
+            clear_calls: Mutex<u32>,
+        }
+
+        impl RateLimitStore for CountingStore {
+            fn with_record(&self, scope: Scope<'_>, f: &mut dyn FnMut(&mut AttemptRecord)) {
+                *self.with_record_calls.lock().unwrap() += 1;
+                self.inner.with_record(scope, f);
+            }
+            fn clear(&self, scope: Scope<'_>) {
+                *self.clear_calls.lock().unwrap() += 1;
+                self.inner.clear(scope);
+            }
+        }
+
+        let store = Arc::new(CountingStore::default());
+        let limiter = LoginRateLimiter::with_store(store.clone());
+        limiter.record_failure("alice", None);
+        limiter.record_success("alice", None);
+
+        assert!(*store.with_record_calls.lock().unwrap() >= 1);
+        assert!(*store.clear_calls.lock().unwrap() >= 1);
     }
 }

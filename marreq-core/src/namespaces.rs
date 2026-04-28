@@ -3,10 +3,10 @@
 
 //! Namespace helpers for user/group rooted HTML URLs.
 
-use crate::errors::ValidationError;
 use crate::models::{Group, Project, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{GroupsRepository, UserRepository};
+use crate::validation::ValidationError;
 
 /// Top-level path segments that are reserved for system routes and cannot be used as namespaces.
 pub const RESERVED_NAMESPACE_SEGMENTS: &[&str] = &[

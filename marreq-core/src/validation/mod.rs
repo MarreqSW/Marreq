@@ -6,7 +6,10 @@
 //! This module provides validation functions for all input data types,
 //! ensuring data integrity and providing clear error messages.
 
-use crate::errors::ValidationError;
+mod error;
+
+pub use error::ValidationError;
+
 use crate::models::*;
 use crate::namespaces::validate_namespace_segment;
 use regex::Regex;

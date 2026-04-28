@@ -13,8 +13,8 @@
 #[cfg(test)]
 #[allow(clippy::module_inception)]
 mod tests {
-    use crate::errors::ValidationError;
     use crate::status_enums::ProjectStatus;
+    use crate::validation::ValidationError;
     use crate::validation::*;
 
     // ============================================================================

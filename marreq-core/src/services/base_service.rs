@@ -8,7 +8,7 @@
 //! abstraction. A handful of utility functions are still reused by several
 //! services, so they live in this module.
 
-use crate::errors::{ApiError, ApiResult};
+use crate::api::error::{ApiError, ApiResult};
 use crate::models::User;
 use crate::permissions::{has_permission, Permission};
 use crate::repository::ProjectMembersRepository;
@@ -18,7 +18,7 @@ pub fn serialize_for_logging<T>(data: &T) -> ApiResult<String>
 where
     T: serde::Serialize,
 {
-    serde_json::to_string(data).map_err(ApiError::Serialization)
+    serde_json::to_string(data).map_err(ApiError::from)
 }
 
 /// Ensure the provided user has the given permission in the project. Fail-closed.
@@ -34,7 +34,7 @@ where
     if has_permission(repo, user, project_id, permission) {
         Ok(())
     } else {
-        Err(ApiError::Authorization("permission denied".into()))
+        Err(ApiError::Forbidden("permission denied".into()))
     }
 }
 

@@ -2,14 +2,15 @@
 
 ## Overview
 
-The Marreq backend is split into three Rust crates that live as **independent
-git submodules** inside the `Marreq` root repository:
+The Marreq backend is split into three Rust crates that live as
+**directories** inside the `Marreq` root repository (a single Cargo
+workspace, no git submodules):
 
 | Crate | Kind | Purpose |
 |---|---|---|
-| [`marreq-core`](https://github.com/MarreqSW/marreq-core) | library | Shared domain, persistence (Diesel), Rocket primitives, auth, services, routes, fairings. Used by both deployment binaries. |
-| [`marreq-server`](https://github.com/MarreqSW/marreq-server) | binary | Self-hosted deployment. Admin-managed users; no public registration. |
-| [`marreq-cloud`](https://github.com/MarreqSW/marreq-cloud) | binary | Hosted / SaaS deployment. Self-registration, email verification, password reset, single bootstrap site administrator. |
+| `marreq-core` | library | Shared domain, persistence (Diesel), Rocket primitives, auth, services, routes, fairings. Used by both deployment binaries. |
+| `marreq-server` | binary | Self-hosted deployment. Admin-managed users; no public registration. |
+| `marreq-cloud` | binary | Hosted / SaaS deployment. Self-registration, email verification, password reset, single bootstrap site administrator. |
 
 The root `Marreq` repo is a **virtual Cargo workspace** — it contains no Rust
 source of its own. It hosts the frontend, Docker files, documentation,
@@ -29,7 +30,7 @@ Marreq/                         ← root repo (virtual workspace)
 ├── Cargo.toml                  ← workspace: ["marreq-core","marreq-server","marreq-cloud"]
 ├── Cargo.lock                  ← single lock-file for the whole workspace
 ├── Makefile                    ← convenience targets (see below)
-├── marreq-core/                ← git submodule → git@github.com:MarreqSW/marreq-core.git
+├── marreq-core/                ← in-tree crate (library)
 │   ├── Cargo.toml              ← [lib] marreq-core
 │   ├── src/                    ← shared library source
 │   ├── migrations/             ← Diesel migrations (schema source of truth)
@@ -44,14 +45,14 @@ Marreq/                         ← root repo (virtual workspace)
 │       ├── run_tests.sh
 │       ├── run_ci.sh
 │       └── init_complete.sql
-├── marreq-server/              ← git submodule → git@github.com:MarreqSW/marreq-server.git
+├── marreq-server/              ← in-tree crate (binary)
 │   ├── Cargo.toml              ← [[bin]] marreq-server; depends on marreq-core
 │   └── src/
 │       ├── main.rs             ← Rocket launch, wires Server deployment mode
 │       ├── deployment.rs       ← impl DeploymentMode for Server
 │       ├── api/                ← server-only routes (admin user management)
 │       └── routes.rs           ← pub fn routes() → server-only route vec
-├── marreq-cloud/               ← git submodule → git@github.com:MarreqSW/marreq-cloud.git
+├── marreq-cloud/               ← in-tree crate (binary)
 │   ├── Cargo.toml              ← [[bin]] marreq-cloud; depends on marreq-core
 │   └── src/
 │       ├── main.rs             ← Rocket launch, wires Cloud deployment mode
@@ -78,22 +79,6 @@ edition = "2021"
 license = "AGPL-3.0-or-later"
 ```
 
-### Submodule URLs (`.gitmodules`)
-
-```
-[submodule "marreq-core"]
-    path = marreq-core
-    url  = git@github.com:MarreqSW/marreq-core.git
-
-[submodule "marreq-server"]
-    path = marreq-server
-    url  = git@github.com:MarreqSW/marreq-server.git
-
-[submodule "marreq-cloud"]
-    path = marreq-cloud
-    url  = git@github.com:MarreqSW/marreq-cloud.git
-```
-
 Each deployment crate declares its library dependency as:
 
 ```toml
@@ -108,14 +93,8 @@ marreq-core = { path = "../marreq-core" }
 ### Clone (fresh machine)
 
 ```bash
-git clone --recurse-submodules git@github.com:MarreqSW/Marreq.git
+git clone git@github.com:MarreqSW/Marreq.git
 cd Marreq
-```
-
-### Update submodules after a `git pull`
-
-```bash
-git submodule update --init --recursive
 ```
 
 ### Build the whole workspace
@@ -196,8 +175,7 @@ self-service registration and password-reset UI.
    `app::build_with`. There is no fallback `default_mode()` any more —
    tests use `marreq_core::deployment::install_test_server_mode()` from the
    `test-helpers` feature.
-6. Commit in the `marreq-core` submodule, then bump the pointer in root
-   (see [Submodule workflow](#submodule-workflow) below).
+6. Commit the change normally — all three crates live in the same repo.
 
 ---
 
@@ -208,49 +186,17 @@ self-service registration and password-reset UI.
 1. Add source under `marreq-server/src/` (e.g. `src/api/my_feature.rs`).
 2. Register routes or fairings in `marreq-server/src/routes.rs`
    (`pub fn routes()`) or the fairing list in `main.rs`.
-3. Commit in the `marreq-server` submodule, then bump the root pointer.
+3. Commit normally — all three crates live in the same repo.
 
 ### Cloud-only
 
 1. Add source under `marreq-cloud/src/` (e.g. `src/api/my_feature.rs`).
 2. Register in `marreq-cloud/src/routes.rs` or the fairing list in `main.rs`.
-3. Commit in the `marreq-cloud` submodule, then bump the root pointer.
+3. Commit normally — all three crates live in the same repo.
 
 The `DeploymentMode` trait lives in `marreq-core::deployment`. Each binary
 has its own `impl DeploymentMode` in `src/deployment.rs`. Extend the trait
 there if you need core to call back into deployment-specific logic.
-
----
-
-## Submodule workflow
-
-The three crates are full independent git repositories. Changes follow a
-two-commit flow:
-
-```bash
-# 1. Work inside the submodule
-cd marreq-core
-# … edit files …
-git add .
-git commit -m "feat(core): add my-module"
-git push
-
-# 2. Record the new submodule SHA in the root repo
-cd ..
-git add marreq-core
-git commit -m "chore: bump marreq-core submodule"
-git push
-```
-
-> **Tip:** `git diff --submodule` shows which submodule SHAs have changed
-> before you stage them.
-
-When pulling, always update submodules afterwards:
-
-```bash
-git pull
-git submodule update --init --recursive
-```
 
 ---
 
@@ -268,7 +214,7 @@ git submodule update --init --recursive
 
 ## Database & scripts
 
-Migrations and dev-helper scripts now live inside the `marreq-core` submodule:
+Migrations and dev-helper scripts live inside the `marreq-core` crate:
 
 - **Schema migrations**: `marreq-core/migrations/*/up.sql` (Diesel, shared by
   both binaries).

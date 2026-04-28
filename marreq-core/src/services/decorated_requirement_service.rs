@@ -1,0 +1,817 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Marreq
+
+//! Service providing requirement related operations.
+//!
+//! The service is intentionally lightweight and wraps repository calls with
+//! validation and logging so that route handlers can remain focused on HTTP
+//! concerns.
+
+use super::{
+    ApplicabilityService, CategoryService, RequirementService, StatusService, UserService,
+};
+use crate::app::{AppState, DieselCachedRepo};
+use crate::models::{
+    DecoratedRequirement, NewRequirement, ReqParentDisplay, Requirement, User, Verification,
+};
+use crate::repository::errors::RepoError;
+
+/// High level operations for requirements backed by the shared [`AppState`].
+pub struct DecoratedRequirementService<'a> {
+    requirement_service: RequirementService<'a>,
+    category_service: CategoryService<'a>,
+    status_service: StatusService<'a>,
+    user_service: UserService<'a>,
+    applicability_service: ApplicabilityService<'a>,
+}
+
+impl<'a> DecoratedRequirementService<'a> {
+    /// Create a new service instance bound to the provided application state.
+    pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
+        Self {
+            requirement_service: RequirementService::new(state),
+            category_service: CategoryService::new(state),
+            status_service: StatusService::new(state),
+            user_service: UserService::new(state),
+            applicability_service: ApplicabilityService::new(state),
+        }
+    }
+
+    /// Retrieve all requirements.
+    pub fn list_all(&self) -> Result<Vec<DecoratedRequirement>, RepoError> {
+        self.decorate_vec(self.requirement_service.list_all()?)
+    }
+
+    /// Retrieve requirements scoped to a project.
+    pub fn list_by_project(&self, project_id: i32) -> Result<Vec<DecoratedRequirement>, RepoError> {
+        self.decorate_vec(self.requirement_service.list_by_project(project_id)?)
+    }
+
+    pub fn list_by_project_filtered(
+        &self,
+        project_id: i32,
+        status_filter: Option<i32>,
+        verification_filter: Option<i32>,
+        category_filter: Option<i32>,
+        applicability_filter: Option<i32>,
+    ) -> Result<Vec<DecoratedRequirement>, RepoError> {
+        self.decorate_vec(self.requirement_service.list_by_project_filtered(
+            project_id,
+            status_filter,
+            verification_filter,
+            category_filter,
+            applicability_filter,
+        )?)
+    }
+
+    /// Paginated filtered list; loads only one page from the database (e.g. 25 items).
+    #[allow(clippy::too_many_arguments)]
+    pub fn list_by_project_filtered_paginated(
+        &self,
+        project_id: i32,
+        status_filter: Option<i32>,
+        verification_filter: Option<i32>,
+        category_filter: Option<i32>,
+        applicability_filter: Option<i32>,
+        custom_field_filters: Option<&[(i32, String)]>,
+        limit: i64,
+        offset: i64,
+    ) -> Result<Vec<DecoratedRequirement>, RepoError> {
+        self.decorate_vec(
+            self.requirement_service
+                .list_by_project_filtered_paginated(
+                    project_id,
+                    status_filter,
+                    verification_filter,
+                    category_filter,
+                    applicability_filter,
+                    custom_field_filters,
+                    limit,
+                    offset,
+                )?,
+        )
+    }
+
+    /// Retrieve a single requirement by identifier.
+    pub fn get_by_id(&self, id: i32) -> Result<DecoratedRequirement, RepoError> {
+        let req = self.requirement_service.get_by_id(id)?;
+        self.decorate(&req)
+    }
+
+    /// Build a decorated requirement from an arbitrary requirement (e.g. a past version).
+    pub fn decorate_requirement(
+        &self,
+        req: &Requirement,
+    ) -> Result<DecoratedRequirement, RepoError> {
+        self.decorate(req)
+    }
+
+    pub fn get_by_parent_id(&self, parent_id: i32) -> Result<Vec<DecoratedRequirement>, RepoError> {
+        self.decorate_vec(self.requirement_service.get_by_parent_id(parent_id)?)
+    }
+
+    pub fn get_linked_verifications(&self, id: i32) -> Result<Vec<Verification>, RepoError> {
+        self.requirement_service.get_linked_verifications(id)
+    }
+
+    /// Create a new requirement entry and log the action.
+    pub fn create(
+        &self,
+        actor: &User,
+        payload: NewRequirement,
+        verification_method_ids: &[i32],
+    ) -> Result<i32, RepoError> {
+        self.requirement_service
+            .create(actor, payload, verification_method_ids, None)
+    }
+
+    /// Update an existing requirement entry and log the change.
+    pub fn update(
+        &self,
+        actor: &User,
+        id: i32,
+        payload: NewRequirement,
+        verification_method_ids: &[i32],
+    ) -> Result<Requirement, RepoError> {
+        self.requirement_service
+            .update(actor, id, payload, verification_method_ids, None, None)
+    }
+
+    /// Delete an requirement entry and log the removal.
+    pub fn delete(&self, actor: &User, id: i32) -> Result<Requirement, RepoError> {
+        self.requirement_service.delete(actor, id)
+    }
+
+    fn decorate_vec(&self, req: Vec<Requirement>) -> Result<Vec<DecoratedRequirement>, RepoError> {
+        req.iter().map(|r| self.decorate(r)).collect()
+    }
+
+    fn decorate(&self, req: &Requirement) -> Result<DecoratedRequirement, RepoError> {
+        let verification_ids = self
+            .requirement_service
+            .get_verification_method_ids(req.id)
+            .unwrap_or_default();
+        let verification = if verification_ids.is_empty() {
+            "—".to_string()
+        } else {
+            verification_ids
+                .iter()
+                .map(|id| {
+                    self.requirement_service
+                        .get_verification_method_title(*id)
+                        .unwrap_or_else(|| format!("Unknown Verification ({})", id))
+                })
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+
+        let (status, status_tag_color) = self
+            .status_service
+            .get_requirement_status(req.status_id)
+            .map(|s| (s.title, s.tag_color))
+            .unwrap_or_else(|_| (format!("Unknown Status ({})", req.status_id), None));
+
+        let author = self
+            .user_service
+            .get_by_id(req.author_id)
+            .map(|u| u.name)
+            .unwrap_or_else(|_| format!("Unknown User ({})", req.author_id));
+
+        let reviewer = self
+            .user_service
+            .get_by_id(req.reviewer_id)
+            .map(|u| u.name)
+            .unwrap_or_else(|_| format!("Unknown User ({})", req.reviewer_id));
+
+        let category = self
+            .category_service
+            .get_by_id(req.category_id)
+            .map(|c| c.title)
+            .unwrap_or_else(|_| format!("Unknown Category ({})", req.category_id));
+
+        let applicability = self
+            .applicability_service
+            .get_by_id(req.applicability_id)
+            .map(|a| a.title)
+            .unwrap_or_else(|_| format!("Unknown Applicability ({})", req.applicability_id));
+
+        // All parents from requirement_version_links.
+        let req_parents: Vec<ReqParentDisplay> = req
+            .current_version_id
+            .map(|vid| {
+                self.requirement_service
+                    .get_parent_requirement_ids_for_version(vid)
+            })
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|id| {
+                let parent_req = self.requirement_service.get_by_id(id).ok()?;
+                Some(ReqParentDisplay {
+                    id: parent_req.id,
+                    reference_code: parent_req.reference_code,
+                    title: parent_req.title,
+                })
+            })
+            .collect();
+
+        let first_parent_id = req_parents.first().map(|p| p.id).or(req.parent_id);
+        let (
+            parent_title,
+            parent_ref,
+            parent_desc,
+            parent_status,
+            parent_category,
+            req_parent_status_tag_color,
+        ) = if let Some(parent_id) = first_parent_id {
+            match self.requirement_service.get_by_id(parent_id) {
+                Ok(parent_req) => {
+                    let (p_status, p_tag_color) = self
+                        .status_service
+                        .get_requirement_status(parent_req.status_id)
+                        .map(|s| (s.title, s.tag_color))
+                        .unwrap_or_else(|_| {
+                            (format!("Unknown Status ({})", parent_req.status_id), None)
+                        });
+                    let p_category = self
+                        .category_service
+                        .get_by_id(parent_req.category_id)
+                        .map(|c| c.title)
+                        .unwrap_or_else(|_| {
+                            format!("Unknown Category ({})", parent_req.category_id)
+                        });
+                    (
+                        parent_req.title,
+                        parent_req.reference_code,
+                        parent_req.description,
+                        p_status,
+                        p_category,
+                        p_tag_color,
+                    )
+                }
+                Err(_) => (
+                    "[Deleted Parent]".to_string(),
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                    String::new(),
+                    None,
+                ),
+            }
+        } else {
+            (
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+                String::new(),
+                None,
+            )
+        };
+
+        Ok(DecoratedRequirement {
+            id: req.id,
+            current_version_id: req.current_version_id,
+            title: req.title.clone(),
+            verification_method_id: verification,
+            req_verification_ids: verification_ids,
+            description: req.description.clone(),
+            status_id: status,
+            req_current_status_id: req.status_id,
+            status_tag_color,
+            author_id: author,
+            req_author_id: req.author_id,
+            reviewer_id: reviewer,
+            req_reviewer_id: req.reviewer_id,
+            reference_code: req.reference_code.clone(),
+            category_id: category,
+            req_category_id: req.category_id,
+            applicability_id: applicability,
+            req_applicability_id: req.applicability_id,
+            req_parent_id: first_parent_id,
+            req_parent_title: parent_title,
+            req_parents,
+            req_parent_reference_code: parent_ref,
+            req_parent_description: parent_desc,
+            req_parent_status_id: parent_status,
+            req_parent_status_tag_color,
+            req_parent_category_id: parent_category,
+            creation_date: req.creation_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+            update_date: req.update_date.format("%d-%m-%Y %H:%M:%S").to_string(),
+            deadline_date: req
+                .deadline_date
+                .map(|d| d.format("%d-%m-%Y %H:%M:%S").to_string())
+                .unwrap_or_default(),
+            justification: req.justification.clone(),
+            project_id: req.project_id,
+            approval_state: req.approval_state.clone(),
+            approved_by: req.approved_by,
+            approved_at: req.approved_at,
+            custom_fields: req.custom_fields.clone(),
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{Applicability, Category, RequirementStatus, User, VerificationMethod};
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use chrono::{NaiveDate, NaiveDateTime};
+    use std::sync::{Arc, RwLock};
+
+    fn timestamp() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn state_with_repo(repo: DieselRepoMock) -> AppState<DieselCachedRepo> {
+        AppState {
+            repo: Arc::new(RwLock::new(DieselCachedRepo::new(repo, 0))),
+        }
+    }
+
+    fn requirement(id: i32, project_id: i32) -> Requirement {
+        Requirement {
+            id,
+            current_version_id: None,
+            same_as_current: None,
+            title: format!("Requirement {id}"),
+            description: "Description".into(),
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 2,
+            reference_code: format!("REQ-{id:03}"),
+            category_id: 1,
+            parent_id: None,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            applicability_id: 1,
+            justification: Some("Justification".into()),
+            project_id,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
+            custom_fields: None,
+        }
+    }
+
+    fn setup_repo_with_lookup_data() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+
+        // Add verification method
+        repo.verification_methods.insert(
+            1,
+            VerificationMethod {
+                id: 1,
+                title: "Test Verification".into(),
+                description: "Test".into(),
+                tag: "TEST".into(),
+                project_id: 1,
+            },
+        );
+
+        // Add status
+        repo.requirement_statuses.insert(
+            1,
+            RequirementStatus {
+                id: 1,
+                title: "Draft".into(),
+                description: "Draft status".into(),
+                tag: "DRAFT".into(),
+                project_id: 1,
+                is_system: false,
+                tag_color: None,
+            },
+        );
+
+        // Add users
+        repo.users.insert(
+            1,
+            User {
+                id: 1,
+                username: "author".into(),
+                name: "Author Name".into(),
+                email: "author@example.com".into(),
+                creation_date: timestamp(),
+                last_login: timestamp(),
+                password_hash: "hash".into(),
+                is_admin: false,
+                email_verified: true,
+            },
+        );
+        repo.users.insert(
+            2,
+            User {
+                id: 2,
+                username: "reviewer".into(),
+                name: "Reviewer Name".into(),
+                email: "reviewer@example.com".into(),
+                creation_date: timestamp(),
+                last_login: timestamp(),
+                password_hash: "hash".into(),
+                is_admin: false,
+                email_verified: true,
+            },
+        );
+
+        // Add category
+        repo.categories.insert(
+            1,
+            Category {
+                id: 1,
+                title: "Functional".into(),
+                description: "Functional requirements".into(),
+                tag: "FUNC".into(),
+                project_id: 1,
+            },
+        );
+
+        // Add applicability
+        repo.applicability.insert(
+            1,
+            Applicability {
+                id: 1,
+                title: "All Systems".into(),
+                description: "Applies to all systems".into(),
+                tag: "ALL".into(),
+                project_id: 1,
+            },
+        );
+
+        repo
+    }
+
+    #[test]
+    fn decorate_includes_all_related_data() {
+        let mut repo = setup_repo_with_lookup_data();
+        repo.requirements.insert(1, requirement(1, 1));
+        repo.requirement_verification_methods.push((1, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.get_by_id(1).unwrap();
+
+        assert_eq!(decorated.id, 1);
+        assert_eq!(decorated.title, "Requirement 1");
+        assert_eq!(decorated.verification_method_id, "Test Verification");
+        assert_eq!(decorated.status_id, "Draft");
+        assert_eq!(decorated.author_id, "Author Name");
+        assert_eq!(decorated.reviewer_id, "Reviewer Name");
+        assert_eq!(decorated.category_id, "Functional");
+        assert_eq!(decorated.applicability_id, "All Systems");
+    }
+
+    #[test]
+    fn decorate_handles_missing_verification() {
+        let mut repo = setup_repo_with_lookup_data();
+        repo.verification_methods.remove(&1);
+        repo.requirements.insert(1, requirement(1, 1));
+        repo.requirement_verification_methods.push((1, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.get_by_id(1).unwrap();
+        assert_eq!(decorated.verification_method_id, "Unknown Verification (1)");
+    }
+
+    #[test]
+    fn decorate_handles_missing_status() {
+        let mut repo = setup_repo_with_lookup_data();
+        repo.requirement_statuses.remove(&1);
+        repo.requirements.insert(1, requirement(1, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.get_by_id(1).unwrap();
+        assert_eq!(decorated.status_id, "Unknown Status (1)");
+    }
+
+    #[test]
+    fn decorate_handles_missing_author() {
+        let mut repo = setup_repo_with_lookup_data();
+        repo.users.remove(&1);
+        repo.requirements.insert(1, requirement(1, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.get_by_id(1).unwrap();
+        assert_eq!(decorated.author_id, "Unknown User (1)");
+    }
+
+    #[test]
+    fn decorate_handles_missing_reviewer() {
+        let mut repo = setup_repo_with_lookup_data();
+        repo.users.remove(&2);
+        repo.requirements.insert(1, requirement(1, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.get_by_id(1).unwrap();
+        assert_eq!(decorated.reviewer_id, "Unknown User (2)");
+    }
+
+    #[test]
+    fn decorate_handles_missing_category() {
+        let mut repo = setup_repo_with_lookup_data();
+        repo.categories.remove(&1);
+        repo.requirements.insert(1, requirement(1, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.get_by_id(1).unwrap();
+        assert_eq!(decorated.category_id, "Unknown Category (1)");
+    }
+
+    #[test]
+    fn decorate_handles_missing_applicability() {
+        let mut repo = setup_repo_with_lookup_data();
+        repo.applicability.remove(&1);
+        repo.requirements.insert(1, requirement(1, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.get_by_id(1).unwrap();
+        assert_eq!(decorated.applicability_id, "Unknown Applicability (1)");
+    }
+
+    #[test]
+    fn decorate_includes_parent_title_when_parent_exists() {
+        let mut repo = setup_repo_with_lookup_data();
+        let mut parent = requirement(1, 1);
+        parent.title = "Parent Requirement".into();
+        let mut child = requirement(2, 1);
+        child.parent_id = Some(1);
+
+        repo.requirements.insert(1, parent);
+        repo.requirements.insert(2, child);
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.get_by_id(2).unwrap();
+        assert_eq!(decorated.req_parent_id, Some(1));
+        assert_eq!(decorated.req_parent_title, "Parent Requirement");
+    }
+
+    #[test]
+    fn decorate_handles_deleted_parent() {
+        let mut repo = setup_repo_with_lookup_data();
+        let mut child = requirement(2, 1);
+        child.parent_id = Some(999); // Parent doesn't exist
+
+        repo.requirements.insert(2, child);
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.get_by_id(2).unwrap();
+        assert_eq!(decorated.req_parent_id, Some(999));
+        assert_eq!(decorated.req_parent_title, "[Deleted Parent]");
+    }
+
+    #[test]
+    fn decorate_handles_no_parent() {
+        let mut repo = setup_repo_with_lookup_data();
+        let mut req = requirement(1, 1);
+        req.parent_id = None;
+
+        repo.requirements.insert(1, req);
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.get_by_id(1).unwrap();
+        assert_eq!(decorated.req_parent_id, None);
+        assert_eq!(decorated.req_parent_title, "");
+    }
+
+    #[test]
+    fn decorate_formats_dates_correctly() {
+        let mut repo = setup_repo_with_lookup_data();
+        repo.requirements.insert(1, requirement(1, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.get_by_id(1).unwrap();
+        // Date format should be "dd-mm-yyyy HH:MM:SS"
+        assert!(decorated.creation_date.contains("2024"));
+        assert!(decorated.update_date.contains("2024"));
+        assert!(decorated.deadline_date.contains("2024"));
+    }
+
+    #[test]
+    fn decorate_handles_none_deadline() {
+        let mut repo = setup_repo_with_lookup_data();
+        let mut req = requirement(1, 1);
+        req.deadline_date = None;
+
+        repo.requirements.insert(1, req);
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.get_by_id(1).unwrap();
+        assert_eq!(decorated.deadline_date, "");
+    }
+
+    #[test]
+    fn list_all_decorates_all_requirements() {
+        let mut repo = setup_repo_with_lookup_data();
+        repo.requirements.insert(1, requirement(1, 1));
+        repo.requirements.insert(2, requirement(2, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.list_all().unwrap();
+        assert_eq!(decorated.len(), 2);
+        // Order may vary, so check that both IDs are present
+        let ids: Vec<i32> = decorated.iter().map(|r| r.id).collect();
+        assert!(ids.contains(&1));
+        assert!(ids.contains(&2));
+    }
+
+    #[test]
+    fn list_by_project_decorates_filtered_requirements() {
+        let mut repo = setup_repo_with_lookup_data();
+        repo.requirements.insert(1, requirement(1, 1));
+        repo.requirements.insert(2, requirement(2, 2)); // Different project
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.list_by_project(1).unwrap();
+        assert_eq!(decorated.len(), 1);
+        assert_eq!(decorated[0].project_id, 1);
+    }
+
+    #[test]
+    fn list_by_project_filtered_decorates_filtered_results() {
+        let mut repo = setup_repo_with_lookup_data();
+        let mut req1 = requirement(1, 1);
+        req1.status_id = 1;
+        let mut req2 = requirement(2, 1);
+        req2.status_id = 2;
+
+        repo.requirements.insert(1, req1);
+        repo.requirements.insert(2, req2);
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service
+            .list_by_project_filtered(1, Some(1), None, None, None)
+            .unwrap();
+        assert_eq!(decorated.len(), 1);
+        assert_eq!(decorated[0].id, 1);
+    }
+
+    #[test]
+    fn get_by_parent_id_decorates_children() {
+        use crate::models::{RequirementVersion, RequirementVersionLink};
+
+        let mut repo = setup_repo_with_lookup_data();
+        let mut parent = requirement(1, 1);
+        parent.current_version_id = Some(100);
+        let mut child1 = requirement(2, 1);
+        child1.current_version_id = Some(200);
+        let mut child2 = requirement(3, 1);
+        child2.current_version_id = Some(300);
+
+        repo.requirements.insert(1, parent);
+        repo.requirements.insert(2, child1);
+        repo.requirements.insert(3, child2);
+
+        // Add RequirementVersion entries so get_requirement_version_by_id works
+        for (vid, rid) in [(100, 1), (200, 2), (300, 3)] {
+            repo.requirement_versions.insert(
+                vid,
+                RequirementVersion {
+                    id: vid,
+                    requirement_id: rid,
+                    title: format!("Requirement {rid}"),
+                    description: "Description".into(),
+                    status_id: 1,
+                    author_id: 1,
+                    reviewer_id: 2,
+                    category_id: 1,
+                    created_at: timestamp(),
+                    deadline_date: None,
+                    applicability_id: 1,
+                    justification: None,
+                    approval_state: "draft".to_string(),
+                    approved_by: None,
+                    approved_at: None,
+                    reviewed_by: None,
+                    reviewed_at: None,
+                },
+            );
+        }
+
+        // Add links: child1 -> parent, child2 -> parent (source=child version, target=parent version)
+        repo.requirement_version_links.push(RequirementVersionLink {
+            id: 1,
+            source_version_id: 200,
+            target_version_id: 100,
+            link_type: "DERIVES_FROM".to_string(),
+            rationale: None,
+            project_id: 1,
+            created_at: timestamp(),
+            metadata: None,
+        });
+        repo.requirement_version_links.push(RequirementVersionLink {
+            id: 2,
+            source_version_id: 300,
+            target_version_id: 100,
+            link_type: "DERIVES_FROM".to_string(),
+            rationale: None,
+            project_id: 1,
+            created_at: timestamp(),
+            metadata: None,
+        });
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let decorated = service.get_by_parent_id(1).unwrap();
+        assert_eq!(decorated.len(), 2);
+        assert!(decorated.iter().any(|r| r.id == 2));
+        assert!(decorated.iter().any(|r| r.id == 3));
+    }
+
+    #[test]
+    fn create_delegates_to_requirement_service() {
+        let repo = setup_repo_with_lookup_data();
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let actor = DieselRepoMock::make_user(1, "actor", "");
+        let payload = NewRequirement {
+            id: None,
+            title: "New Requirement".into(),
+            description: "Description".into(),
+            author_id: 1,
+            category_id: 1,
+            status_id: 1,
+            reference_code: "REQ-NEW".into(),
+            reviewer_id: 1,
+            applicability_id: 1,
+            justification: None,
+            project_id: 1,
+        };
+
+        let id = service.create(&actor, payload, &[1]).unwrap();
+        assert!(id > 0);
+    }
+
+    #[test]
+    fn update_delegates_to_requirement_service() {
+        let mut repo = setup_repo_with_lookup_data();
+        repo.requirements.insert(1, requirement(1, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let actor = DieselRepoMock::make_user(1, "actor", "");
+        let payload = NewRequirement {
+            id: Some(1),
+            title: "Updated".into(),
+            description: "Updated Description".into(),
+            author_id: 1,
+            category_id: 1,
+            status_id: 1,
+            reference_code: "REQ-001".into(),
+            reviewer_id: 1,
+            applicability_id: 1,
+            justification: None,
+            project_id: 1,
+        };
+
+        let updated = service.update(&actor, 1, payload, &[1]).unwrap();
+        assert_eq!(updated.title, "Updated");
+    }
+
+    #[test]
+    fn delete_delegates_to_requirement_service() {
+        let mut repo = setup_repo_with_lookup_data();
+        repo.requirements.insert(1, requirement(1, 1));
+
+        let state = state_with_repo(repo);
+        let service = DecoratedRequirementService::new(&state);
+
+        let actor = DieselRepoMock::make_user(1, "actor", "");
+        let deleted = service.delete(&actor, 1).unwrap();
+        assert_eq!(deleted.id, 1);
+    }
+}

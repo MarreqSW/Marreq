@@ -1,0 +1,24 @@
+[package]
+name = "marreq-server"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "Marreq self-hosted server binary (admin-managed users)."
+authors = [
+    "Màrius Montón <marius.monton@gmail.com>",
+    "Ramon Vallés <vallespuigramon@gmail.com>",
+]
+
+[[bin]]
+name = "marreq-server"
+path = "src/main.rs"
+
+[dependencies]
+marreq-core = { path = "../marreq-core" }
+rocket = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+marreq-core = { path = "../marreq-core", features = ["test-helpers"] }
+tokio = { workspace = true, features = ["rt"] }

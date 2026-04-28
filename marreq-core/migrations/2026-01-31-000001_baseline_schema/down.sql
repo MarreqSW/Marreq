@@ -1,0 +1,35 @@
+-- Drop all Marreq tables in reverse-dependency order.
+DROP TABLE IF EXISTS embedding_index_queue CASCADE;
+DROP TABLE IF EXISTS requirement_embeddings CASCADE;
+DROP TABLE IF EXISTS logs CASCADE;
+DROP TABLE IF EXISTS baseline_traceability CASCADE;
+DROP TABLE IF EXISTS baseline_requirements CASCADE;
+DROP TABLE IF EXISTS baselines CASCADE;
+DROP TABLE IF EXISTS matrix CASCADE;
+DROP TABLE IF EXISTS tests CASCADE;
+DROP TABLE IF EXISTS requirement_version_links CASCADE;
+DROP TABLE IF EXISTS requirement_comments CASCADE;
+DROP TABLE IF EXISTS custom_field_values CASCADE;
+DROP TABLE IF EXISTS custom_field_definitions CASCADE;
+DROP TABLE IF EXISTS requirement_version_verification_methods CASCADE;
+DROP TABLE IF EXISTS requirement_versions CASCADE;
+DROP TABLE IF EXISTS requirements CASCADE;
+DROP TABLE IF EXISTS verification CASCADE;
+DROP TABLE IF EXISTS applicability CASCADE;
+DROP TABLE IF EXISTS categories CASCADE;
+DROP TABLE IF EXISTS test_status CASCADE;
+DROP TABLE IF EXISTS requirement_status CASCADE;
+DROP TABLE IF EXISTS user_api_tokens CASCADE;
+DROP TABLE IF EXISTS project_members CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
+DROP TABLE IF EXISTS projects CASCADE;
+
+DROP FUNCTION IF EXISTS requirement_versions_search_vector_update() CASCADE;
+DROP FUNCTION IF EXISTS forbid_baseline_update_delete() CASCADE;
+DROP FUNCTION IF EXISTS check_rv_category_project_consistency() CASCADE;
+DROP FUNCTION IF EXISTS check_cfv_project_consistency() CASCADE;
+DROP FUNCTION IF EXISTS check_rvvm_project_consistency() CASCADE;
+DROP FUNCTION IF EXISTS check_rvl_project_consistency() CASCADE;
+DROP FUNCTION IF EXISTS check_matrix_project_consistency() CASCADE;
+DROP FUNCTION IF EXISTS diesel_manage_updated_at(regclass) CASCADE;
+DROP FUNCTION IF EXISTS diesel_set_updated_at() CASCADE;

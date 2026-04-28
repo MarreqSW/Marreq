@@ -18,7 +18,6 @@ pub mod cors;
 pub mod db_types;
 pub mod deployment;
 pub mod diff;
-pub mod errors;
 pub mod fairings;
 pub mod generators;
 pub mod helper_functions;

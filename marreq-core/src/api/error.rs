@@ -9,6 +9,7 @@ use rocket::Request;
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 
 use crate::repository::errors::RepoError;
+use crate::validation::ValidationError;
 
 pub type ApiResult<T> = Result<T, ApiError>;
 
@@ -96,5 +97,17 @@ impl From<RepoError> for ApiError {
 impl From<Box<dyn std::error::Error>> for ApiError {
     fn from(value: Box<dyn std::error::Error>) -> Self {
         ApiError::Internal(value.to_string())
+    }
+}
+
+impl From<ValidationError> for ApiError {
+    fn from(value: ValidationError) -> Self {
+        ApiError::BadRequest(value.to_string())
+    }
+}
+
+impl From<serde_json::Error> for ApiError {
+    fn from(value: serde_json::Error) -> Self {
+        ApiError::Internal(format!("serialization failed: {value}"))
     }
 }

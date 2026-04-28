@@ -5,11 +5,7 @@ import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import type { User } from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
-
-function parseUser(u: unknown): User | null {
-  if (u && typeof u === 'object' && 'username' in u) return u as User;
-  return null;
-}
+import { parseUser } from '@/utils/parseUser';
 
 export default function AdminPage() {
   const { projectId: pid } = useOutletContext<ProjectOutletContext>();

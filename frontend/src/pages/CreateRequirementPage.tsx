@@ -24,14 +24,10 @@ import type {
 import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { authorDefaultRequirementStatusId } from '@/statusAuthorDefaults';
+import { parseUser } from '@/utils/parseUser';
 
 const selectClass =
   'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
-
-function parseUser(u: unknown): User | null {
-  if (u && typeof u === 'object' && 'username' in u) return u as User;
-  return null;
-}
 
 export default function CreateRequirementPage() {
   const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();

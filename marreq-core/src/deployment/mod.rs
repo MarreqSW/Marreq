@@ -61,11 +61,24 @@ pub fn set_current(mode: &'static dyn DeploymentMode) {
 ///
 /// # Panics
 /// Panics if called before [`crate::app::build_with`] (or a test's explicit [`set_current`] call)
-/// has registered a mode.
+/// has registered a mode.  Library code that may run before installation should
+/// prefer [`try_current`].
 pub fn current() -> &'static dyn DeploymentMode {
     *CURRENT
         .get()
         .expect("deployment::current() called before app::build_with set the mode")
+}
+
+/// Non-panicking variant of [`current`]. Returns `None` when no deployment mode
+/// has been installed yet — useful in code paths that may be exercised from
+/// startup hooks, tests, or shared library helpers that pre-date Rocket boot.
+pub fn try_current() -> Option<&'static dyn DeploymentMode> {
+    CURRENT.get().copied()
+}
+
+/// True once a deployment mode has been registered via [`set_current`].
+pub fn is_initialized() -> bool {
+    CURRENT.get().is_some()
 }
 
 #[cfg(any(test, feature = "test-helpers"))]

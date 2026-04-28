@@ -13,9 +13,9 @@ const SESSION_COOKIE_INSECURE: &str = "session";
 /// True if we should use the non-__Host- cookie (no Secure). Default true so localhost (HTTP) works;
 /// set MARREQ_SECURE_SESSION_COOKIE=1 in production over HTTPS to use __Host-session.
 fn use_insecure_session_cookie() -> bool {
-    std::env::var("MARREQ_SECURE_SESSION_COOKIE")
-        .map(|v| !matches!(v.as_str(), "1" | "true" | "yes"))
-        .unwrap_or(true)
+    !crate::config::AppConfig::try_current()
+        .map(|c| c.secure_session_cookie)
+        .unwrap_or(false)
 }
 
 /// Store the authenticated user's id in a hardened private cookie.

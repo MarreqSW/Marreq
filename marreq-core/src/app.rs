@@ -63,6 +63,7 @@ pub fn build_with(
     // Register the mode into the OnceLock so `deployment::current()` works
     // without per-call lookups.
     crate::deployment::set_current(mode);
+    eprintln!("[marreq] deployment mode: {}", mode.name());
 
     #[cfg(not(any(test, feature = "test-helpers")))]
     let inner = {

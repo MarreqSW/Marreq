@@ -97,12 +97,9 @@ impl CsrfFairing {
     /// The Rocket-configured origin is added automatically in `on_ignite`.
     pub fn new() -> Self {
         let mut origins = HashSet::new();
-        if let Ok(env_val) = std::env::var("CSRF_ALLOWED_ORIGINS") {
-            for part in env_val.split(',') {
-                let trimmed = part.trim().to_string();
-                if !trimmed.is_empty() {
-                    origins.insert(trimmed);
-                }
+        if let Some(cfg) = crate::config::AppConfig::try_current() {
+            for o in &cfg.csrf_allowed_origins {
+                origins.insert(o.clone());
             }
         }
         Self {

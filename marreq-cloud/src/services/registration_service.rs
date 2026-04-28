@@ -297,7 +297,9 @@ fn sha256_hex(input: &str) -> String {
 }
 
 fn public_base_url() -> String {
-    std::env::var("MARREQ_PUBLIC_BASE_URL").unwrap_or_else(|_| "http://localhost:8000".into())
+    marreq_core::config::AppConfig::try_current()
+        .map(|c| c.public_base_url.clone())
+        .unwrap_or_else(|| "http://localhost:8000".into())
 }
 
 fn send_verification_email(to: &str, token: &str) -> Result<(), email_sender::EmailError> {

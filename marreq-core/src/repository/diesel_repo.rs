@@ -146,8 +146,13 @@ static CONNECTION_POOL: OnceLock<Arc<ConnectionPool>> = OnceLock::new();
 /// Create the database connection pool. Returns an error if DATABASE_URL is unset or the pool cannot be built.
 /// Call this from `app::build_with()` before creating the repository; the pool is stored globally for `DieselRepo::new()`.
 pub fn create_connection_pool() -> Result<Arc<ConnectionPool>, Box<dyn std::error::Error>> {
-    dotenvy::dotenv().ok();
-    let database_url = std::env::var("DATABASE_URL").map_err(|_| "DATABASE_URL must be set")?;
+    let database_url = match crate::config::AppConfig::try_current() {
+        Some(cfg) => cfg.database_url.clone(),
+        None => {
+            dotenvy::dotenv().ok();
+            std::env::var("DATABASE_URL").map_err(|_| "DATABASE_URL must be set")?
+        }
+    };
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool = Pool::builder()
         .max_size(30)

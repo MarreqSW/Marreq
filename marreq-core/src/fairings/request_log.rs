@@ -80,7 +80,10 @@ impl Fairing for RequestLogFairing {
             .map(escape_ua)
             .unwrap_or_else(|| "-".into());
 
-        let user = crate::auth::session::read_session_user_id(req.cookies())
+        let user = req
+            .rocket()
+            .state::<crate::app::AppState>()
+            .and_then(|s| crate::auth::session::read_session_user_id_via_state(req.cookies(), s))
             .map(|id| id.to_string())
             .unwrap_or_else(|| "-".into());
 

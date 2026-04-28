@@ -125,3 +125,68 @@ impl DieselRepo {
         Ok(())
     }
 }
+
+impl super::SessionRepository for DieselRepo {
+    fn create_session(
+        &mut self,
+        new: &crate::models::entities::NewSession,
+    ) -> Result<(), RepoError> {
+        use schema::sessions::dsl;
+        let mut conn = self.get_conn()?;
+        diesel::insert_into(dsl::sessions)
+            .values(new)
+            .execute(conn.as_mut())?;
+        Ok(())
+    }
+
+    fn find_active_session(
+        &self,
+        token_hash: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<Option<crate::models::entities::Session>, RepoError> {
+        use schema::sessions::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::sessions
+            .filter(dsl::token_hash.eq(token_hash))
+            .filter(dsl::expires_at.gt(now))
+            .first::<crate::models::entities::Session>(conn.as_mut())
+            .optional()
+            .map_err(RepoError::from)
+    }
+
+    fn touch_session(
+        &mut self,
+        token_hash: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        use schema::sessions::dsl;
+        let mut conn = self.get_conn()?;
+        diesel::update(dsl::sessions.filter(dsl::token_hash.eq(token_hash)))
+            .set(dsl::last_seen_at.eq(now))
+            .execute(conn.as_mut())?;
+        Ok(())
+    }
+
+    fn delete_session(&mut self, token_hash: &str) -> Result<(), RepoError> {
+        use schema::sessions::dsl;
+        let mut conn = self.get_conn()?;
+        diesel::delete(dsl::sessions.filter(dsl::token_hash.eq(token_hash)))
+            .execute(conn.as_mut())?;
+        Ok(())
+    }
+
+    fn delete_user_sessions(&mut self, user_id: i32) -> Result<(), RepoError> {
+        use schema::sessions::dsl;
+        let mut conn = self.get_conn()?;
+        diesel::delete(dsl::sessions.filter(dsl::user_id.eq(user_id))).execute(conn.as_mut())?;
+        Ok(())
+    }
+
+    fn purge_expired_sessions(&mut self, now: chrono::NaiveDateTime) -> Result<usize, RepoError> {
+        use schema::sessions::dsl;
+        let mut conn = self.get_conn()?;
+        let n =
+            diesel::delete(dsl::sessions.filter(dsl::expires_at.le(now))).execute(conn.as_mut())?;
+        Ok(n)
+    }
+}

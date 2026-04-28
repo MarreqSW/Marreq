@@ -8,7 +8,7 @@ use rocket::request::{FromRequest, Outcome};
 use rocket::Request;
 
 use crate::app::AppState;
-use crate::auth::session::read_session_user_id;
+use crate::auth::session::read_session_user_id_via_state;
 use crate::models::User;
 use crate::repository::errors::RepoError;
 use crate::repository::UserRepository;
@@ -23,14 +23,15 @@ impl<'r> FromRequest<'r> for OptionalSessionUser {
 
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let cookies = request.cookies();
-        let user_id = match read_session_user_id(cookies) {
-            Some(id) => id,
-            None => return Outcome::Success(OptionalSessionUser(None)),
-        };
 
         let state = match request.rocket().state::<AppState>() {
             Some(s) => s.clone(),
             None => return Outcome::Error((Status::InternalServerError, ())),
+        };
+
+        let user_id = match read_session_user_id_via_state(cookies, &state) {
+            Some(id) => id,
+            None => return Outcome::Success(OptionalSessionUser(None)),
         };
 
         let result = rocket::tokio::task::spawn_blocking(move || {

@@ -133,12 +133,19 @@ pub async fn put_verification_matrix(
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
+    use crate::auth::session::test_session_cookie_for;
+
+    fn auth_cookie_for(
+        client: &rocket::local::asynchronous::Client,
+        user_id: i32,
+    ) -> rocket::http::Cookie<'static> {
+        let state = client.rocket().state::<TestState>().unwrap();
+        test_session_cookie_for(state, user_id)
+    }
     use crate::models::{MatrixLink, Project, ProjectMember};
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use crate::status_enums::ProjectStatus;
     use chrono::NaiveDate;
-    use rocket::http::{Cookie, SameSite};
     use rocket::local::asynchronous::Client;
     use std::sync::{Arc, RwLock};
 
@@ -248,14 +255,7 @@ mod tests {
         let client = client_with_routes(repo, true).await;
         let response = client
             .get(format!("/api/projects/{}/matrix", PROJECT_ID))
-            .private_cookie({
-                let mut c = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-                c.set_path("/");
-                c.set_http_only(true);
-                c.set_secure(true);
-                c.set_same_site(SameSite::Strict);
-                c
-            })
+            .private_cookie(auth_cookie_for(&client, ADMIN_ID))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);
@@ -316,14 +316,7 @@ mod tests {
         let client = client_with_routes(repo, true).await;
         let response = client
             .get(format!("/api/projects/{}/matrix", PROJECT_ID))
-            .private_cookie({
-                let mut c = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-                c.set_path("/");
-                c.set_http_only(true);
-                c.set_secure(true);
-                c.set_same_site(SameSite::Strict);
-                c
-            })
+            .private_cookie(auth_cookie_for(&client, ADMIN_ID))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);

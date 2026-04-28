@@ -13,14 +13,14 @@
 
 use marreq_core::models::*;
 use marreq_core::status_enums::ProjectStatus;
-use rocket::http::{ContentType, Cookie, SameSite, Status};
+use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::{json, Value};
 
 mod test_support {
     use super::*;
     use marreq_core::app::AppState;
-    use marreq_core::auth::session::SESSION_COOKIE;
+    use marreq_core::auth::session::test_session_cookie_for;
     use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
@@ -76,13 +76,12 @@ mod test_support {
         repo
     }
 
-    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
-        cookie.set_path("/");
-        cookie.set_http_only(true);
-        cookie.set_secure(true);
-        cookie.set_same_site(SameSite::Strict);
-        cookie
+    pub fn session_cookie(client: &Client, user_id: i32) -> Cookie<'static> {
+        let state = client
+            .rocket()
+            .state::<TestAppState>()
+            .expect("managed app state");
+        test_session_cookie_for(state, user_id)
     }
 }
 
@@ -95,7 +94,7 @@ use test_support::*;
 #[rocket::async_test]
 async fn workflow_traceability_lifecycle() {
     let client = test_client(base_repo()).await;
-    let auth = session_cookie(1);
+    let auth = session_cookie(&client, 1);
 
     // 1. Create Requirement
     let req_response = client
@@ -239,7 +238,7 @@ async fn workflow_project_isolation() {
     // User 1 is NOT a member of Project 2
 
     let client = test_client(repo).await;
-    let auth = session_cookie(1);
+    let auth = session_cookie(&client, 1);
 
     // 1. Try to create requirement in Project 2
     let req_response = client

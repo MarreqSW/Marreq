@@ -268,9 +268,17 @@ pub async fn remove_member(
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
+    use crate::auth::session::test_session_cookie_for;
+
+    fn auth_cookie_for(
+        client: &rocket::local::asynchronous::Client,
+        user_id: i32,
+    ) -> rocket::http::Cookie<'static> {
+        let state = client.rocket().state::<TestState>().unwrap();
+        test_session_cookie_for(state, user_id)
+    }
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use rocket::http::{ContentType, Cookie, SameSite};
+    use rocket::http::{ContentType, Cookie};
     use rocket::local::asynchronous::Client;
     use serde_json::{json, Value};
     use std::sync::{Arc, RwLock};
@@ -283,13 +291,8 @@ mod tests {
         }
     }
 
-    fn session_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, "1");
-        cookie.set_path("/");
-        cookie.set_http_only(true);
-        cookie.set_secure(true);
-        cookie.set_same_site(SameSite::Strict);
-        cookie
+    fn session_cookie(client: &Client) -> Cookie<'static> {
+        auth_cookie_for(client, 1)
     }
 
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
@@ -334,7 +337,7 @@ mod tests {
         let response = client
             .post("/api/groups")
             .header(ContentType::JSON)
-            .private_cookie(session_cookie())
+            .private_cookie(session_cookie(&client))
             .body(
                 json!({
                     "name": "Flight Systems",
@@ -361,7 +364,7 @@ mod tests {
         let response = client
             .post("/api/groups")
             .header(ContentType::JSON)
-            .private_cookie(session_cookie())
+            .private_cookie(session_cookie(&client))
             .body(
                 json!({
                     "name": "Admin",

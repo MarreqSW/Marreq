@@ -20,7 +20,7 @@ use serde_json::{json, Value};
 mod test_support {
     use super::*;
     use marreq_core::app::AppState;
-    use marreq_core::auth::session::SESSION_COOKIE;
+    use marreq_core::auth::session::test_session_cookie_for;
     use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
@@ -42,10 +42,12 @@ mod test_support {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
-    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
-        cookie.set_path("/");
-        cookie
+    pub fn session_cookie(client: &Client, user_id: i32) -> Cookie<'static> {
+        let state = client
+            .rocket()
+            .state::<TestAppState>()
+            .expect("managed app state");
+        test_session_cookie_for(state, user_id)
     }
 
     pub fn base_repo() -> DieselRepoMock {
@@ -84,7 +86,7 @@ async fn get_users_returns_all_users() {
 
     let response = client
         .get("/api/users")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -112,7 +114,7 @@ async fn get_user_by_id_returns_correct_user() {
 
     let response = client
         .get("/api/users/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -129,7 +131,7 @@ async fn get_user_with_nonexistent_id_returns_404() {
 
     let response = client
         .get("/api/users/999")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -156,7 +158,7 @@ async fn post_user_creates_new_user() {
     let response = client
         .post("/api/users")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(new_user_json("newuser", "New User", false).to_string())
         .dispatch()
         .await;
@@ -179,7 +181,7 @@ async fn post_user_with_missing_fields_returns_error() {
     let response = client
         .post("/api/users")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(invalid_json.to_string())
         .dispatch()
         .await;
@@ -208,7 +210,7 @@ async fn post_user_creates_admin_user() {
     let response = client
         .post("/api/users")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(new_user_json("admin2", "Second Admin", true).to_string())
         .dispatch()
         .await;
@@ -220,7 +222,7 @@ async fn post_user_creates_admin_user() {
     // Verify is_admin was set
     let get_response = client
         .get(format!("/api/users/{}", user_id))
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -242,7 +244,7 @@ async fn post_user_with_taken_username_returns_conflict() {
     let response = client
         .post("/api/users")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(new_user_json("alice", "Duplicate User", false).to_string())
         .dispatch()
         .await;
@@ -262,7 +264,7 @@ async fn post_user_with_reserved_namespace_returns_bad_request() {
     let response = client
         .post("/api/users")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(new_user_json("projects", "Reserved User", false).to_string())
         .dispatch()
         .await;
@@ -281,7 +283,7 @@ async fn delete_user_removes_user() {
     // Delete the regular user (ID 2)
     let response = client
         .delete("/api/users/2")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -290,7 +292,7 @@ async fn delete_user_removes_user() {
     // Verify user is gone
     let get_response = client
         .get("/api/users/2")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -303,7 +305,7 @@ async fn delete_nonexistent_user_returns_404() {
 
     let response = client
         .delete("/api/users/999")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -329,7 +331,7 @@ async fn password_field_is_not_present() {
 
     let response = client
         .get("/api/users/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -349,7 +351,7 @@ async fn create_multiple_users_sequentially() {
         let response = client
             .post("/api/users")
             .header(ContentType::JSON)
-            .private_cookie(session_cookie(1))
+            .private_cookie(session_cookie(&client, 1))
             .body(new_user_json(&format!("user{}", i), &format!("User {}", i), false).to_string())
             .dispatch()
             .await;
@@ -360,7 +362,7 @@ async fn create_multiple_users_sequentially() {
     // Verify all were created (2 initial + 5 new = 7 total)
     let list_response = client
         .get("/api/users")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -374,7 +376,7 @@ async fn list_users_shows_admin_flag() {
 
     let response = client
         .get("/api/users")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 

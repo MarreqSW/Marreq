@@ -49,7 +49,7 @@ use rocket::response::status;
 use rocket::{Build, Data, Request, Rocket};
 
 use crate::auth::csrf::{CSRF_COOKIE, CSRF_HEADER};
-use crate::auth::session::read_session_user_id;
+use crate::auth::session::read_session_user_id_via_state;
 
 // ---------------------------------------------------------------------------
 // Public helpers for tests
@@ -286,7 +286,11 @@ impl Fairing for CsrfFairing {
         // avoid breaking unauthenticated API / health-check calls that
         // legitimately lack an Origin header.
         // Match both `session` and `__Host-session` private cookies (see `session.rs`).
-        let has_session = read_session_user_id(req.cookies()).is_some();
+        let has_session = req
+            .rocket()
+            .state::<crate::app::AppState>()
+            .map(|s| read_session_user_id_via_state(req.cookies(), s).is_some())
+            .unwrap_or(false);
         if has_session {
             reject_request(req);
         }

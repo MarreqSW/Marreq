@@ -23,7 +23,7 @@ mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
     use marreq_core::app::AppState;
-    use marreq_core::auth::session::SESSION_COOKIE;
+    use marreq_core::auth::session::test_session_cookie_for;
     use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
@@ -52,10 +52,12 @@ mod test_support {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
-    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
-        cookie.set_path("/");
-        cookie
+    pub fn session_cookie(client: &Client, user_id: i32) -> Cookie<'static> {
+        let state = client
+            .rocket()
+            .state::<TestAppState>()
+            .expect("managed app state");
+        test_session_cookie_for(state, user_id)
     }
 
     pub fn base_repo() -> DieselRepoMock {
@@ -179,7 +181,7 @@ async fn get_tests_returns_empty_list_when_no_tests() {
 
     let response = client
         .get("/api/verifications")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -199,7 +201,7 @@ async fn get_tests_returns_all_tests() {
 
     let response = client
         .get("/api/verifications")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -231,7 +233,7 @@ async fn get_test_by_id_returns_correct_test() {
 
     let response = client
         .get("/api/verifications/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -248,7 +250,7 @@ async fn get_test_with_nonexistent_id_returns_404() {
 
     let response = client
         .get("/api/verifications/999")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -278,7 +280,7 @@ async fn post_test_creates_new_test() {
     let response = client
         .post("/api/verifications")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(new_test_json("Smoke Test", 1).to_string())
         .dispatch()
         .await;
@@ -301,7 +303,7 @@ async fn post_test_with_missing_fields_returns_error() {
     let response = client
         .post("/api/verifications")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(invalid_json.to_string())
         .dispatch()
         .await;
@@ -343,7 +345,7 @@ async fn update_field_changes_test_name() {
     let response = client
         .post("/api/verifications/1/field")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(update.to_string())
         .dispatch()
         .await;
@@ -355,7 +357,7 @@ async fn update_field_changes_test_name() {
     // Verify the update
     let get_response = client
         .get("/api/verifications/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -378,7 +380,7 @@ async fn update_field_changes_test_status() {
     let response = client
         .post("/api/verifications/1/field")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(update.to_string())
         .dispatch()
         .await;
@@ -388,7 +390,7 @@ async fn update_field_changes_test_status() {
     // Verify status was updated
     let get_response = client
         .get("/api/verifications/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -411,7 +413,7 @@ async fn update_field_with_invalid_field_returns_error() {
     let response = client
         .post("/api/verifications/1/field")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(update.to_string())
         .dispatch()
         .await;
@@ -434,7 +436,7 @@ async fn update_field_with_invalid_status_value_returns_error() {
     let response = client
         .post("/api/verifications/1/field")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(update.to_string())
         .dispatch()
         .await;
@@ -455,7 +457,7 @@ async fn delete_test_removes_test() {
 
     let response = client
         .delete("/api/verifications/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -464,7 +466,7 @@ async fn delete_test_removes_test() {
     // Verify test is gone
     let get_response = client
         .get("/api/verifications/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -477,7 +479,7 @@ async fn delete_nonexistent_test_returns_404() {
 
     let response = client
         .delete("/api/verifications/999")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -514,7 +516,7 @@ async fn create_test_with_parent() {
     let response = client
         .post("/api/verifications")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(child_json.to_string())
         .dispatch()
         .await;
@@ -526,7 +528,7 @@ async fn create_test_with_parent() {
     // Verify parent relationship
     let get_response = client
         .get(format!("/api/verifications/{}", child_id))
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -552,7 +554,7 @@ async fn update_test_parent() {
     let response = client
         .post("/api/verifications/2/field")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(update.to_string())
         .dispatch()
         .await;
@@ -562,7 +564,7 @@ async fn update_test_parent() {
     // Verify parent was set
     let get_response = client
         .get("/api/verifications/2")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -589,7 +591,7 @@ async fn update_test_description() {
     let response = client
         .post("/api/verifications/1/field")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(update.to_string())
         .dispatch()
         .await;
@@ -598,7 +600,7 @@ async fn update_test_description() {
 
     let get_response = client
         .get("/api/verifications/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -621,7 +623,7 @@ async fn update_test_source() {
     let response = client
         .post("/api/verifications/1/field")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(update.to_string())
         .dispatch()
         .await;
@@ -630,7 +632,7 @@ async fn update_test_source() {
 
     let get_response = client
         .get("/api/verifications/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -650,7 +652,7 @@ async fn create_multiple_tests_sequentially() {
         let response = client
             .post("/api/verifications")
             .header(ContentType::JSON)
-            .private_cookie(session_cookie(1))
+            .private_cookie(session_cookie(&client, 1))
             .body(new_test_json(&format!("Test {}", i), 1).to_string())
             .dispatch()
             .await;
@@ -663,7 +665,7 @@ async fn create_multiple_tests_sequentially() {
     // Verify all were created
     let list_response = client
         .get("/api/verifications")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 

@@ -74,10 +74,18 @@ mod tests {
     use super::*;
     use crate::api::{baselines, requirements};
     use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
+    use crate::auth::session::test_session_cookie_for;
+
+    fn auth_cookie_for(
+        client: &rocket::local::asynchronous::Client,
+        user_id: i32,
+    ) -> rocket::http::Cookie<'static> {
+        let state = client.rocket().state::<TestState>().unwrap();
+        test_session_cookie_for(state, user_id)
+    }
     use crate::diff::RequirementDiff;
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use rocket::http::{ContentType, Cookie, SameSite};
+    use rocket::http::ContentType;
     use rocket::local::asynchronous::Client;
     use serde_json::Value;
     use std::sync::{Arc, RwLock};
@@ -112,13 +120,8 @@ mod tests {
         Client::tracked(rocket).await.unwrap()
     }
 
-    fn auth_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-        cookie.set_path("/");
-        cookie.set_http_only(true);
-        cookie.set_secure(true);
-        cookie.set_same_site(SameSite::Strict);
-        cookie
+    fn auth_cookie(client: &rocket::local::asynchronous::Client) -> rocket::http::Cookie<'static> {
+        auth_cookie_for(client, ADMIN_ID)
     }
 
     fn sample_requirement(title: &str) -> Value {
@@ -146,7 +149,7 @@ mod tests {
         let create_resp = client
             .post("/api/requirements")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(req.to_string())
             .dispatch()
             .await;
@@ -157,14 +160,14 @@ mod tests {
         client
             .patch(format!("/api/requirements/{}", req_id))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(serde_json::json!({ "title": "V2 Updated" }).to_string())
             .dispatch()
             .await;
 
         let versions_resp = client
             .get(format!("/api/requirements/{}/versions", req_id))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(versions_resp.status(), Status::Ok);
@@ -178,7 +181,7 @@ mod tests {
                 "/api/requirements/{}/versions/{}/diff/{}",
                 req_id, v1_id, v2_id
             ))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(diff_resp.status(), Status::Ok);
@@ -194,7 +197,7 @@ mod tests {
         let create1 = client
             .post("/api/requirements")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(sample_requirement("Req1").to_string())
             .dispatch()
             .await;
@@ -208,7 +211,7 @@ mod tests {
         let create2 = client
             .post("/api/requirements")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(
                 sample_requirement("Req2")
                     .to_string()
@@ -225,7 +228,7 @@ mod tests {
             .unwrap() as i32;
         let versions_resp = client
             .get(format!("/api/requirements/{}/versions", id1))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         let versions: Vec<Value> = versions_resp.into_json().await.unwrap();
@@ -235,7 +238,7 @@ mod tests {
                 "/api/requirements/{}/versions/{}/diff/{}",
                 id2, v1_id, v1_id
             ))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(diff_resp.status(), Status::NotFound);
@@ -247,7 +250,7 @@ mod tests {
         let create_req = client
             .post("/api/requirements")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(sample_requirement("Before Baseline").to_string())
             .dispatch()
             .await;
@@ -261,7 +264,7 @@ mod tests {
         let create_bl = client
             .post("/api/projects/1/baselines")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(serde_json::json!({ "name": "BL", "description": null }).to_string())
             .dispatch()
             .await;
@@ -271,7 +274,7 @@ mod tests {
         client
             .patch(format!("/api/requirements/{}", req_id))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(serde_json::json!({ "title": "After Baseline" }).to_string())
             .dispatch()
             .await;
@@ -280,7 +283,7 @@ mod tests {
                 "/api/projects/1/baselines/{}/requirements/{}/diff/current",
                 baseline_id, req_id
             ))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(diff_resp.status(), Status::Ok);
@@ -294,7 +297,7 @@ mod tests {
         let create_bl = client
             .post("/api/projects/1/baselines")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(serde_json::json!({ "name": "Empty BL", "description": null }).to_string())
             .dispatch()
             .await;
@@ -304,7 +307,7 @@ mod tests {
         let create_req = client
             .post("/api/requirements")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(sample_requirement("Req After BL").to_string())
             .dispatch()
             .await;
@@ -320,7 +323,7 @@ mod tests {
                 "/api/projects/1/baselines/{}/requirements/{}/diff/current",
                 baseline_id, req_id
             ))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(diff_resp.status(), Status::NotFound);

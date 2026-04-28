@@ -22,7 +22,7 @@ mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
     use marreq_core::app::AppState;
-    use marreq_core::auth::session::SESSION_COOKIE;
+    use marreq_core::auth::session::test_session_cookie_for;
     use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
@@ -51,10 +51,12 @@ mod test_support {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
-    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
-        cookie.set_path("/");
-        cookie
+    pub fn session_cookie(client: &Client, user_id: i32) -> Cookie<'static> {
+        let state = client
+            .rocket()
+            .state::<TestAppState>()
+            .expect("managed app state");
+        test_session_cookie_for(state, user_id)
     }
 
     pub fn base_repo() -> DieselRepoMock {
@@ -309,7 +311,7 @@ async fn list_requirements_returns_only_user_projects() {
     // User 2 should see requirements from projects 1 and 2
     let response = client
         .get("/api/requirements")
-        .private_cookie(session_cookie(2))
+        .private_cookie(session_cookie(&client, 2))
         .dispatch()
         .await;
 
@@ -366,7 +368,7 @@ async fn get_requirement_from_unauthorized_project_returns_forbidden() {
     // User 3 is not a member of project 1
     let response = client
         .get("/api/requirements/1")
-        .private_cookie(session_cookie(3))
+        .private_cookie(session_cookie(&client, 3))
         .dispatch()
         .await;
 
@@ -399,7 +401,7 @@ async fn create_requirement_forbidden_when_user_not_project_member() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(3))
+        .private_cookie(session_cookie(&client, 3))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -443,7 +445,7 @@ async fn delete_requirement_works_for_any_authenticated_user() {
     // User 3 is not a member of project 1, but API allows deletion
     let response = client
         .delete("/api/requirements/1")
-        .private_cookie(session_cookie(3))
+        .private_cookie(session_cookie(&client, 3))
         .dispatch()
         .await;
 
@@ -521,7 +523,7 @@ async fn list_tests_returns_only_user_projects() {
     // User 2 should see tests from projects 1 and 2
     let response = client
         .get("/api/verifications")
-        .private_cookie(session_cookie(2))
+        .private_cookie(session_cookie(&client, 2))
         .dispatch()
         .await;
 
@@ -567,7 +569,7 @@ async fn get_test_works_for_any_authenticated_user() {
     // User 3 is not a member of project 1, but API allows access
     let response = client
         .get("/api/verifications/1")
-        .private_cookie(session_cookie(3))
+        .private_cookie(session_cookie(&client, 3))
         .dispatch()
         .await;
 
@@ -587,7 +589,7 @@ async fn list_categories_returns_only_user_projects() {
     // User 2 should see categories from projects 1 and 2
     let response = client
         .get("/api/categories")
-        .private_cookie(session_cookie(2))
+        .private_cookie(session_cookie(&client, 2))
         .dispatch()
         .await;
 
@@ -611,7 +613,7 @@ async fn get_category_works_for_any_authenticated_user() {
     // User 3 is not a member of project 1, but API allows access
     let response = client
         .get("/api/categories/1")
-        .private_cookie(session_cookie(3))
+        .private_cookie(session_cookie(&client, 3))
         .dispatch()
         .await;
 
@@ -634,7 +636,7 @@ async fn create_category_works_for_any_authenticated_user() {
     let response = client
         .post("/api/categories")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(3))
+        .private_cookie(session_cookie(&client, 3))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -656,7 +658,7 @@ async fn list_applicability_returns_only_user_projects() {
     // User 2 should see applicability from projects 1 and 2
     let response = client
         .get("/api/applicability")
-        .private_cookie(session_cookie(2))
+        .private_cookie(session_cookie(&client, 2))
         .dispatch()
         .await;
 
@@ -680,7 +682,7 @@ async fn get_applicability_works_for_any_authenticated_user() {
     // User 3 is not a member of project 1, but API allows access
     let response = client
         .get("/api/applicability/1")
-        .private_cookie(session_cookie(3))
+        .private_cookie(session_cookie(&client, 3))
         .dispatch()
         .await;
 
@@ -728,7 +730,7 @@ async fn admin_can_access_all_projects() {
     // Admin (user 1) should be able to access requirement from project 1
     let response = client
         .get("/api/requirements/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 

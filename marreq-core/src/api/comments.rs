@@ -149,12 +149,20 @@ pub async fn create(
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
+    use crate::auth::session::test_session_cookie_for;
+
+    fn auth_cookie_for(
+        client: &rocket::local::asynchronous::Client,
+        user_id: i32,
+    ) -> rocket::http::Cookie<'static> {
+        let state = client.rocket().state::<TestState>().unwrap();
+        test_session_cookie_for(state, user_id)
+    }
     use crate::models::{Project, ProjectMember, Requirement, RequirementComment};
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use crate::status_enums::ProjectStatus;
     use chrono::NaiveDate;
-    use rocket::http::{ContentType, Cookie, SameSite, Status};
+    use rocket::http::{ContentType, Status};
     use rocket::local::asynchronous::Client;
     use std::sync::{Arc, RwLock};
 
@@ -184,13 +192,11 @@ mod tests {
         Client::tracked(rocket).await.unwrap()
     }
 
-    fn auth_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
-        cookie.set_path("/");
-        cookie.set_http_only(true);
-        cookie.set_secure(true);
-        cookie.set_same_site(SameSite::Strict);
-        cookie
+    fn auth_cookie(
+        client: &rocket::local::asynchronous::Client,
+        user_id: i32,
+    ) -> rocket::http::Cookie<'static> {
+        auth_cookie_for(client, user_id)
     }
 
     fn repo_with_requirement_and_member() -> DieselRepoMock {
@@ -250,7 +256,7 @@ mod tests {
         let client = client_with_repo(repo_with_requirement_and_member()).await;
         let response = client
             .get(format!("/api/requirements/{}/comments", REQ_ID))
-            .private_cookie(auth_cookie(ADMIN_ID))
+            .private_cookie(auth_cookie(&client, ADMIN_ID))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);
@@ -272,7 +278,7 @@ mod tests {
         let client = client_with_repo(repo).await;
         let response = client
             .get(format!("/api/requirements/{}/comments", REQ_ID))
-            .private_cookie(auth_cookie(ADMIN_ID))
+            .private_cookie(auth_cookie(&client, ADMIN_ID))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);
@@ -290,7 +296,7 @@ mod tests {
         let client = client_with_repo(repo).await;
         let response = client
             .get(format!("/api/requirements/{}/comments", REQ_ID))
-            .private_cookie(auth_cookie(ADMIN_ID))
+            .private_cookie(auth_cookie(&client, ADMIN_ID))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Forbidden);
@@ -301,7 +307,7 @@ mod tests {
         let client = client_with_repo(repo_with_requirement_and_member()).await;
         let response = client
             .get("/api/requirements/999/comments")
-            .private_cookie(auth_cookie(ADMIN_ID))
+            .private_cookie(auth_cookie(&client, ADMIN_ID))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::NotFound);
@@ -313,7 +319,7 @@ mod tests {
         let response = client
             .post(format!("/api/requirements/{}/comments", REQ_ID))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie(ADMIN_ID))
+            .private_cookie(auth_cookie(&client, ADMIN_ID))
             .body(r#"{"body":"New comment"}"#)
             .dispatch()
             .await;
@@ -333,7 +339,7 @@ mod tests {
         let response = client
             .post(format!("/api/requirements/{}/comments", REQ_ID))
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie(ADMIN_ID))
+            .private_cookie(auth_cookie(&client, ADMIN_ID))
             .body(r#"{"body":"New comment"}"#)
             .dispatch()
             .await;
@@ -346,7 +352,7 @@ mod tests {
         let response = client
             .post("/api/requirements/999/comments")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie(ADMIN_ID))
+            .private_cookie(auth_cookie(&client, ADMIN_ID))
             .body(r#"{"body":"New comment"}"#)
             .dispatch()
             .await;

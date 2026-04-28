@@ -22,7 +22,7 @@ mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
     use marreq_core::app::AppState;
-    use marreq_core::auth::session::SESSION_COOKIE;
+    use marreq_core::auth::session::test_session_cookie_for;
     use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
@@ -51,10 +51,12 @@ mod test_support {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
-    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
-        cookie.set_path("/");
-        cookie
+    pub fn session_cookie(client: &Client, user_id: i32) -> Cookie<'static> {
+        let state = client
+            .rocket()
+            .state::<TestAppState>()
+            .expect("managed app state");
+        test_session_cookie_for(state, user_id)
     }
 
     pub fn base_repo() -> DieselRepoMock {
@@ -249,7 +251,7 @@ async fn get_requirements_returns_empty_list_when_no_requirements() {
 
     let response = client
         .get("/api/requirements")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -272,7 +274,7 @@ async fn get_requirements_returns_all_requirements() {
 
     let response = client
         .get("/api/requirements")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -310,7 +312,7 @@ async fn get_requirement_by_id_returns_correct_requirement() {
 
     let response = client
         .get("/api/requirements/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -327,7 +329,7 @@ async fn get_requirement_with_nonexistent_id_returns_404() {
 
     let response = client
         .get("/api/requirements/999")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -358,7 +360,7 @@ async fn post_requirement_creates_new_requirement() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(new_requirement_json("New Requirement", 1).to_string())
         .dispatch()
         .await;
@@ -381,7 +383,7 @@ async fn post_requirement_with_missing_fields_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(invalid_json.to_string())
         .dispatch()
         .await;
@@ -411,7 +413,7 @@ async fn post_requirement_creates_with_multiple_verification_method_ids() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(body.to_string())
         .dispatch()
         .await;
@@ -430,7 +432,7 @@ async fn post_requirement_rejects_empty_verification_method_ids() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(body.to_string())
         .dispatch()
         .await;
@@ -445,7 +447,7 @@ async fn post_requirement_with_invalid_json_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body("{invalid json}")
         .dispatch()
         .await;
@@ -472,7 +474,7 @@ async fn patch_requirement_updates_title() {
     let response = client
         .patch("/api/requirements/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(patch.to_string())
         .dispatch()
         .await;
@@ -484,7 +486,7 @@ async fn patch_requirement_updates_title() {
     // Verify the update
     let get_response = client
         .get("/api/requirements/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -509,7 +511,7 @@ async fn patch_requirement_updates_multiple_fields() {
     let response = client
         .patch("/api/requirements/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(patch.to_string())
         .dispatch()
         .await;
@@ -519,7 +521,7 @@ async fn patch_requirement_updates_multiple_fields() {
     // Verify all fields were updated
     let get_response = client
         .get("/api/requirements/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -545,7 +547,7 @@ async fn patch_requirement_updates_verification_method_ids() {
     let response = client
         .patch("/api/requirements/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(patch.to_string())
         .dispatch()
         .await;
@@ -564,7 +566,7 @@ async fn patch_requirement_with_empty_patch_returns_bad_request() {
     let response = client
         .patch("/api/requirements/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(json!({}).to_string())
         .dispatch()
         .await;
@@ -583,7 +585,7 @@ async fn patch_nonexistent_requirement_returns_404() {
     let response = client
         .patch("/api/requirements/999")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(patch.to_string())
         .dispatch()
         .await;
@@ -605,7 +607,7 @@ async fn delete_requirement_removes_requirement() {
 
     let response = client
         .delete("/api/requirements/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -614,7 +616,7 @@ async fn delete_requirement_removes_requirement() {
     // Verify requirement is gone
     let get_response = client
         .get("/api/requirements/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -627,7 +629,7 @@ async fn delete_nonexistent_requirement_returns_404() {
 
     let response = client
         .delete("/api/requirements/999")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -663,7 +665,7 @@ async fn get_requirements_returns_requirements_from_all_projects() {
 
     let response = client
         .get("/api/requirements")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -688,7 +690,7 @@ async fn create_requirement_with_very_long_title() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(req_json.to_string())
         .dispatch()
         .await;
@@ -705,7 +707,7 @@ async fn create_multiple_requirements_sequentially() {
         let response = client
             .post("/api/requirements")
             .header(ContentType::JSON)
-            .private_cookie(session_cookie(1))
+            .private_cookie(session_cookie(&client, 1))
             .body(new_requirement_json(&format!("Requirement {}", i), 1).to_string())
             .dispatch()
             .await;
@@ -718,7 +720,7 @@ async fn create_multiple_requirements_sequentially() {
     // Verify all were created
     let list_response = client
         .get("/api/requirements")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -744,7 +746,7 @@ async fn patch_requirement_preserves_unmodified_fields() {
     client
         .patch("/api/requirements/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(patch.to_string())
         .dispatch()
         .await;
@@ -752,7 +754,7 @@ async fn patch_requirement_preserves_unmodified_fields() {
     // Verify other fields unchanged
     let get_response = client
         .get("/api/requirements/1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -771,7 +773,7 @@ async fn list_requirement_version_links_returns_200_and_array() {
 
     let response = client
         .get("/api/projects/1/requirement-version-links")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 

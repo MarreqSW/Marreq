@@ -51,9 +51,9 @@ pub async fn delete(admin: AdminOnly, id: i32, state: &State<AppState>) -> ApiRe
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
+    use crate::auth::session::test_session_cookie_for;
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use rocket::http::{ContentType, Cookie, SameSite};
+    use rocket::http::{ContentType, Cookie};
     use rocket::local::asynchronous::Client;
     use serde_json::json;
     use std::collections::HashMap;
@@ -77,22 +77,14 @@ mod tests {
         Client::tracked(rocket).await.unwrap()
     }
 
-    fn auth_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-        cookie.set_path("/");
-        cookie.set_http_only(true);
-        cookie.set_secure(true);
-        cookie.set_same_site(SameSite::Strict);
-        cookie
+    fn auth_cookie(client: &Client) -> Cookie<'static> {
+        let state = client.rocket().state::<TestState>().unwrap();
+        test_session_cookie_for(state, ADMIN_ID)
     }
 
-    fn non_admin_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, NON_ADMIN_ID.to_string());
-        cookie.set_path("/");
-        cookie.set_http_only(true);
-        cookie.set_secure(true);
-        cookie.set_same_site(SameSite::Strict);
-        cookie
+    fn non_admin_cookie(client: &Client) -> Cookie<'static> {
+        let state = client.rocket().state::<TestState>().unwrap();
+        test_session_cookie_for(state, NON_ADMIN_ID)
     }
 
     /// Build a repo that contains the seeded admin user plus a plain (non-admin) user with id 2.
@@ -110,7 +102,7 @@ mod tests {
         let client = client_with_repo(repo_with_non_admin()).await;
         let response = client
             .get("/api/users")
-            .private_cookie(non_admin_cookie())
+            .private_cookie(non_admin_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Forbidden);
@@ -121,7 +113,7 @@ mod tests {
         let client = client_with_repo(repo_with_non_admin()).await;
         let response = client
             .get("/api/users/1")
-            .private_cookie(non_admin_cookie())
+            .private_cookie(non_admin_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Forbidden);
@@ -133,7 +125,7 @@ mod tests {
         let response = client
             .post("/api/users")
             .header(ContentType::JSON)
-            .private_cookie(non_admin_cookie())
+            .private_cookie(non_admin_cookie(&client))
             .body(
                 json!({
                     "username": "carol",
@@ -154,7 +146,7 @@ mod tests {
         let client = client_with_repo(repo_with_non_admin()).await;
         let response = client
             .delete("/api/users/1")
-            .private_cookie(non_admin_cookie())
+            .private_cookie(non_admin_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Forbidden);
@@ -174,7 +166,7 @@ mod tests {
         let client = client_with_repo(repo).await;
         let response = client
             .get("/api/users")
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);

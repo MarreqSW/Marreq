@@ -22,7 +22,7 @@ mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
     use marreq_core::app::AppState;
-    use marreq_core::auth::session::SESSION_COOKIE;
+    use marreq_core::auth::session::test_session_cookie_for;
     use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
@@ -51,10 +51,12 @@ mod test_support {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
-    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
-        cookie.set_path("/");
-        cookie
+    pub fn session_cookie(client: &Client, user_id: i32) -> Cookie<'static> {
+        let state = client
+            .rocket()
+            .state::<TestAppState>()
+            .expect("managed app state");
+        test_session_cookie_for(state, user_id)
     }
 
     /// Repo with project 1, admin (user 1) as owner, user 2 as member with role 2 (manager), user 3 as member with role 3 (cannot approve).
@@ -253,7 +255,7 @@ async fn create_by_project_returns_ok_and_id() {
     let response = client
         .post(format!("/api/projects/{PROJECT_ID}/requirements"))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(create_requirement_payload(PROJECT_ID, "REQ-MCP-001").to_string())
         .dispatch()
         .await;
@@ -271,7 +273,7 @@ async fn create_by_project_rejects_when_payload_project_id_mismatch() {
     let response = client
         .post(format!("/api/projects/{PROJECT_ID}/requirements"))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(create_requirement_payload(999, "REQ-001").to_string())
         .dispatch()
         .await;
@@ -289,7 +291,7 @@ async fn create_by_project_rejects_empty_verification_method_ids() {
     let response = client
         .post(format!("/api/projects/{PROJECT_ID}/requirements"))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -373,7 +375,7 @@ async fn patch_by_project_updates_requirement() {
     let response = client
         .patch(format!("/api/projects/{PROJECT_ID}/requirements/1"))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(json!({ "title": "Patched Title" }).to_string())
         .dispatch()
         .await;
@@ -384,7 +386,7 @@ async fn patch_by_project_updates_requirement() {
 
     let get_resp = client
         .get(format!("/api/projects/{PROJECT_ID}/requirements/1"))
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
     assert_eq!(get_resp.status(), Status::Ok);
@@ -450,7 +452,7 @@ async fn patch_by_project_returns_404_when_requirement_not_in_project() {
     let response = client
         .patch(format!("/api/projects/{PROJECT_ID}/requirements/1"))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(json!({ "title": "Patched" }).to_string())
         .dispatch()
         .await;
@@ -515,7 +517,7 @@ async fn patch_by_project_rejects_empty_patch() {
     let response = client
         .patch(format!("/api/projects/{PROJECT_ID}/requirements/1"))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(json!({}).to_string())
         .dispatch()
         .await;
@@ -587,7 +589,7 @@ async fn set_version_approval_by_project_succeeds_for_owner() {
             "/api/projects/{PROJECT_ID}/requirements/1/versions/{version_id}/approval"
         ))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(json!({ "state": "reviewed" }).to_string())
         .dispatch()
         .await;
@@ -657,7 +659,7 @@ async fn set_version_approval_by_project_succeeds_for_manager() {
             "/api/projects/{PROJECT_ID}/requirements/1/versions/{version_id}/approval"
         ))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(2))
+        .private_cookie(session_cookie(&client, 2))
         .body(json!({ "state": "reviewed" }).to_string())
         .dispatch()
         .await;
@@ -727,7 +729,7 @@ async fn set_version_approval_by_project_returns_forbidden_for_member_without_ro
             "/api/projects/{PROJECT_ID}/requirements/1/versions/{version_id}/approval"
         ))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(3))
+        .private_cookie(session_cookie(&client, 3))
         .body(json!({ "state": "reviewed" }).to_string())
         .dispatch()
         .await;
@@ -795,7 +797,7 @@ async fn set_version_approval_by_project_returns_404_when_requirement_not_in_pro
             "/api/projects/{PROJECT_ID}/requirements/1/versions/{version_id}/approval"
         ))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(json!({ "state": "reviewed" }).to_string())
         .dispatch()
         .await;
@@ -860,7 +862,7 @@ async fn set_version_approval_by_project_rejects_invalid_state() {
     let response = client
         .put("/api/projects/1/requirements/1/versions/1/approval")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(json!({ "state": "invalid" }).to_string())
         .dispatch()
         .await;
@@ -879,7 +881,7 @@ async fn create_baseline_project_scoped_succeeds_with_session() {
     let response = client
         .post(format!("/api/projects/{PROJECT_ID}/baselines"))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(json!({ "name": "MCP Baseline", "description": "From test" }).to_string())
         .dispatch()
         .await;
@@ -970,7 +972,7 @@ async fn patch_status_forbidden_when_user_not_in_project_reviewer_pool() {
     let response = client
         .patch(format!("/api/projects/{PROJECT_ID}/requirements/1"))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(2))
+        .private_cookie(session_cookie(&client, 2))
         .body(json!({ "status_id": 2 }).to_string())
         .dispatch()
         .await;
@@ -989,7 +991,7 @@ async fn patch_status_forbidden_for_site_admin_not_in_project_reviewer_pool() {
     let response = client
         .patch(format!("/api/projects/{PROJECT_ID}/requirements/1"))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(json!({ "status_id": 2 }).to_string())
         .dispatch()
         .await;
@@ -1008,7 +1010,7 @@ async fn patch_status_ok_for_user_in_project_reviewer_pool() {
     let response = client
         .patch(format!("/api/projects/{PROJECT_ID}/requirements/1"))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(3))
+        .private_cookie(session_cookie(&client, 3))
         .body(json!({ "status_id": 2 }).to_string())
         .dispatch()
         .await;
@@ -1029,7 +1031,7 @@ async fn set_version_approval_forbidden_when_user_not_in_reviewer_pool() {
             "/api/projects/{PROJECT_ID}/requirements/1/versions/1/approval"
         ))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(2))
+        .private_cookie(session_cookie(&client, 2))
         .body(json!({ "state": "reviewed" }).to_string())
         .dispatch()
         .await;
@@ -1050,7 +1052,7 @@ async fn set_version_approval_forbidden_for_site_admin_not_in_reviewer_pool() {
             "/api/projects/{PROJECT_ID}/requirements/1/versions/1/approval"
         ))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(json!({ "state": "reviewed" }).to_string())
         .dispatch()
         .await;
@@ -1071,7 +1073,7 @@ async fn set_version_approval_ok_for_user_in_reviewer_pool() {
             "/api/projects/{PROJECT_ID}/requirements/1/versions/1/approval"
         ))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(3))
+        .private_cookie(session_cookie(&client, 3))
         .body(json!({ "state": "reviewed" }).to_string())
         .dispatch()
         .await;
@@ -1091,7 +1093,7 @@ async fn create_by_project_draft_status_ok_for_non_reviewer_when_not_in_reviewer
     let response = client
         .post(format!("/api/projects/{PROJECT_ID}/requirements"))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(2))
+        .private_cookie(session_cookie(&client, 2))
         .body(create_requirement_payload(PROJECT_ID, "REQ-DRAFT-NR").to_string())
         .dispatch()
         .await;
@@ -1113,7 +1115,7 @@ async fn create_by_project_non_draft_status_forbidden_for_non_reviewer() {
     let response = client
         .post(format!("/api/projects/{PROJECT_ID}/requirements"))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(2))
+        .private_cookie(session_cookie(&client, 2))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -1132,7 +1134,7 @@ async fn verification_field_status_forbidden_when_user_not_in_reviewer_pool() {
     let response = client
         .post(format!("/api/projects/{PROJECT_ID}/verifications/1/field"))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(2))
+        .private_cookie(session_cookie(&client, 2))
         .body(json!({ "field": "status_id", "value": "2" }).to_string())
         .dispatch()
         .await;
@@ -1151,7 +1153,7 @@ async fn verification_field_status_ok_for_user_in_reviewer_pool() {
     let response = client
         .post(format!("/api/projects/{PROJECT_ID}/verifications/1/field"))
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(3))
+        .private_cookie(session_cookie(&client, 3))
         .body(json!({ "field": "status_id", "value": "2" }).to_string())
         .dispatch()
         .await;

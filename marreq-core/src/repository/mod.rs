@@ -61,6 +61,38 @@ pub trait ApiTokensRepository {
     fn update_api_token_last_used_at(&mut self, token_hash: &str) -> Result<(), RepoError>;
 }
 
+/// Server-side authenticated sessions backed by `sessions(token_hash, user_id, ...)`.
+///
+/// The cookie carries a 256-bit base64url **raw** token; the SHA-256 of that
+/// token is the primary key here.  The flow is:
+///
+/// 1. login → `create_session(user_id, token_hash, expires_at, ua, ip)` and
+///    set the cookie to the raw token;
+/// 2. each request → `find_active_session(token_hash, now)` and
+///    `touch_session(token_hash, now)` (best-effort);
+/// 3. logout (single device) → `delete_session(token_hash)`;
+/// 4. logout-everywhere / password change → `delete_user_sessions(user_id)`.
+///
+/// Implementations should treat `find_active_session` as "and not expired";
+/// they may opportunistically delete expired rows on the same call.
+pub trait SessionRepository {
+    fn create_session(&mut self, new: &NewSession) -> Result<(), RepoError>;
+    fn find_active_session(
+        &self,
+        token_hash: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<Option<Session>, RepoError>;
+    fn touch_session(
+        &mut self,
+        token_hash: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError>;
+    fn delete_session(&mut self, token_hash: &str) -> Result<(), RepoError>;
+    fn delete_user_sessions(&mut self, user_id: i32) -> Result<(), RepoError>;
+    /// Best-effort cleanup of rows past `expires_at`.  Idempotent.
+    fn purge_expired_sessions(&mut self, now: chrono::NaiveDateTime) -> Result<usize, RepoError>;
+}
+
 pub trait RequirementsRepository {
     fn get_requirement_by_id(&self, requirement_id: i32) -> Result<Requirement, RepoError>;
     fn get_requirements_all(&self) -> Result<Vec<Requirement>, RepoError>;
@@ -510,6 +542,7 @@ pub trait Repository:
     + NotificationRepository
     + WorkspacesRepository
     + EmailTokensRepository
+    + SessionRepository
 {
 }
 
@@ -533,6 +566,7 @@ impl<T> Repository for T where
         + NotificationRepository
         + WorkspacesRepository
         + EmailTokensRepository
+        + SessionRepository
 {
 }
 

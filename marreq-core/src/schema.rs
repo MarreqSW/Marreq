@@ -291,6 +291,22 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    sessions (token_hash) {
+        #[max_length = 64]
+        token_hash -> Bpchar,
+        user_id -> Int4,
+        created_at -> Timestamp,
+        expires_at -> Timestamp,
+        last_seen_at -> Timestamp,
+        user_agent -> Nullable<Text>,
+        ip_addr -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     requirement_comments (id) {
         id -> Int4,
         requirement_id -> Int4,
@@ -578,6 +594,7 @@ diesel::joinable!(verifications -> verification_methods (verification_method_id)
 diesel::joinable!(verifications -> verification_status (status_id));
 diesel::joinable!(workspaces -> users (owner_user_id));
 diesel::joinable!(email_tokens -> users (user_id));
+diesel::joinable!(sessions -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     applicability,
@@ -605,6 +622,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     requirement_version_verification_methods,
     requirement_versions,
     requirements,
+    sessions,
     user_api_tokens,
     users,
     verification_methods,

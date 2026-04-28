@@ -189,12 +189,20 @@ pub async fn clear_suspect(
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::auth::session::SESSION_COOKIE;
+    use crate::auth::session::test_session_cookie_for;
+
+    fn auth_cookie_for(
+        client: &rocket::local::asynchronous::Client,
+        user_id: i32,
+    ) -> rocket::http::Cookie<'static> {
+        let state = client.rocket().state::<TestState>().unwrap();
+        test_session_cookie_for(state, user_id)
+    }
     use crate::models::{MatrixLink, Project, ProjectMember, Requirement, Verification};
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use crate::status_enums::ProjectStatus;
     use chrono::NaiveDate;
-    use rocket::http::{ContentType, Cookie, SameSite};
+    use rocket::http::ContentType;
     use rocket::local::asynchronous::Client;
     use rocket::serde::json::Value;
     use std::sync::{Arc, RwLock};
@@ -217,13 +225,8 @@ mod tests {
         }
     }
 
-    fn auth_cookie() -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, ADMIN_ID.to_string());
-        cookie.set_path("/");
-        cookie.set_http_only(true);
-        cookie.set_secure(true);
-        cookie.set_same_site(SameSite::Strict);
-        cookie
+    fn auth_cookie(client: &rocket::local::asynchronous::Client) -> rocket::http::Cookie<'static> {
+        auth_cookie_for(client, ADMIN_ID)
     }
 
     fn repo_with_project_and_requirement() -> DieselRepoMock {
@@ -306,7 +309,7 @@ mod tests {
         let response = client
             .post("/api/traceability/clear_suspect")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(r#"{"req_id":1,"verification_id":2}"#)
             .dispatch()
             .await;
@@ -323,7 +326,7 @@ mod tests {
         let response = client
             .post("/api/traceability/clear_suspect")
             .header(ContentType::JSON)
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .body(r#"{"req_id":99,"verification_id":99}"#)
             .dispatch()
             .await;
@@ -358,7 +361,7 @@ mod tests {
                 "/api/projects/{}/requirements/1/trace_up",
                 PROJECT_ID
             ))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(response.status(), rocket::http::Status::Ok);
@@ -378,7 +381,7 @@ mod tests {
                 "/api/projects/{}/requirements/999/trace_up",
                 PROJECT_ID
             ))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(response.status(), rocket::http::Status::NotFound);
@@ -424,7 +427,7 @@ mod tests {
                 "/api/projects/{}/requirements/1/trace_down",
                 PROJECT_ID
             ))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(response.status(), rocket::http::Status::Ok);
@@ -438,7 +441,7 @@ mod tests {
         let client = client_with_repo(repo_with_project_and_requirement()).await;
         let response = client
             .get(format!("/api/projects/{}/coverage_report", PROJECT_ID))
-            .private_cookie(auth_cookie())
+            .private_cookie(auth_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(response.status(), rocket::http::Status::Ok);

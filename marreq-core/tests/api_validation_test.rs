@@ -23,7 +23,7 @@ mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
     use marreq_core::app::AppState;
-    use marreq_core::auth::session::SESSION_COOKIE;
+    use marreq_core::auth::session::test_session_cookie_for;
     use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
@@ -52,10 +52,12 @@ mod test_support {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
-    pub fn session_cookie(user_id: i32) -> Cookie<'static> {
-        let mut cookie = Cookie::new(SESSION_COOKIE, user_id.to_string());
-        cookie.set_path("/");
-        cookie
+    pub fn session_cookie(client: &Client, user_id: i32) -> Cookie<'static> {
+        let state = client
+            .rocket()
+            .state::<TestAppState>()
+            .expect("managed app state");
+        test_session_cookie_for(state, user_id)
     }
 
     pub fn base_repo() -> DieselRepoMock {
@@ -150,7 +152,7 @@ async fn create_requirement_with_missing_fields_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -166,7 +168,7 @@ async fn create_requirement_with_invalid_json_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body("{ invalid json }")
         .dispatch()
         .await;
@@ -194,7 +196,7 @@ async fn create_requirement_with_type_mismatch_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -222,7 +224,7 @@ async fn create_requirement_with_very_long_string_handles_gracefully() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -255,7 +257,7 @@ async fn create_requirement_with_negative_id_returns_error() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -306,7 +308,7 @@ async fn patch_requirement_with_empty_patch_returns_bad_request() {
     let response = client
         .patch("/api/requirements/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(patch.to_string())
         .dispatch()
         .await;
@@ -354,7 +356,7 @@ async fn patch_requirement_with_invalid_field_type_returns_error() {
     let response = client
         .patch("/api/requirements/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(patch.to_string())
         .dispatch()
         .await;
@@ -381,7 +383,7 @@ async fn create_test_with_missing_fields_returns_error() {
     let response = client
         .post("/api/verifications")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -422,7 +424,7 @@ async fn update_test_field_with_invalid_field_name_returns_error() {
     let response = client
         .post("/api/verifications/1/field")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(update.to_string())
         .dispatch()
         .await;
@@ -464,7 +466,7 @@ async fn update_test_field_with_invalid_status_value_returns_error() {
     let response = client
         .post("/api/verifications/1/field")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(update.to_string())
         .dispatch()
         .await;
@@ -491,7 +493,7 @@ async fn create_category_with_missing_fields_returns_error() {
     let response = client
         .post("/api/categories")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -519,7 +521,7 @@ async fn update_category_with_invalid_json_returns_error() {
     let response = client
         .put("/api/categories/1")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body("{ invalid json }")
         .dispatch()
         .await;
@@ -546,7 +548,7 @@ async fn create_applicability_with_missing_fields_returns_error() {
     let response = client
         .post("/api/applicability")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -572,7 +574,7 @@ async fn create_user_with_missing_fields_returns_error() {
     let response = client
         .post("/api/users")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -595,7 +597,7 @@ async fn create_user_with_invalid_email_format_handles_gracefully() {
     let response = client
         .post("/api/users")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -633,7 +635,7 @@ async fn sql_injection_in_requirement_title_is_handled_safely() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -684,7 +686,7 @@ async fn sql_injection_in_id_parameter_is_handled_safely() {
     // Try SQL injection in ID parameter
     let response = client
         .get("/api/requirements/1 OR 1=1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -720,7 +722,7 @@ async fn xss_attempt_in_requirement_title_is_handled_safely() {
     let response = client
         .post("/api/requirements")
         .header(ContentType::JSON)
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .body(payload.to_string())
         .dispatch()
         .await;
@@ -746,7 +748,7 @@ async fn get_requirement_with_zero_id_returns_error() {
 
     let response = client
         .get("/api/requirements/0")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -760,7 +762,7 @@ async fn get_requirement_with_negative_id_returns_error() {
 
     let response = client
         .get("/api/requirements/-1")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 
@@ -774,7 +776,7 @@ async fn get_requirement_with_very_large_id_returns_error() {
 
     let response = client
         .get("/api/requirements/999999999")
-        .private_cookie(session_cookie(1))
+        .private_cookie(session_cookie(&client, 1))
         .dispatch()
         .await;
 

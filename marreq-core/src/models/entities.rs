@@ -714,3 +714,31 @@ impl EmailToken {
     pub const PURPOSE_VERIFY_EMAIL: &'static str = "verify_email";
     pub const PURPOSE_RESET_PASSWORD: &'static str = "reset_password";
 }
+
+/// Server-side authenticated session.  The cookie carries the **raw** token;
+/// we only store its SHA-256 hash so a database leak cannot be replayed as a
+/// cookie (mirrors the [`EmailToken`] design).
+///
+/// Sessions are revocable by deleting the row (single-device logout) or
+/// `WHERE user_id = …` (logout everywhere / password change).
+#[derive(Queryable, Selectable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::sessions)]
+pub struct Session {
+    pub token_hash: String,
+    pub user_id: i32,
+    pub created_at: chrono::NaiveDateTime,
+    pub expires_at: chrono::NaiveDateTime,
+    pub last_seen_at: chrono::NaiveDateTime,
+    pub user_agent: Option<String>,
+    pub ip_addr: Option<String>,
+}
+
+#[derive(Insertable, Clone, Debug)]
+#[diesel(table_name = crate::schema::sessions)]
+pub struct NewSession {
+    pub token_hash: String,
+    pub user_id: i32,
+    pub expires_at: chrono::NaiveDateTime,
+    pub user_agent: Option<String>,
+    pub ip_addr: Option<String>,
+}

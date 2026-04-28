@@ -111,6 +111,7 @@ pub fn build_with(
             ],
         )
         .attach(crate::fairings::SecurityHeadersFairing)
+        .attach(crate::fairings::RequestLogFairing)
         .attach(crate::fairings::CsrfFairing::new())
         .attach(crate::cors::CorsFairing(crate::cors::CorsPolicy::from_env()))
         .attach(crate::fairings::AntiCacheFairing)

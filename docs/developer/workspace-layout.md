@@ -189,8 +189,14 @@ self-service registration and password-reset UI.
    `pub use <module>::…`).
 3. Both deployment binaries gain access immediately via `marreq_core::<module>::…`.
 4. If the module needs dependencies not yet in `marreq-core/Cargo.toml`, add
-   them there.
-5. Commit in the `marreq-core` submodule, then bump the pointer in root
+   them there. New shared deps go into the root `[workspace.dependencies]`
+   block first; member crates reference them via `dep = { workspace = true }`.
+5. If `marreq_core::deployment::current()` is read from the new module,
+   remember that **every** binary must register a mode at startup via
+   `app::build_with`. There is no fallback `default_mode()` any more —
+   tests use `marreq_core::deployment::install_test_server_mode()` from the
+   `test-helpers` feature.
+6. Commit in the `marreq-core` submodule, then bump the pointer in root
    (see [Submodule workflow](#submodule-workflow) below).
 
 ---
@@ -278,10 +284,25 @@ See the [database setup guide](database-setup.md) for full usage.
 ## Migration note
 
 The legacy `backend/` single-crate layout was retired on **2026-04-27** as
-part of the 3-crate workspace restructure. The old tree is still reachable in
-the git history of the root repository. Cargo features `--features server`
-and `--features cloud` no longer exist; choose the binary (`-p marreq-server`
-or `-p marreq-cloud`) instead.
+part of the 3-crate workspace restructure. The old tree is still reachable
+in the git history of the root repository. Cargo features `--features
+server` and `--features cloud` no longer exist; choose the binary
+(`-p marreq-server` or `-p marreq-cloud`) instead.
+
+Follow-up cleanup landed shortly after retirement:
+
+- `marreq_core::app::build()` and `marreq_core::deployment::default_mode()`
+  (the legacy fallbacks kept alive while `backend/` was being torn down)
+  were removed. Each binary must call `marreq_core::app::build_with(mode,
+  routes, fairings)` at startup; tests use
+  `marreq_core::deployment::install_test_server_mode()` (gated on the
+  `test-helpers` Cargo feature).
+- All shared dependencies now live in the root `[workspace.dependencies]`
+  block; the three member `Cargo.toml` files reference them via
+  `dep = { workspace = true }`.
+- The Docker `backend` compose service was renamed to `marreq-server`, and
+  a sibling `marreq-cloud` service is available behind the `cloud` profile
+  (`docker compose --profile cloud up -d marreq-cloud`).
 
 ---
 

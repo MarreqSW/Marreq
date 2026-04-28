@@ -1,7 +1,9 @@
 #!/bin/sh
 set -e
 
-# Split-stack backend (docker-compose `backend` service): JSON API only; SPA is served by the frontend container.
+# Entrypoint shared by the marreq-server and marreq-cloud images
+# (docker-compose `marreq-server` / `marreq-cloud` services): JSON API only;
+# the SPA is served by the frontend container.
 
 if [ -n "${DATABASE_URL}" ]; then
   echo "Waiting for database..."

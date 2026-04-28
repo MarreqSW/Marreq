@@ -33,9 +33,6 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Clippy (cloud crate)
-        run: cargo clippy -p marreq-cloud --all-targets -- -D warnings
-
       - name: Set up Node.js (for stylelint)
         uses: actions/setup-node@v4
         with:

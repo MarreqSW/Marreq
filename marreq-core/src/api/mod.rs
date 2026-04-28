@@ -38,6 +38,7 @@ pub fn routes() -> Vec<Route> {
     let r = routes![
         meta::api_root,
         meta::deployment_info,
+        meta::health,
         auth::auth_csrf,
         auth::auth_login,
         auth::auth_logout,

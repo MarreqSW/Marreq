@@ -1,6 +1,6 @@
 /**
- * Mirrors backend `author_default_requirement_status_id` / `initial_verification_status_id`
- * (see `backend/src/api/prelude.rs`): non-reviewers may create only with these statuses.
+ * Mirrors `author_default_requirement_status_id` / `initial_verification_status_id`
+ * (see `marreq-core/src/api/prelude.rs`): non-reviewers may create only with these statuses.
  */
 export function authorDefaultRequirementStatusId(statuses: { id: number; tag: string }[]): number | null {
   if (statuses.length === 0) return null;

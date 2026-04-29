@@ -8,8 +8,8 @@ set -euo pipefail
 # manual DDL is executed by this script.
 #
 # Usage:
-#   ./backend/scripts/db_setup.sh           # apply schema only
-#   ./backend/scripts/db_setup.sh --seed    # apply schema, then load demo/test data
+#   ./marreq-core/scripts/db_setup.sh           # apply schema only
+#   ./marreq-core/scripts/db_setup.sh --seed    # apply schema, then load demo/test data
 #
 # Prerequisites:
 #   • Docker running with Compose (for the managed PostgreSQL container), OR
@@ -172,9 +172,9 @@ echo "  Connection : ${DATABASE_URL}"
 echo ""
 echo "Next steps:"
 if [[ "${SEED}" == "false" ]]; then
-  echo "  Load demo/test data : ./backend/scripts/db_seed.sh"
+  echo "  Load demo/test data : ./marreq-core/scripts/db_seed.sh"
 fi
-echo "  Start Marreq        : cargo run -p marreq (from repo root) or cd backend && cargo run --bin marreq"
-echo "  Apply future updates: ./backend/scripts/db_migrate.sh up"
-echo "  Backup database     : ./backend/scripts/db_backup.sh"
+echo "  Start Marreq        : cargo run -p marreq-server (from repo root) or cargo run -p marreq-cloud"
+echo "  Apply future updates: ./marreq-core/scripts/db_migrate.sh up"
+echo "  Backup database     : ./marreq-core/scripts/db_backup.sh"
 echo -e "${BLUE}───────────────────────────────────────────────${NC}"

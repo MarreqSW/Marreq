@@ -4,9 +4,9 @@ set -euo pipefail
 # Shared CI/local quality tasks for Marreq.
 #
 # Usage:
-#   ./backend/scripts/run_ci.sh checks
-#   ./backend/scripts/run_ci.sh tests
-#   ./backend/scripts/run_ci.sh local-ci [--jobs N]
+#   ./marreq-core/scripts/run_ci.sh checks
+#   ./marreq-core/scripts/run_ci.sh tests
+#   ./marreq-core/scripts/run_ci.sh local-ci [--jobs N]
 
 MODE="${1:-}"
 if [[ -z "${MODE}" ]]; then
@@ -34,13 +34,13 @@ run_local_ci() {
         shift 2
         ;;
       -h|--help)
-        echo "Usage: backend/scripts/run_ci.sh local-ci [OPTIONS]"
+        echo "Usage: marreq-core/scripts/run_ci.sh local-ci [OPTIONS]"
         echo ""
         echo "Options:"
         echo "  -j, --jobs NUMBER    Limit the number of parallel jobs (CPUs) to use"
         echo "  -h, --help           Show this help message"
         echo ""
-        echo "Example: backend/scripts/run_ci.sh local-ci --jobs 2"
+        echo "Example: marreq-core/scripts/run_ci.sh local-ci --jobs 2"
         return 0
         ;;
       *)

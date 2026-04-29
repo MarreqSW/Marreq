@@ -15,17 +15,17 @@ CSV_PATH = os.path.join(REPO_ROOT, "doc", "requirements.csv")
 
 # Trace paths in CSV that map to different filenames in the repo
 PATH_ALIASES = {
-    "src/api/tests.rs": "backend/src/api/verifications.rs",
-    "src/routes/html/project/tests.rs": "backend/src/api/verifications.rs",
-    "src/logger": "backend/src/logger.rs",
+    "src/api/tests.rs": "marreq-core/src/api/verifications.rs",
+    "src/routes/html/project/tests.rs": "marreq-core/src/api/verifications.rs",
+    "src/logger": "marreq-core/src/logger.rs",
     "templates/index.hbs": "frontend/src/main.ts",
     "templates/requirements/requirements.hbs": "frontend/src/main.ts",
     "templates/tests/tests.hbs": "frontend/src/main.ts",
     "templates/matrix/matrix.hbs": "frontend/src/main.ts",
-    "src/routes/html/project/project.rs": "backend/src/api/projects_session.rs",
-    "src/repository/cache/cache.rs": "backend/src/repository/cache/repository.rs",
-    "src/services/project_member_service.rs": "backend/src/services/project_service.rs",
-    "src/services/semantic_search/semantic_search_service.rs": "backend/src/services/semantic_search/search_service.rs",
+    "src/routes/html/project/project.rs": "marreq-core/src/api/projects_session.rs",
+    "src/repository/cache/cache.rs": "marreq-core/src/repository/cache/repository.rs",
+    "src/services/project_member_service.rs": "marreq-core/src/services/project_service.rs",
+    "src/services/semantic_search/semantic_search_service.rs": "marreq-core/src/services/semantic_search/search_service.rs",
 }
 
 
@@ -51,13 +51,13 @@ def extract_trace_paths(justification: str) -> list[str]:
 
 
 def resolve_path(path: str) -> str:
-    """Resolve path using aliases; prefix legacy root paths with backend/."""
+    """Resolve path using aliases; prefix legacy root paths with marreq-core/."""
     if path in PATH_ALIASES:
         return PATH_ALIASES[path]
-    if path.startswith("backend/"):
+    if path.startswith("marreq-core/"):
         return path
     if path.startswith(("src/", "templates/", "migrations/")):
-        return f"backend/{path}"
+        return f"marreq-core/{path}"
     return path
 
 

@@ -3,8 +3,10 @@
 
 //! Cloud-only self-service registration, email verification, and password reset.
 //!
-//! These flows are gated behind `#[cfg(feature = "cloud")]`. In Server mode the
-//! module is not compiled at all and the corresponding routes are not mounted.
+//! This module lives in the `marreq-cloud` binary crate and is therefore
+//! compiled only when building the hosted SaaS deployment. The
+//! corresponding routes are mounted by `marreq_cloud::routes::routes()`
+//! and are not present in the `marreq-server` binary.
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;

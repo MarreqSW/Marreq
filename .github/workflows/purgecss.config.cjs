@@ -3,7 +3,6 @@ module.exports = {
     'frontend/**/*.html',
     'frontend/static/**/*.js',
     'frontend/src/**/*.ts',
-    'backend/tests/js/**/*.js',
   ],
   css: [
     'frontend/static/**/*.css',

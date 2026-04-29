@@ -188,7 +188,7 @@ Before running checks locally, ensure you have:
 
 3. **Initialize the database**
    ```bash
-   ./backend/scripts/db_setup.sh --seed
+   ./marreq-core/scripts/db_setup.sh --seed
    ```
 
 4. **Verify database is ready**
@@ -364,7 +364,7 @@ docker compose -f docker/docker-compose.yml exec db pg_isready -U rust
 docker compose -f docker/docker-compose.yml restart db
 
 # Reinitialize database
-./backend/scripts/db_setup.sh --seed
+./marreq-core/scripts/db_setup.sh --seed
 ```
 
 ---
@@ -472,7 +472,7 @@ Common issues:
    ```
 3. **Database state:** CI uses fresh database, local might have stale data
    ```bash
-   ./backend/scripts/db_setup.sh --seed  # Reinitialize
+   ./marreq-core/scripts/db_setup.sh --seed  # Reinitialize
    ```
 
 ---

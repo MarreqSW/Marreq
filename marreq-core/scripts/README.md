@@ -3,7 +3,7 @@
 This directory contains all scripts needed to set up, migrate, seed, and
 maintain the Marreq database.  **Diesel is the single authority for schema
 management.**  No script in this directory applies DDL directly, all schema
-changes go through `backend/migrations/` (run `diesel` from `backend/`).
+changes go through `marreq-core/migrations/` (run `diesel` from `marreq-core/`).
 
 ---
 
@@ -44,10 +44,10 @@ changes go through `backend/migrations/` (run `diesel` from `backend/`).
 
 ```bash
 # 1. Start the database container, create the DB, apply all migrations
-./backend/scripts/db_setup.sh
+./marreq-core/scripts/db_setup.sh
 
 # 2. (Optional) Load demo/test data
-./backend/scripts/db_seed.sh
+./marreq-core/scripts/db_seed.sh
 
 # 3. Start Marreq
 cargo run -p marreq
@@ -62,14 +62,14 @@ cargo run -p marreq
 ### 2. Combined setup + seed in one command
 
 ```bash
-./backend/scripts/db_setup.sh --seed
+./marreq-core/scripts/db_setup.sh --seed
 ```
 
 ### 3. Applying updates after pulling a new version
 
 ```bash
 git pull
-./backend/scripts/db_migrate.sh up
+./marreq-core/scripts/db_migrate.sh up
 cargo build --release
 ```
 
@@ -77,16 +77,16 @@ cargo build --release
 
 ```bash
 # Revert the most recent migration
-./backend/scripts/db_migrate.sh down
+./marreq-core/scripts/db_migrate.sh down
 
 # Revert 2 migrations
-./backend/scripts/db_migrate.sh down 2
+./marreq-core/scripts/db_migrate.sh down 2
 ```
 
 ### 5. Check migration status
 
 ```bash
-./backend/scripts/db_migrate.sh list
+./marreq-core/scripts/db_migrate.sh list
 ```
 
 Output legend: `[X]` = applied, `[ ]` = pending.
@@ -95,10 +95,10 @@ Output legend: `[X]` = applied, `[ ]` = pending.
 
 ```bash
 # Save to ./backups/marreq_<timestamp>.sql.gz  (directory auto-created)
-./backend/scripts/db_backup.sh
+./marreq-core/scripts/db_backup.sh
 
 # Custom output path
-./backend/scripts/db_backup.sh /var/backups/marreq_prod.sql.gz
+./marreq-core/scripts/db_backup.sh /var/backups/marreq_prod.sql.gz
 ```
 
 Restore:
@@ -111,8 +111,8 @@ gunzip -c backups/marreq_<timestamp>.sql.gz | \
 
 ```bash
 # ⚠  Destroys all data
-./backend/scripts/db_reset.sh             # drops the database
-./backend/scripts/db_setup.sh --seed      # recreate and reload demo data
+./marreq-core/scripts/db_reset.sh             # drops the database
+./marreq-core/scripts/db_setup.sh --seed      # recreate and reload demo data
 ```
 
 ---
@@ -125,7 +125,7 @@ psql-based flow automatically:
 
 ```bash
 export DATABASE_URL=postgres://myuser:mypass@myhost:5432/marreq
-./backend/scripts/db_setup.sh
+./marreq-core/scripts/db_setup.sh
 ```
 
 The same applies to `db_migrate.sh`, `db_seed.sh`, and `db_backup.sh`.
@@ -148,7 +148,7 @@ To add a new migration:
 ```bash
 diesel migration generate <migration_name>
 # Edit migrations/<timestamp>_<name>/up.sql and down.sql
-./backend/scripts/db_migrate.sh up
+./marreq-core/scripts/db_migrate.sh up
 ```
 
 ---
@@ -184,6 +184,6 @@ Triggers semantic-search re-indexing for a project via the REST API.
 Useful after bulk-importing requirements or if the embedding index is stale.
 
 ```bash
-./backend/scripts/reindex_project.sh
+./marreq-core/scripts/reindex_project.sh
 # Prompts for URL, username, password, and project ID
 ```

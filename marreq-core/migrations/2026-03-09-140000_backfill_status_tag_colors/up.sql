@@ -1,5 +1,5 @@
 -- One-time backfill: catalog colors for canonical requirement / verification statuses.
--- Matches backend/scripts/init_complete.sql. Only rows with NULL/empty tag_color are updated
+-- Matches marreq-core/scripts/init_complete.sql. Only rows with NULL/empty tag_color are updated
 -- so manually chosen colors in the UI are preserved.
 
 -- Requirement statuses (tag + title as seeded)

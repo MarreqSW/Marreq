@@ -6,8 +6,8 @@ set -euo pipefail
 # ⚠  DESTRUCTIVE — permanently deletes all data.  Use for development resets.
 #
 # Typical workflow after this script:
-#   ./backend/scripts/db_setup.sh        # re-apply schema via Diesel
-#   ./backend/scripts/db_seed.sh         # optionally reload demo/test data
+#   ./marreq-core/scripts/db_setup.sh        # re-apply schema via Diesel
+#   ./marreq-core/scripts/db_seed.sh         # optionally reload demo/test data
 #
 # Prerequisites:
 #   • Docker running with the 'db' service up.

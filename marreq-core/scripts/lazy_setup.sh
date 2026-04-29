@@ -69,7 +69,7 @@ for arg in "$@"; do
             ;;
         *)
             print_error "Unknown argument: ${arg}"
-            echo "Usage: ./backend/scripts/lazy_setup.sh [--fresh]"
+            echo "Usage: ./marreq-core/scripts/lazy_setup.sh [--fresh]"
             exit 1
             ;;
     esac
@@ -477,7 +477,7 @@ bash "${SCRIPT_DIR}/db_setup.sh"
 # Load demo/test data for the development environment
 if database_has_projects; then
     print_error "Database already contains project data. lazy_setup.sh seeds demo data only into a fresh database.
-Run ./backend/scripts/db_reset.sh && ./backend/scripts/db_setup.sh --seed for a full reset, or skip lazy_setup.sh and start Marreq with the existing database."
+Run ./marreq-core/scripts/db_reset.sh && ./marreq-core/scripts/db_setup.sh --seed for a full reset, or skip lazy_setup.sh and start Marreq with the existing database."
     exit 1
 fi
 
@@ -552,8 +552,8 @@ echo ""
 echo -e "${BLUE}📖 Useful Commands:${NC}"
 echo "   • View logs:           $DC logs -f"
 echo "   • Stop database:       $DC down"
-echo "   • Reset database:      ./backend/scripts/db_reset.sh && ./backend/scripts/db_setup.sh --seed"
-echo "   • Fresh lazy setup:    ./backend/scripts/lazy_setup.sh --fresh"
+echo "   • Reset database:      ./marreq-core/scripts/db_reset.sh && ./marreq-core/scripts/db_setup.sh --seed"
+echo "   • Fresh lazy setup:    ./marreq-core/scripts/lazy_setup.sh --fresh"
 echo "   • Check Ollama:        ollama list"
 echo "   • Pull new model:      ollama pull <model_name>"
 echo ""

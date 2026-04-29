@@ -8,8 +8,8 @@ set -euo pipefail
 # never overwrite each other.
 #
 # Usage:
-#   ./backend/scripts/db_backup.sh                      # saves to ./backups/
-#   ./backend/scripts/db_backup.sh /path/to/output.sql.gz  # custom output path
+#   ./marreq-core/scripts/db_backup.sh                      # saves to ./backups/
+#   ./marreq-core/scripts/db_backup.sh /path/to/output.sql.gz  # custom output path
 #
 # Prerequisites:
 #   • Docker running with the 'db' service up, OR pg_dump available locally.

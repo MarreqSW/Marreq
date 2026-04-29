@@ -1,4 +1,4 @@
-/** API shapes aligned with backend JSON (snake_case). */
+/** API shapes aligned with marreq-core JSON (snake_case). */
 
 export interface RequirementStatus {
   id: number;
@@ -373,7 +373,7 @@ export interface User {
   email_verified?: boolean;
 }
 
-/** Single custom field value in PATCH body (matches backend `CustomFieldValueInput`). */
+/** Single custom field value in PATCH body (matches `CustomFieldValueInput`). */
 export type CustomFieldPatchItem = { field_id: number; value: string | null };
 
 /** Body for `PATCH /api/projects/:pid/requirements/:id` (all optional). */

@@ -12,10 +12,10 @@ set -euo pipefail
 # ⚠  FOR TESTING AND DEMO ENVIRONMENTS ONLY — do not run against production data.
 #
 # Usage:
-#   ./backend/scripts/db_seed.sh
+#   ./marreq-core/scripts/db_seed.sh
 #
 # Prerequisites:
-#   • Database schema already applied (./backend/scripts/db_setup.sh)
+#   • Database schema already applied (./marreq-core/scripts/db_setup.sh)
 #   • DATABASE_URL in .env or environment
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

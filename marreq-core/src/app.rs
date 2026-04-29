@@ -115,8 +115,12 @@ pub fn build_with(
         .attach(crate::fairings::CsrfFairing::new())
         .attach(crate::cors::CorsFairing(crate::cors::CorsPolicy::from_env()))
         .attach(crate::fairings::AntiCacheFairing)
-        .attach(crate::fairings::SemanticIndexFairing)
-        .attach(crate::app::MyDbConn::fairing());
+        .attach(crate::fairings::SemanticIndexFairing);
+
+    #[cfg(not(any(test, feature = "test-helpers")))]
+    {
+        rocket = rocket.attach(crate::app::MyDbConn::fairing());
+    }
 
     for fairing in extra_fairings {
         rocket = rocket.attach(fairing);

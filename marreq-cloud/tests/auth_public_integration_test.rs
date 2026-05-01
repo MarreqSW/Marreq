@@ -161,7 +161,8 @@ async fn verify_email_with_unknown_token_returns_400() {
     assert_eq!(response.status(), Status::BadRequest);
     let body = response.into_string().await.unwrap_or_default();
     assert!(
-        body.to_lowercase().contains("invalid or already-used token"),
+        body.to_lowercase()
+            .contains("invalid or already-used token"),
         "expected body to mention the invalid token, got: {body}"
     );
 }
@@ -250,7 +251,8 @@ async fn reset_password_with_invalid_token_returns_400() {
     assert_eq!(response.status(), Status::BadRequest);
     let body = response.into_string().await.unwrap_or_default();
     assert!(
-        body.to_lowercase().contains("invalid or already-used token"),
+        body.to_lowercase()
+            .contains("invalid or already-used token"),
         "expected body to mention the invalid token, got: {body}"
     );
 }

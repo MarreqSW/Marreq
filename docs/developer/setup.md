@@ -120,15 +120,16 @@ Use this when you want the hosted/SaaS deployment binary in containers.
    ```
 4. Start the cloud binary:
    ```bash
-   docker compose -f docker/docker-compose.yml --profile cloud up -d marreq-cloud
+   docker compose -f docker/docker-compose.yml --profile cloud up -d marreq-cloud frontend-cloud
    ```
-5. Use the API at **`http://127.0.0.1:8001/api`**.
+5. Open the SPA at **`http://localhost:8082`**.
 
 Notes:
 
 - `marreq-cloud` bootstraps or promotes the configured site admin at startup.
-- Set `MARREQ_PUBLIC_BASE_URL` to the actual browser origin that should appear in cloud email links.
-- The bundled Docker `frontend` service is wired to **`marreq-server`**, not `marreq-cloud`. For cloud-mode SPA testing, run the SPA outside Docker against a cloud backend, or provide your own reverse proxy in front of `marreq-cloud`.
+- The cloud Docker frontend proxies `/api` to `marreq-cloud`.
+- The backend is also reachable directly on **`http://127.0.0.1:8001/api`**.
+- Set `MARREQ_PUBLIC_BASE_URL` to the actual browser origin that should appear in cloud email links. The Docker compose default is **`http://localhost:8082`**.
 
 ## `marreq-cloud` without Docker
 

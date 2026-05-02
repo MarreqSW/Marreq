@@ -38,7 +38,10 @@ See [docs/developer/http-api-contract.md](../docs/developer/http-api-contract.md
 
 ## Docker
 
-Built from `docker/frontend/Dockerfile` (build context: repository root). Nginx serves `dist/` and proxies `/api/` to the `marreq-server` service. Run `npm install` + `npm run build` inside the image as today; no Dockerfile change required for this stack.
+Built from `docker/frontend/Dockerfile` (build context: repository root). The image uses an env-templated nginx config, so the same SPA image can proxy `/api/` to either `marreq-server` or `marreq-cloud`.
+
+- Self-hosted Docker frontend: **http://localhost:8080** → `marreq-server:8000`
+- Cloud Docker frontend: **http://localhost:8082** → `marreq-cloud:8001` (cloud profile)
 
 For cloud-mode SPA testing, the simplest local path is `cargo run -p marreq-cloud` on the default Rocket port (`8000`), because the Vite proxy already targets `http://127.0.0.1:8000`.
 

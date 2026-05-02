@@ -1,4 +1,4 @@
-# Docker embedded DNS — required when proxy_pass uses a variable so `marreq-server` is re-resolved
+# Docker embedded DNS — required when proxy_pass uses a variable so the upstream is re-resolved
 # after container recreate (avoids stale upstream IP → connection refused).
 resolver 127.0.0.11 valid=10s ipv6=off;
 
@@ -11,7 +11,7 @@ server {
     gzip on;
     gzip_types text/css application/javascript application/json image/svg+xml;
 
-    set $marreq_backend http://marreq-server:8000;
+    set $marreq_backend http://${MARREQ_BACKEND_HOST}:${MARREQ_BACKEND_PORT};
 
     location /api/ {
         proxy_pass $marreq_backend;

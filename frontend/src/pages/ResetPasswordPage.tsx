@@ -1,34 +1,26 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { resetPassword } from '@/api/client';
 import AuthLayout from '@/components/AuthLayout';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 export default function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const token = useMemo(() => searchParams.get('token') ?? '', [searchParams]);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [error, setError] = useState<string | null>(token ? null : 'Missing reset token.');
   const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
+  const { error, submitting, onSubmit } = useFormSubmit(async () => {
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
+      throw new Error('Passwords do not match');
     }
-    setError(null);
-    setSubmitting(true);
-    try {
-      await resetPassword({ token, new_password: password });
-      setSubmitted(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Password reset failed');
-    } finally {
-      setSubmitting(false);
-    }
-  }
+    await resetPassword({ token, new_password: password });
+    setSubmitted(true);
+  });
+
+  // Pre-set error if the page was opened without a token
+  const displayError = error ?? (!token ? 'Missing reset token.' : null);
 
   return (
     <AuthLayout
@@ -49,9 +41,9 @@ export default function ResetPasswordPage() {
         </div>
       ) : (
         <form onSubmit={onSubmit} className="space-y-4">
-          {error && (
+          {displayError && (
             <div className="rounded-lg bg-red-500/10 border border-red-500/25 px-3 py-2 text-sm text-red-800 dark:text-red-200">
-              {error}
+              {displayError}
             </div>
           )}
           <div>

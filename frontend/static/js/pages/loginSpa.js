@@ -70,7 +70,7 @@ async function showAuthenticatedShell(data, path) {
       pathname: p,
       title: 'Not available in SPA',
       message:
-        'This screen is not implemented in the current SPA shell. Use the JSON API (see doc/API.md) or return to the dashboard.',
+        'This screen is not implemented in the current SPA shell. Use the JSON API (see docs/developer/http-api-contract.md) or return to the dashboard.',
     });
     return;
   }

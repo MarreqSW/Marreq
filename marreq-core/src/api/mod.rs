@@ -1,0 +1,173 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// Copyright (C) 2026 Marreq
+
+pub mod activity;
+pub mod applicability;
+pub mod auth;
+pub mod baselines;
+pub mod cache;
+pub mod categories;
+pub mod comments;
+pub mod custom_fields;
+pub mod dashboard;
+pub mod error;
+pub mod groups;
+pub mod guards;
+pub mod matrix;
+pub mod mcp;
+pub mod members;
+pub mod meta;
+pub mod notifications;
+pub mod prelude;
+pub mod projects;
+pub mod projects_session;
+pub mod requirement_diff;
+pub mod requirement_version_links;
+pub mod requirements;
+pub mod semantic_search;
+pub mod status;
+pub mod traceability;
+pub mod users;
+pub mod verification_methods;
+pub mod verification_status;
+pub mod verifications;
+
+use rocket::Route;
+
+pub fn routes() -> Vec<Route> {
+    let r = routes![
+        meta::api_root,
+        meta::deployment_info,
+        meta::health,
+        auth::auth_csrf,
+        auth::auth_login,
+        auth::auth_logout,
+        auth::auth_me,
+        dashboard::dashboard_json,
+        projects_session::list_for_session,
+        projects_session::project_from_path,
+        baselines::list,
+        baselines::get,
+        baselines::create,
+        baselines::get_requirements,
+        baselines::get_traceability,
+        baselines::get_verifications,
+        baselines::diff_baselines,
+        requirements::list,
+        requirements::list_by_project,
+        requirements::get,
+        requirements::get_by_project,
+        activity::requirement_activity_by_project,
+        requirements::list_versions,
+        requirements::list_versions_by_project,
+        requirements::get_version,
+        requirements::get_version_by_project,
+        requirements::get_impacted_tests,
+        requirements::set_version_approval,
+        requirements::set_version_approval_by_project,
+        requirements::create,
+        requirements::create_by_project,
+        requirements::delete,
+        requirements::patch_requirement,
+        requirements::patch_by_project,
+        comments::list,
+        comments::create,
+        requirement_diff::diff_versions,
+        requirement_diff::diff_versions_by_project,
+        requirement_diff::diff_baseline_vs_current,
+        verifications::list,
+        verifications::list_by_project,
+        verifications::get,
+        activity::verification_activity_by_project,
+        verification_methods::list_by_project,
+        verification_methods::create_by_project,
+        verification_methods::update_by_project,
+        verification_methods::delete_by_project,
+        verifications::create,
+        verifications::delete,
+        verifications::update_field,
+        verifications::update_field_by_project,
+        categories::list,
+        categories::get,
+        categories::create,
+        categories::update,
+        categories::delete,
+        applicability::list,
+        applicability::get,
+        applicability::create,
+        applicability::update,
+        applicability::delete,
+        custom_fields::list_by_project,
+        custom_fields::get,
+        custom_fields::create,
+        custom_fields::update,
+        custom_fields::delete,
+        status::list_requirement_statuses,
+        status::get_requirement_status,
+        status::create_requirement_status,
+        status::update_requirement_status,
+        status::delete_requirement_status,
+        verification_status::list_verification_statuses,
+        verification_status::get_verification_status,
+        verification_status::create_verification_status,
+        verification_status::update_verification_status,
+        verification_status::delete_verification_status,
+        users::list,
+        users::get,
+        users::create,
+        users::delete,
+        matrix::list,
+        matrix::list_by_project,
+        matrix::get_verification_matrix,
+        matrix::put_verification_matrix,
+        traceability::trace_up,
+        traceability::trace_down,
+        traceability::coverage_report,
+        traceability::clear_suspect,
+        requirement_version_links::create,
+        requirement_version_links::list,
+        requirement_version_links::delete,
+        requirement_version_links::link_types,
+        members::get_my_permissions,
+        members::list_members,
+        members::set_member_role,
+        members::remove_member,
+        members::list_project_reviewers,
+        members::put_project_reviewers,
+        cache::stats,
+        cache::clear,
+        cache::cleanup,
+        cache::performance,
+        cache::recommendations,
+        cache::reset_counters,
+        cache::health,
+        // Semantic search endpoints
+        semantic_search::semantic_search,
+        semantic_search::ask,
+        semantic_search::reindex,
+        semantic_search::index_status,
+        semantic_search::search_status,
+        mcp::audit,
+        // Notifications
+        notifications::list,
+        notifications::unread_count,
+        notifications::mark_read,
+        notifications::mark_all_read,
+        notifications::get_preferences,
+        notifications::set_preference,
+        notifications::delete_preference,
+        // Project creation
+        projects::create,
+        // Group endpoints
+        groups::list,
+        groups::get,
+        groups::create,
+        groups::update,
+        groups::delete,
+        groups::list_projects,
+        groups::list_members,
+        groups::set_member_role,
+        groups::remove_member,
+    ];
+    r
+}

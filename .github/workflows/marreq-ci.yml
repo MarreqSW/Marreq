@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
 
       - name: Set up Rust (stable + rustfmt + clippy)
         uses: dtolnay/rust-toolchain@v1
@@ -29,7 +30,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Set up Node.js (for stylelint)
         uses: actions/setup-node@v4
@@ -53,6 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -66,6 +68,27 @@ jobs:
       - name: Run JavaScript tests
         run: npm test
 
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build frontend
+        working-directory: frontend
+        run: npm run build
+
   test-and-coverage:
     runs-on: ubuntu-latest
     env:
@@ -73,6 +96,7 @@ jobs:
       DATABASE_URL: postgres://rust:rust@127.0.0.1:5433/marreq
     steps:
       - uses: actions/checkout@v4
+        with:
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libclang-dev
@@ -109,12 +133,18 @@ jobs:
         run: cargo install diesel_cli --no-default-features --features postgres
 
       - name: Initialize database
-        run: ./backend/scripts/db_setup.sh
+        run: ./marreq-core/scripts/db_setup.sh
+
+      - name: Build workspace (release)
+        run: cargo build --workspace --release
 
       - name: Generate coverage reports
         run: |
-          cargo cov -p marreq --all-features --cobertura --output-path coverage.xml
-          cargo cov -p marreq report --html --output-dir coverage_html
+          cargo cov --workspace --cobertura --output-path coverage.xml
+          cargo cov --workspace report --html --output-dir coverage_html
+
+      - name: Run workspace tests
+        run: cargo test --workspace
 
       - name: Build coverage summary (Markdown)
         uses: irongut/CodeCoverageSummary@v1.3.0
@@ -135,7 +165,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Coverage gate
-        run: cargo cov -p marreq --all-features --no-run --fail-under-lines 70
+        run: cargo cov --workspace --no-run --fail-under-lines 70
 
       - name: Upload coverage HTML
         if: always()

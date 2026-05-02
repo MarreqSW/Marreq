@@ -167,7 +167,7 @@ All tools are scoped to `MARREQ_PROJECT_ID` where the API provides a project pat
 
 ## 6. API parity (MCP vs REST)
 
-Reference: backend route list in `backend/src/api/mod.rs`. This table states whether an MCP tool exists for that capability.
+Reference: shared route list in `marreq-core/src/api/mod.rs` (plus deployment-specific routes in `marreq-server/src/routes.rs` / `marreq-cloud/src/routes.rs`). This table states whether an MCP tool exists for that capability.
 
 | REST area | MCP coverage |
 |-----------|----------------|

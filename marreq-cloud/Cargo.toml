@@ -1,0 +1,36 @@
+[package]
+name = "marreq-cloud"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "Marreq hosted SaaS binary (self-registration, email verification, single bootstrap admin, personal workspaces)."
+authors = [
+    "Màrius Montón <marius.monton@gmail.com>",
+    "Ramon Vallés <vallespuigramon@gmail.com>",
+]
+
+[[bin]]
+name = "marreq-cloud"
+path = "src/main.rs"
+
+[dependencies]
+marreq-core = { path = "../marreq-core" }
+rocket = { workspace = true }
+tokio = { workspace = true }
+lettre = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+argon2 = { workspace = true }
+base64 = { workspace = true }
+urlencoding = { workspace = true }
+diesel = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+sha2 = { workspace = true }
+
+[dev-dependencies]
+marreq-core = { path = "../marreq-core", features = ["test-helpers"] }
+tokio = { workspace = true, features = ["rt"] }
+serde_json = { workspace = true }

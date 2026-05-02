@@ -45,7 +45,7 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 - **Stack**: React 19, Vite 6, TypeScript, Tailwind CSS; light/dark theming and shared design tokens
 - **Routing**: Login, project-scoped requirements and verification views, requirement editor, traceability graph — see [frontend/README.md](frontend/README.md)
 - **Responsive**: Layout tuned for desktop and smaller viewports
-- **Same-origin API**: Session cookies and CSRF work when the SPA and `/api` share an origin (Docker nginx or Vite dev proxy); details in [doc/API.md](doc/API.md)
+- **Same-origin API**: Session cookies and CSRF work when the SPA and `/api` share an origin (Docker nginx or Vite dev proxy); details in [docs/developer/http-api-contract.md](docs/developer/http-api-contract.md)
 
 ### 🔌 API Access
 - **RESTful API**: Complete programmatic access to all data
@@ -129,13 +129,13 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 
 #### Quick Start (Recommended)
 
-For a fully initialized database with pre-configured users and sample data, use the helper scripts described in the [scripts README](backend/scripts/README.md), in particular [`db_setup.sh`](backend/scripts/db_setup.sh) (optionally followed by [`db_seed.sh`](backend/scripts/db_seed.sh)).
+For a fully initialized database with pre-configured users and sample data, use the helper scripts described in the [scripts README](marreq-core/scripts/README.md), in particular [`db_setup.sh`](marreq-core/scripts/db_setup.sh) (optionally followed by [`db_seed.sh`](marreq-core/scripts/db_seed.sh)).
 
 Typical flow:
 - Start database: `docker compose -f docker/docker-compose.yml up -d db`
-- Initialize DB schema: `./backend/scripts/db_setup.sh`
-- Load sample data (optional): `./backend/scripts/db_seed.sh`
-- Start API: `cargo run -p marreq` (from repo root) or `cd backend && cargo run --bin marreq` — serves **http://127.0.0.1:8000** with JSON under **`/api`** (no server-rendered HTML app).
+- Initialize DB schema: `./marreq-core/scripts/db_setup.sh`
+- Load sample data (optional): `./marreq-core/scripts/db_seed.sh`
+- Start API (self-hosted mode): `cargo run -p marreq-server` — serves **http://127.0.0.1:8000** with JSON under **`/api`**.
 
 For the **full browser UI** locally, run the SPA against that API:
 
@@ -147,13 +147,13 @@ npm run dev   # http://localhost:5173 — proxies /api → http://127.0.0.1:8000
 
 Demo admin user **`alice`** / **`ChangeMe123!`** (change after first login).
 
-For detailed database setup options (automated, manual, reset, verification) see the [database setup guide](docs/developer/database-setup.md).
+For the full setup matrix (**`marreq-server`** vs **`marreq-cloud`**, Docker vs local), see the [setup guide](docs/developer/setup.md). For database-only details (automated, manual, reset, verification), see the [database setup guide](docs/developer/database-setup.md).
 
 ### Docker: API backend + SPA frontend
 
-The default [docker/docker-compose.yml](docker/docker-compose.yml) stack runs **db**, **backend** (Rocket **JSON API** on `127.0.0.1:8000`), **frontend** (nginx serving the **production Vite build** on **http://localhost:8080** with **`/api/`** proxied to the backend), and **adminer** (**http://localhost:8081**). See [docker/README.md](docker/README.md) and [doc/API.md](doc/API.md) (auth, CSRF, cookies).
+The default [docker/docker-compose.yml](docker/docker-compose.yml) stack runs **db**, **marreq-server** (Rocket **JSON API** on `127.0.0.1:8000`), **frontend** (nginx serving the **production Vite build** on **http://localhost:8080** with **`/api/`** proxied to `marreq-server`), and **adminer** (**http://localhost:8081**). The `cloud` compose profile adds **`marreq-cloud`** on **`127.0.0.1:8001`** plus **`frontend-cloud`** on **http://localhost:8082**. See the [setup guide](docs/developer/setup.md), [docker/README.md](docker/README.md), and the [HTTP API contract](docs/developer/http-api-contract.md).
 
-Backend layout and optional env toggles: [docs/developer/backend-layout.md](docs/developer/backend-layout.md). SPA scripts, routes, and API mapping: [frontend/README.md](frontend/README.md).
+Workspace layout, deployment modes, and build commands: [docs/developer/workspace-layout.md](docs/developer/workspace-layout.md). SPA scripts, routes, and API mapping: [frontend/README.md](frontend/README.md).
 
 ## 📖 Usage
 
@@ -183,14 +183,14 @@ Use the SPA (**Docker** `http://localhost:8080` or **`npm run dev`** in `fronten
 
 ## 🔌 API Reference
 
-**Interchangeable clients:** session auth, CSRF, and Docker/nginx notes are documented in [doc/API.md](doc/API.md). A partial [doc/openapi.yaml](doc/openapi.yaml) covers auth and session-scoped project listing.
+**Interchangeable clients:** session auth, CSRF, and Docker/nginx notes are documented in [docs/developer/http-api-contract.md](docs/developer/http-api-contract.md). A partial [OpenAPI spec](docs/developer/openapi.yaml) covers auth and session-scoped project listing.
 
 ### Base URL
 ```
 http://localhost:8000/api
 ```
 
-Behind the Docker frontend (or Vite dev), use the **same origin** as the SPA (e.g. `http://localhost:8080/api/...`). JSON routes are mounted under `/api` from [backend/src/api/mod.rs](backend/src/api/mod.rs) (see also [backend/src/app.rs](backend/src/app.rs)). When adding or changing API endpoints, update this section so the list stays in sync.
+Behind the Docker frontend (or Vite dev), use the **same origin** as the SPA (e.g. `http://localhost:8080/api/...`). JSON routes are mounted under `/api` from `marreq-core/src/api/mod.rs` (shared routes) and the deployment crate's `src/routes.rs` (deployment-specific routes). When adding or changing API endpoints, update this section so the list stays in sync.
 
 ### Endpoints
 
@@ -327,13 +327,13 @@ For a full entity-relationship diagram see [docs/architecture/database-schema.md
 
 A comprehensive database initialization system is provided, including SQL files, helper scripts, pre-configured users, and rich sample data.
 
-- For end-to-end database setup and reset via scripts, see the [scripts README](backend/scripts/README.md) (`db_setup.sh`, `db_seed.sh`, `db_reset.sh`).
+- For end-to-end database setup and reset via scripts, see the [scripts README](marreq-core/scripts/README.md) (`db_setup.sh`, `db_seed.sh`, `db_reset.sh`).
 - For a full description of the schema, sample projects/users, and manual initialization commands, see the [database setup guide](docs/developer/database-setup.md).
 
 ### Migrations
-Database schema changes are managed through Diesel migrations (run CLI commands from **`backend/`**, where `diesel.toml` lives):
+Database schema changes are managed through Diesel migrations (`diesel.toml` lives in **`marreq-core/`**; run CLI commands from there):
 ```bash
-cd backend
+cd marreq-core
 
 # Create new migration
 diesel migration generate migration_name
@@ -345,38 +345,46 @@ diesel migration run
 diesel migration redo
 ```
 
-**Note**: Migrations are the single source of truth for schema creation/evolution. `backend/scripts/init_complete.sql` is seed data only (sample projects/users/requirements) and should be run after migrations.
+**Note**: Migrations are the single source of truth for schema creation/evolution. `marreq-core/scripts/init_complete.sql` is seed data only (sample projects/users/requirements) and should be run after migrations.
 
 ## 🛠️ Development
 
 ### Project structure
 ```
 Marreq/
-├── Cargo.toml              # Workspace root (virtual workspace)
-├── backend/                # Rust / Rocket JSON API
+├── Cargo.toml              # Virtual workspace (marreq-core, marreq-server, marreq-cloud)
+├── Cargo.lock              # Single lock-file for the whole workspace
+├── Makefile                # make server / make cloud / make test / …
+├── marreq-core/            # shared lib (domain, persistence, Rocket primitives)
 │   ├── Cargo.toml
-│   ├── src/
-│   │   ├── main.rs         # Application entry point
-│   │   ├── app.rs          # Rocket bootstrap and route mounting
-│   │   ├── api/            # REST handlers under /api
-│   │   ├── routes/         # Catchers, shared helpers (e.g. project listing)
-│   │   ├── auth/           # Session, CSRF, login, guards
-│   │   ├── schema.rs       # Diesel schema (generated)
-│   │   ├── services/       # Business logic and orchestration
-│   │   ├── repository/     # Data access (Diesel + cache)
-│   │   ├── models/         # Domain entities and forms
-│   │   ├── importers/      # Excel importer
-│   │   └── reqif/          # ReqIF import/export
-│   ├── migrations/         # Database migrations
-│   └── scripts/            # Dev tooling & DB setup
+│   ├── src/                # Library source (api/, auth/, services/, models/, …)
+│   ├── migrations/         # Diesel migrations (schema source of truth)
+│   ├── diesel.toml
+│   └── scripts/            # Dev tooling & DB helpers
 │       ├── db_setup.sh
 │       ├── db_seed.sh
 │       ├── db_migrate.sh
 │       ├── db_reset.sh
 │       ├── db_backup.sh
-│       ├── reindex_project.sh
 │       ├── run_checks.sh   # fmt, clippy, stylelint, purgecss, npm test
+│       ├── run_tests.sh
 │       └── init_complete.sql
+├── marreq-server/          # self-hosted binary (admin-managed users)
+│   ├── Cargo.toml
+│   └── src/
+│       ├── main.rs         # Rocket launch for server mode
+│       ├── deployment.rs   # impl DeploymentMode for Server
+│       ├── api/            # Server-only REST handlers
+│       └── routes.rs       # pub fn routes() for server-only routes
+├── marreq-cloud/           # hosted/SaaS binary (self-registration)
+│   ├── Cargo.toml
+│   └── src/
+│       ├── main.rs         # Rocket launch for cloud mode
+│       ├── deployment.rs   # impl DeploymentMode for Cloud
+│       ├── api/            # Cloud-only REST handlers (register, verify-email, …)
+│       ├── services/       # registration_service.rs
+│       ├── fairings/       # cloud_admin_bootstrap.rs
+│       └── routes.rs       # pub fn routes() for cloud-only routes
 ├── frontend/               # React + Vite SPA + legacy static/
 │   ├── src/                # React app (main.tsx, routes, components)
 │   ├── static/             # Legacy JS/CSS (optional @static alias)
@@ -388,7 +396,7 @@ Marreq/
 ├── docker/                 # Container files (compose, Dockerfile, entrypoint, CI override)
 │   ├── docker-compose.yml  # Main Docker Compose stack
 │   ├── docker-compose.ci.yml
-│   ├── Dockerfile          # Backend image
+│   ├── Dockerfile          # Backend image (MARREQ_BIN=marreq-server|marreq-cloud)
 │   ├── frontend/           # Frontend image + nginx config
 │   ├── docker-entrypoint.sh
 │   └── README.md
@@ -403,23 +411,26 @@ Marreq/
 
 ### Building
 ```bash
-# Development build
-cargo build
+# Development build (all crates)
+cargo build --workspace
 
 # Release build
-cargo build --release
+cargo build --workspace --release
 
-# Run tests
-cargo test -p marreq
+# Run tests (all crates)
+cargo test --workspace
+
+# Run tests for a specific crate
+cargo test -p marreq-core
 
 # Run all checks (fmt, clippy, stylelint, purgecss, npm ci, npm test)
-bash backend/scripts/run_checks.sh
+bash marreq-core/scripts/run_checks.sh
 
 # Run backend test suite with summary output
-bash backend/scripts/run_tests.sh
+bash marreq-core/scripts/run_tests.sh
 
 # Run local CI flow (supports --jobs)
-bash backend/scripts/run_ci.sh local-ci --jobs 2
+bash marreq-core/scripts/run_ci.sh local-ci --jobs 2
 ```
 
 ## 📝 License
@@ -448,8 +459,8 @@ lsof -i :8000
 # Kill existing process
 kill <PID>
 
-# Start application with specific binary
-cargo run -p marreq
+# Start application (self-hosted mode)
+cargo run -p marreq-server
 ```
 
 #### Login Issues

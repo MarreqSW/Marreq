@@ -1,4 +1,4 @@
-/** API shapes aligned with backend JSON (snake_case). */
+/** API shapes aligned with marreq-core JSON (snake_case). */
 
 export interface RequirementStatus {
   id: number;
@@ -180,6 +180,31 @@ export interface DashboardPayload {
   csrf_token: string;
 }
 
+export interface DeploymentInfo {
+  mode: 'server' | 'cloud' | string;
+  allows_self_registration: boolean;
+  requires_email_verification: boolean;
+  allows_admin_promotion: boolean;
+  assigns_personal_workspace: boolean;
+  allows_self_administered_user_creation: boolean;
+}
+
+export type RegistrationBody = {
+  username: string;
+  name: string;
+  email: string;
+  password: string;
+};
+
+export type ForgotPasswordBody = {
+  email: string;
+};
+
+export type ResetPasswordBody = {
+  token: string;
+  new_password: string;
+};
+
 /** `GET /api/projects/:pid/requirements/:id` — requirement fields flattened + trace_summary. */
 export interface RequirementVersionLink {
   id: number;
@@ -345,9 +370,10 @@ export interface User {
   creation_date: string;
   last_login: string;
   is_admin: boolean;
+  email_verified?: boolean;
 }
 
-/** Single custom field value in PATCH body (matches backend `CustomFieldValueInput`). */
+/** Single custom field value in PATCH body (matches `CustomFieldValueInput`). */
 export type CustomFieldPatchItem = { field_id: number; value: string | null };
 
 /** Body for `PATCH /api/projects/:pid/requirements/:id` (all optional). */

@@ -2,14 +2,8 @@ import { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import type { User } from '@/api/types';
+import { parseUser } from '@/utils/parseUser';
 import NoProjectsHome from '@/pages/NoProjectsHome';
-
-function parseUser(u: unknown): User | null {
-  if (u && typeof u === 'object' && 'username' in u) {
-    return u as User;
-  }
-  return null;
-}
 
 export default function HomeRedirect() {
   const navigate = useNavigate();

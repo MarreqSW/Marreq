@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
+import { escapeCsv, downloadCsv } from '@/utils/tableUtils';
+import { Pagination } from '@/components/table/Pagination';
+import { CsvDownloadButton } from '@/components/table/CsvDownloadButton';
 import {
   getMyPermissions,
   listCategories,
@@ -36,11 +39,6 @@ function formatModified(iso: string): string {
   } catch {
     return iso;
   }
-}
-
-function escapeCsv(s: string): string {
-  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
 }
 
 function approvalLabel(state: string): string {
@@ -96,16 +94,6 @@ function mergeRequirementAfterPatch(req: Requirement, patch: RequirementPatchBod
     next.custom_fields = [...byId.values()];
   }
   return next;
-}
-
-/** Compact page list: 1 2 3 4 5 … 50 style */
-function paginationItems(current: number, total: number): (number | 'dots')[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  if (current <= 4) return [1, 2, 3, 4, 5, 'dots', total];
-  if (current >= total - 3) {
-    return [1, 'dots', total - 4, total - 3, total - 2, total - 1, total];
-  }
-  return [1, 'dots', current - 1, current, current + 1, 'dots', total];
 }
 
 type ViewMode = 'table' | 'list';
@@ -350,30 +338,21 @@ export default function RequirementsTable({
       'Modified',
       'Author',
     ];
-    const lines = [headers.join(',')];
-    for (const req of filtered) {
+    const rows = filtered.map((req) => {
       const st = statusById.get(req.status_id);
-      lines.push(
-        [
-          escapeCsv(req.reference_code || `#${req.id}`),
-          escapeCsv(req.title),
-          escapeCsv(categoryById.get(req.category_id) ?? ''),
-          escapeCsv(parentRequirementIdsForDisplay(req).join(';')),
-          escapeCsv(st?.title ?? ''),
-          escapeCsv(req.approval_state),
-          escapeCsv((req.verification_method_ids ?? []).join(';')),
-          escapeCsv(formatModified(req.update_date)),
-          escapeCsv(userLabel(req.author_id)),
-        ].join(','),
-      );
-    }
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `requirements-project-${projectId}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+      return [
+        escapeCsv(req.reference_code || `#${req.id}`),
+        escapeCsv(req.title),
+        escapeCsv(categoryById.get(req.category_id) ?? ''),
+        escapeCsv(parentRequirementIdsForDisplay(req).join(';')),
+        escapeCsv(st?.title ?? ''),
+        escapeCsv(req.approval_state),
+        escapeCsv((req.verification_method_ids ?? []).join(';')),
+        escapeCsv(formatModified(req.update_date)),
+        escapeCsv(userLabel(req.author_id)),
+      ];
+    });
+    downloadCsv(`requirements-project-${projectId}.csv`, headers, rows);
   }, [filtered, statusById, categoryById, userLabel, projectId]);
 
   if (loading) {
@@ -443,14 +422,7 @@ export default function RequirementsTable({
           <p className="text-[10px] text-stitch-muted font-mono">
             {filtered.length.toLocaleString()} Requirements found
           </p>
-          <button
-            type="button"
-            onClick={exportCsv}
-            title="Download CSV"
-            className="p-2 text-stitch-muted hover:text-stitch-accent transition-colors"
-          >
-            <span className="material-symbols-outlined">file_download</span>
-          </button>
+          <CsvDownloadButton onClick={exportCsv} />
           <a
             href={`${basePath}/requirements.xls`}
             title="Download Excel (classic)"
@@ -1098,46 +1070,11 @@ export default function RequirementsTable({
               </span>{' '}
               of <span className="text-stitch-fg font-bold">{filtered.length}</span>
             </p>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled={safePage <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="p-1 text-stitch-muted hover:text-stitch-accent transition-colors disabled:opacity-30"
-              >
-                <span className="material-symbols-outlined">chevron_left</span>
-              </button>
-              <div className="flex gap-1 items-center">
-                {paginationItems(safePage, pageCount).map((item, idx) =>
-                  item === 'dots' ? (
-                    <span key={`dots-${idx}`} className="px-1 text-stitch-muted text-xs">
-                      …
-                    </span>
-                  ) : (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => setPage(item)}
-                      className={`w-8 h-8 flex items-center justify-center rounded text-xs font-bold transition-colors ${
-                        item === safePage
-                          ? 'bg-stitch-accent text-stitch-canvas'
-                          : 'hover:bg-stitch-elevated text-stitch-fg'
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  ),
-                )}
-              </div>
-              <button
-                type="button"
-                disabled={safePage >= pageCount}
-                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                className="p-1 text-stitch-muted hover:text-stitch-accent transition-colors disabled:opacity-30"
-              >
-                <span className="material-symbols-outlined">chevron_right</span>
-              </button>
-            </div>
+            <Pagination
+              page={safePage}
+              pageCount={pageCount}
+              onPageChange={setPage}
+            />
           </div>
         </div>
       )}

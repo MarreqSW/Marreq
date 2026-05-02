@@ -16,7 +16,7 @@ export async function jsonFetch(url, options = {}) {
       Accept: 'application/json',
       ...headers,
     },
-    // Use include so credentialed API calls behave consistently via Vite/nginx proxies (same as doc/API.md).
+    // Use include so credentialed API calls behave consistently via Vite/nginx proxies (same as docs/developer/http-api-contract.md).
     credentials: options.credentials ?? 'include',
   };
 
@@ -71,4 +71,3 @@ export function formToJSON(form) {
   const formData = new FormData(form);
   return Object.fromEntries(formData.entries());
 }
-

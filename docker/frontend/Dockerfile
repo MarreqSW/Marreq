@@ -7,6 +7,8 @@ COPY frontend/ ./
 RUN npm run build
 
 FROM nginx:alpine
+ENV MARREQ_BACKEND_HOST=marreq-server
+ENV MARREQ_BACKEND_PORT=8000
 COPY --from=build /build/frontend/dist /usr/share/nginx/html
-COPY docker/frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY docker/frontend/nginx.conf.template /etc/nginx/templates/default.conf.template
 EXPOSE 80

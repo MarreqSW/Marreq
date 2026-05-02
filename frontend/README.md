@@ -12,6 +12,9 @@ SPA built with **React 19**, **TypeScript**, **Tailwind CSS**, and **React Flow*
 ## Routes (MVP)
 
 - `/login` — JSON login (`POST /api/auth/login` with CSRF)
+- `/register` — Cloud-mode self-service registration (`POST /api/auth/register`)
+- `/verify-email` — consumes Cloud-mode email verification links
+- `/forgot-password` and `/reset-password` — Cloud-mode password reset
 - `/` — redirects to `/p/{selectedOrFirstProjectId}/requirements`
 - `/p/:projectId/requirements` — requirements table (row opens editor)
 - `/p/:projectId/requirements/:requirementId/edit` — edit requirement (Stitch / Axiom-style layout)
@@ -28,12 +31,19 @@ SPA built with **React 19**, **TypeScript**, **Tailwind CSS**, and **React Flow*
 | Requirement status labels | `GET /api/status` (join `status_id` on each requirement) |
 | Verifications (for coverage denominator) | `GET /api/verifications` (filter by `project_id` client-side) |
 | Session + CSRF | `GET /api/dashboard`, `GET /api/auth/csrf`; mutating calls need `X-CSRF-Token` |
+| Deployment capabilities | `GET /api/meta/deployment` |
+| Cloud auth | `POST /api/auth/register`, `GET /api/auth/verify-email`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password` |
 
-See [doc/API.md](../doc/API.md) for the full HTTP contract.
+See [docs/developer/http-api-contract.md](../docs/developer/http-api-contract.md) for the full HTTP contract.
 
 ## Docker
 
-Built from `docker/frontend/Dockerfile` (build context: repository root). Nginx serves `dist/` and proxies `/api/` to the `backend` service. Run `npm install` + `npm run build` inside the image as today; no Dockerfile change required for this stack.
+Built from `docker/frontend/Dockerfile` (build context: repository root). The image uses an env-templated nginx config, so the same SPA image can proxy `/api/` to either `marreq-server` or `marreq-cloud`.
+
+- Self-hosted Docker frontend: **http://localhost:8080** → `marreq-server:8000`
+- Cloud Docker frontend: **http://localhost:8082** → `marreq-cloud:8001` (cloud profile)
+
+For cloud-mode SPA testing, the simplest local path is `cargo run -p marreq-cloud` on the default Rocket port (`8000`), because the Vite proxy already targets `http://127.0.0.1:8000`.
 
 ## Legacy static (optional)
 

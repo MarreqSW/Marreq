@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
+import { escapeCsv, downloadCsv } from '@/utils/tableUtils';
+import { Pagination } from '@/components/table/Pagination';
+import { CsvDownloadButton } from '@/components/table/CsvDownloadButton';
 import {
   getMyPermissions,
   listUsersOptional,
@@ -17,20 +20,6 @@ import type {
   VerificationStatus,
 } from '@/api/types';
 import { StatusBadge } from '@/components/StatusBadge';
-
-function escapeCsv(s: string): string {
-  if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-  return s;
-}
-
-function paginationItems(current: number, total: number): (number | 'dots')[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-  if (current <= 4) return [1, 2, 3, 4, 5, 'dots', total];
-  if (current >= total - 3) {
-    return [1, 'dots', total - 4, total - 3, total - 2, total - 1, total];
-  }
-  return [1, 'dots', current - 1, current, current + 1, 'dots', total];
-}
 
 type ViewMode = 'table' | 'list';
 
@@ -218,8 +207,7 @@ export default function VerificationsTable({
       'Verification',
       'Source',
     ];
-    const lines = [headers.join(',')];
-    for (const v of filtered) {
+    const csvRows = filtered.map((v) => {
       const stRow = statusById.get(v.status_id);
       const methodTitle =
         v.verification_method_id == null
@@ -232,26 +220,18 @@ export default function VerificationsTable({
           : v.parent_id != null
             ? `Parent #${v.parent_id}`
             : '';
-      lines.push(
-        [
-          escapeCsv(v.reference_code || `#${v.id}`),
-          escapeCsv(v.name),
-          escapeCsv(parentKey),
-          escapeCsv(stRow?.title ?? ''),
-          escapeCsv(userLabel(v.author_id)),
-          escapeCsv(userLabel(v.reviewer_id)),
-          escapeCsv(methodTitle),
-          escapeCsv(v.source),
-        ].join(','),
-      );
-    }
-    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `verifications-project-${projectId}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+      return [
+        escapeCsv(v.reference_code || `#${v.id}`),
+        escapeCsv(v.name),
+        escapeCsv(parentKey),
+        escapeCsv(stRow?.title ?? ''),
+        escapeCsv(userLabel(v.author_id)),
+        escapeCsv(userLabel(v.reviewer_id)),
+        escapeCsv(methodTitle),
+        escapeCsv(v.source),
+      ];
+    });
+    downloadCsv(`verifications-project-${projectId}.csv`, headers, csvRows);
   }, [filtered, statusById, methods, rows, projectId, userLabel]);
 
   const canEditFields = Boolean(perms?.edit_requirements && (csrfToken ?? '').length);
@@ -355,14 +335,7 @@ export default function VerificationsTable({
           <p className="text-[10px] text-stitch-muted font-mono">
             {filtered.length.toLocaleString()} Verifications found
           </p>
-          <button
-            type="button"
-            onClick={exportCsv}
-            title="Download CSV"
-            className="p-2 text-stitch-muted hover:text-stitch-accent transition-colors"
-          >
-            <span className="material-symbols-outlined">file_download</span>
-          </button>
+          <CsvDownloadButton onClick={exportCsv} />
           <a
             href={`${basePath}/verifications.xls`}
             title="Download Excel (classic)"
@@ -909,46 +882,11 @@ export default function VerificationsTable({
               </span>{' '}
               of <span className="text-stitch-fg font-bold">{filtered.length}</span>
             </p>
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                disabled={safePage <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="p-1 text-stitch-muted hover:text-stitch-accent transition-colors disabled:opacity-30"
-              >
-                <span className="material-symbols-outlined">chevron_left</span>
-              </button>
-              <div className="flex gap-1 items-center">
-                {paginationItems(safePage, pageCount).map((item, idx) =>
-                  item === 'dots' ? (
-                    <span key={`dots-${idx}`} className="px-1 text-stitch-muted text-xs">
-                      …
-                    </span>
-                  ) : (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => setPage(item)}
-                      className={`w-8 h-8 flex items-center justify-center rounded text-xs font-bold transition-colors ${
-                        item === safePage
-                          ? 'bg-stitch-accent text-stitch-canvas'
-                          : 'hover:bg-stitch-elevated text-stitch-fg'
-                      }`}
-                    >
-                      {item}
-                    </button>
-                  ),
-                )}
-              </div>
-              <button
-                type="button"
-                disabled={safePage >= pageCount}
-                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                className="p-1 text-stitch-muted hover:text-stitch-accent transition-colors disabled:opacity-30"
-              >
-                <span className="material-symbols-outlined">chevron_right</span>
-              </button>
-            </div>
+            <Pagination
+              page={safePage}
+              pageCount={pageCount}
+              onPageChange={setPage}
+            />
           </div>
         </div>
       )}

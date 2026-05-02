@@ -1,5 +1,7 @@
 # Marreq Database Setup Guide
 
+For the full binary-level setup flows (**`marreq-server`** / **`marreq-cloud`**, Docker / local), start with the [setup guide](setup.md). This page stays focused on database initialization, seeding, migration, reset, and verification details.
+
 ## Overview
 
 Marreq now uses a single database strategy:

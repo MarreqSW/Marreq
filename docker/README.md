@@ -8,6 +8,8 @@ Copy the project env template before first use:
 cp .env.example .env
 ```
 
+For the end-to-end setup flows for **`marreq-server`** and **`marreq-cloud`** (Docker and non-Docker), start with [../docs/developer/setup.md](../docs/developer/setup.md).
+
 ## Files
 
 - `docker-compose.yml`: Primary local stack — **`db`**, **`ollama`**, **`marreq-server`** (Rocket API; default profile), **`marreq-cloud`** (Rocket API; `cloud` profile), **`frontend`** (nginx + SPA), **`adminer`**
@@ -73,7 +75,9 @@ docker compose \
   up --build db marreq-dev
 ```
 
-This override adds `marreq-dev` (bind-mounted checkout + Cargo caches). The app is exposed at **http://localhost:8000**. To work on the SPA locally, run `npm run dev` in `frontend/` against a Rocket instance (e.g. `marreq-dev` or `cargo run -p marreq-server`) with CORS configured; see [doc/API.md](../doc/API.md).
+This override adds `marreq-dev` (bind-mounted checkout + Cargo caches). The app is exposed at **http://localhost:8000**. To work on the SPA locally, run `npm run dev` in `frontend/` against a Rocket instance (e.g. `marreq-dev` or `cargo run -p marreq-server`) with CORS configured; see [../docs/developer/http-api-contract.md](../docs/developer/http-api-contract.md).
+
+The bundled `frontend` container proxies to **`marreq-server`** only. If you want to exercise the SPA against **`marreq-cloud`**, run the SPA outside Docker or add your own reverse proxy in front of `marreq-cloud`.
 
 For local development outside Docker, run either binary directly:
 

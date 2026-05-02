@@ -45,7 +45,7 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 - **Stack**: React 19, Vite 6, TypeScript, Tailwind CSS; light/dark theming and shared design tokens
 - **Routing**: Login, project-scoped requirements and verification views, requirement editor, traceability graph — see [frontend/README.md](frontend/README.md)
 - **Responsive**: Layout tuned for desktop and smaller viewports
-- **Same-origin API**: Session cookies and CSRF work when the SPA and `/api` share an origin (Docker nginx or Vite dev proxy); details in [doc/API.md](doc/API.md)
+- **Same-origin API**: Session cookies and CSRF work when the SPA and `/api` share an origin (Docker nginx or Vite dev proxy); details in [docs/developer/http-api-contract.md](docs/developer/http-api-contract.md)
 
 ### 🔌 API Access
 - **RESTful API**: Complete programmatic access to all data
@@ -147,11 +147,11 @@ npm run dev   # http://localhost:5173 — proxies /api → http://127.0.0.1:8000
 
 Demo admin user **`alice`** / **`ChangeMe123!`** (change after first login).
 
-For detailed database setup options (automated, manual, reset, verification) see the [database setup guide](docs/developer/database-setup.md).
+For the full setup matrix (**`marreq-server`** vs **`marreq-cloud`**, Docker vs local), see the [setup guide](docs/developer/setup.md). For database-only details (automated, manual, reset, verification), see the [database setup guide](docs/developer/database-setup.md).
 
 ### Docker: API backend + SPA frontend
 
-The default [docker/docker-compose.yml](docker/docker-compose.yml) stack runs **db**, **backend** (Rocket **JSON API** on `127.0.0.1:8000`), **frontend** (nginx serving the **production Vite build** on **http://localhost:8080** with **`/api/`** proxied to the backend), and **adminer** (**http://localhost:8081**). See [docker/README.md](docker/README.md) and [doc/API.md](doc/API.md) (auth, CSRF, cookies).
+The default [docker/docker-compose.yml](docker/docker-compose.yml) stack runs **db**, **marreq-server** (Rocket **JSON API** on `127.0.0.1:8000`), **frontend** (nginx serving the **production Vite build** on **http://localhost:8080** with **`/api/`** proxied to `marreq-server`), and **adminer** (**http://localhost:8081**). The `cloud` compose profile adds **`marreq-cloud`** on **`127.0.0.1:8001`**. See the [setup guide](docs/developer/setup.md), [docker/README.md](docker/README.md), and the [HTTP API contract](docs/developer/http-api-contract.md).
 
 Workspace layout, deployment modes, and build commands: [docs/developer/workspace-layout.md](docs/developer/workspace-layout.md). SPA scripts, routes, and API mapping: [frontend/README.md](frontend/README.md).
 
@@ -183,7 +183,7 @@ Use the SPA (**Docker** `http://localhost:8080` or **`npm run dev`** in `fronten
 
 ## 🔌 API Reference
 
-**Interchangeable clients:** session auth, CSRF, and Docker/nginx notes are documented in [doc/API.md](doc/API.md). A partial [doc/openapi.yaml](doc/openapi.yaml) covers auth and session-scoped project listing.
+**Interchangeable clients:** session auth, CSRF, and Docker/nginx notes are documented in [docs/developer/http-api-contract.md](docs/developer/http-api-contract.md). A partial [OpenAPI spec](docs/developer/openapi.yaml) covers auth and session-scoped project listing.
 
 ### Base URL
 ```

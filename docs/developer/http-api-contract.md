@@ -77,7 +77,7 @@ HTTP status matches the error class (400, 401, 403, 404, 409, 422, 500).
 
 ## Full route list
 
-Rocket mounts all JSON routes under `/api` in `marreq-core/src/api/mod.rs` (shared routes) and the deployment crate's `src/routes.rs` (deployment-specific routes). The project [README](../README.md) includes a human-maintained endpoint summary (requirements, tests, matrix, baselines, MCP audit, etc.).
+Rocket mounts all JSON routes under `/api` in `marreq-core/src/api/mod.rs` (shared routes) and the deployment crate's `src/routes.rs` (deployment-specific routes). The project [README](../../README.md) includes a human-maintained endpoint summary (requirements, tests, matrix, baselines, MCP audit, etc.).
 
 A minimal **OpenAPI 3** sketch for auth and session project listing lives in [`openapi.yaml`](openapi.yaml) (extend or replace with generated spec later).
 
@@ -90,8 +90,8 @@ A minimal **OpenAPI 3** sketch for auth and session project listing lives in [`o
 
 ## Docker (two containers)
 
-- **frontend:** nginx on host port **8080** → SPA + `location /api/` → `backend:8000`.
+- **frontend:** nginx on host port **8080** → SPA + `location /api/` → `marreq-server:8000`.
 - **backend:** Rocket on **8000** (internal to compose network unless you publish it).
 - **Adminer:** host port **8081** (to avoid clashing with the frontend).
 
-See [`docker/README.md`](../docker/README.md).
+See [`../../docker/README.md`](../../docker/README.md).

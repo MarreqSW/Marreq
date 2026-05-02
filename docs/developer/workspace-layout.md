@@ -223,7 +223,7 @@ Migrations and dev-helper scripts live inside the `marreq-core` crate:
   `db_migrate.sh`, `db_reset.sh`, `db_backup.sh`, `run_checks.sh`,
   `run_tests.sh`, `run_ci.sh`, `init_complete.sql`.
 
-See the [database setup guide](database-setup.md) for full usage.
+See the [setup guide](setup.md) for the end-to-end local flows, and the [database setup guide](database-setup.md) for full schema/setup details.
 
 ---
 
@@ -254,8 +254,9 @@ Follow-up cleanup landed shortly after retirement:
 
 ## Related docs
 
+- [Setup guide](setup.md)
 - [Database setup guide](database-setup.md)
 - [Docker / Compose reference](../../docker/README.md)
-- [HTTP API contract](../../doc/API.md)
+- [HTTP API contract](http-api-contract.md)
 - [MCP server setup](mcp-setup.md)
 - [Semantic search / AI setup](semantic-search.md)

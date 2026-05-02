@@ -14,14 +14,16 @@ This repo’s documentation is organized by audience:
 
 ## Developers
 
+- [Setup guide (`marreq-server` / `marreq-cloud`, Docker / local)](developer/setup.md)
 - [Workspace layout & deployment modes](developer/workspace-layout.md)
-- [HTTP API contract (SPA / interchangeable clients)](../doc/API.md) — auth, CSRF, cookies; partial [OpenAPI](../doc/openapi.yaml)
+- [HTTP API contract (SPA / interchangeable clients)](developer/http-api-contract.md) — auth, CSRF, cookies; partial [OpenAPI](developer/openapi.yaml)
 - [Database setup](developer/database-setup.md)
 - [MCP setup](developer/mcp-setup.md)
 - [Semantic search](developer/semantic-search.md)
 - [Ollama setup](developer/ollama-setup.md)
 - [CSS style guide](developer/css-style-guide.md)
 - [Approval workflow testing](developer/testing/approval-workflow-testing.md)
+- [Requirements compliance report](developer/testing/requirements-compliance-report.md)
 - [API test coverage analysis](developer/testing/api-test-coverage-analysis.md)
 - [Test coverage recommendations](developer/testing/test-coverage-recommendations.md)
 
@@ -31,6 +33,7 @@ This repo’s documentation is organized by audience:
 - [Database models](architecture/database-models.md)
 - [Status enums](architecture/status-enums.md)
 - [Baselines UI suggestion](architecture/ui/baselines-ui-suggestion.md)
+- [Requirements DAG view proposal](architecture/ui/requirements-dag-view.md)
 
 ## Conventions
 

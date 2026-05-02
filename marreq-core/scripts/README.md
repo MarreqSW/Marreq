@@ -50,7 +50,7 @@ changes go through `marreq-core/migrations/` (run `diesel` from `marreq-core/`).
 ./marreq-core/scripts/db_seed.sh
 
 # 3. Start Marreq
-cargo run -p marreq
+cargo run -p marreq-server
 ```
 
 `db_setup.sh` will:
@@ -58,6 +58,8 @@ cargo run -p marreq
 - Wait for PostgreSQL to be ready
 - Create the `marreq` database if it does not exist
 - Run `diesel migration run` (applies every migration in `migrations/` in order)
+
+For the full application setup matrix (`marreq-server` / `marreq-cloud`, Docker / local), see [`docs/developer/setup.md`](../../docs/developer/setup.md).
 
 ### 2. Combined setup + seed in one command
 

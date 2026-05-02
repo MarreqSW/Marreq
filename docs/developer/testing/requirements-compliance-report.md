@@ -1,6 +1,6 @@
 # Requirements compliance report
 
-Generated against [doc/requirements.csv](requirements.csv). A requirement is considered **accomplished** here if (1) every path in its Justification "Trace: …" exists in the repo, and (2) the project's automated test suite passes.
+Generated against [`docs/assets/requirements.csv`](../../assets/requirements.csv). A requirement is considered **accomplished** here if (1) every path in its Justification "Trace: …" exists in the repo, and (2) the project's automated test suite passes.
 
 *Last updated: after running trace compliance and full test suite.*
 

@@ -1,30 +1,20 @@
-import { FormEvent, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { registerAccount } from '@/api/client';
 import AuthLayout from '@/components/AuthLayout';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 export default function RegisterPage() {
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      await registerAccount({ username, name, email, password });
-      setSubmitted(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Registration failed');
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const { error, submitting, onSubmit } = useFormSubmit(async () => {
+    await registerAccount({ username, name, email, password });
+    setSubmitted(true);
+  });
 
   return (
     <AuthLayout

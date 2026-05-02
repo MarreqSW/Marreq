@@ -1,27 +1,17 @@
-import { FormEvent, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { requestPasswordReset } from '@/api/client';
 import AuthLayout from '@/components/AuthLayout';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
-  const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      await requestPasswordReset({ email });
-      setSubmitted(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Password reset request failed');
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const { error, submitting, onSubmit } = useFormSubmit(async () => {
+    await requestPasswordReset({ email });
+    setSubmitted(true);
+  });
 
   return (
     <AuthLayout

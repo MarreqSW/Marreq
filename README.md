@@ -151,7 +151,7 @@ For the full setup matrix (**`marreq-server`** vs **`marreq-cloud`**, Docker vs 
 
 ### Docker: API backend + SPA frontend
 
-The default [docker/docker-compose.yml](docker/docker-compose.yml) stack runs **db**, **marreq-server** (Rocket **JSON API** on `127.0.0.1:8000`), **frontend** (nginx serving the **production Vite build** on **http://localhost:8080** with **`/api/`** proxied to `marreq-server`), and **adminer** (**http://localhost:8081**). The `cloud` compose profile adds **`marreq-cloud`** on **`127.0.0.1:8001`**. See the [setup guide](docs/developer/setup.md), [docker/README.md](docker/README.md), and the [HTTP API contract](docs/developer/http-api-contract.md).
+The default [docker/docker-compose.yml](docker/docker-compose.yml) stack runs **db**, **marreq-server** (Rocket **JSON API** on `127.0.0.1:8000`), **frontend** (nginx serving the **production Vite build** on **http://localhost:8080** with **`/api/`** proxied to `marreq-server`), and **adminer** (**http://localhost:8081**). The `cloud` compose profile adds **`marreq-cloud`** on **`127.0.0.1:8001`** plus **`frontend-cloud`** on **http://localhost:8082**. See the [setup guide](docs/developer/setup.md), [docker/README.md](docker/README.md), and the [HTTP API contract](docs/developer/http-api-contract.md).
 
 Workspace layout, deployment modes, and build commands: [docs/developer/workspace-layout.md](docs/developer/workspace-layout.md). SPA scripts, routes, and API mapping: [frontend/README.md](frontend/README.md).
 

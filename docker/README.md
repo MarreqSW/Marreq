@@ -12,29 +12,30 @@ For the end-to-end setup flows for **`marreq-server`** and **`marreq-cloud`** (D
 
 ## Files
 
-- `docker-compose.yml`: Primary local stack — **`db`**, **`ollama`**, **`marreq-server`** (Rocket API; default profile), **`marreq-cloud`** (Rocket API; `cloud` profile), **`frontend`** (nginx + SPA), **`adminer`**
+- `docker-compose.yml`: Primary local stack — **`db`**, **`ollama`**, **`marreq-server`** (Rocket API; default profile), **`marreq-cloud`** (Rocket API; `cloud` profile), **`frontend`** (self-hosted nginx + SPA), **`frontend-cloud`** (cloud nginx + SPA; `cloud` profile), **`adminer`**
 - `docker-compose.dev.yml`: Developer override for running Marreq via `cargo run` inside Docker (`marreq-dev` on host port **8000**)
 - `docker-compose.ci.yml`: CI-specific compose overrides
 - `Dockerfile`: Marreq image (Rust binary; build context: repository root). Accepts `MARREQ_BIN` build-arg (`marreq-server` by default; `marreq-cloud` for the cloud variant).
 - `frontend/Dockerfile`: **Frontend** image (multi-stage: `npm run build` + nginx)
-- `frontend/nginx.conf`: SPA on `/` only; `/api/` + legacy SSR paths (`/p/`, `/static/`, `/user/`, `/admin`, …) reverse-proxied to `marreq-server:8000` when using hybrid mode (`MARREQ_DOCKER_SSR_PROXY=1`)
+- `frontend/nginx.conf.template`: nginx template used by both frontend containers; serves the SPA and proxies `/api/` to either `marreq-server:8000` or `marreq-cloud:8001`
 - `Dockerfile.dockerignore`: Build context exclusions for `Dockerfile`
 - `docker-entrypoint.sh`: Backend container startup (wait for DB + migrations + start app)
 
 ## Split stack (default compose)
 
-The default `docker-compose.yml` uses a **hybrid split stack**: Vite SPA for **`/`** only; nginx proxies legacy SSR paths (`/p/…`, `/static/…`, `/projects`, …) to Rocket so links work on **:8080**.
+The default `docker-compose.yml` uses a **split SPA stack**: nginx serves the Vite build and proxies `/api/` to the selected Rocket backend so the browser stays on a single origin.
 
 | Service   | Role |
 |-----------|------|
 | `db` | PostgreSQL published on host **`127.0.0.1:5433`** → container `5432` (avoids conflict with a local Postgres on **5432**). From the host, use `DATABASE_URL=postgres://rust:rust@127.0.0.1:5433/marreq` for `diesel`/scripts. |
 | `ollama` | Published on host **`127.0.0.1:11435`** → container `11434` (avoids conflict with a local Ollama on **11434**). The Marreq container still uses `http://ollama:11434` on the Docker network. |
 | `marreq-server` | Self-hosted Rocket binary on **`127.0.0.1:8000`**: **`/api`**, plus HTML + **`/static`** when **`MARREQ_DOCKER_SSR_PROXY=1`**. **`GET /`** on :8000 is the classic dashboard; use **:8080/** for the SPA. **`ROCKET_SECRET_KEY`**: compose default if missing. |
-| `marreq-cloud` | Hosted (SaaS) Rocket binary on **`127.0.0.1:8001`**. Started only by the **`cloud`** compose profile. Reads cloud-only env (`MARREQ_SITE_ADMIN_EMAIL`, `MARREQ_SITE_ADMIN_BOOTSTRAP_PASSWORD`, `MARREQ_PUBLIC_BASE_URL`, `SMTP_*`) from `../.env`. |
-| `frontend` | Nginx: SPA for **`/`**; **`/api/`**, **`/static/`**, **`/p/`**, **`/user/`**, **`/admin`**, **`/projects`**, **`/logs`**, … → **`marreq-server:8000`**. |
+| `marreq-cloud` | Hosted (SaaS) Rocket binary on **`127.0.0.1:8001`**. Started only by the **`cloud`** compose profile. Reads cloud-only env (`MARREQ_SITE_ADMIN_EMAIL`, `MARREQ_SITE_ADMIN_BOOTSTRAP_PASSWORD`, `MARREQ_PUBLIC_BASE_URL`, `SMTP_*`) from `../.env`. Compose defaults `MARREQ_PUBLIC_BASE_URL` to **http://localhost:8082**. |
+| `frontend` | Nginx: SPA on **http://localhost:8080** with `/api/` proxied to **`marreq-server:8000`**. |
+| `frontend-cloud` | Nginx: same SPA on host **http://localhost:8082** with `/api/` proxied to **`marreq-cloud:8001`**. Started only by the **`cloud`** compose profile. |
 | `adminer` | Database UI on host **http://localhost:8081** (avoids clashing with frontend **8080**). |
 
-Use the UI at **http://localhost:8080** so session cookies stay on the same origin as `/api`.
+Use the UI at **http://localhost:8080** for self-hosted mode, or **http://localhost:8082** for cloud mode, so session cookies stay on the same origin as `/api`.
 
 ## Common Commands (from repo root)
 
@@ -50,10 +51,10 @@ Start the full self-hosted stack (db, ollama, marreq-server, frontend, adminer):
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-Start the cloud variant alongside (or instead of) the self-hosted server:
+Start the cloud variant with its own frontend:
 
 ```bash
-docker compose -f docker/docker-compose.yml --profile cloud up -d marreq-cloud
+docker compose -f docker/docker-compose.yml --profile cloud up -d marreq-cloud frontend-cloud
 ```
 
 The cloud service expects the following entries in `../.env`:
@@ -75,9 +76,7 @@ docker compose \
   up --build db marreq-dev
 ```
 
-This override adds `marreq-dev` (bind-mounted checkout + Cargo caches). The app is exposed at **http://localhost:8000**. To work on the SPA locally, run `npm run dev` in `frontend/` against a Rocket instance (e.g. `marreq-dev` or `cargo run -p marreq-server`) with CORS configured; see [../docs/developer/http-api-contract.md](../docs/developer/http-api-contract.md).
-
-The bundled `frontend` container proxies to **`marreq-server`** only. If you want to exercise the SPA against **`marreq-cloud`**, run the SPA outside Docker or add your own reverse proxy in front of `marreq-cloud`.
+This override adds `marreq-dev` (bind-mounted checkout + Cargo caches). The app is exposed at **http://localhost:8000**. To work on the SPA locally, run `npm run dev` in `frontend/` against a Rocket instance (e.g. `marreq-dev`, `cargo run -p marreq-server`, or `cargo run -p marreq-cloud`) with CORS configured; see [../docs/developer/http-api-contract.md](../docs/developer/http-api-contract.md).
 
 For local development outside Docker, run either binary directly:
 
@@ -204,4 +203,4 @@ Ensure you open the app on the **frontend** port (**8080**), not only the API po
 
 ### nginx `502` / `connect() failed (111: Connection refused)` to upstream
 
-Usually means the **frontend** container started before Rocket was listening (migrations/seed) or nginx had a **stale IP** for `marreq-server` after a recreate. The stack uses a **`marreq-server` `healthcheck`** and **`depends_on: condition: service_healthy`** so nginx starts only after `GET /api/auth/csrf` succeeds on the backend; nginx is configured with **Docker DNS resolver** + variable `proxy_pass` so `marreq-server` is re-resolved. Rebuild the image (it includes `curl` for the healthcheck) and recreate: `docker compose up -d --build marreq-server frontend`.
+Usually means a frontend container started before its backend was listening (migrations/seed) or nginx had a **stale IP** for `marreq-server` / `marreq-cloud` after a recreate. The stack uses backend `healthcheck`s and `depends_on: condition: service_healthy` so nginx starts only after `GET /api/auth/csrf` succeeds on the target backend; nginx is configured with **Docker DNS resolver** + variable `proxy_pass` so upstream names are re-resolved. Rebuild the image (it includes `curl` for the healthcheck) and recreate, for example: `docker compose up -d --build marreq-server frontend` or `docker compose --profile cloud up -d --build marreq-cloud frontend-cloud`.

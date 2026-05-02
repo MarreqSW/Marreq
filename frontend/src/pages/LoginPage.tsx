@@ -1,45 +1,29 @@
-import { FormEvent, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getCsrfToken, getDeploymentInfo, loginJson } from '@/api/client';
 import type { DeploymentInfo } from '@/api/types';
 import AuthLayout from '@/components/AuthLayout';
+import { useFormSubmit } from '@/hooks/useFormSubmit';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
   const [deployment, setDeployment] = useState<DeploymentInfo | null>(null);
+
+  const { error, submitting, onSubmit } = useFormSubmit(async () => {
+    const csrf = await getCsrfToken();
+    await loginJson(username, password, csrf);
+    navigate('/', { replace: true });
+  });
 
   useEffect(() => {
     let alive = true;
     getDeploymentInfo()
-      .then((info) => {
-        if (alive) setDeployment(info);
-      })
-      .catch(() => {
-        if (alive) setDeployment(null);
-      });
-    return () => {
-      alive = false;
-    };
+      .then((info) => { if (alive) setDeployment(info); })
+      .catch(() => { if (alive) setDeployment(null); });
+    return () => { alive = false; };
   }, []);
-
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      const csrf = await getCsrfToken();
-      await loginJson(username, password, csrf);
-      navigate('/', { replace: true });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Login failed');
-    } finally {
-      setSubmitting(false);
-    }
-  }
 
   const showSelfService = deployment?.allows_self_registration === true;
 
@@ -48,25 +32,19 @@ export default function LoginPage() {
       title="Welcome to Marreq"
       subtitle="Sign in to continue"
       footer={
-        <>
-          {showSelfService ? (
-            <div className="space-y-3 text-center text-sm">
-              <Link to="/forgot-password" className="text-stitch-accent hover:underline">
-                Forgot your password?
+        showSelfService && (
+          <div className="space-y-3 text-center text-sm">
+            <Link to="/forgot-password" className="text-stitch-accent hover:underline">
+              Forgot your password?
+            </Link>
+            <p className="text-stitch-muted">
+              New to Marreq?{' '}
+              <Link to="/register" className="text-stitch-accent hover:underline">
+                Create an account
               </Link>
-              <p className="text-stitch-muted">
-                New to Marreq?{' '}
-                <Link to="/register" className="text-stitch-accent hover:underline">
-                  Create an account
-                </Link>
-              </p>
-            </div>
-          ) : (
-            <p className="text-center text-xs text-stitch-muted">
-              Default: alice / ChangeMe123!
             </p>
-          )}
-        </>
+          </div>
+        )
       }
     >
         <form onSubmit={onSubmit} className="space-y-4">

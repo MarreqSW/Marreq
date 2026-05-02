@@ -124,6 +124,23 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    email_tokens (id) {
+        id -> Int4,
+        user_id -> Int4,
+        #[max_length = 128]
+        token_hash -> Varchar,
+        #[max_length = 32]
+        purpose -> Varchar,
+        expires_at -> Timestamp,
+        used_at -> Nullable<Timestamp>,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     embedding_index_queue (id) {
         id -> Int4,
         requirement_id -> Int4,
@@ -291,22 +308,6 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
-    sessions (token_hash) {
-        #[max_length = 64]
-        token_hash -> Bpchar,
-        user_id -> Int4,
-        created_at -> Timestamp,
-        expires_at -> Timestamp,
-        last_seen_at -> Timestamp,
-        user_agent -> Nullable<Text>,
-        ip_addr -> Nullable<Text>,
-    }
-}
-
-diesel::table! {
-    use diesel::sql_types::*;
-    use pgvector::sql_types::*;
-
     requirement_comments (id) {
         id -> Int4,
         requirement_id -> Int4,
@@ -421,6 +422,22 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    sessions (token_hash) {
+        #[max_length = 64]
+        token_hash -> Bpchar,
+        user_id -> Int4,
+        created_at -> Timestamp,
+        expires_at -> Timestamp,
+        last_seen_at -> Timestamp,
+        user_agent -> Nullable<Text>,
+        ip_addr -> Nullable<Text>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     user_api_tokens (id) {
         id -> Int4,
         user_id -> Int4,
@@ -449,41 +466,6 @@ diesel::table! {
         password_hash -> Varchar,
         is_admin -> Bool,
         email_verified -> Bool,
-    }
-}
-
-diesel::table! {
-    use diesel::sql_types::*;
-    use pgvector::sql_types::*;
-
-    workspaces (id) {
-        id -> Int4,
-        #[max_length = 255]
-        slug -> Varchar,
-        #[max_length = 255]
-        name -> Varchar,
-        owner_user_id -> Int4,
-        #[max_length = 32]
-        kind -> Varchar,
-        created_at -> Timestamp,
-        updated_at -> Timestamp,
-    }
-}
-
-diesel::table! {
-    use diesel::sql_types::*;
-    use pgvector::sql_types::*;
-
-    email_tokens (id) {
-        id -> Int4,
-        user_id -> Int4,
-        #[max_length = 128]
-        token_hash -> Varchar,
-        #[max_length = 32]
-        purpose -> Varchar,
-        expires_at -> Timestamp,
-        used_at -> Nullable<Timestamp>,
-        created_at -> Timestamp,
     }
 }
 
@@ -537,6 +519,24 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
+    workspaces (id) {
+        id -> Int4,
+        #[max_length = 255]
+        slug -> Varchar,
+        #[max_length = 255]
+        name -> Varchar,
+        owner_user_id -> Int4,
+        #[max_length = 32]
+        kind -> Varchar,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
 diesel::joinable!(applicability -> projects (project_id));
 diesel::joinable!(baseline_requirements -> baselines (baseline_id));
 diesel::joinable!(baseline_requirements -> requirement_versions (version_id));
@@ -552,6 +552,7 @@ diesel::joinable!(categories -> projects (project_id));
 diesel::joinable!(custom_field_definitions -> projects (project_id));
 diesel::joinable!(custom_field_values -> custom_field_definitions (custom_field_definition_id));
 diesel::joinable!(custom_field_values -> requirement_versions (requirement_version_id));
+diesel::joinable!(email_tokens -> users (user_id));
 diesel::joinable!(embedding_index_queue -> projects (project_id));
 diesel::joinable!(embedding_index_queue -> requirements (requirement_id));
 diesel::joinable!(group_members -> groups (group_id));
@@ -585,6 +586,7 @@ diesel::joinable!(requirement_versions -> applicability (applicability_id));
 diesel::joinable!(requirement_versions -> categories (category_id));
 diesel::joinable!(requirement_versions -> requirement_status (status_id));
 diesel::joinable!(requirements -> projects (project_id));
+diesel::joinable!(sessions -> users (user_id));
 diesel::joinable!(user_api_tokens -> projects (project_id));
 diesel::joinable!(user_api_tokens -> users (user_id));
 diesel::joinable!(verification_methods -> projects (project_id));
@@ -593,8 +595,6 @@ diesel::joinable!(verifications -> projects (project_id));
 diesel::joinable!(verifications -> verification_methods (verification_method_id));
 diesel::joinable!(verifications -> verification_status (status_id));
 diesel::joinable!(workspaces -> users (owner_user_id));
-diesel::joinable!(email_tokens -> users (user_id));
-diesel::joinable!(sessions -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     applicability,
@@ -605,6 +605,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     categories,
     custom_field_definitions,
     custom_field_values,
+    email_tokens,
     embedding_index_queue,
     group_members,
     groups,
@@ -629,5 +630,4 @@ diesel::allow_tables_to_appear_in_same_query!(
     verification_status,
     verifications,
     workspaces,
-    email_tokens,
 );

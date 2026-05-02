@@ -88,10 +88,11 @@ A minimal **OpenAPI 3** sketch for auth and session project listing lives in [`o
 | `MARREQ_UI_MODE=api_only` | Do not mount legacy HTML routes (`/`, `/p/...`, `/user/...`). |
 | `MARREQ_SERVE_STATIC=0` | Do not serve `/static` from Rocket (SPA container serves assets). Default is off when `api_only`, on otherwise. |
 
-## Docker (two containers)
+## Docker (Compose frontends)
 
 - **frontend:** nginx on host port **8080** → SPA + `location /api/` → `marreq-server:8000`.
-- **backend:** Rocket on **8000** (internal to compose network unless you publish it).
+- **frontend-cloud:** nginx on host port **8082** → SPA + `location /api/` → `marreq-cloud:8001` (cloud profile).
+- **backend:** Rocket on **8000** or **8001** depending on deployment mode and compose profile.
 - **Adminer:** host port **8081** (to avoid clashing with the frontend).
 
 See [`../../docker/README.md`](../../docker/README.md).

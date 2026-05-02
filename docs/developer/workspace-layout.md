@@ -151,7 +151,7 @@ no runtime flags or Cargo features need to be toggled:
 
 | Variable | Purpose |
 |---|---|
-| `MARREQ_PUBLIC_BASE_URL` | Public SPA origin for email links. Default: `http://localhost:8000`. |
+| `MARREQ_PUBLIC_BASE_URL` | Public SPA origin for email links. Default for direct local runs: `http://localhost:8000`; Docker cloud compose defaults it to `http://localhost:8082`. |
 | `MARREQ_SITE_ADMIN_EMAIL` | Email of the Cloud site admin. Existing users are promoted and verified. |
 | `MARREQ_SITE_ADMIN_BOOTSTRAP_PASSWORD` | Initial password used only when the Cloud admin does not yet exist. |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS` | SMTP settings for Cloud auth emails and notifications. |

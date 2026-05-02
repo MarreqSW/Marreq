@@ -66,6 +66,9 @@ services:
       context: ..
       dockerfile: docker/frontend/Dockerfile
     restart: always
+    environment:
+      MARREQ_BACKEND_HOST: marreq-server
+      MARREQ_BACKEND_PORT: '8000'
     depends_on:
       marreq-server:
         condition: service_healthy
@@ -81,7 +84,7 @@ services:
       - '8081:8080'
 
   # Run the cloud (SaaS) binary alongside or instead of marreq-server.
-  # Start with: docker compose -f docker/docker-compose.yml --profile cloud up -d marreq-cloud
+  # Start with: docker compose -f docker/docker-compose.yml --profile cloud up -d marreq-cloud frontend-cloud
   # Reads cloud-only env vars (MARREQ_SITE_ADMIN_EMAIL, SMTP_*, MARREQ_PUBLIC_BASE_URL …) from ../.env.
   marreq-cloud:
     profiles: ["cloud"]
@@ -105,8 +108,8 @@ services:
       ROCKET_PORT: '8001'
       ROCKET_SECRET_KEY: ${ROCKET_SECRET_KEY:-UT5jxByH2kV2h9j/620KVP2w5NwZUEGVREFBbIKHVZk=}
       OLLAMA_URL: 'http://ollama:11434'
-      MARREQ_PUBLIC_BASE_URL: ${MARREQ_PUBLIC_BASE_URL:-http://localhost:8080}
-      CSRF_ALLOWED_ORIGINS: 'http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:8001,http://localhost:8001'
+      MARREQ_PUBLIC_BASE_URL: ${MARREQ_PUBLIC_BASE_URL:-http://localhost:8082}
+      CSRF_ALLOWED_ORIGINS: 'http://127.0.0.1:8082,http://localhost:8082,http://127.0.0.1:8001,http://localhost:8001'
     ports:
       - '127.0.0.1:8001:8001'
     healthcheck:
@@ -115,6 +118,21 @@ services:
       timeout: 3s
       retries: 30
       start_period: 120s
+
+  frontend-cloud:
+    profiles: ["cloud"]
+    build:
+      context: ..
+      dockerfile: docker/frontend/Dockerfile
+    restart: always
+    environment:
+      MARREQ_BACKEND_HOST: marreq-cloud
+      MARREQ_BACKEND_PORT: '8001'
+    depends_on:
+      marreq-cloud:
+        condition: service_healthy
+    ports:
+      - '8082:80'
 
 volumes:
   pgdata:

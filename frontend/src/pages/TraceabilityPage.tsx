@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import TraceabilityGraph from '@/components/TraceabilityGraph';
+import HierarchyGraph from '@/components/HierarchyGraph';
 import RequirementsViewSwitcher from '@/components/RequirementsViewSwitcher';
 import { useDashboard } from '@/context/DashboardContext';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
@@ -73,7 +74,7 @@ export default function TraceabilityPage() {
       {view === 'coverage' ? (
         <TraceabilityGraph projectId={projectId} />
       ) : (
-        <HierarchyPlaceholder />
+        <HierarchyGraph projectId={projectId} />
       )}
     </div>
   );
@@ -101,14 +102,5 @@ function SubtabButton({
     >
       {children}
     </button>
-  );
-}
-
-// Temporary placeholder until the dedicated component lands in the next commit.
-function HierarchyPlaceholder() {
-  return (
-    <div className="h-[400px] flex items-center justify-center border border-dashed border-stitch-border rounded-xl bg-stitch-surface/50 text-stitch-muted text-sm">
-      Hierarchy view coming next.
-    </div>
   );
 }

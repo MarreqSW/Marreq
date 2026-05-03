@@ -17,7 +17,7 @@ const blocks: { title: string; body: string }[] = [
   {
     title: 'Traceability',
     body:
-      'The Graph view shows requirement ↔ verification links. Suspect links appear in Reports and use coral styling on the graph when applicable.',
+      'The Graph view has two subtabs. Coverage shows requirement ↔ verification links (suspect links use coral styling). Hierarchy shows parent ↔ child links between requirements (solid blue) and between verifications (dashed green); a Requirements / Verifications / Both filter restricts the view and is remembered in the URL (?kind=).',
   },
   {
     title: 'Creating records',

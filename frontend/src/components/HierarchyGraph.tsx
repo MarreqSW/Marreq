@@ -5,6 +5,7 @@ import ReactFlow, {
   Controls,
   type Edge,
   type Node,
+  type NodeMouseHandler,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { listRequirements, listVerifications } from '@/api/client';
@@ -15,6 +16,8 @@ import {
   TOP_PADDING,
   nodeTypes,
 } from '@/components/graph/nodes';
+import { useGraphNodeNavigation } from '@/hooks/useGraphNodeNavigation';
+import { highlightEdgesForSelection, highlightNodesForSelection } from '@/utils/graphHighlight';
 
 export type HierarchyKind = 'reqs' | 'vers' | 'both';
 
@@ -141,7 +144,13 @@ function emptyMessage(kind: HierarchyKind): string {
   }
 }
 
-export default function HierarchyGraph({ projectId }: { projectId: number }) {
+export default function HierarchyGraph({
+  projectId,
+  basePath,
+}: {
+  projectId: number;
+  basePath: string;
+}) {
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,12 +189,40 @@ export default function HierarchyGraph({ projectId }: { projectId: number }) {
     setSearchParams(params, { replace: true });
   };
 
-  const { nodes, edges } = useMemo(
+  const { nodes: baseNodes, edges: baseEdges } = useMemo(
     () => buildHierarchyGraph(requirements, verifications, kind),
     [requirements, verifications, kind],
   );
 
-  const empty = nodes.length === 0 && !loading && !err;
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSelectedNodeId(null);
+  }, [kind, projectId]);
+
+  useEffect(() => {
+    if (selectedNodeId != null && !baseNodes.some((n) => n.id === selectedNodeId)) {
+      setSelectedNodeId(null);
+    }
+  }, [baseNodes, selectedNodeId]);
+
+  const nodes = useMemo(
+    () => highlightNodesForSelection(baseNodes, baseEdges, selectedNodeId),
+    [baseNodes, baseEdges, selectedNodeId],
+  );
+
+  const edges = useMemo(
+    () => highlightEdgesForSelection(baseEdges, selectedNodeId),
+    [baseEdges, selectedNodeId],
+  );
+
+  const onNodeClick: NodeMouseHandler = useCallback((_, node) => {
+    setSelectedNodeId(node.id);
+  }, []);
+
+  const { onNodeDoubleClick } = useGraphNodeNavigation(basePath);
+
+  const empty = baseNodes.length === 0 && !loading && !err;
 
   return (
     <div>
@@ -216,7 +253,16 @@ export default function HierarchyGraph({ projectId }: { projectId: number }) {
             edges={edges}
             nodeTypes={nodeTypes}
             fitView
+            fitViewOptions={{ padding: 0.15, minZoom: 0.05 }}
+            minZoom={0.05}
+            maxZoom={2}
+            nodesDraggable={false}
+            selectNodesOnDrag={false}
+            zoomOnDoubleClick={false}
             proOptions={{ hideAttribution: true }}
+            onNodeClick={onNodeClick}
+            onNodeDoubleClick={onNodeDoubleClick}
+            onPaneClick={() => setSelectedNodeId(null)}
           >
             <Background color="rgba(255,255,255,0.06)" gap={20} />
             <Controls />

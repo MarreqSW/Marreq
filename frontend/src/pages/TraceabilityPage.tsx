@@ -17,7 +17,7 @@ function readView(value: string | null): GraphView {
 }
 
 export default function TraceabilityPage() {
-  const { projectId } = useOutletContext<Ctx>();
+  const { projectId, basePath } = useOutletContext<Ctx>();
   const { dashboard } = useDashboard();
   const pid = projectId;
   const [searchParams, setSearchParams] = useSearchParams();
@@ -72,9 +72,9 @@ export default function TraceabilityPage() {
       </div>
 
       {view === 'coverage' ? (
-        <TraceabilityGraph projectId={projectId} />
+        <TraceabilityGraph projectId={projectId} basePath={basePath} />
       ) : (
-        <HierarchyGraph projectId={projectId} />
+        <HierarchyGraph projectId={projectId} basePath={basePath} />
       )}
     </div>
   );

@@ -4,6 +4,7 @@ import ReactFlow, {
   Controls,
   type Edge,
   type Node,
+  type NodeMouseHandler,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { listMatrix, listRequirements, listVerifications } from '@/api/client';
@@ -14,6 +15,8 @@ import {
   TOP_PADDING,
   nodeTypes,
 } from '@/components/graph/nodes';
+import { useGraphNodeNavigation } from '@/hooks/useGraphNodeNavigation';
+import { highlightEdgesForSelection, highlightNodesForSelection } from '@/utils/graphHighlight';
 
 function buildGraph(
   matrix: MatrixLink[],
@@ -86,11 +89,18 @@ function buildGraph(
   return { nodes, edges };
 }
 
-export default function TraceabilityGraph({ projectId }: { projectId: number }) {
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [edges, setEdges] = useState<Edge[]>([]);
+export default function TraceabilityGraph({
+  projectId,
+  basePath,
+}: {
+  projectId: number;
+  basePath: string;
+}) {
+  const [baseNodes, setBaseNodes] = useState<Node[]>([]);
+  const [baseEdges, setBaseEdges] = useState<Edge[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -103,8 +113,8 @@ export default function TraceabilityGraph({ projectId }: { projectId: number }) 
       ]);
       const verifications = allVer.filter((v) => v.project_id === projectId);
       const { nodes: n, edges: e } = buildGraph(matrix, requirements, verifications, projectId);
-      setNodes(n);
-      setEdges(e);
+      setBaseNodes(n);
+      setBaseEdges(e);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load graph');
     } finally {
@@ -116,7 +126,36 @@ export default function TraceabilityGraph({ projectId }: { projectId: number }) 
     void load();
   }, [load]);
 
-  const empty = useMemo(() => nodes.length === 0 && !loading && !err, [nodes.length, loading, err]);
+  useEffect(() => {
+    setSelectedNodeId(null);
+  }, [projectId]);
+
+  useEffect(() => {
+    if (selectedNodeId != null && !baseNodes.some((n) => n.id === selectedNodeId)) {
+      setSelectedNodeId(null);
+    }
+  }, [baseNodes, selectedNodeId]);
+
+  const nodes = useMemo(
+    () => highlightNodesForSelection(baseNodes, baseEdges, selectedNodeId),
+    [baseNodes, baseEdges, selectedNodeId],
+  );
+
+  const edges = useMemo(
+    () => highlightEdgesForSelection(baseEdges, selectedNodeId),
+    [baseEdges, selectedNodeId],
+  );
+
+  const onNodeClick: NodeMouseHandler = useCallback((_, node) => {
+    setSelectedNodeId(node.id);
+  }, []);
+
+  const { onNodeDoubleClick } = useGraphNodeNavigation(basePath);
+
+  const empty = useMemo(
+    () => baseNodes.length === 0 && !loading && !err,
+    [baseNodes.length, loading, err],
+  );
 
   if (loading) {
     return (
@@ -156,7 +195,16 @@ export default function TraceabilityGraph({ projectId }: { projectId: number }) 
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
+        fitViewOptions={{ padding: 0.15, minZoom: 0.05 }}
+        minZoom={0.05}
+        maxZoom={2}
+        nodesDraggable={false}
+        selectNodesOnDrag={false}
+        zoomOnDoubleClick={false}
         proOptions={{ hideAttribution: true }}
+        onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onPaneClick={() => setSelectedNodeId(null)}
       >
         <Background color="rgba(255,255,255,0.06)" gap={20} />
         <Controls />

@@ -5,6 +5,8 @@ export type ReqNodeData = {
   id: string;
   label: string;
   statusLine: string;
+  dimmed?: boolean;
+  selected?: boolean;
 };
 
 export type VerNodeData = {
@@ -12,12 +14,23 @@ export type VerNodeData = {
   id: string;
   label: string;
   ref: string;
+  dimmed?: boolean;
+  selected?: boolean;
 };
 
 export function RequirementFlowNode({ data }: NodeProps<ReqNodeData>) {
   const verified = /verified|accepted|approved/i.test(data.statusLine);
   return (
-    <div className="px-4 py-3 rounded-md bg-stitch-elevated border border-stitch-border w-48 relative shadow-stitch">
+    <div
+      title="Double-click to open"
+      className={`px-4 py-3 rounded-md bg-stitch-elevated border w-48 relative shadow-stitch cursor-pointer transition-[opacity,transform,box-shadow] duration-200 ${
+        data.dimmed ? 'opacity-[0.14] saturate-[0.35]' : 'opacity-100'
+      } ${
+        data.selected
+          ? 'border-stitch-accent ring-[3px] ring-stitch-accent ring-offset-2 ring-offset-stitch-surface scale-[1.03] shadow-[0_0_24px_rgba(138,180,248,0.55)] z-10'
+          : 'border-stitch-border'
+      }`}
+    >
       <Handle
         type="target"
         position={Position.Left}
@@ -41,7 +54,16 @@ export function RequirementFlowNode({ data }: NodeProps<ReqNodeData>) {
 
 export function VerificationFlowNode({ data }: NodeProps<VerNodeData>) {
   return (
-    <div className="px-3 py-2 rounded-md bg-stitch-surface border border-stitch-accent/35 w-44 relative shadow-stitch">
+    <div
+      title="Double-click to open"
+      className={`px-3 py-2 rounded-md bg-stitch-surface border w-44 relative shadow-stitch cursor-pointer transition-[opacity,transform,box-shadow] duration-200 ${
+        data.dimmed ? 'opacity-[0.14] saturate-[0.35]' : 'opacity-100'
+      } ${
+        data.selected
+          ? 'border-stitch-accent ring-[3px] ring-stitch-accent ring-offset-2 ring-offset-stitch-surface scale-[1.03] shadow-[0_0_24px_rgba(138,180,248,0.55)] z-10'
+          : 'border-stitch-accent/35'
+      }`}
+    >
       <Handle
         type="target"
         position={Position.Left}

@@ -16,6 +16,7 @@ import {
   TOP_PADDING,
   nodeTypes,
 } from '@/components/graph/nodes';
+import ResizableGraphShell from '@/components/graph/ResizableGraphShell';
 import { useGraphNodeNavigation } from '@/hooks/useGraphNodeNavigation';
 import { highlightEdgesForSelection, highlightNodesForSelection } from '@/utils/graphHighlight';
 
@@ -227,27 +228,29 @@ export default function HierarchyGraph({
   return (
     <div>
       <KindFilter kind={kind} onChange={setKind} />
-      {loading ? (
-        <div className="h-[600px] flex items-center justify-center border border-stitch-border rounded-xl bg-stitch-surface text-stitch-muted text-sm">
-          Loading hierarchy graph…
-        </div>
-      ) : err ? (
+      {err ? (
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-200 text-sm">
           {err}
         </div>
+      ) : loading ? (
+        <ResizableGraphShell projectId={projectId} viewKey="hierarchy" placeholder>
+          <span className="text-stitch-muted text-sm">Loading hierarchy graph…</span>
+        </ResizableGraphShell>
       ) : empty ? (
-        <div className="h-[400px] flex flex-col items-center justify-center border border-dashed border-stitch-border rounded-xl bg-stitch-surface/50 text-stitch-muted text-sm">
-          {emptyMessage(kind)}
-          <button
-            type="button"
-            onClick={() => void load()}
-            className="mt-3 text-stitch-accent text-xs font-semibold hover:underline"
-          >
-            Retry
-          </button>
-        </div>
+        <ResizableGraphShell projectId={projectId} viewKey="hierarchy" placeholder>
+          <div className="flex flex-col items-center text-stitch-muted text-sm">
+            {emptyMessage(kind)}
+            <button
+              type="button"
+              onClick={() => void load()}
+              className="mt-3 text-stitch-accent text-xs font-semibold hover:underline"
+            >
+              Retry
+            </button>
+          </div>
+        </ResizableGraphShell>
       ) : (
-        <div className="stitch-flow h-[600px] w-full border border-stitch-border rounded-xl bg-stitch-surface overflow-hidden shadow-stitch">
+        <ResizableGraphShell projectId={projectId} viewKey="hierarchy">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -267,7 +270,7 @@ export default function HierarchyGraph({
             <Background color="rgba(255,255,255,0.06)" gap={20} />
             <Controls />
           </ReactFlow>
-        </div>
+        </ResizableGraphShell>
       )}
     </div>
   );

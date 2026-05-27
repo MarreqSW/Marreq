@@ -6,6 +6,8 @@ A comprehensive web-based requirements and test management system built with **R
 
 Documentation index (by audience): [docs/README.md](docs/README.md)
 
+**Installation (operations):** host packages, Docker, database, CI parity — see [INSTALL.md](INSTALL.md).
+
 ## ✨ Features
 
 ### 📋 Core Management

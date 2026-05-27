@@ -111,6 +111,11 @@ html.dark .marreq-catalog-field:-webkit-autofill:active {
   color-scheme: dark;
 }
 
+/* Stronger focus on the React Flow selected node wrapper (synced from highlight state) */
+.stitch-flow .react-flow__node.selected {
+  filter: drop-shadow(0 0 14px rgba(138, 180, 248, 0.45));
+}
+
 .stitch-flow .react-flow__controls {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }

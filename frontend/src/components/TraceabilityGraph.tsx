@@ -2,68 +2,21 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import ReactFlow, {
   Background,
   Controls,
-  Handle,
-  Position,
   type Edge,
   type Node,
-  type NodeProps,
-  type NodeTypes,
+  type NodeMouseHandler,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { listMatrix, listRequirements, listVerifications } from '@/api/client';
 import type { MatrixLink, Requirement, Verification } from '@/api/types';
-
-type ReqNodeData = { kind: 'requirement'; id: string; label: string; statusLine: string };
-type VerNodeData = { kind: 'verification'; id: string; label: string; ref: string };
-
-function RequirementFlowNode({ data }: NodeProps<ReqNodeData>) {
-  const verified = /verified|accepted|approved/i.test(data.statusLine);
-  return (
-    <div className="px-4 py-3 rounded-md bg-stitch-elevated border border-stitch-border w-48 relative shadow-stitch">
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="!bg-stitch-muted !w-2 !h-2 !border-stitch-border"
-      />
-      <div className="text-[10px] font-bold text-stitch-accent uppercase mb-1 tracking-tighter">
-        {data.id}
-      </div>
-      <div className="text-xs font-semibold text-white leading-tight">{data.label}</div>
-      <div
-        className={`mt-2 h-1 w-full rounded-full ${verified ? 'bg-emerald-400/80' : 'bg-white/20'}`}
-      />
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="!bg-stitch-accent !w-2 !h-2 !border-0"
-      />
-    </div>
-  );
-}
-
-function VerificationFlowNode({ data }: NodeProps<VerNodeData>) {
-  return (
-    <div className="px-3 py-2 rounded-md bg-stitch-surface border border-stitch-accent/35 w-44 relative shadow-stitch">
-      <Handle
-        type="target"
-        position={Position.Left}
-        className="!bg-stitch-accent/60 !w-2 !h-2"
-      />
-      <div className="text-[10px] font-mono text-stitch-muted">{data.ref}</div>
-      <div className="text-xs font-medium text-white/95 leading-tight">{data.label}</div>
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="!bg-stitch-muted !w-2 !h-2"
-      />
-    </div>
-  );
-}
-
-const nodeTypes: NodeTypes = {
-  requirement: RequirementFlowNode,
-  verification: VerificationFlowNode,
-};
+import {
+  COLUMN_X,
+  ROW_HEIGHT,
+  TOP_PADDING,
+  nodeTypes,
+} from '@/components/graph/nodes';
+import { useGraphNodeNavigation } from '@/hooks/useGraphNodeNavigation';
+import { highlightEdgesForSelection, highlightNodesForSelection } from '@/utils/graphHighlight';
 
 function buildGraph(
   matrix: MatrixLink[],
@@ -91,7 +44,7 @@ function buildGraph(
     nodes.push({
       id: `r-${rid}`,
       type: 'requirement',
-      position: { x: 40, y: 40 + yi * 120 },
+      position: { x: COLUMN_X.requirement, y: TOP_PADDING + yi * ROW_HEIGHT.requirement },
       data: {
         kind: 'requirement',
         id: idStr,
@@ -108,7 +61,7 @@ function buildGraph(
     nodes.push({
       id: `v-${vid}`,
       type: 'verification',
-      position: { x: 420, y: 40 + yj * 100 },
+      position: { x: COLUMN_X.verification, y: TOP_PADDING + yj * ROW_HEIGHT.verification },
       data: {
         kind: 'verification',
         id: String(vid),
@@ -136,11 +89,18 @@ function buildGraph(
   return { nodes, edges };
 }
 
-export default function TraceabilityGraph({ projectId }: { projectId: number }) {
-  const [nodes, setNodes] = useState<Node[]>([]);
-  const [edges, setEdges] = useState<Edge[]>([]);
+export default function TraceabilityGraph({
+  projectId,
+  basePath,
+}: {
+  projectId: number;
+  basePath: string;
+}) {
+  const [baseNodes, setBaseNodes] = useState<Node[]>([]);
+  const [baseEdges, setBaseEdges] = useState<Edge[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -153,8 +113,8 @@ export default function TraceabilityGraph({ projectId }: { projectId: number }) 
       ]);
       const verifications = allVer.filter((v) => v.project_id === projectId);
       const { nodes: n, edges: e } = buildGraph(matrix, requirements, verifications, projectId);
-      setNodes(n);
-      setEdges(e);
+      setBaseNodes(n);
+      setBaseEdges(e);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load graph');
     } finally {
@@ -166,7 +126,36 @@ export default function TraceabilityGraph({ projectId }: { projectId: number }) 
     void load();
   }, [load]);
 
-  const empty = useMemo(() => nodes.length === 0 && !loading && !err, [nodes.length, loading, err]);
+  useEffect(() => {
+    setSelectedNodeId(null);
+  }, [projectId]);
+
+  useEffect(() => {
+    if (selectedNodeId != null && !baseNodes.some((n) => n.id === selectedNodeId)) {
+      setSelectedNodeId(null);
+    }
+  }, [baseNodes, selectedNodeId]);
+
+  const nodes = useMemo(
+    () => highlightNodesForSelection(baseNodes, baseEdges, selectedNodeId),
+    [baseNodes, baseEdges, selectedNodeId],
+  );
+
+  const edges = useMemo(
+    () => highlightEdgesForSelection(baseEdges, selectedNodeId),
+    [baseEdges, selectedNodeId],
+  );
+
+  const onNodeClick: NodeMouseHandler = useCallback((_, node) => {
+    setSelectedNodeId(node.id);
+  }, []);
+
+  const { onNodeDoubleClick } = useGraphNodeNavigation(basePath);
+
+  const empty = useMemo(
+    () => baseNodes.length === 0 && !loading && !err,
+    [baseNodes.length, loading, err],
+  );
 
   if (loading) {
     return (
@@ -206,7 +195,16 @@ export default function TraceabilityGraph({ projectId }: { projectId: number }) 
         edges={edges}
         nodeTypes={nodeTypes}
         fitView
+        fitViewOptions={{ padding: 0.15, minZoom: 0.05 }}
+        minZoom={0.05}
+        maxZoom={2}
+        nodesDraggable={false}
+        selectNodesOnDrag={false}
+        zoomOnDoubleClick={false}
         proOptions={{ hideAttribution: true }}
+        onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onPaneClick={() => setSelectedNodeId(null)}
       >
         <Background color="rgba(255,255,255,0.06)" gap={20} />
         <Controls />

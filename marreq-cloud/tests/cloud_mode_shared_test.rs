@@ -73,7 +73,8 @@ async fn login_blocked_until_email_verified_in_cloud_mode() {
     );
     let body = response.into_string().await.unwrap_or_default();
     assert!(
-        body.to_lowercase().contains("email address has not been verified"),
+        body.to_lowercase()
+            .contains("email address has not been verified"),
         "body should mention email verification, got: {body}"
     );
 }

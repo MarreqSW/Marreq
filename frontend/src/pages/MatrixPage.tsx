@@ -4,6 +4,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import {
   clearTraceabilitySuspect,
   listMatrix,
+  listRequirementStatuses,
   listRequirements,
   listVerificationMethodsByProject,
   listVerificationStatuses,
@@ -15,11 +16,18 @@ import StitchPageHeader from '@/components/StitchPageHeader';
 import type {
   MatrixLink,
   Requirement,
+  RequirementStatus,
   Verification,
   VerificationMethod,
   VerificationStatus,
 } from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
+import {
+  STATUS_GROUP_OPTIONS,
+  statusGlyph,
+  statusSemanticGroup,
+  type StatusSemanticGroup,
+} from '@/lib/verificationStatusSemantic';
 
 const PAGE_SIZE = 40;
 
@@ -66,39 +74,6 @@ function compareByVerificationColumn(
   return compareRefCode(a, b);
 }
 
-/** Visual + tooltip for a verification status in a matrix cell (catalog titles vary by project). */
-function statusGlyph(
-  statusTitle: string,
-  tagColor: string | null | undefined,
-): { symbol: string; className: string } {
-  const t = statusTitle.toLowerCase();
-  if (t.includes('fail') || t.includes('reject')) {
-    return { symbol: '✗', className: 'text-red-300' };
-  }
-  if (
-    /\bpass\b/.test(t) ||
-    t.includes('passed') ||
-    t.includes('success') ||
-    t.includes('complete') ||
-    t === 'ok'
-  ) {
-    return { symbol: '✓', className: 'text-emerald-400' };
-  }
-  if (t.includes('verified') || t.includes('accepted')) {
-    return { symbol: '✓', className: 'text-amber-300' };
-  }
-  if (t.includes('pending') || t.includes('review') || t.includes('progress') || t.includes('blocked')) {
-    return { symbol: '◐', className: 'text-amber-200' };
-  }
-  if (t.includes('draft')) {
-    return { symbol: '○', className: 'text-stitch-muted' };
-  }
-  if (tagColor && /^#[0-9A-Fa-f]{6}$/.test(tagColor.trim())) {
-    return { symbol: '●', className: '' };
-  }
-  return { symbol: '●', className: 'text-stitch-muted' };
-}
-
 export default function MatrixPage() {
   const { globalSearch, basePath, projectId } = useOutletContext<ProjectOutletContext>();
   const pid = projectId;
@@ -108,11 +83,15 @@ export default function MatrixPage() {
   const [reqs, setReqs] = useState<Requirement[]>([]);
   const [vers, setVers] = useState<Verification[]>([]);
   const [statuses, setStatuses] = useState<VerificationStatus[]>([]);
+  const [reqStatuses, setReqStatuses] = useState<RequirementStatus[]>([]);
   const [methods, setMethods] = useState<VerificationMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [suspectOnly, setSuspectOnly] = useState(false);
+  const [statusGroups, setStatusGroups] = useState<Set<StatusSemanticGroup>>(new Set());
+  const [reqStatusFilter, setReqStatusFilter] = useState<Set<number>>(new Set());
+  const [verStatusFilter, setVerStatusFilter] = useState<Set<number>>(new Set());
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [sortColumn, setSortColumn] = useState<MatrixSortColumn>({ kind: 'requirement' });
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -188,17 +167,19 @@ export default function MatrixPage() {
     setLoading(true);
     setErr(null);
     try {
-      const [mx, r, allV, st, m] = await Promise.all([
+      const [mx, r, allV, st, rs, m] = await Promise.all([
         listMatrix(pid),
         listRequirements(pid),
         listVerifications(),
         listVerificationStatuses(),
+        listRequirementStatuses(),
         listVerificationMethodsByProject(pid),
       ]);
       setMatrix(mx);
       setReqs(r);
       setVers(allV.filter((v) => v.project_id === pid));
       setStatuses(st);
+      setReqStatuses(rs);
       setMethods(m);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load matrix');
@@ -216,6 +197,22 @@ export default function MatrixPage() {
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses]);
   const methodById = useMemo(() => new Map(methods.map((m) => [m.id, m])), [methods]);
 
+  const reqStatusOptions = useMemo(
+    () =>
+      [...reqStatuses]
+        .filter((s) => s.project_id === pid)
+        .sort((a, b) => a.title.localeCompare(b.title)),
+    [reqStatuses, pid],
+  );
+
+  const verStatusOptions = useMemo(
+    () =>
+      [...statuses]
+        .filter((s) => s.project_id === pid)
+        .sort((a, b) => a.title.localeCompare(b.title)),
+    [statuses, pid],
+  );
+
   const linkByPair = useMemo(() => {
     const m = new Map<string, MatrixLink>();
     for (const x of matrix) {
@@ -225,6 +222,69 @@ export default function MatrixPage() {
   }, [matrix]);
 
   const q = globalSearch.trim().toLowerCase();
+  const statusGroupActive = statusGroups.size > 0;
+  const reqStatusFilterActive = reqStatusFilter.size > 0;
+  const verStatusFilterActive = verStatusFilter.size > 0;
+  const verColumnFilterActive = statusGroupActive || verStatusFilterActive;
+
+  const verStatusGroup = useCallback(
+    (verId: number): StatusSemanticGroup | null => {
+      const t = verById.get(verId);
+      if (!t) return null;
+      const st = statusById.get(t.status_id);
+      const title = st?.title ?? `Status #${t.status_id}`;
+      return statusSemanticGroup(title, st?.tag_color);
+    },
+    [verById, statusById],
+  );
+
+  const verMatchesStatusGroup = useCallback(
+    (verId: number) => {
+      if (!statusGroupActive) return true;
+      const g = verStatusGroup(verId);
+      return g != null && statusGroups.has(g);
+    },
+    [statusGroupActive, verStatusGroup, statusGroups],
+  );
+
+  const linkMatchesStatusGroup = useCallback(
+    (link: MatrixLink) => verMatchesStatusGroup(link.verification_id),
+    [verMatchesStatusGroup],
+  );
+
+  const verMatchesStatusFilter = useCallback(
+    (verId: number) => {
+      if (!verStatusFilterActive) return true;
+      const t = verById.get(verId);
+      return t != null && verStatusFilter.has(t.status_id);
+    },
+    [verStatusFilterActive, verById, verStatusFilter],
+  );
+
+  const linkMatchesVerFilters = useCallback(
+    (link: MatrixLink) => {
+      if (statusGroupActive && !linkMatchesStatusGroup(link)) return false;
+      if (verStatusFilterActive && !verMatchesStatusFilter(link.verification_id)) {
+        return false;
+      }
+      return true;
+    },
+    [
+      statusGroupActive,
+      linkMatchesStatusGroup,
+      verStatusFilterActive,
+      verMatchesStatusFilter,
+    ],
+  );
+
+  const reqMatchesStatusFilter = useCallback(
+    (reqId: number) => {
+      if (!reqStatusFilterActive) return true;
+      const r = reqById.get(reqId);
+      return r != null && reqStatusFilter.has(r.status_id);
+    },
+    [reqStatusFilterActive, reqById, reqStatusFilter],
+  );
 
   const reqMatches = useCallback(
     (reqId: number) => {
@@ -260,15 +320,33 @@ export default function MatrixPage() {
 
   const filteredReqs = useMemo(() => {
     return reqs.filter((r) => {
+      if (reqStatusFilterActive && !reqStatusFilter.has(r.status_id)) return false;
       if (suspectOnly) {
         const hit = matrix.some((m) => m.req_id === r.id && m.suspect);
+        if (!hit) return false;
+      }
+      if (verColumnFilterActive) {
+        const hit = matrix.some(
+          (m) => m.req_id === r.id && linkMatchesVerFilters(m),
+        );
         if (!hit) return false;
       }
       if (!q) return true;
       if (reqMatches(r.id)) return true;
       return matrix.some((m) => m.req_id === r.id && verMatches(m.verification_id));
     });
-  }, [reqs, matrix, suspectOnly, q, reqMatches, verMatches]);
+  }, [
+    reqs,
+    matrix,
+    reqStatusFilterActive,
+    reqStatusFilter,
+    suspectOnly,
+    verColumnFilterActive,
+    linkMatchesVerFilters,
+    q,
+    reqMatches,
+    verMatches,
+  ]);
 
   const sortedDisplayReqs = useMemo(() => {
     const arr = [...filteredReqs];
@@ -293,11 +371,24 @@ export default function MatrixPage() {
         const hit = matrix.some((m) => m.verification_id === v.id && m.suspect);
         if (!hit) return false;
       }
+      if (statusGroupActive && !verMatchesStatusGroup(v.id)) return false;
+      if (verStatusFilterActive && !verStatusFilter.has(v.status_id)) return false;
       if (!q) return true;
       if (verMatches(v.id)) return true;
       return matrix.some((m) => m.verification_id === v.id && reqMatches(m.req_id));
     });
-  }, [vers, matrix, suspectOnly, q, verMatches, reqMatches]);
+  }, [
+    vers,
+    matrix,
+    suspectOnly,
+    statusGroupActive,
+    verStatusFilterActive,
+    verStatusFilter,
+    verMatchesStatusGroup,
+    q,
+    verMatches,
+    reqMatches,
+  ]);
 
   const pageCount = Math.max(1, Math.ceil(sortedDisplayReqs.length / PAGE_SIZE));
   const safePage = Math.min(page, pageCount);
@@ -308,7 +399,46 @@ export default function MatrixPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [suspectOnly, q, sortColumn, sortDir]);
+  }, [suspectOnly, statusGroups, reqStatusFilter, verStatusFilter, q, sortColumn, sortDir]);
+
+  function toggleStatusGroup(group: StatusSemanticGroup) {
+    setStatusGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(group)) next.delete(group);
+      else next.add(group);
+      return next;
+    });
+  }
+
+  function clearStatusGroups() {
+    setStatusGroups(new Set());
+  }
+
+  function toggleReqStatusFilter(statusId: number) {
+    setReqStatusFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(statusId)) next.delete(statusId);
+      else next.add(statusId);
+      return next;
+    });
+  }
+
+  function clearReqStatusFilter() {
+    setReqStatusFilter(new Set());
+  }
+
+  function toggleVerStatusFilter(statusId: number) {
+    setVerStatusFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(statusId)) next.delete(statusId);
+      else next.add(statusId);
+      return next;
+    });
+  }
+
+  function clearVerStatusFilter() {
+    setVerStatusFilter(new Set());
+  }
 
   function onSortRequirementHeaderClick(e: React.MouseEvent) {
     if ((e.target as HTMLElement).closest('[data-matrix-resize-handle]')) return;
@@ -364,6 +494,8 @@ export default function MatrixPage() {
     const counts = new Map<string, { n: number; tagColor: string | null }>();
     for (const link of matrix) {
       if (suspectOnly && !link.suspect) continue;
+      if (!reqMatchesStatusFilter(link.req_id)) continue;
+      if (!linkMatchesVerFilters(link)) continue;
       if (q && !reqMatches(link.req_id) && !verMatches(link.verification_id)) continue;
       const t = verById.get(link.verification_id);
       const st = t ? statusById.get(t.status_id) : undefined;
@@ -375,7 +507,17 @@ export default function MatrixPage() {
       });
     }
     return [...counts.entries()].sort((a, b) => b[1].n - a[1].n);
-  }, [matrix, suspectOnly, q, verById, statusById, reqMatches, verMatches]);
+  }, [
+    matrix,
+    suspectOnly,
+    reqMatchesStatusFilter,
+    linkMatchesVerFilters,
+    q,
+    verById,
+    statusById,
+    reqMatches,
+    verMatches,
+  ]);
 
   if (loading) {
     return (
@@ -395,6 +537,8 @@ export default function MatrixPage() {
 
   const linkCount = matrix.filter((m) => {
     if (suspectOnly && !m.suspect) return false;
+    if (!reqMatchesStatusFilter(m.req_id)) return false;
+    if (!linkMatchesVerFilters(m)) return false;
     if (!q) return true;
     return reqMatches(m.req_id) || verMatches(m.verification_id);
   }).length;
@@ -423,15 +567,123 @@ export default function MatrixPage() {
       </StitchPageHeader>
 
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-        <label className="flex items-center gap-2 text-sm text-stitch-muted cursor-pointer">
-          <input
-            type="checkbox"
-            checked={suspectOnly}
-            onChange={(e) => setSuspectOnly(e.target.checked)}
-            className="rounded border-stitch-border text-stitch-accent"
-          />
-          Suspect links only (rows &amp; columns filtered)
-        </label>
+        <div className="flex flex-col gap-3">
+          <label className="flex items-center gap-2 text-sm text-stitch-muted cursor-pointer">
+            <input
+              type="checkbox"
+              checked={suspectOnly}
+              onChange={(e) => setSuspectOnly(e.target.checked)}
+              className="rounded border-stitch-border text-stitch-accent"
+            />
+            Suspect links only (rows &amp; columns filtered)
+          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] uppercase tracking-widest text-stitch-muted font-bold shrink-0">
+              Status groups
+            </span>
+            {STATUS_GROUP_OPTIONS.map(({ id, label, symbol, symbolClass }) => {
+              const active = statusGroups.has(id);
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={active}
+                  title={`${active ? 'Remove' : 'Show'} ${label}`}
+                  onClick={() => toggleStatusGroup(id)}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors ${
+                    active
+                      ? 'border-stitch-accent bg-stitch-accent/15 text-stitch-fg'
+                      : 'border-stitch-border bg-stitch-elevated/50 text-stitch-muted hover:bg-stitch-higher hover:text-stitch-fg'
+                  }`}
+                >
+                  <span className={`font-semibold ${symbolClass}`} aria-hidden>
+                    {symbol}
+                  </span>
+                  {label}
+                </button>
+              );
+            })}
+            {statusGroupActive ? (
+              <button
+                type="button"
+                onClick={clearStatusGroups}
+                className="text-[10px] font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-accent px-2 py-1"
+              >
+                Clear
+              </button>
+            ) : null}
+          </div>
+          {reqStatusOptions.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] uppercase tracking-widest text-stitch-muted font-bold shrink-0">
+                Requirement status
+              </span>
+              {reqStatusOptions.map((st) => {
+                const active = reqStatusFilter.has(st.id);
+                return (
+                  <button
+                    key={st.id}
+                    type="button"
+                    aria-pressed={active}
+                    title={`${active ? 'Remove' : 'Show'} requirements with status ${st.title}`}
+                    onClick={() => toggleReqStatusFilter(st.id)}
+                    className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors ${
+                      active
+                        ? 'border-stitch-accent bg-stitch-accent/15 text-stitch-fg'
+                        : 'border-stitch-border bg-stitch-elevated/50 text-stitch-muted hover:bg-stitch-higher hover:text-stitch-fg'
+                    }`}
+                  >
+                    <StatusBadge title={st.title} tagColor={st.tag_color} />
+                  </button>
+                );
+              })}
+              {reqStatusFilterActive ? (
+                <button
+                  type="button"
+                  onClick={clearReqStatusFilter}
+                  className="text-[10px] font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-accent px-2 py-1"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {verStatusOptions.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] uppercase tracking-widest text-stitch-muted font-bold shrink-0">
+                Verification status
+              </span>
+              {verStatusOptions.map((st) => {
+                const active = verStatusFilter.has(st.id);
+                return (
+                  <button
+                    key={st.id}
+                    type="button"
+                    aria-pressed={active}
+                    title={`${active ? 'Remove' : 'Show'} verifications with status ${st.title}`}
+                    onClick={() => toggleVerStatusFilter(st.id)}
+                    className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors ${
+                      active
+                        ? 'border-stitch-accent bg-stitch-accent/15 text-stitch-fg'
+                        : 'border-stitch-border bg-stitch-elevated/50 text-stitch-muted hover:bg-stitch-higher hover:text-stitch-fg'
+                    }`}
+                  >
+                    <StatusBadge title={st.title} tagColor={st.tag_color} />
+                  </button>
+                );
+              })}
+              {verStatusFilterActive ? (
+                <button
+                  type="button"
+                  onClick={clearVerStatusFilter}
+                  className="text-[10px] font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-accent px-2 py-1"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
         <p className="text-[10px] text-stitch-muted font-mono">
           {sortedDisplayReqs.length} req × {displayVers.length} test
           {linkCount > 0 ? ` · ${linkCount} visible link${linkCount === 1 ? '' : 's'}` : ''}

@@ -137,10 +137,9 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
     }
 
     fn get_requirements_by_project(&self, project_id: i32) -> Result<Vec<Requirement>, RepoError> {
-        let key = keys::Requirements::by_project(project_id);
-        self.get_or_fetch(&key, Duration::from_secs(300), || {
-            self.inner.get_requirements_by_project(project_id)
-        })
+        // Do not cache: bulk SQL seeds / admin imports bypass repository invalidation and would
+        // leave stale lists visible for minutes (dashboard + requirements table use this path).
+        self.inner.get_requirements_by_project(project_id)
     }
 
     fn get_requirements_by_project_filtered_paginated(
@@ -1777,7 +1776,7 @@ mod tests {
         assert!(cache.get(keys::REQUIREMENTS_ALL).is_some());
 
         repo.get_requirements_by_project(1).unwrap();
-        assert!(cache.get(&keys::Requirements::by_project(1)).is_some());
+        assert!(cache.get(&keys::Requirements::by_project(1)).is_none());
 
         let new_req = NewRequirement {
             id: None,

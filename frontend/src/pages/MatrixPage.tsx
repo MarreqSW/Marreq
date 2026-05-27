@@ -4,6 +4,7 @@ import { Link, useOutletContext } from 'react-router-dom';
 import {
   clearTraceabilitySuspect,
   listMatrix,
+  listRequirementStatuses,
   listRequirements,
   listVerificationMethodsByProject,
   listVerificationStatuses,
@@ -15,6 +16,7 @@ import StitchPageHeader from '@/components/StitchPageHeader';
 import type {
   MatrixLink,
   Requirement,
+  RequirementStatus,
   Verification,
   VerificationMethod,
   VerificationStatus,
@@ -81,12 +83,15 @@ export default function MatrixPage() {
   const [reqs, setReqs] = useState<Requirement[]>([]);
   const [vers, setVers] = useState<Verification[]>([]);
   const [statuses, setStatuses] = useState<VerificationStatus[]>([]);
+  const [reqStatuses, setReqStatuses] = useState<RequirementStatus[]>([]);
   const [methods, setMethods] = useState<VerificationMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [suspectOnly, setSuspectOnly] = useState(false);
   const [statusGroups, setStatusGroups] = useState<Set<StatusSemanticGroup>>(new Set());
+  const [reqStatusFilter, setReqStatusFilter] = useState<Set<number>>(new Set());
+  const [verStatusFilter, setVerStatusFilter] = useState<Set<number>>(new Set());
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [sortColumn, setSortColumn] = useState<MatrixSortColumn>({ kind: 'requirement' });
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -162,17 +167,19 @@ export default function MatrixPage() {
     setLoading(true);
     setErr(null);
     try {
-      const [mx, r, allV, st, m] = await Promise.all([
+      const [mx, r, allV, st, rs, m] = await Promise.all([
         listMatrix(pid),
         listRequirements(pid),
         listVerifications(),
         listVerificationStatuses(),
+        listRequirementStatuses(),
         listVerificationMethodsByProject(pid),
       ]);
       setMatrix(mx);
       setReqs(r);
       setVers(allV.filter((v) => v.project_id === pid));
       setStatuses(st);
+      setReqStatuses(rs);
       setMethods(m);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load matrix');
@@ -188,7 +195,27 @@ export default function MatrixPage() {
   const reqById = useMemo(() => new Map(reqs.map((r) => [r.id, r])), [reqs]);
   const verById = useMemo(() => new Map(vers.map((v) => [v.id, v])), [vers]);
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses]);
+  const reqStatusById = useMemo(
+    () => new Map(reqStatuses.map((s) => [s.id, s])),
+    [reqStatuses],
+  );
   const methodById = useMemo(() => new Map(methods.map((m) => [m.id, m])), [methods]);
+
+  const reqStatusOptions = useMemo(
+    () =>
+      [...reqStatuses]
+        .filter((s) => s.project_id === pid)
+        .sort((a, b) => a.title.localeCompare(b.title)),
+    [reqStatuses, pid],
+  );
+
+  const verStatusOptions = useMemo(
+    () =>
+      [...statuses]
+        .filter((s) => s.project_id === pid)
+        .sort((a, b) => a.title.localeCompare(b.title)),
+    [statuses, pid],
+  );
 
   const linkByPair = useMemo(() => {
     const m = new Map<string, MatrixLink>();
@@ -200,6 +227,9 @@ export default function MatrixPage() {
 
   const q = globalSearch.trim().toLowerCase();
   const statusGroupActive = statusGroups.size > 0;
+  const reqStatusFilterActive = reqStatusFilter.size > 0;
+  const verStatusFilterActive = verStatusFilter.size > 0;
+  const verColumnFilterActive = statusGroupActive || verStatusFilterActive;
 
   const verStatusGroup = useCallback(
     (verId: number): StatusSemanticGroup | null => {
@@ -224,6 +254,40 @@ export default function MatrixPage() {
   const linkMatchesStatusGroup = useCallback(
     (link: MatrixLink) => verMatchesStatusGroup(link.verification_id),
     [verMatchesStatusGroup],
+  );
+
+  const verMatchesStatusFilter = useCallback(
+    (verId: number) => {
+      if (!verStatusFilterActive) return true;
+      const t = verById.get(verId);
+      return t != null && verStatusFilter.has(t.status_id);
+    },
+    [verStatusFilterActive, verById, verStatusFilter],
+  );
+
+  const linkMatchesVerFilters = useCallback(
+    (link: MatrixLink) => {
+      if (statusGroupActive && !linkMatchesStatusGroup(link)) return false;
+      if (verStatusFilterActive && !verMatchesStatusFilter(link.verification_id)) {
+        return false;
+      }
+      return true;
+    },
+    [
+      statusGroupActive,
+      linkMatchesStatusGroup,
+      verStatusFilterActive,
+      verMatchesStatusFilter,
+    ],
+  );
+
+  const reqMatchesStatusFilter = useCallback(
+    (reqId: number) => {
+      if (!reqStatusFilterActive) return true;
+      const r = reqById.get(reqId);
+      return r != null && reqStatusFilter.has(r.status_id);
+    },
+    [reqStatusFilterActive, reqById, reqStatusFilter],
   );
 
   const reqMatches = useCallback(
@@ -260,13 +324,14 @@ export default function MatrixPage() {
 
   const filteredReqs = useMemo(() => {
     return reqs.filter((r) => {
+      if (reqStatusFilterActive && !reqStatusFilter.has(r.status_id)) return false;
       if (suspectOnly) {
         const hit = matrix.some((m) => m.req_id === r.id && m.suspect);
         if (!hit) return false;
       }
-      if (statusGroupActive) {
+      if (verColumnFilterActive) {
         const hit = matrix.some(
-          (m) => m.req_id === r.id && linkMatchesStatusGroup(m),
+          (m) => m.req_id === r.id && linkMatchesVerFilters(m),
         );
         if (!hit) return false;
       }
@@ -277,9 +342,11 @@ export default function MatrixPage() {
   }, [
     reqs,
     matrix,
+    reqStatusFilterActive,
+    reqStatusFilter,
     suspectOnly,
-    statusGroupActive,
-    linkMatchesStatusGroup,
+    verColumnFilterActive,
+    linkMatchesVerFilters,
     q,
     reqMatches,
     verMatches,
@@ -309,6 +376,7 @@ export default function MatrixPage() {
         if (!hit) return false;
       }
       if (statusGroupActive && !verMatchesStatusGroup(v.id)) return false;
+      if (verStatusFilterActive && !verStatusFilter.has(v.status_id)) return false;
       if (!q) return true;
       if (verMatches(v.id)) return true;
       return matrix.some((m) => m.verification_id === v.id && reqMatches(m.req_id));
@@ -318,6 +386,8 @@ export default function MatrixPage() {
     matrix,
     suspectOnly,
     statusGroupActive,
+    verStatusFilterActive,
+    verStatusFilter,
     verMatchesStatusGroup,
     q,
     verMatches,
@@ -333,7 +403,7 @@ export default function MatrixPage() {
 
   useEffect(() => {
     setPage(1);
-  }, [suspectOnly, statusGroups, q, sortColumn, sortDir]);
+  }, [suspectOnly, statusGroups, reqStatusFilter, verStatusFilter, q, sortColumn, sortDir]);
 
   function toggleStatusGroup(group: StatusSemanticGroup) {
     setStatusGroups((prev) => {
@@ -346,6 +416,32 @@ export default function MatrixPage() {
 
   function clearStatusGroups() {
     setStatusGroups(new Set());
+  }
+
+  function toggleReqStatusFilter(statusId: number) {
+    setReqStatusFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(statusId)) next.delete(statusId);
+      else next.add(statusId);
+      return next;
+    });
+  }
+
+  function clearReqStatusFilter() {
+    setReqStatusFilter(new Set());
+  }
+
+  function toggleVerStatusFilter(statusId: number) {
+    setVerStatusFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(statusId)) next.delete(statusId);
+      else next.add(statusId);
+      return next;
+    });
+  }
+
+  function clearVerStatusFilter() {
+    setVerStatusFilter(new Set());
   }
 
   function onSortRequirementHeaderClick(e: React.MouseEvent) {
@@ -402,7 +498,8 @@ export default function MatrixPage() {
     const counts = new Map<string, { n: number; tagColor: string | null }>();
     for (const link of matrix) {
       if (suspectOnly && !link.suspect) continue;
-      if (statusGroupActive && !linkMatchesStatusGroup(link)) continue;
+      if (!reqMatchesStatusFilter(link.req_id)) continue;
+      if (!linkMatchesVerFilters(link)) continue;
       if (q && !reqMatches(link.req_id) && !verMatches(link.verification_id)) continue;
       const t = verById.get(link.verification_id);
       const st = t ? statusById.get(t.status_id) : undefined;
@@ -417,8 +514,8 @@ export default function MatrixPage() {
   }, [
     matrix,
     suspectOnly,
-    statusGroupActive,
-    linkMatchesStatusGroup,
+    reqMatchesStatusFilter,
+    linkMatchesVerFilters,
     q,
     verById,
     statusById,
@@ -444,7 +541,8 @@ export default function MatrixPage() {
 
   const linkCount = matrix.filter((m) => {
     if (suspectOnly && !m.suspect) return false;
-    if (statusGroupActive && !linkMatchesStatusGroup(m)) return false;
+    if (!reqMatchesStatusFilter(m.req_id)) return false;
+    if (!linkMatchesVerFilters(m)) return false;
     if (!q) return true;
     return reqMatches(m.req_id) || verMatches(m.verification_id);
   }).length;
@@ -519,6 +617,76 @@ export default function MatrixPage() {
               </button>
             ) : null}
           </div>
+          {reqStatusOptions.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] uppercase tracking-widest text-stitch-muted font-bold shrink-0">
+                Requirement status
+              </span>
+              {reqStatusOptions.map((st) => {
+                const active = reqStatusFilter.has(st.id);
+                return (
+                  <button
+                    key={st.id}
+                    type="button"
+                    aria-pressed={active}
+                    title={`${active ? 'Remove' : 'Show'} requirements with status ${st.title}`}
+                    onClick={() => toggleReqStatusFilter(st.id)}
+                    className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors ${
+                      active
+                        ? 'border-stitch-accent bg-stitch-accent/15 text-stitch-fg'
+                        : 'border-stitch-border bg-stitch-elevated/50 text-stitch-muted hover:bg-stitch-higher hover:text-stitch-fg'
+                    }`}
+                  >
+                    <StatusBadge title={st.title} tagColor={st.tag_color} />
+                  </button>
+                );
+              })}
+              {reqStatusFilterActive ? (
+                <button
+                  type="button"
+                  onClick={clearReqStatusFilter}
+                  className="text-[10px] font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-accent px-2 py-1"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+          {verStatusOptions.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] uppercase tracking-widest text-stitch-muted font-bold shrink-0">
+                Verification status
+              </span>
+              {verStatusOptions.map((st) => {
+                const active = verStatusFilter.has(st.id);
+                return (
+                  <button
+                    key={st.id}
+                    type="button"
+                    aria-pressed={active}
+                    title={`${active ? 'Remove' : 'Show'} verifications with status ${st.title}`}
+                    onClick={() => toggleVerStatusFilter(st.id)}
+                    className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors ${
+                      active
+                        ? 'border-stitch-accent bg-stitch-accent/15 text-stitch-fg'
+                        : 'border-stitch-border bg-stitch-elevated/50 text-stitch-muted hover:bg-stitch-higher hover:text-stitch-fg'
+                    }`}
+                  >
+                    <StatusBadge title={st.title} tagColor={st.tag_color} />
+                  </button>
+                );
+              })}
+              {verStatusFilterActive ? (
+                <button
+                  type="button"
+                  onClick={clearVerStatusFilter}
+                  className="text-[10px] font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-accent px-2 py-1"
+                >
+                  Clear
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
         <p className="text-[10px] text-stitch-muted font-mono">
           {sortedDisplayReqs.length} req × {displayVers.length} test

@@ -195,10 +195,6 @@ export default function MatrixPage() {
   const reqById = useMemo(() => new Map(reqs.map((r) => [r.id, r])), [reqs]);
   const verById = useMemo(() => new Map(vers.map((v) => [v.id, v])), [vers]);
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses]);
-  const reqStatusById = useMemo(
-    () => new Map(reqStatuses.map((s) => [s.id, s])),
-    [reqStatuses],
-  );
   const methodById = useMemo(() => new Map(methods.map((m) => [m.id, m])), [methods]);
 
   const reqStatusOptions = useMemo(

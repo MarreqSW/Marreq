@@ -38,9 +38,6 @@ struct RequirementWithVerification<'a> {
     parent_requirement_ids: Option<Vec<i32>>,
 }
 
-/// (source_version_id, project_id, links to create as (target_version_id, link_type))
-type ParentLinksToCreate = (i32, i32, Vec<(i32, String)>);
-
 impl Loggable for RequirementWithVerification<'_> {
     fn entity_type() -> EntityType {
         EntityType::Requirement
@@ -383,6 +380,44 @@ impl<'a> RequirementService<'a> {
         repo.insert_requirement_version_link(&new_link)
     }
 
+    fn build_parent_link_rows(
+        &self,
+        source_version_id: i32,
+        project_id: i32,
+        parent_links: Option<&[(i32, String, Option<String>)]>,
+    ) -> Result<Vec<NewRequirementVersionLink>, RepoError> {
+        let Some(parent_links) = parent_links else {
+            return Ok(Vec::new());
+        };
+        let repo = self.repo_read();
+        let mut rows = Vec::with_capacity(parent_links.len());
+        for (target_version_id, link_type, rationale) in parent_links {
+            validate_link_type(link_type)?;
+            if source_version_id != 0 && source_version_id == *target_version_id {
+                return Err(RepoError::BadInput(
+                    "source_version_id and target_version_id must differ".into(),
+                ));
+            }
+            let target_ver = repo.get_requirement_version_by_id(*target_version_id)?;
+            let target_req = repo.get_requirement_by_id(target_ver.requirement_id)?;
+            if target_req.project_id != project_id {
+                return Err(RepoError::CrossProjectViolation(format!(
+                    "target version {} belongs to project {} but link declares project_id={}",
+                    target_version_id, target_req.project_id, project_id
+                )));
+            }
+            rows.push(NewRequirementVersionLink {
+                source_version_id,
+                target_version_id: *target_version_id,
+                link_type: link_type.clone(),
+                rationale: rationale.clone(),
+                project_id,
+                metadata: None,
+            });
+        }
+        Ok(rows)
+    }
+
     /// Delete a requirement version link by id. Returns NotFound if link not in project.
     pub fn delete_requirement_version_link(
         &self,
@@ -465,25 +500,21 @@ impl<'a> RequirementService<'a> {
         mut payload: NewRequirement,
         verification_method_ids: &[i32],
         custom_fields: Option<&[CustomFieldValueInput]>,
+        parent_links: Option<Vec<(i32, String, Option<String>)>>,
     ) -> Result<i32, RepoError> {
         self.prepare_payload(&mut payload)?;
 
         let project_id = payload.project_id;
+        let parent_link_rows =
+            self.build_parent_link_rows(0, project_id, parent_links.as_deref())?;
         let id = {
             let mut repo = self.repo_write();
-            let id = repo.insert_new_requirement(&payload)?;
-            repo.set_requirement_verification_methods(id, verification_method_ids)?;
-            if let Some(cf) = custom_fields {
-                if !cf.is_empty() {
-                    let req = repo.get_requirement_by_id(id)?;
-                    if let Some(version_id) = req.current_version_id {
-                        let values: Vec<(i32, Option<String>)> =
-                            cf.iter().map(|v| (v.field_id, v.value.clone())).collect();
-                        repo.set_custom_field_values_for_version(version_id, &values)?;
-                    }
-                }
-            }
-            id
+            repo.create_requirement_atomic(
+                &payload,
+                verification_method_ids,
+                custom_fields,
+                &parent_link_rows,
+            )?
         };
 
         self.audit_created(actor, id, &payload);
@@ -511,7 +542,7 @@ impl<'a> RequirementService<'a> {
         mut payload: NewRequirement,
         verification_method_ids: &[i32],
         custom_fields: Option<&[CustomFieldValueInput]>,
-        parent_links: Option<Vec<(i32, String)>>,
+        parent_links: Option<Vec<(i32, String, Option<String>)>>,
     ) -> Result<Requirement, RepoError> {
         self.prepare_payload(&mut payload)?;
         payload.id = Some(id);
@@ -519,63 +550,21 @@ impl<'a> RequirementService<'a> {
         let before = self.get_by_id(id)?;
         let before_verification_ids = self.get_verification_method_ids(id)?;
 
-        let parent_links_to_create: Option<ParentLinksToCreate> = {
+        let parent_link_rows =
+            self.build_parent_link_rows(0, payload.project_id, parent_links.as_deref())?;
+
+        let after = {
             let mut repo = self.repo_write();
-            let updated = repo.edit_requirement(&payload)?;
-            if !updated {
-                return Err(RepoError::NotFound);
-            }
-            repo.set_requirement_verification_methods(id, verification_method_ids)?;
-            let requirement = repo.get_requirement_by_id(id)?;
-            if let Some(cf) = custom_fields {
-                if let Some(version_id) = requirement.current_version_id {
-                    let values: Vec<(i32, Option<String>)> =
-                        cf.iter().map(|v| (v.field_id, v.value.clone())).collect();
-                    repo.set_custom_field_values_for_version(version_id, &values)?;
-                }
-            }
-            let requirement = repo.get_requirement_by_id(id)?;
-            let _project_ids = repo.mark_links_suspect_for_requirement(
+            repo.update_requirement_atomic(
                 id,
+                &payload,
+                verification_method_ids,
+                custom_fields,
+                parent_links.as_ref().map(|_| parent_link_rows.as_slice()),
                 "Requirement updated",
-                requirement.current_version_id,
-                Some(actor.id),
-            )?;
-            let out: Option<ParentLinksToCreate> = if let Some(links) = &parent_links {
-                if let Some(version_id) = requirement.current_version_id {
-                    repo.delete_requirement_version_links_by_source_version(version_id)?;
-                    Some((version_id, requirement.project_id, links.clone()))
-                } else {
-                    None
-                }
-            } else {
-                None
-            };
-            Ok::<_, RepoError>(out)
-        }?;
-
-        if let Some((source_version_id, project_id, links)) = parent_links_to_create {
-            let mut first_err: Option<RepoError> = None;
-            for (target_version_id, link_type) in links {
-                if let Err(e) = self.create_requirement_version_link(
-                    source_version_id,
-                    target_version_id,
-                    &link_type,
-                    project_id,
-                    None,
-                    None,
-                ) {
-                    if first_err.is_none() {
-                        first_err = Some(e);
-                    }
-                }
-            }
-            if let Some(e) = first_err {
-                return Err(e);
-            }
-        }
-
-        let after = self.get_by_id(id)?;
+                actor.id,
+            )?
+        };
         let after_verification_ids = verification_method_ids.to_vec();
         let before_parent_ids: Vec<i32> = before
             .current_version_id
@@ -725,7 +714,7 @@ impl AuditLog for RequirementService<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{MatrixLink, RequirementVersion};
+    use crate::models::{MatrixLink, NewRequirementVersionLink, RequirementVersion};
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
@@ -773,6 +762,28 @@ mod tests {
         }
     }
 
+    fn version(id: i32, requirement_id: i32, title: &str) -> RequirementVersion {
+        RequirementVersion {
+            id,
+            requirement_id,
+            title: title.into(),
+            description: "Version description".into(),
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            category_id: 1,
+            applicability_id: 1,
+            justification: None,
+            deadline_date: Some(timestamp()),
+            created_at: timestamp(),
+            approval_state: "draft".into(),
+            approved_by: None,
+            approved_at: None,
+            reviewed_by: None,
+            reviewed_at: None,
+        }
+    }
+
     fn new_payload() -> NewRequirement {
         NewRequirement {
             id: None,
@@ -796,7 +807,7 @@ mod tests {
         let service = RequirementService::new(&state);
 
         let payload = new_payload();
-        let id = service.create(&actor(), payload, &[1], None).unwrap();
+        let id = service.create(&actor(), payload, &[1], None, None).unwrap();
 
         let stored = service.get_by_id(id).unwrap();
         assert_eq!(stored.title, "Title");
@@ -814,8 +825,60 @@ mod tests {
         let mut payload = new_payload();
         payload.reference_code = "invalid".into();
 
-        let err = service.create(&actor(), payload, &[1], None).unwrap_err();
+        let err = service
+            .create(&actor(), payload, &[1], None, None)
+            .unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
+    }
+
+    #[test]
+    fn create_with_invalid_parent_link_rolls_back_requirement() {
+        let mut repo = DieselRepoMock::default();
+        let mut parent = requirement(10, 7, "REQ-PARENT");
+        parent.current_version_id = Some(100);
+        repo.requirements.insert(10, parent);
+        repo.requirement_versions
+            .insert(100, version(100, 10, "Parent"));
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let result = service.create(
+            &actor(),
+            new_payload(),
+            &[1],
+            None,
+            Some(vec![(999, "REFINES".into(), Some("bad target".into()))]),
+        );
+
+        assert!(result.is_err());
+        assert!(service.get_by_id(11).is_err());
+        assert!(service
+            .get_parent_links_for_version(100)
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn repository_atomic_create_rolls_back_when_parent_insert_fails() {
+        let mut repo = DieselRepoMock::default();
+        let result = repo.create_requirement_atomic(
+            &new_payload(),
+            &[1],
+            None,
+            &[NewRequirementVersionLink {
+                source_version_id: 0,
+                target_version_id: 999,
+                link_type: "REFINES".into(),
+                rationale: None,
+                project_id: 7,
+                metadata: None,
+            }],
+        );
+
+        assert!(result.is_err());
+        assert!(repo.requirements.is_empty());
+        assert!(repo.requirement_versions.is_empty());
+        assert!(repo.requirement_version_links.is_empty());
     }
 
     #[test]
@@ -836,6 +899,108 @@ mod tests {
         assert_eq!(updated.title, "Updated");
         assert_eq!(updated.description, "New Description");
         assert_eq!(updated.reference_code, "REQ-999");
+    }
+
+    #[test]
+    fn update_with_invalid_parent_replacement_preserves_previous_state() {
+        let mut repo = DieselRepoMock::default();
+        let mut child = requirement(1, 7, "REQ-CHILD");
+        child.current_version_id = Some(10);
+        let mut parent = requirement(2, 7, "REQ-PARENT");
+        parent.current_version_id = Some(20);
+        repo.requirements.insert(1, child);
+        repo.requirements.insert(2, parent);
+        repo.requirement_versions
+            .insert(10, version(10, 1, "Child"));
+        repo.requirement_versions
+            .insert(20, version(20, 2, "Parent"));
+        repo.requirement_version_links.push(RequirementVersionLink {
+            id: 1,
+            source_version_id: 10,
+            target_version_id: 20,
+            link_type: "REFINES".into(),
+            rationale: Some("existing".into()),
+            project_id: 7,
+            created_at: timestamp(),
+            metadata: None,
+        });
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+
+        let mut payload = new_payload();
+        payload.title = "Changed".into();
+        payload.reference_code = "REQ-CHANGED".into();
+        let result = service.update(
+            &actor(),
+            1,
+            payload,
+            &[1],
+            None,
+            Some(vec![(999, "REFINES".into(), None)]),
+        );
+
+        assert!(result.is_err());
+        let stored = service.get_by_id(1).unwrap();
+        assert_eq!(stored.title, "Requirement 1");
+        assert_eq!(stored.current_version_id, Some(10));
+        let links = service.get_parent_links_for_version(10).unwrap();
+        assert_eq!(links.len(), 1);
+        assert_eq!(links[0].target_version_id, 20);
+    }
+
+    #[test]
+    fn repository_atomic_update_rolls_back_when_parent_insert_fails() {
+        let mut repo = DieselRepoMock::default();
+        let mut child = requirement(1, 7, "REQ-CHILD");
+        child.current_version_id = Some(10);
+        let mut parent = requirement(2, 7, "REQ-PARENT");
+        parent.current_version_id = Some(20);
+        repo.requirements.insert(1, child);
+        repo.requirements.insert(2, parent);
+        repo.requirement_versions
+            .insert(10, version(10, 1, "Child"));
+        repo.requirement_versions
+            .insert(20, version(20, 2, "Parent"));
+        repo.requirement_version_links.push(RequirementVersionLink {
+            id: 1,
+            source_version_id: 10,
+            target_version_id: 20,
+            link_type: "REFINES".into(),
+            rationale: Some("existing".into()),
+            project_id: 7,
+            created_at: timestamp(),
+            metadata: None,
+        });
+
+        let mut payload = new_payload();
+        payload.id = Some(1);
+        payload.title = "Changed".into();
+        payload.reference_code = "REQ-CHANGED".into();
+        let result = repo.update_requirement_atomic(
+            1,
+            &payload,
+            &[1],
+            None,
+            Some(&[NewRequirementVersionLink {
+                source_version_id: 0,
+                target_version_id: 999,
+                link_type: "REFINES".into(),
+                rationale: None,
+                project_id: 7,
+                metadata: None,
+            }]),
+            "Requirement updated",
+            1,
+        );
+
+        assert!(matches!(result, Err(RepoError::NotFound)));
+        let stored = repo.get_requirement_by_id(1).unwrap();
+        assert_eq!(stored.title, "Requirement 1");
+        assert_eq!(stored.current_version_id, Some(10));
+        assert_eq!(repo.requirement_versions.len(), 2);
+        assert_eq!(repo.requirement_version_links.len(), 1);
+        assert_eq!(repo.requirement_version_links[0].source_version_id, 10);
+        assert_eq!(repo.requirement_version_links[0].target_version_id, 20);
     }
 
     #[test]
@@ -1488,7 +1653,7 @@ mod tests {
         let mut payload = new_payload();
         payload.title = "".to_string(); // Empty title should fail validation
 
-        let result = service.create(&actor(), payload, &[1], None);
+        let result = service.create(&actor(), payload, &[1], None, None);
         assert!(result.is_err());
         assert!(matches!(result.unwrap_err(), RepoError::BadInput(_)));
     }
@@ -1559,7 +1724,7 @@ mod tests {
         let service = RequirementService::new(&state);
 
         let err = service
-            .create(&actor(), new_payload(), &[5], None)
+            .create(&actor(), new_payload(), &[5], None, None)
             .unwrap_err();
         assert!(
             matches!(err, RepoError::CrossProjectViolation(_)),
@@ -1599,7 +1764,7 @@ mod tests {
             value: Some("bad".into()),
         }];
         let err = service
-            .create(&actor(), new_payload(), &[], Some(&custom_fields))
+            .create(&actor(), new_payload(), &[], Some(&custom_fields), None)
             .unwrap_err();
         assert!(
             matches!(err, RepoError::CrossProjectViolation(_)),

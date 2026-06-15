@@ -210,6 +210,24 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
         Ok(id)
     }
 
+    fn create_requirement_atomic(
+        &mut self,
+        new: &NewRequirement,
+        verification_method_ids: &[i32],
+        custom_fields: Option<&[CustomFieldValueInput]>,
+        parent_links: &[NewRequirementVersionLink],
+    ) -> Result<i32, RepoError> {
+        let id = self.inner.create_requirement_atomic(
+            new,
+            verification_method_ids,
+            custom_fields,
+            parent_links,
+        )?;
+        self.cache.invalidate_requirement(id);
+        self.cache.invalidate_project(new.project_id);
+        Ok(id)
+    }
+
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError> {
         let res = self.inner.edit_requirement(new)?;
         if let Some(id) = new.id {
@@ -217,6 +235,31 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
         }
         self.cache.invalidate_project(new.project_id);
         Ok(res)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn update_requirement_atomic(
+        &mut self,
+        requirement_id: i32,
+        new: &NewRequirement,
+        verification_method_ids: &[i32],
+        custom_fields: Option<&[CustomFieldValueInput]>,
+        parent_links: Option<&[NewRequirementVersionLink]>,
+        suspect_reason: &str,
+        actor_id: i32,
+    ) -> Result<Requirement, RepoError> {
+        let requirement = self.inner.update_requirement_atomic(
+            requirement_id,
+            new,
+            verification_method_ids,
+            custom_fields,
+            parent_links,
+            suspect_reason,
+            actor_id,
+        )?;
+        self.cache.invalidate_requirement(requirement_id);
+        self.cache.invalidate_project(requirement.project_id);
+        Ok(requirement)
     }
 
     fn delete_requirement(&mut self, requirement_id: i32) -> Result<Requirement, RepoError> {

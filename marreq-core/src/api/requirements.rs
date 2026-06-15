@@ -374,11 +374,23 @@ pub async fn create(
     } else {
         Some(payload.custom_fields.as_slice())
     };
+    let parent_links = payload
+        .parent_links
+        .iter()
+        .map(|pl| {
+            (
+                pl.target_version_id,
+                pl.link_type.clone(),
+                pl.rationale.clone(),
+            )
+        })
+        .collect::<Vec<_>>();
     let id = service.create(
         user.user(),
         new_req,
         &verification_method_ids,
         custom_fields,
+        Some(parent_links),
     )?;
 
     Ok(json!({ "status": "ok", "id": id }))
@@ -540,28 +552,24 @@ pub async fn create_by_project(
     } else {
         Some(payload.custom_fields.as_slice())
     };
+    let parent_links = payload
+        .parent_links
+        .iter()
+        .map(|pl| {
+            (
+                pl.target_version_id,
+                pl.link_type.clone(),
+                pl.rationale.clone(),
+            )
+        })
+        .collect::<Vec<_>>();
     let id = service.create(
         access.user(),
         new_req,
         &verification_method_ids,
         custom_fields,
+        Some(parent_links),
     )?;
-    let requirement = service.get_by_id(id)?;
-    let source_version_id = requirement.current_version_id;
-    if !payload.parent_links.is_empty() {
-        if let Some(vid) = source_version_id {
-            for pl in &payload.parent_links {
-                let _ = service.create_requirement_version_link(
-                    vid,
-                    pl.target_version_id,
-                    &pl.link_type,
-                    project_id,
-                    pl.rationale.clone(),
-                    None,
-                );
-            }
-        }
-    }
     Ok(json!({ "status": "ok", "id": id }))
 }
 

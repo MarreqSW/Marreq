@@ -1134,6 +1134,62 @@ impl RequirementsRepository for DieselRepoMock {
         Ok(id)
     }
 
+    fn create_requirement_atomic(
+        &mut self,
+        new: &NewRequirement,
+        verification_method_ids: &[i32],
+        custom_fields: Option<&[CustomFieldValueInput]>,
+        parent_links: &[NewRequirementVersionLink],
+    ) -> Result<i32, RepoError> {
+        let requirements = self.requirements.clone();
+        let requirement_versions = self.requirement_versions.clone();
+        let requirement_verification_methods = self.requirement_verification_methods.clone();
+        let custom_field_values = self.custom_field_values.clone();
+        let requirement_version_links = self.requirement_version_links.clone();
+        let next_version_id = self.next_version_id;
+        let next_link_id = self.next_link_id;
+
+        let result = (|| {
+            let id = self.insert_new_requirement(new)?;
+            self.set_requirement_verification_methods(id, verification_method_ids)?;
+            if let Some(values) = custom_fields {
+                if let Some(version_id) = self
+                    .requirements
+                    .get(&id)
+                    .and_then(|req| req.current_version_id)
+                {
+                    let values: Vec<(i32, Option<String>)> = values
+                        .iter()
+                        .map(|v| (v.field_id, v.value.clone()))
+                        .collect();
+                    self.set_custom_field_values_for_version(version_id, &values)?;
+                }
+            }
+            let source_version_id = self
+                .requirements
+                .get(&id)
+                .and_then(|req| req.current_version_id)
+                .ok_or(RepoError::NotFound)?;
+            for link in parent_links {
+                let mut new_link = link.clone();
+                new_link.source_version_id = source_version_id;
+                self.insert_requirement_version_link(&new_link)?;
+            }
+            Ok(id)
+        })();
+
+        if result.is_err() {
+            self.requirements = requirements;
+            self.requirement_versions = requirement_versions;
+            self.requirement_verification_methods = requirement_verification_methods;
+            self.custom_field_values = custom_field_values;
+            self.requirement_version_links = requirement_version_links;
+            self.next_version_id = next_version_id;
+            self.next_link_id = next_link_id;
+        }
+        result
+    }
+
     fn edit_requirement(&mut self, _new: &NewRequirement) -> Result<bool, RepoError> {
         let id = _new.id.ok_or(RepoError::NotFound)?;
         match self.requirements.get_mut(&id) {
@@ -1192,6 +1248,75 @@ impl RequirementsRepository for DieselRepoMock {
             }
             None => Err(RepoError::NotFound),
         }
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn update_requirement_atomic(
+        &mut self,
+        requirement_id: i32,
+        new: &NewRequirement,
+        verification_method_ids: &[i32],
+        custom_fields: Option<&[CustomFieldValueInput]>,
+        parent_links: Option<&[NewRequirementVersionLink]>,
+        suspect_reason: &str,
+        actor_id: i32,
+    ) -> Result<Requirement, RepoError> {
+        let requirements = self.requirements.clone();
+        let requirement_versions = self.requirement_versions.clone();
+        let requirement_verification_methods = self.requirement_verification_methods.clone();
+        let custom_field_values = self.custom_field_values.clone();
+        let requirement_version_links = self.requirement_version_links.clone();
+        let matrices = self.matrices.clone();
+        let next_version_id = self.next_version_id;
+        let next_link_id = self.next_link_id;
+
+        let result = (|| {
+            let updated = self.edit_requirement(new)?;
+            if !updated {
+                return Err(RepoError::NotFound);
+            }
+            self.set_requirement_verification_methods(requirement_id, verification_method_ids)?;
+            let requirement = self.get_requirement_by_id(requirement_id)?;
+            if let Some(values) = custom_fields {
+                if let Some(version_id) = requirement.current_version_id {
+                    let values: Vec<(i32, Option<String>)> = values
+                        .iter()
+                        .map(|v| (v.field_id, v.value.clone()))
+                        .collect();
+                    self.set_custom_field_values_for_version(version_id, &values)?;
+                }
+            }
+            let requirement = self.get_requirement_by_id(requirement_id)?;
+            self.mark_links_suspect_for_requirement(
+                requirement_id,
+                suspect_reason,
+                requirement.current_version_id,
+                Some(actor_id),
+            )?;
+            if let Some(links) = parent_links {
+                if let Some(source_version_id) = requirement.current_version_id {
+                    self.delete_requirement_version_links_by_source_version(source_version_id)?;
+                    for link in links {
+                        let mut new_link = link.clone();
+                        new_link.source_version_id = source_version_id;
+                        self.insert_requirement_version_link(&new_link)?;
+                    }
+                }
+            }
+            self.get_requirement_by_id(requirement_id)
+        })();
+
+        if result.is_err() {
+            self.requirements = requirements;
+            self.requirement_versions = requirement_versions;
+            self.requirement_verification_methods = requirement_verification_methods;
+            self.custom_field_values = custom_field_values;
+            self.requirement_version_links = requirement_version_links;
+            self.matrices = matrices;
+            self.next_version_id = next_version_id;
+            self.next_link_id = next_link_id;
+        }
+        result
     }
 
     fn delete_requirement(&mut self, requirement_id: i32) -> Result<Requirement, RepoError> {
@@ -2409,35 +2534,31 @@ impl RequirementVersionLinksRepository for DieselRepoMock {
             .requirement_versions
             .get(&new.source_version_id)
             .and_then(|rv| self.requirements.get(&rv.requirement_id))
-            .map(|r| r.project_id);
+            .map(|r| r.project_id)
+            .ok_or(RepoError::NotFound)?;
         let tgt_project = self
             .requirement_versions
             .get(&new.target_version_id)
             .and_then(|rv| self.requirements.get(&rv.requirement_id))
-            .map(|r| r.project_id);
-        if let Some(sp) = src_project {
-            if sp != new.project_id {
-                return Err(RepoError::CrossProjectViolation(format!(
-                    "source version {} belongs to project {} but link declares project_id={}",
-                    new.source_version_id, sp, new.project_id
-                )));
-            }
+            .map(|r| r.project_id)
+            .ok_or(RepoError::NotFound)?;
+        if src_project != new.project_id {
+            return Err(RepoError::CrossProjectViolation(format!(
+                "source version {} belongs to project {} but link declares project_id={}",
+                new.source_version_id, src_project, new.project_id
+            )));
         }
-        if let Some(tp) = tgt_project {
-            if tp != new.project_id {
-                return Err(RepoError::CrossProjectViolation(format!(
-                    "target version {} belongs to project {} but link declares project_id={}",
-                    new.target_version_id, tp, new.project_id
-                )));
-            }
+        if tgt_project != new.project_id {
+            return Err(RepoError::CrossProjectViolation(format!(
+                "target version {} belongs to project {} but link declares project_id={}",
+                new.target_version_id, tgt_project, new.project_id
+            )));
         }
-        if let (Some(sp), Some(tp)) = (src_project, tgt_project) {
-            if sp != tp {
-                return Err(RepoError::CrossProjectViolation(format!(
-                    "source version {} (project {}) and target version {} (project {}) are in different projects",
-                    new.source_version_id, sp, new.target_version_id, tp
-                )));
-            }
+        if src_project != tgt_project {
+            return Err(RepoError::CrossProjectViolation(format!(
+                "source version {} (project {}) and target version {} (project {}) are in different projects",
+                new.source_version_id, src_project, new.target_version_id, tgt_project
+            )));
         }
         let id = self.next_link_id;
         self.next_link_id += 1;

@@ -183,7 +183,7 @@ impl<'a> ReqIFService<'a> {
             };
 
             let verification_method_ids = [config.default_verification_method_id];
-            match req_service.create(actor, payload, &verification_method_ids, None) {
+            match req_service.create(actor, payload, &verification_method_ids, None, None) {
                 Ok(id) => {
                     imported_count += 1;
                     imported_requirement_ids.push(id);

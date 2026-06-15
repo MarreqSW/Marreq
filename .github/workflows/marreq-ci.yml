@@ -140,8 +140,10 @@ jobs:
 
       - name: Generate coverage reports
         run: |
-          cargo cov --workspace --cobertura --output-path coverage.xml
-          cargo cov --workspace report --html --output-dir coverage_html
+          cargo cov clean --workspace
+          cargo cov --workspace --no-report
+          cargo cov report --cobertura --output-path coverage.xml
+          cargo cov report --html --output-dir coverage_html
 
       - name: Run workspace tests
         run: cargo test --workspace
@@ -165,7 +167,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Coverage gate
-        run: cargo cov --workspace --no-run --fail-under-lines 70
+        run: cargo cov report --fail-under-lines 70
 
       - name: Upload coverage HTML
         if: always()

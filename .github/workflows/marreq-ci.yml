@@ -90,6 +90,25 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+  backend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust stable
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "ci-build"
+          cache-on-failure: true
+
+      - name: Build workspace (release)
+        run: cargo build --workspace --release
+
   test-and-coverage:
     runs-on: ubuntu-latest
     env:
@@ -97,6 +116,12 @@ jobs:
       DATABASE_URL: postgres://rust:rust@127.0.0.1:5433/marreq
     steps:
       - uses: actions/checkout@v4
+
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          docker system prune -af || true
+          df -h
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libclang-dev
@@ -121,7 +146,7 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: "ci"
+          shared-key: "ci-coverage"
           cache-on-failure: true
 
       - name: Install cargo-llvm-cov
@@ -135,18 +160,12 @@ jobs:
       - name: Initialize database
         run: ./marreq-core/scripts/db_setup.sh
 
-      - name: Build workspace (release)
-        run: cargo build --workspace --release
-
       - name: Generate coverage reports
         run: |
           cargo cov clean --workspace
           cargo cov --workspace --no-report
           cargo cov report --cobertura --output-path coverage.xml
           cargo cov report --html --output-dir coverage_html
-
-      - name: Run workspace tests
-        run: cargo test --workspace
 
       - name: Build coverage summary (Markdown)
         uses: irongut/CodeCoverageSummary@v1.3.0
@@ -164,7 +183,7 @@ jobs:
         uses: mshick/add-pr-comment@v2
         with:
           message-path: code-coverage-results.md
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ github.token }}
 
       - name: Coverage gate
         run: cargo cov report --fail-under-lines 70

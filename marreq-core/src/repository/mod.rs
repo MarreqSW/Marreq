@@ -133,7 +133,25 @@ pub trait RequirementsRepository {
     ) -> Result<(), RepoError>;
 
     fn insert_new_requirement(&mut self, new: &NewRequirement) -> Result<i32, RepoError>;
+    fn create_requirement_atomic(
+        &mut self,
+        new: &NewRequirement,
+        verification_method_ids: &[i32],
+        custom_fields: Option<&[CustomFieldValueInput]>,
+        parent_links: &[NewRequirementVersionLink],
+    ) -> Result<i32, RepoError>;
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError>;
+    #[allow(clippy::too_many_arguments)]
+    fn update_requirement_atomic(
+        &mut self,
+        requirement_id: i32,
+        new: &NewRequirement,
+        verification_method_ids: &[i32],
+        custom_fields: Option<&[CustomFieldValueInput]>,
+        parent_links: Option<&[NewRequirementVersionLink]>,
+        suspect_reason: &str,
+        actor_id: i32,
+    ) -> Result<Requirement, RepoError>;
     fn delete_requirement(&mut self, requirement_id: i32) -> Result<Requirement, RepoError>;
     fn update_requirement(&mut self, requirement_id: i32) -> Result<(), RepoError>;
 

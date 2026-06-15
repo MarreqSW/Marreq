@@ -8,7 +8,7 @@ export default defineConfig({
   root: __dirname,
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './frontend/static/js'),
+      '@': path.resolve(__dirname, './frontend/src'),
       '@modules': path.resolve(__dirname, './frontend/static/js/modules'),
       '@pages': path.resolve(__dirname, './frontend/static/js/pages'),
       '@core': path.resolve(__dirname, './frontend/static/js/core'),

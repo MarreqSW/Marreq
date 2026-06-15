@@ -2,6 +2,8 @@
  * Global test setup for Vitest
  */
 
+import '@testing-library/jest-dom/vitest';
+
 // Keep reference to real console before mocking to avoid recursion
 const realConsole = { ...console };
 

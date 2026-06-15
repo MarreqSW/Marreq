@@ -11,12 +11,12 @@ use crate::models::entities::{
     Verification, VerificationMethod, VerificationStatus,
 };
 use crate::models::forms::{
-    CustomFieldDefinitionPayload, NewApplicability, NewBaselineRequirement, NewBaselineRow,
-    NewBaselineTraceability, NewBaselineVerification, NewCategory, NewCustomFieldDefinitionRow,
-    NewGroupMember, NewGroupRow, NewLog, NewMatrixLink, NewNotification, NewNotificationPreference,
-    NewProjectMember, NewProjectRow, NewRequirement, NewRequirementContainer, NewRequirementStatus,
-    NewUser, NewVerification, NewVerificationMethod, NewVerificationStatus, UpdateGroup,
-    UpdateProject, UpdateUser,
+    CustomFieldDefinitionPayload, CustomFieldValueInput, NewApplicability, NewBaselineRequirement,
+    NewBaselineRow, NewBaselineTraceability, NewBaselineVerification, NewCategory,
+    NewCustomFieldDefinitionRow, NewGroupMember, NewGroupRow, NewLog, NewMatrixLink,
+    NewNotification, NewNotificationPreference, NewProjectMember, NewProjectRow, NewRequirement,
+    NewRequirementContainer, NewRequirementStatus, NewUser, NewVerification, NewVerificationMethod,
+    NewVerificationStatus, UpdateGroup, UpdateProject, UpdateUser,
 };
 use crate::namespaces::TAKEN_NAMESPACE_MESSAGE;
 use crate::repository::{
@@ -1271,6 +1271,82 @@ impl RequirementsRepository for DieselRepo {
         })
     }
 
+    fn create_requirement_atomic(
+        &mut self,
+        new: &NewRequirement,
+        verification_method_ids: &[i32],
+        custom_fields: Option<&[CustomFieldValueInput]>,
+        parent_links: &[NewRequirementVersionLink],
+    ) -> Result<i32, RepoError> {
+        use schema::custom_field_values;
+        use schema::requirement_version_links;
+        use schema::requirement_version_verification_methods;
+        use schema::requirement_versions;
+        use schema::requirements;
+        let mut conn = self.get_conn()?;
+        conn.as_mut().transaction::<i32, RepoError, _>(|conn| {
+            let container = NewRequirementContainer {
+                project_id: new.project_id,
+                stable_code: new.reference_code.clone(),
+                current_version_id: None,
+            };
+            let req_id: i32 = diesel::insert_into(requirements::table)
+                .values(&container)
+                .returning(requirements::id)
+                .get_result(conn)?;
+            let version = new.to_new_version(req_id);
+            let (version_id, version_created_at): (i32, chrono::NaiveDateTime) =
+                diesel::insert_into(requirement_versions::table)
+                    .values(&version)
+                    .returning((requirement_versions::id, requirement_versions::created_at))
+                    .get_result(conn)?;
+            diesel::update(requirements::table.filter(requirements::id.eq(req_id)))
+                .set((
+                    requirements::current_version_id.eq(version_id),
+                    requirements::first_created_at.eq(version_created_at),
+                ))
+                .execute(conn)?;
+            for &verification_method_id in verification_method_ids {
+                if verification_method_id <= 0 {
+                    continue;
+                }
+                diesel::insert_into(requirement_version_verification_methods::table)
+                    .values((
+                        requirement_version_verification_methods::requirement_version_id
+                            .eq(version_id),
+                        requirement_version_verification_methods::verification_method_id
+                            .eq(verification_method_id),
+                    ))
+                    .execute(conn)
+                    .map_err(map_db_error)?;
+            }
+            if let Some(values) = custom_fields {
+                for field in values {
+                    if field.field_id <= 0 {
+                        continue;
+                    }
+                    diesel::insert_into(custom_field_values::table)
+                        .values((
+                            custom_field_values::requirement_version_id.eq(version_id),
+                            custom_field_values::custom_field_definition_id.eq(field.field_id),
+                            custom_field_values::value.eq(field.value.as_deref()),
+                        ))
+                        .execute(conn)
+                        .map_err(map_db_error)?;
+                }
+            }
+            for link in parent_links {
+                let mut new_link = link.clone();
+                new_link.source_version_id = version_id;
+                diesel::insert_into(requirement_version_links::table)
+                    .values(&new_link)
+                    .execute(conn)
+                    .map_err(map_db_error)?;
+            }
+            Ok(req_id)
+        })
+    }
+
     fn get_verification_method_ids_for_requirement(
         &self,
         requirement_id: i32,
@@ -1410,6 +1486,153 @@ impl RequirementsRepository for DieselRepo {
             .execute(conn)?;
             Ok(affected > 0)
         })
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn update_requirement_atomic(
+        &mut self,
+        requirement_id: i32,
+        new: &NewRequirement,
+        verification_method_ids: &[i32],
+        custom_fields: Option<&[CustomFieldValueInput]>,
+        parent_links: Option<&[NewRequirementVersionLink]>,
+        suspect_reason: &str,
+        actor_id: i32,
+    ) -> Result<Requirement, RepoError> {
+        use schema::custom_field_values;
+        use schema::matrix;
+        use schema::requirement_version_links;
+        use schema::requirement_version_verification_methods;
+        use schema::requirement_versions;
+        use schema::requirements;
+        let mut conn = self.get_conn()?;
+        conn.as_mut()
+            .transaction::<Requirement, RepoError, _>(|conn| {
+                let (container, old_version): (RequirementContainer, RequirementVersion) =
+                    requirements::table
+                        .inner_join(
+                            requirement_versions::table.on(requirements::current_version_id
+                                .eq(requirement_versions::id.nullable())),
+                        )
+                        .filter(requirements::id.eq(requirement_id))
+                        .select((
+                            RequirementContainer::as_select(),
+                            RequirementVersion::as_select(),
+                        ))
+                        .get_result(conn)
+                        .map_err(|e| {
+                            if e == diesel::result::Error::NotFound {
+                                RepoError::NotFound
+                            } else {
+                                e.into()
+                            }
+                        })?;
+                let version = new.to_new_version(requirement_id);
+                let new_version_id: i32 = diesel::insert_into(requirement_versions::table)
+                    .values(&version)
+                    .returning(requirement_versions::id)
+                    .get_result(conn)?;
+                let affected =
+                    diesel::update(requirements::table.filter(requirements::id.eq(requirement_id)))
+                        .set(requirements::current_version_id.eq(new_version_id))
+                        .execute(conn)?;
+                if affected == 0 {
+                    return Err(RepoError::NotFound);
+                }
+                diesel::update(
+                    requirement_version_links::table
+                        .filter(requirement_version_links::source_version_id.eq(old_version.id)),
+                )
+                .set(requirement_version_links::source_version_id.eq(new_version_id))
+                .execute(conn)?;
+                diesel::update(
+                    requirement_version_links::table
+                        .filter(requirement_version_links::target_version_id.eq(old_version.id)),
+                )
+                .set(requirement_version_links::target_version_id.eq(new_version_id))
+                .execute(conn)?;
+                diesel::delete(
+                    requirement_version_verification_methods::table.filter(
+                        requirement_version_verification_methods::requirement_version_id
+                            .eq(new_version_id),
+                    ),
+                )
+                .execute(conn)?;
+                for &verification_method_id in verification_method_ids {
+                    if verification_method_id <= 0 {
+                        continue;
+                    }
+                    diesel::insert_into(requirement_version_verification_methods::table)
+                        .values((
+                            requirement_version_verification_methods::requirement_version_id
+                                .eq(new_version_id),
+                            requirement_version_verification_methods::verification_method_id
+                                .eq(verification_method_id),
+                        ))
+                        .execute(conn)
+                        .map_err(map_db_error)?;
+                }
+                if let Some(values) = custom_fields {
+                    diesel::delete(
+                        custom_field_values::table
+                            .filter(custom_field_values::requirement_version_id.eq(new_version_id)),
+                    )
+                    .execute(conn)?;
+                    for field in values {
+                        if field.field_id <= 0 {
+                            continue;
+                        }
+                        diesel::insert_into(custom_field_values::table)
+                            .values((
+                                custom_field_values::requirement_version_id.eq(new_version_id),
+                                custom_field_values::custom_field_definition_id.eq(field.field_id),
+                                custom_field_values::value.eq(field.value.as_deref()),
+                            ))
+                            .execute(conn)
+                            .map_err(map_db_error)?;
+                    }
+                }
+                let now = chrono::Utc::now().naive_utc();
+                diesel::update(matrix::table.filter(matrix::req_id.eq(requirement_id)))
+                    .set((
+                        matrix::suspect.eq(true),
+                        matrix::suspect_at.eq(now),
+                        matrix::suspect_reason.eq(suspect_reason),
+                        matrix::cleared_by.eq(Option::<i32>::None),
+                        matrix::cleared_at.eq(Option::<chrono::NaiveDateTime>::None),
+                        matrix::triggering_version_id.eq(Some(new_version_id)),
+                        matrix::triggering_user_id.eq(Some(actor_id)),
+                    ))
+                    .execute(conn)?;
+                if let Some(links) = parent_links {
+                    diesel::delete(
+                        requirement_version_links::table.filter(
+                            requirement_version_links::source_version_id.eq(new_version_id),
+                        ),
+                    )
+                    .execute(conn)?;
+                    for link in links {
+                        let mut new_link = link.clone();
+                        new_link.source_version_id = new_version_id;
+                        diesel::insert_into(requirement_version_links::table)
+                            .values(&new_link)
+                            .execute(conn)
+                            .map_err(map_db_error)?;
+                    }
+                }
+                let new_version = requirement_versions::table
+                    .filter(requirement_versions::id.eq(new_version_id))
+                    .select(RequirementVersion::as_select())
+                    .get_result(conn)?;
+                Ok(requirement_from_current(
+                    &RequirementContainer {
+                        current_version_id: Some(new_version_id),
+                        stable_code: new.reference_code.clone(),
+                        ..container
+                    },
+                    &new_version,
+                ))
+            })
     }
 
     fn delete_requirement(&mut self, requirement_id: i32) -> Result<Requirement, RepoError> {

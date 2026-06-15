@@ -11,9 +11,10 @@
 mod common;
 
 use common::cloud_client;
+use marreq_core::auth::csrf::{CSRF_COOKIE, CSRF_HEADER};
 use marreq_core::auth::session::test_session_cookie_for;
 use marreq_core::repository::UserRepository;
-use rocket::http::{ContentType, Status};
+use rocket::http::{ContentType, Cookie, Header, Status};
 use serde_json::{json, Value};
 
 // ============================================================================
@@ -168,11 +169,16 @@ async fn admin_user_creation_via_api_returns_gone_in_cloud_mode() {
 
     // Build a session cookie so the request is authenticated as admin.
     let auth_cookie = test_session_cookie_for(state, admin_id);
+    let csrf_token = "cloud-mode-admin-user-create-disabled-test-token";
+    let mut csrf_cookie = Cookie::new(CSRF_COOKIE, csrf_token);
+    csrf_cookie.set_path("/");
 
     let response = client
         .post("/api/users")
         .header(ContentType::JSON)
+        .header(Header::new(CSRF_HEADER, csrf_token))
         .private_cookie(auth_cookie)
+        .private_cookie(csrf_cookie)
         .body(
             json!({
                 "username": "bob",

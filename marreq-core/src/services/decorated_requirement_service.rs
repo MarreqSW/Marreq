@@ -122,7 +122,7 @@ impl<'a> DecoratedRequirementService<'a> {
         verification_method_ids: &[i32],
     ) -> Result<i32, RepoError> {
         self.requirement_service
-            .create(actor, payload, verification_method_ids, None)
+            .create(actor, payload, verification_method_ids, None, None)
     }
 
     /// Update an existing requirement entry and log the change.

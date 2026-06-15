@@ -38,6 +38,9 @@
     "lodash": "4.17.23"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@vitest/coverage-v8": "^4.0.18",
     "@vitest/ui": "^4.0.18",
     "commitizen": "^4.3.1",
@@ -45,6 +48,10 @@
     "happy-dom": "^20.8.3",
     "playwright": "^1.58.2",
     "purgecss": "^8.0.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^6.30.4",
+    "reactflow": "^11.11.4",
     "stylelint": "^17.4.0",
     "stylelint-config-standard": "^40.0.0",
     "stylelint-order": "^7.0.1",

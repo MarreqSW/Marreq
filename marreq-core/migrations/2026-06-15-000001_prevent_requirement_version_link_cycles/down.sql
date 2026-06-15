@@ -1,0 +1,2 @@
+DROP TRIGGER IF EXISTS trg_prevent_requirement_version_link_cycles ON requirement_version_links;
+DROP FUNCTION IF EXISTS prevent_requirement_version_link_cycles();

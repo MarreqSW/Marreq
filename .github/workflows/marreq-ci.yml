@@ -60,7 +60,11 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Install root test dependencies
+        run: npm ci
+
+      - name: Install frontend test dependencies
+        working-directory: frontend
         run: npm ci
 
       - name: Run JavaScript tests

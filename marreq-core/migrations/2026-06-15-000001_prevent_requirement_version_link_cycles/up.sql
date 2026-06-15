@@ -13,7 +13,9 @@ BEGIN
     END IF;
 
     IF NEW.source_version_id = NEW.target_version_id THEN
-        RAISE EXCEPTION '[requirement_version_links_cycle] source_version_id and target_version_id must differ';
+        RAISE EXCEPTION 'source_version_id and target_version_id must differ'
+            USING ERRCODE = '23514',
+                  CONSTRAINT = 'requirement_version_links_no_self_link';
     END IF;
 
     WITH RECURSIVE ancestors(version_id) AS (
@@ -38,7 +40,9 @@ BEGIN
     ) INTO cycle_found;
 
     IF cycle_found THEN
-        RAISE EXCEPTION '[requirement_version_links_cycle] creating this link would introduce a cycle in requirement version links';
+        RAISE EXCEPTION 'creating this link would introduce a cycle in requirement version links'
+            USING ERRCODE = '23514',
+                  CONSTRAINT = 'requirement_version_links_no_cycles';
     END IF;
 
     RETURN NEW;

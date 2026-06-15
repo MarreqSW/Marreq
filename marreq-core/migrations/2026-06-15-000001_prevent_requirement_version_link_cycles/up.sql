@@ -6,7 +6,12 @@ CREATE OR REPLACE FUNCTION prevent_requirement_version_link_cycles()
 RETURNS trigger AS $$
 DECLARE
     cycle_found boolean;
+    excluded_link_id integer := NULL;
 BEGIN
+    IF TG_OP = 'UPDATE' THEN
+        excluded_link_id := OLD.id;
+    END IF;
+
     IF NEW.source_version_id = NEW.target_version_id THEN
         RAISE EXCEPTION '[requirement_version_links_cycle] source_version_id and target_version_id must differ';
     END IF;
@@ -16,7 +21,7 @@ BEGIN
         FROM requirement_version_links rvl
         WHERE rvl.source_version_id = NEW.target_version_id
           AND rvl.project_id = NEW.project_id
-          AND (TG_OP <> 'UPDATE' OR rvl.id <> OLD.id)
+          AND (excluded_link_id IS NULL OR rvl.id <> excluded_link_id)
 
         UNION
 
@@ -24,7 +29,7 @@ BEGIN
         FROM requirement_version_links rvl
         INNER JOIN ancestors a ON rvl.source_version_id = a.version_id
         WHERE rvl.project_id = NEW.project_id
-          AND (TG_OP <> 'UPDATE' OR rvl.id <> OLD.id)
+          AND (excluded_link_id IS NULL OR rvl.id <> excluded_link_id)
     )
     SELECT EXISTS (
         SELECT 1

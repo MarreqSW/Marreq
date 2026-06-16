@@ -13,7 +13,6 @@ pub use crate::permissions::Permission;
 pub use crate::repository::ProjectReviewersRepository;
 pub use crate::repository::RepoLockExt;
 
-/// Require the user to have the given project permission; returns `Err(ApiError::Forbidden)` otherwise.
 pub fn require_project_permission(
     state: &State<AppState>,
     user: &crate::models::User,
@@ -24,8 +23,6 @@ pub fn require_project_permission(
     crate::authorization::require_project_permission(&*repo, user, project_id, permission)
 }
 
-/// Require the user to be a designated project reviewer (or global admin). Fails if the project has
-/// no reviewers configured (except for admins).
 pub fn require_project_reviewer(
     state: &State<AppState>,
     user: &crate::models::User,
@@ -35,7 +32,6 @@ pub fn require_project_reviewer(
     crate::authorization::require_project_reviewer(&*repo, user, project_id)
 }
 
-/// On create, authors may pick only the draft-like (or lexicographically first) requirement status without being a reviewer.
 pub fn require_project_reviewer_unless_requirement_create_status_is_draft_like(
     state: &State<AppState>,
     user: &crate::models::User,
@@ -44,11 +40,10 @@ pub fn require_project_reviewer_unless_requirement_create_status_is_draft_like(
 ) -> ApiResult<()> {
     let repo = state.repo_read();
     crate::authorization::require_project_reviewer_unless_requirement_create_status_is_draft_like(
-        &*repo, project_id, user, status_id,
+        &*repo, user, project_id, status_id,
     )
 }
 
-/// On create, authors may pick only the initial (e.g. Not Run / minimum id) verification status without being a reviewer.
 pub fn require_project_reviewer_unless_verification_create_status_is_initial(
     state: &State<AppState>,
     user: &crate::models::User,

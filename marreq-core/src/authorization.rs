@@ -91,8 +91,7 @@ where
     let statuses = repo
         .get_requirement_status_by_project(project_id)
         .map_err(ApiError::from)?;
-    let allowed = author_default_requirement_status_id(&statuses)
-        .is_some_and(|id| id == status_id);
+    let allowed = author_default_requirement_status_id(&statuses).is_some_and(|id| id == status_id);
     if allowed {
         Ok(())
     } else {
@@ -199,11 +198,10 @@ mod tests {
     fn project_permission_allows_matching_role() {
         let user = user(7, false);
         let mut repo = DieselRepoMock::default();
-        repo.project_members.push(project_member(10, 7, ROLE_VIEWER));
+        repo.project_members
+            .push(project_member(10, 7, ROLE_VIEWER));
 
-        assert!(
-            require_project_permission(&repo, &user, 10, Permission::ViewRequirements).is_ok()
-        );
+        assert!(require_project_permission(&repo, &user, 10, Permission::ViewRequirements).is_ok());
     }
 
     #[test]
@@ -221,7 +219,8 @@ mod tests {
     fn validate_entity_access_uses_view_permission() {
         let user = user(7, false);
         let mut repo = DieselRepoMock::default();
-        repo.project_members.push(project_member(10, 7, ROLE_VIEWER));
+        repo.project_members
+            .push(project_member(10, 7, ROLE_VIEWER));
 
         assert!(validate_entity_access(&repo, &user, 10).is_ok());
         assert!(matches!(

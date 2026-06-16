@@ -91,7 +91,8 @@ where
     let statuses = repo
         .get_requirement_status_by_project(project_id)
         .map_err(ApiError::from)?;
-    let allowed = author_default_requirement_status_id(&statuses).is_some_and(|id| id == status_id);
+    let allowed = author_default_requirement_status_id(&statuses)
+        .is_some_and(|id| id == status_id);
     if allowed {
         Ok(())
     } else {
@@ -200,7 +201,9 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         repo.project_members.push(project_member(10, 7, ROLE_VIEWER));
 
-        assert!(require_project_permission(&repo, &user, 10, Permission::ViewRequirements).is_ok());
+        assert!(
+            require_project_permission(&repo, &user, 10, Permission::ViewRequirements).is_ok()
+        );
     }
 
     #[test]
@@ -257,9 +260,12 @@ mod tests {
     fn group_permission_allows_and_denies() {
         let user = user(7, false);
         let mut repo = DieselRepoMock::default();
-        repo.group_members.push(group_member(20, 7, GROUP_ROLE_OWNER));
+        repo.group_members
+            .push(group_member(20, 7, GROUP_ROLE_OWNER));
 
-        assert!(require_group_permission(&repo, &user, 20, GroupPermission::ManageGroupMembers).is_ok());
+        assert!(
+            require_group_permission(&repo, &user, 20, GroupPermission::ManageGroupMembers).is_ok()
+        );
         assert!(matches!(
             require_group_permission(&repo, &user, 21, GroupPermission::ManageGroupMembers),
             Err(ApiError::Forbidden(_))

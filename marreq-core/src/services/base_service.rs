@@ -10,7 +10,7 @@
 
 use crate::api::error::{ApiError, ApiResult};
 use crate::models::User;
-use crate::permissions::{has_permission, Permission};
+use crate::permissions::Permission;
 use crate::repository::ProjectMembersRepository;
 
 /// Serialize a value into JSON so it can be stored in the audit log.
@@ -31,11 +31,7 @@ pub fn check_project_permission<R>(
 where
     R: ProjectMembersRepository,
 {
-    if has_permission(repo, user, project_id, permission) {
-        Ok(())
-    } else {
-        Err(ApiError::Forbidden("permission denied".into()))
-    }
+    crate::authorization::require_project_permission(repo, user, project_id, permission)
 }
 
 /// Validate that a user may access an entity belonging to `entity_project_id` (at least view).
@@ -43,5 +39,5 @@ pub fn validate_entity_access<R>(repo: &R, user: &User, entity_project_id: i32) 
 where
     R: ProjectMembersRepository,
 {
-    check_project_permission(repo, user, entity_project_id, Permission::ViewRequirements)
+    crate::authorization::validate_entity_access(repo, user, entity_project_id)
 }

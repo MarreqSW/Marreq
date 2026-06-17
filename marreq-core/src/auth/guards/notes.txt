@@ -1,1 +1,0 @@
-Auth guard modules are split by responsibility. Public guard types continue to be re-exported from mod.rs for existing call sites.

@@ -14,7 +14,7 @@ mod group;
 mod html;
 mod project;
 mod route_params;
-mod session;
+pub(crate) mod session;
 
 pub use admin::AdminOnly;
 pub use api::ApiUser;

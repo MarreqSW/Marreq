@@ -14,7 +14,7 @@ use crate::auth::guards::SessionUser;
 use crate::models::User;
 use crate::permissions::{has_group_permission, GroupPermission};
 use crate::repository::errors::RepoError;
-use crate::repository::{GroupMembersRepository, GroupsRepository};
+use crate::repository::GroupsRepository;
 
 /// Request guard that ensures the user can view the addressed group page.
 pub struct HtmlGroupAccess {

@@ -6,7 +6,8 @@ use rocket::serde::{Deserialize, Serialize};
 use crate::api::prelude::*;
 use crate::auth::guards::ProjectAccessOrBearer;
 use crate::models::{
-    NewRequirement, Requirement, RequirementVersion, RequirementVersionLink, Verification,
+    CustomFieldValueInput, NewRequirement, Requirement, RequirementVersion, RequirementVersionLink,
+    Verification,
 };
 use crate::repository::RequirementsRepository;
 use crate::services::RequirementService;
@@ -56,7 +57,7 @@ pub struct RequirementCreateRequest {
     #[serde(default)]
     pub verification_method_ids: Vec<i32>,
     #[serde(default)]
-    pub custom_fields: Vec<crate::models::CustomFieldValueInput>,
+    pub custom_fields: Vec<CustomFieldValueInput>,
     #[serde(default)]
     pub parent_links: Vec<ParentLinkInput>,
 }
@@ -84,7 +85,129 @@ pub struct RequirementPatch {
     pub reviewer_id: Option<i32>,
     pub category_id: Option<i32>,
     pub applicability_id: Option<i32>,
-    pub custom_fields: Option<Vec<crate::models::CustomFieldValueInput>>,
+    pub custom_fields: Option<Vec<CustomFieldValueInput>>,
+}
+
+type ParentLinkCommand = (i32, String, Option<String>);
+
+struct CreateRequirementCommand {
+    requirement: NewRequirement,
+    verification_method_ids: Vec<i32>,
+    custom_fields: Vec<CustomFieldValueInput>,
+    parent_links: Vec<ParentLinkCommand>,
+}
+
+struct UpdateRequirementCommand {
+    requirement: NewRequirement,
+    verification_method_ids: Vec<i32>,
+    custom_fields: Option<Vec<CustomFieldValueInput>>,
+}
+
+impl RequirementPatch {
+    fn has_updates(&self) -> bool {
+        self.title.is_some()
+            || self.description.is_some()
+            || self.status_id.is_some()
+            || self.verification_method_ids.is_some()
+            || self.author_id.is_some()
+            || self.reviewer_id.is_some()
+            || self.category_id.is_some()
+            || self.applicability_id.is_some()
+            || self.custom_fields.is_some()
+    }
+}
+
+fn filter_positive_ids(ids: Vec<i32>) -> Vec<i32> {
+    ids.into_iter().filter(|&id| id > 0).collect()
+}
+
+fn require_patch_updates(patch: &RequirementPatch) -> ApiResult<()> {
+    if patch.has_updates() {
+        Ok(())
+    } else {
+        Err(ApiError::BadRequest("no fields provided".into()))
+    }
+}
+
+fn build_new_requirement_command(
+    payload: RequirementCreateRequest,
+) -> ApiResult<CreateRequirementCommand> {
+    let verification_method_ids = filter_positive_ids(payload.verification_method_ids);
+    if verification_method_ids.is_empty() {
+        return Err(ApiError::BadRequest(
+            "at least one verification_method_id required".into(),
+        ));
+    }
+
+    let requirement = NewRequirement {
+        id: None,
+        title: payload.title,
+        description: payload.description,
+        author_id: payload.author_id,
+        category_id: payload.category_id,
+        status_id: payload.status_id,
+        reference_code: payload.reference_code,
+        reviewer_id: payload.reviewer_id,
+        applicability_id: payload.applicability_id,
+        justification: payload.justification,
+        project_id: payload.project_id,
+    };
+
+    let parent_links = payload
+        .parent_links
+        .into_iter()
+        .map(|pl| (pl.target_version_id, pl.link_type, pl.rationale))
+        .collect();
+
+    Ok(CreateRequirementCommand {
+        requirement,
+        verification_method_ids,
+        custom_fields: payload.custom_fields,
+        parent_links,
+    })
+}
+
+fn apply_requirement_patch(
+    requirement: Requirement,
+    patch: RequirementPatch,
+    default_verification_method_ids: Vec<i32>,
+) -> ApiResult<UpdateRequirementCommand> {
+    require_patch_updates(&patch)?;
+
+    let RequirementPatch {
+        title,
+        description,
+        status_id,
+        verification_method_ids,
+        author_id,
+        reviewer_id,
+        category_id,
+        applicability_id,
+        custom_fields,
+    } = patch;
+
+    let verification_method_ids =
+        filter_positive_ids(verification_method_ids.unwrap_or(default_verification_method_ids));
+
+    let requirement = NewRequirement {
+        id: Some(requirement.id),
+        title: title.unwrap_or(requirement.title),
+        description: description.unwrap_or(requirement.description),
+        author_id: author_id.unwrap_or(requirement.author_id),
+        category_id: category_id.unwrap_or(requirement.category_id),
+        status_id: status_id.unwrap_or(requirement.status_id),
+        reference_code: requirement.reference_code,
+        reviewer_id: reviewer_id.unwrap_or(requirement.reviewer_id),
+        applicability_id: applicability_id.unwrap_or(requirement.applicability_id),
+        justification: requirement.justification,
+        project_id: requirement.project_id,
+    };
+
+    Ok(UpdateRequirementCommand {
+        requirement,
+        verification_method_ids,
+        custom_fields,
+    })
 }
 
 #[get("/requirements")]
@@ -345,49 +468,22 @@ pub async fn create(
         payload.project_id,
         payload.status_id,
     )?;
-    let verification_method_ids: Vec<i32> = payload
-        .verification_method_ids
-        .into_iter()
-        .filter(|&id| id > 0)
-        .collect();
-    if verification_method_ids.is_empty() {
-        return Err(ApiError::BadRequest(
-            "at least one verification_method_id required".into(),
-        ));
-    }
-    let new_req = NewRequirement {
-        id: None,
-        title: payload.title,
-        description: payload.description,
-        author_id: payload.author_id,
-        category_id: payload.category_id,
-        status_id: payload.status_id,
-        reference_code: payload.reference_code,
-        reviewer_id: payload.reviewer_id,
-        applicability_id: payload.applicability_id,
-        justification: payload.justification,
-        project_id: payload.project_id,
-    };
+
+    let CreateRequirementCommand {
+        requirement,
+        verification_method_ids,
+        custom_fields,
+        parent_links,
+    } = build_new_requirement_command(payload)?;
     let service = RequirementService::new(state.inner());
-    let custom_fields = if payload.custom_fields.is_empty() {
+    let custom_fields = if custom_fields.is_empty() {
         None
     } else {
-        Some(payload.custom_fields.as_slice())
+        Some(custom_fields.as_slice())
     };
-    let parent_links = payload
-        .parent_links
-        .iter()
-        .map(|pl| {
-            (
-                pl.target_version_id,
-                pl.link_type.clone(),
-                pl.rationale.clone(),
-            )
-        })
-        .collect::<Vec<_>>();
     let id = service.create(
         user.user(),
-        new_req,
+        requirement,
         &verification_method_ids,
         custom_fields,
         Some(parent_links),
@@ -411,83 +507,37 @@ pub async fn patch_requirement(
     patch: Json<RequirementPatch>,
 ) -> ApiResult<Value> {
     let patch = patch.into_inner();
-    let any_updates = patch.title.is_some()
-        || patch.description.is_some()
-        || patch.status_id.is_some()
-        || patch.verification_method_ids.is_some()
-        || patch.author_id.is_some()
-        || patch.reviewer_id.is_some()
-        || patch.category_id.is_some()
-        || patch.applicability_id.is_some()
-        || patch.custom_fields.is_some();
-
-    if !any_updates {
-        return Err(ApiError::BadRequest("no fields provided".into()));
-    }
-
+    require_patch_updates(&patch)?;
+    let status_id_is_changed = patch.status_id.is_some();
     let service = RequirementService::new(state.inner());
-    let mut requirement = service.get_by_id(id)?;
+    let requirement = service.get_by_id(id)?;
     require_project_permission(
         state,
         user.user(),
         requirement.project_id,
         Permission::EditRequirements,
     )?;
-    if patch.status_id.is_some() {
+    if status_id_is_changed {
         require_project_reviewer(state, user.user(), requirement.project_id)?;
     }
 
-    if let Some(v) = patch.title {
-        requirement.title = v;
-    }
-    if let Some(v) = patch.description {
-        requirement.description = v;
-    }
-    if let Some(v) = patch.status_id {
-        requirement.status_id = v;
-    }
-    if let Some(v) = patch.author_id {
-        requirement.author_id = v;
-    }
-    if let Some(v) = patch.reviewer_id {
-        requirement.reviewer_id = v;
-    }
-    if let Some(v) = patch.category_id {
-        requirement.category_id = v;
-    }
-    if let Some(v) = patch.applicability_id {
-        requirement.applicability_id = v;
-    }
-
-    let verification_method_ids = patch
-        .verification_method_ids
-        .unwrap_or_else(|| service.get_verification_method_ids(id).unwrap_or_default());
-    let verification_method_ids: Vec<i32> = verification_method_ids
-        .into_iter()
-        .filter(|&vid| vid > 0)
-        .collect();
-
-    let payload = NewRequirement {
-        id: Some(requirement.id),
-        title: requirement.title.clone(),
-        description: requirement.description.clone(),
-        author_id: requirement.author_id,
-        category_id: requirement.category_id,
-        status_id: requirement.status_id,
-        reference_code: requirement.reference_code.clone(),
-        reviewer_id: requirement.reviewer_id,
-        applicability_id: requirement.applicability_id,
-        justification: requirement.justification.clone(),
-        project_id: requirement.project_id,
+    let default_verification_method_ids = if patch.verification_method_ids.is_some() {
+        Vec::new()
+    } else {
+        service.get_verification_method_ids(id).unwrap_or_default()
     };
+    let UpdateRequirementCommand {
+        requirement: payload,
+        verification_method_ids,
+        custom_fields,
+    } = apply_requirement_patch(requirement, patch, default_verification_method_ids)?;
 
-    let custom_fields = patch.custom_fields.as_deref();
     service.update(
         user.user(),
         id,
         payload,
         &verification_method_ids,
-        custom_fields,
+        custom_fields.as_deref(),
         None,
     )?;
 
@@ -523,49 +573,22 @@ pub async fn create_by_project(
         project_id,
         payload.status_id,
     )?;
-    let verification_method_ids: Vec<i32> = payload
-        .verification_method_ids
-        .into_iter()
-        .filter(|&id| id > 0)
-        .collect();
-    if verification_method_ids.is_empty() {
-        return Err(ApiError::BadRequest(
-            "at least one verification_method_id required".into(),
-        ));
-    }
-    let new_req = NewRequirement {
-        id: None,
-        title: payload.title,
-        description: payload.description,
-        author_id: payload.author_id,
-        category_id: payload.category_id,
-        status_id: payload.status_id,
-        reference_code: payload.reference_code,
-        reviewer_id: payload.reviewer_id,
-        applicability_id: payload.applicability_id,
-        justification: payload.justification,
-        project_id: payload.project_id,
-    };
+
+    let CreateRequirementCommand {
+        requirement,
+        verification_method_ids,
+        custom_fields,
+        parent_links,
+    } = build_new_requirement_command(payload)?;
     let service = RequirementService::new(state.inner());
-    let custom_fields = if payload.custom_fields.is_empty() {
+    let custom_fields = if custom_fields.is_empty() {
         None
     } else {
-        Some(payload.custom_fields.as_slice())
+        Some(custom_fields.as_slice())
     };
-    let parent_links = payload
-        .parent_links
-        .iter()
-        .map(|pl| {
-            (
-                pl.target_version_id,
-                pl.link_type.clone(),
-                pl.rationale.clone(),
-            )
-        })
-        .collect::<Vec<_>>();
     let id = service.create(
         access.user(),
-        new_req,
+        requirement,
         &verification_method_ids,
         custom_fields,
         Some(parent_links),
@@ -589,74 +612,34 @@ pub async fn patch_by_project(
         Permission::EditRequirements,
     )?;
     let patch = patch.into_inner();
-    let any_updates = patch.title.is_some()
-        || patch.description.is_some()
-        || patch.status_id.is_some()
-        || patch.verification_method_ids.is_some()
-        || patch.author_id.is_some()
-        || patch.reviewer_id.is_some()
-        || patch.category_id.is_some()
-        || patch.applicability_id.is_some()
-        || patch.custom_fields.is_some();
-    if !any_updates {
-        return Err(ApiError::BadRequest("no fields provided".into()));
-    }
+    require_patch_updates(&patch)?;
+    let status_id_is_changed = patch.status_id.is_some();
     let service = RequirementService::new(state.inner());
-    let mut requirement = service.get_by_id(id)?;
+    let requirement = service.get_by_id(id)?;
     if requirement.project_id != project_id {
         return Err(ApiError::NotFound("requirement not in project".into()));
     }
-    if patch.status_id.is_some() {
+    if status_id_is_changed {
         require_project_reviewer(state, access.user(), project_id)?;
     }
-    if let Some(v) = patch.title {
-        requirement.title = v;
-    }
-    if let Some(v) = patch.description {
-        requirement.description = v;
-    }
-    if let Some(v) = patch.status_id {
-        requirement.status_id = v;
-    }
-    if let Some(v) = patch.author_id {
-        requirement.author_id = v;
-    }
-    if let Some(v) = patch.reviewer_id {
-        requirement.reviewer_id = v;
-    }
-    if let Some(v) = patch.category_id {
-        requirement.category_id = v;
-    }
-    if let Some(v) = patch.applicability_id {
-        requirement.applicability_id = v;
-    }
-    let verification_method_ids = patch
-        .verification_method_ids
-        .unwrap_or_else(|| service.get_verification_method_ids(id).unwrap_or_default());
-    let verification_method_ids: Vec<i32> = verification_method_ids
-        .into_iter()
-        .filter(|&id| id > 0)
-        .collect();
-    let payload = NewRequirement {
-        id: Some(requirement.id),
-        title: requirement.title.clone(),
-        description: requirement.description.clone(),
-        author_id: requirement.author_id,
-        category_id: requirement.category_id,
-        status_id: requirement.status_id,
-        reference_code: requirement.reference_code.clone(),
-        reviewer_id: requirement.reviewer_id,
-        applicability_id: requirement.applicability_id,
-        justification: requirement.justification.clone(),
-        project_id: requirement.project_id,
+
+    let default_verification_method_ids = if patch.verification_method_ids.is_some() {
+        Vec::new()
+    } else {
+        service.get_verification_method_ids(id).unwrap_or_default()
     };
-    let custom_fields = patch.custom_fields.as_deref();
+    let UpdateRequirementCommand {
+        requirement: payload,
+        verification_method_ids,
+        custom_fields,
+    } = apply_requirement_patch(requirement, patch, default_verification_method_ids)?;
+
     service.update(
         access.user(),
         id,
         payload,
         &verification_method_ids,
-        custom_fields,
+        custom_fields.as_deref(),
         None,
     )?;
     Ok(json!({

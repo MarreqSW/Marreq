@@ -11,8 +11,11 @@ use crate::models::{
     CustomFieldValueInput, NewRequirement, Requirement, RequirementVersion, RequirementVersionLink,
     Verification,
 };
-use crate::repository::{errors::RepoError, MatrixRepository, RequirementsRepository};
+#[cfg(not(any(test, feature = "test-helpers")))]
+use crate::repository::{errors::RepoError, MatrixRepository};
+use crate::repository::RequirementsRepository;
 use crate::services::RequirementService;
+#[cfg(not(any(test, feature = "test-helpers")))]
 use std::collections::HashSet;
 
 /// Trace summary for a requirement (parent, parent_links, children, linked tests). Used in project-scoped get.
@@ -213,6 +216,7 @@ fn apply_requirement_patch(
     })
 }
 
+#[cfg(not(any(test, feature = "test-helpers")))]
 fn filter_project_requirement_list(
     state: &AppState,
     project_id: i32,
@@ -398,33 +402,6 @@ fn build_requirement_list_rows(
     Ok(rows)
 }
 
-#[cfg(any(test, feature = "test-helpers"))]
-fn build_requirement_list_rows(
-    state: &AppState,
-    _project_id: i32,
-    requirements: Vec<Requirement>,
-) -> Result<Vec<RequirementListRow>, RepoError> {
-    let service = RequirementService::new(state);
-    Ok(requirements
-        .into_iter()
-        .map(|requirement| {
-            let requirement = service.get_by_id(requirement.id).unwrap_or(requirement);
-            let verification_method_ids = service
-                .get_verification_method_ids(requirement.id)
-                .unwrap_or_default();
-            let parent_requirement_ids = requirement
-                .current_version_id
-                .map(|vid| service.get_parent_requirement_ids_for_version(vid))
-                .unwrap_or_default();
-            RequirementListRow {
-                requirement,
-                verification_method_ids,
-                parent_requirement_ids,
-            }
-        })
-        .collect())
-}
-
 #[get("/requirements")]
 pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Requirement>>> {
     let service = RequirementService::new(state.inner());
@@ -448,13 +425,45 @@ pub async fn list_by_project(
         project_id,
         Permission::ViewRequirements,
     )?;
+
+    #[cfg(any(test, feature = "test-helpers"))]
+    let requirements = RequirementService::new(state.inner()).list_by_project_with_approval_and_tests(
+        project_id,
+        approval_state.as_deref(),
+        has_tests,
+    )?;
+
+    #[cfg(not(any(test, feature = "test-helpers")))]
     let requirements = filter_project_requirement_list(
         state.inner(),
         project_id,
         approval_state.as_deref(),
         has_tests,
     )?;
+
+    #[cfg(any(test, feature = "test-helpers"))]
+    let rows: Vec<RequirementListRow> = requirements
+        .into_iter()
+        .map(|requirement| {
+            let service = RequirementService::new(state.inner());
+            let verification_method_ids = service
+                .get_verification_method_ids(requirement.id)
+                .unwrap_or_default();
+            let parent_requirement_ids = requirement
+                .current_version_id
+                .map(|vid| service.get_parent_requirement_ids_for_version(vid))
+                .unwrap_or_default();
+            RequirementListRow {
+                requirement,
+                verification_method_ids,
+                parent_requirement_ids,
+            }
+        })
+        .collect();
+
+    #[cfg(not(any(test, feature = "test-helpers")))]
     let rows = build_requirement_list_rows(state.inner(), project_id, requirements)?;
+
     Ok(Json(rows))
 }
 

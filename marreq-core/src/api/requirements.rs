@@ -223,7 +223,9 @@ fn filter_project_requirement_list(
 
     if let Some(state_filter) = approval_state {
         let state_lower = state_filter.to_lowercase();
-        requirements.retain(|requirement| requirement.approval_state.to_lowercase() == state_lower);
+        requirements.retain(|requirement| {
+            requirement.approval_state.to_lowercase() == state_lower
+        });
     }
 
     if let Some(has_tests_filter) = has_tests {

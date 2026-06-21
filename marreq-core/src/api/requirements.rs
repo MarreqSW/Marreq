@@ -8,12 +8,12 @@ use rocket::serde::{Deserialize, Serialize};
 use crate::api::prelude::*;
 use crate::auth::guards::ProjectAccessOrBearer;
 use crate::models::{
-    CustomFieldValueDisplay, CustomFieldValueInput, NewRequirement, Requirement, RequirementVersion,
-    RequirementVersionLink, Verification,
+    CustomFieldValueInput, NewRequirement, Requirement, RequirementVersion, RequirementVersionLink,
+    Verification,
 };
 use crate::repository::{errors::RepoError, MatrixRepository, RequirementsRepository};
 use crate::services::RequirementService;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 
 /// Trace summary for a requirement (parent, parent_links, children, linked tests). Used in project-scoped get.
 #[derive(Debug, Serialize)]
@@ -245,12 +245,14 @@ fn build_requirement_list_rows(
     project_id: i32,
     mut requirements: Vec<Requirement>,
 ) -> Result<Vec<RequirementListRow>, RepoError> {
+    use crate::models::CustomFieldValueDisplay;
     use crate::schema::custom_field_definitions as cfd;
     use crate::schema::custom_field_values as cfv;
     use crate::schema::requirement_version_links as rvl;
     use crate::schema::requirement_version_verification_methods as rvvm;
     use crate::schema::requirement_versions as rv;
     use crate::schema::requirements as req;
+    use std::collections::HashMap;
 
     if requirements.is_empty() {
         return Ok(Vec::new());
@@ -886,4 +888,267 @@ pub async fn set_version_approval_by_project(
     }
 
     Ok(Json(updated))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::AppState;
+    use crate::auth::session::test_session_cookie_for;
+
+    fn auth_cookie_for(
+        client: &rocket::local::asynchronous::Client,
+        user_id: i32,
+    ) -> rocket::http::Cookie<'static> {
+        let state = client.rocket().state::<TestState>().unwrap();
+        test_session_cookie_for(state, user_id)
+    }
+    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use rocket::http::ContentType;
+    use rocket::local::asynchronous::Client;
+    use serde_json::{json, Value};
+    use std::sync::{Arc, RwLock};
+
+    type TestState = AppState<CacheRepository<DieselRepoMock>>;
+
+    const ADMIN_ID: i32 = 1;
+
+    fn state_from_repo(repo: DieselRepoMock) -> TestState {
+        AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        }
+    }
+
+    async fn client_with_repo(repo: DieselRepoMock) -> Client {
+        let rocket = rocket::build()
+            .manage(state_from_repo(repo.with_admin_user()))
+            .mount(
+                "/api",
+                routes![
+                    list,
+                    get,
+                    list_versions,
+                    get_version,
+                    create,
+                    delete,
+                    patch_requirement,
+                ],
+            );
+        Client::tracked(rocket).await.unwrap()
+    }
+
+    fn auth_cookie(client: &rocket::local::asynchronous::Client) -> rocket::http::Cookie<'static> {
+        auth_cookie_for(client, ADMIN_ID)
+    }
+
+    fn sample_requirement(title: &str) -> Value {
+        json!({
+            "title": title,
+            "description": format!("{title} description"),
+            "verification_method_ids": [1],
+            "author_id": 1,
+            "category_id": 1,
+            "status_id": 1,
+            "reference_code": "REF-1",
+            "reviewer_id": 2,
+            "applicability_id": 3,
+            "justification": null,
+            "project_id": 1
+        })
+    }
+
+    #[rocket::async_test]
+    async fn list_returns_empty_array() {
+        let client = client_with_repo(DieselRepoMock::default()).await;
+        let response = client
+            .get("/api/requirements")
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Ok);
+        let items: Vec<Requirement> = response.into_json().await.unwrap();
+        assert!(items.is_empty());
+    }
+
+    #[rocket::async_test]
+    async fn create_returns_identifier() {
+        let client = client_with_repo(DieselRepoMock::default()).await;
+        let response = client
+            .post("/api/requirements")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(sample_requirement("First").to_string())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let payload: Value = response.into_json().await.unwrap();
+        assert_eq!(payload.get("status"), Some(&Value::from("ok")));
+        assert_eq!(payload.get("id"), Some(&Value::from(1)));
+    }
+
+    #[rocket::async_test]
+    async fn patch_updates_fields() {
+        let client = client_with_repo(DieselRepoMock::default()).await;
+        let create_response = client
+            .post("/api/requirements")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(sample_requirement("Original").to_string())
+            .dispatch()
+            .await;
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
+
+        let response = client
+            .patch(format!("/api/requirements/{id}"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(
+                json!({
+                    "title": "Updated",
+                    "description": "Updated description"
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let payload: Value = response.into_json().await.unwrap();
+        assert_eq!(payload.get("success"), Some(&Value::from(true)));
+
+        let get_response = client
+            .get(format!("/api/requirements/{id}"))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        let requirement: Requirement = get_response.into_json().await.unwrap();
+        assert_eq!(requirement.title, "Updated");
+        assert_eq!(requirement.description, "Updated description");
+    }
+
+    #[rocket::async_test]
+    async fn patch_creates_new_version_and_versions_list_returns_history() {
+        let client = client_with_repo(DieselRepoMock::default()).await;
+        let mut req = sample_requirement("V1 Title");
+        req["reference_code"] = serde_json::Value::from("REQ-001");
+        let create_response = client
+            .post("/api/requirements")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(req.to_string())
+            .dispatch()
+            .await;
+        assert_eq!(
+            create_response.status(),
+            Status::Ok,
+            "create should succeed"
+        );
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created
+            .get("id")
+            .and_then(Value::as_i64)
+            .expect("create response should have id") as i32;
+
+        let versions_after_create = client
+            .get(format!("/api/requirements/{id}/versions"))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        assert_eq!(versions_after_create.status(), Status::Ok);
+        let versions: Vec<RequirementVersion> = versions_after_create.into_json().await.unwrap();
+        assert_eq!(versions.len(), 1);
+        assert_eq!(versions[0].title, "V1 Title");
+
+        client
+            .patch(format!("/api/requirements/{id}"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(json!({ "title": "V2 Updated" }).to_string())
+            .dispatch()
+            .await;
+
+        let versions_after_patch = client
+            .get(format!("/api/requirements/{id}/versions"))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        assert_eq!(versions_after_patch.status(), Status::Ok);
+        let versions: Vec<RequirementVersion> = versions_after_patch.into_json().await.unwrap();
+        assert_eq!(versions.len(), 2);
+        assert_eq!(versions[0].title, "V2 Updated");
+        assert_eq!(versions[1].title, "V1 Title");
+
+        let first_version_id = versions[1].id;
+        let single = client
+            .get(format!(
+                "/api/requirements/{id}/versions/{first_version_id}"
+            ))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        assert_eq!(single.status(), Status::Ok);
+        let v: RequirementVersion = single.into_json().await.unwrap();
+        assert_eq!(v.id, first_version_id);
+        assert_eq!(v.requirement_id, id);
+        assert_eq!(v.title, "V1 Title");
+    }
+
+    #[rocket::async_test]
+    async fn patch_without_fields_returns_bad_request() {
+        let client = client_with_repo(DieselRepoMock::default()).await;
+        let create_response = client
+            .post("/api/requirements")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(sample_requirement("Original").to_string())
+            .dispatch()
+            .await;
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
+
+        let response = client
+            .patch(format!("/api/requirements/{id}"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(json!({}).to_string())
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::BadRequest);
+        let payload: Value = response.into_json().await.unwrap();
+        assert_eq!(
+            payload.get("message"),
+            Some(&Value::from("no fields provided"))
+        );
+    }
+
+    #[rocket::async_test]
+    async fn delete_removes_requirement() {
+        let client = client_with_repo(DieselRepoMock::default()).await;
+        let create_response = client
+            .post("/api/requirements")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(sample_requirement("Disposable").to_string())
+            .dispatch()
+            .await;
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
+
+        let delete_response = client
+            .delete(format!("/api/requirements/{id}"))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        assert_eq!(delete_response.status(), Status::NoContent);
+
+        let not_found = client
+            .get(format!("/api/requirements/{id}"))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        assert_eq!(not_found.status(), Status::NotFound);
+    }
 }

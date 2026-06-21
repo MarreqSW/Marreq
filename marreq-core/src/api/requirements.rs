@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+#[cfg(not(any(test, feature = "test-helpers")))]
+use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
@@ -9,8 +11,9 @@ use crate::models::{
     CustomFieldValueInput, NewRequirement, Requirement, RequirementVersion, RequirementVersionLink,
     Verification,
 };
-use crate::repository::RequirementsRepository;
+use crate::repository::{errors::RepoError, MatrixRepository, RequirementsRepository};
 use crate::services::RequirementService;
+use std::collections::HashSet;
 
 /// Trace summary for a requirement (parent, parent_links, children, linked tests). Used in project-scoped get.
 #[derive(Debug, Serialize)]
@@ -210,6 +213,222 @@ fn apply_requirement_patch(
     })
 }
 
+fn filter_project_requirement_list(
+    state: &AppState,
+    project_id: i32,
+    approval_state: Option<&str>,
+    has_tests: Option<bool>,
+) -> Result<Vec<Requirement>, RepoError> {
+    let mut requirements = state.repo_read().get_requirements_by_project(project_id)?;
+
+    if let Some(state_filter) = approval_state {
+        let state_lower = state_filter.to_lowercase();
+        requirements.retain(|requirement| requirement.approval_state.to_lowercase() == state_lower);
+    }
+
+    if let Some(has_tests_filter) = has_tests {
+        let links = state.repo_read().get_matrix_by_project(project_id)?;
+        let req_ids_with_tests: HashSet<i32> = links.into_iter().map(|link| link.req_id).collect();
+        if has_tests_filter {
+            requirements.retain(|requirement| req_ids_with_tests.contains(&requirement.id));
+        } else {
+            requirements.retain(|requirement| !req_ids_with_tests.contains(&requirement.id));
+        }
+    }
+
+    Ok(requirements)
+}
+
+#[cfg(not(any(test, feature = "test-helpers")))]
+fn build_requirement_list_rows(
+    state: &AppState,
+    project_id: i32,
+    mut requirements: Vec<Requirement>,
+) -> Result<Vec<RequirementListRow>, RepoError> {
+    use crate::models::CustomFieldValueDisplay;
+    use crate::schema::custom_field_definitions as cfd;
+    use crate::schema::custom_field_values as cfv;
+    use crate::schema::requirement_version_links as rvl;
+    use crate::schema::requirement_version_verification_methods as rvvm;
+    use crate::schema::requirement_versions as rv;
+    use crate::schema::requirements as req;
+    use std::collections::HashMap;
+
+    if requirements.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let requirement_ids: Vec<i32> = requirements
+        .iter()
+        .map(|requirement| requirement.id)
+        .collect();
+    let version_ids: Vec<i32> = requirements
+        .iter()
+        .filter_map(|requirement| requirement.current_version_id)
+        .collect();
+
+    let mut verification_method_ids_by_requirement: HashMap<i32, Vec<i32>> = requirement_ids
+        .iter()
+        .copied()
+        .map(|id| (id, Vec::new()))
+        .collect();
+    let mut parent_requirement_ids_by_requirement: HashMap<i32, Vec<i32>> = requirement_ids
+        .iter()
+        .copied()
+        .map(|id| (id, Vec::new()))
+        .collect();
+    let mut custom_fields_by_version: HashMap<i32, Vec<CustomFieldValueDisplay>> = HashMap::new();
+    let mut parent_ids_by_source_version: HashMap<i32, Vec<i32>> = HashMap::new();
+
+    let repo = state.repo_read();
+    let mut conn = repo.inner_repo().get_conn()?;
+
+    let verification_rows: Vec<(i32, i32)> = req::table
+        .inner_join(
+            rvvm::table.on(req::current_version_id.eq(rvvm::requirement_version_id.nullable())),
+        )
+        .filter(req::id.eq_any(&requirement_ids))
+        .select((req::id, rvvm::verification_method_id))
+        .order((req::id, rvvm::verification_method_id))
+        .load(conn.as_mut())
+        .map_err(RepoError::from)?;
+    for (requirement_id, verification_method_id) in verification_rows {
+        verification_method_ids_by_requirement
+            .entry(requirement_id)
+            .or_default()
+            .push(verification_method_id);
+    }
+
+    if !version_ids.is_empty() {
+        let custom_field_rows: Vec<(i32, i32, String, Option<String>)> = cfv::table
+            .inner_join(cfd::table.on(cfv::custom_field_definition_id.eq(cfd::id)))
+            .filter(cfv::requirement_version_id.eq_any(&version_ids))
+            .select((cfv::requirement_version_id, cfd::id, cfd::label, cfv::value))
+            .order((cfv::requirement_version_id, cfd::sort_order, cfd::id))
+            .load(conn.as_mut())
+            .map_err(RepoError::from)?;
+        for (version_id, field_id, label, value) in custom_field_rows {
+            custom_fields_by_version
+                .entry(version_id)
+                .or_default()
+                .push(CustomFieldValueDisplay {
+                    field_id,
+                    label,
+                    value,
+                });
+        }
+
+        let link_rows: Vec<(i32, i32)> = rvl::table
+            .filter(rvl::project_id.eq(project_id))
+            .filter(rvl::source_version_id.eq_any(&version_ids))
+            .select((rvl::source_version_id, rvl::target_version_id))
+            .load(conn.as_mut())
+            .map_err(RepoError::from)?;
+
+        let mut target_version_ids: Vec<i32> = link_rows
+            .iter()
+            .map(|(_, target_version_id)| *target_version_id)
+            .collect();
+        target_version_ids.sort_unstable();
+        target_version_ids.dedup();
+
+        if !target_version_ids.is_empty() {
+            let target_version_rows: Vec<(i32, i32)> = rv::table
+                .filter(rv::id.eq_any(&target_version_ids))
+                .select((rv::id, rv::requirement_id))
+                .load(conn.as_mut())
+                .map_err(RepoError::from)?;
+            let target_version_to_requirement: HashMap<i32, i32> =
+                target_version_rows.into_iter().collect();
+
+            for (source_version_id, target_version_id) in link_rows {
+                if let Some(&parent_requirement_id) =
+                    target_version_to_requirement.get(&target_version_id)
+                {
+                    parent_ids_by_source_version
+                        .entry(source_version_id)
+                        .or_default()
+                        .push(parent_requirement_id);
+                }
+            }
+        }
+    }
+
+    for parent_ids in parent_ids_by_source_version.values_mut() {
+        parent_ids.sort_unstable();
+        parent_ids.dedup();
+    }
+
+    for requirement in &requirements {
+        if let Some(version_id) = requirement.current_version_id {
+            if let Some(parent_ids) = parent_ids_by_source_version.get(&version_id) {
+                parent_requirement_ids_by_requirement.insert(requirement.id, parent_ids.clone());
+            }
+        }
+    }
+
+    let mut rows = Vec::with_capacity(requirements.len());
+    for mut requirement in requirements.drain(..) {
+        let parent_requirement_ids = parent_requirement_ids_by_requirement
+            .remove(&requirement.id)
+            .unwrap_or_default();
+        if requirement.parent_id.is_none() {
+            requirement.parent_id = parent_requirement_ids.first().copied();
+        }
+
+        if let Some(version_id) = requirement.current_version_id {
+            let custom_fields = custom_fields_by_version
+                .remove(&version_id)
+                .unwrap_or_default();
+            requirement.custom_fields = if custom_fields.is_empty() {
+                None
+            } else {
+                Some(custom_fields)
+            };
+        } else {
+            requirement.custom_fields = Some(Vec::new());
+        }
+
+        let verification_method_ids = verification_method_ids_by_requirement
+            .remove(&requirement.id)
+            .unwrap_or_default();
+        rows.push(RequirementListRow {
+            requirement,
+            verification_method_ids,
+            parent_requirement_ids,
+        });
+    }
+
+    Ok(rows)
+}
+
+#[cfg(any(test, feature = "test-helpers"))]
+fn build_requirement_list_rows(
+    state: &AppState,
+    _project_id: i32,
+    requirements: Vec<Requirement>,
+) -> Result<Vec<RequirementListRow>, RepoError> {
+    let service = RequirementService::new(state);
+    Ok(requirements
+        .into_iter()
+        .map(|requirement| {
+            let requirement = service.get_by_id(requirement.id).unwrap_or(requirement);
+            let verification_method_ids = service
+                .get_verification_method_ids(requirement.id)
+                .unwrap_or_default();
+            let parent_requirement_ids = requirement
+                .current_version_id
+                .map(|vid| service.get_parent_requirement_ids_for_version(vid))
+                .unwrap_or_default();
+            RequirementListRow {
+                requirement,
+                verification_method_ids,
+                parent_requirement_ids,
+            }
+        })
+        .collect())
+}
+
 #[get("/requirements")]
 pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Requirement>>> {
     let service = RequirementService::new(state.inner());
@@ -233,29 +452,13 @@ pub async fn list_by_project(
         project_id,
         Permission::ViewRequirements,
     )?;
-    let service = RequirementService::new(state.inner());
-    let requirements = service.list_by_project_with_approval_and_tests(
+    let requirements = filter_project_requirement_list(
+        state.inner(),
         project_id,
         approval_state.as_deref(),
         has_tests,
     )?;
-    let rows: Vec<RequirementListRow> = requirements
-        .into_iter()
-        .map(|requirement| {
-            let verification_method_ids = service
-                .get_verification_method_ids(requirement.id)
-                .unwrap_or_default();
-            let parent_requirement_ids = requirement
-                .current_version_id
-                .map(|vid| service.get_parent_requirement_ids_for_version(vid))
-                .unwrap_or_default();
-            RequirementListRow {
-                requirement,
-                verification_method_ids,
-                parent_requirement_ids,
-            }
-        })
-        .collect();
+    let rows = build_requirement_list_rows(state.inner(), project_id, requirements)?;
     Ok(Json(rows))
 }
 

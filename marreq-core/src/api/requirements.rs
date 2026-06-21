@@ -223,8 +223,7 @@ fn filter_project_requirement_list(
 
     if let Some(state_filter) = approval_state {
         let state_lower = state_filter.to_lowercase();
-        requirements
-            .retain(|requirement| requirement.approval_state.to_lowercase() == state_lower);
+        requirements.retain(|requirement| requirement.approval_state.to_lowercase() == state_lower);
     }
 
     if let Some(has_tests_filter) = has_tests {
@@ -259,7 +258,10 @@ fn build_requirement_list_rows(
         return Ok(Vec::new());
     }
 
-    let requirement_ids: Vec<i32> = requirements.iter().map(|requirement| requirement.id).collect();
+    let requirement_ids: Vec<i32> = requirements
+        .iter()
+        .map(|requirement| requirement.id)
+        .collect();
     let version_ids: Vec<i32> = requirements
         .iter()
         .filter_map(|requirement| requirement.current_version_id)
@@ -375,7 +377,9 @@ fn build_requirement_list_rows(
         }
 
         if let Some(version_id) = requirement.current_version_id {
-            let custom_fields = custom_fields_by_version.remove(&version_id).unwrap_or_default();
+            let custom_fields = custom_fields_by_version
+                .remove(&version_id)
+                .unwrap_or_default();
             requirement.custom_fields = if custom_fields.is_empty() {
                 None
             } else {

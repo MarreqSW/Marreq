@@ -10,8 +10,10 @@
 
 #[test]
 fn project_requirement_listing_uses_bounded_bulk_enrichment_queries() {
-    let source = std::fs::read_to_string("marreq-core/src/api/requirements.rs")
-        .expect("requirements API source should be readable from the workspace root");
+    let source_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("src/api/requirements.rs");
+    let source = std::fs::read_to_string(&source_path)
+        .expect("requirements API source should be readable from the crate manifest directory");
 
     let production_start = source
         .find("#[cfg(not(any(test, feature = \"test-helpers\")))]\nfn build_requirement_list_rows")

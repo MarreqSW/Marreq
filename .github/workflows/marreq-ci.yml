@@ -59,16 +59,47 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-
-      - name: Install root test dependencies
-        run: npm ci
+          cache-dependency-path: |
+            package-lock.json
+            frontend/package-lock.json
 
       - name: Install frontend test dependencies
         working-directory: frontend
         run: npm ci
 
-      - name: Run JavaScript tests
-        run: npm test
+      - name: Run SPA tests with coverage
+        working-directory: frontend
+        run: npm run test:coverage
+
+      - name: Build frontend coverage summary (Markdown)
+        run: node scripts/frontend-coverage-summary.mjs
+
+      - name: Publish frontend coverage to Job Summary
+        run: |
+          echo "## Frontend SPA coverage" >> "$GITHUB_STEP_SUMMARY"
+          cat frontend-coverage-results.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Post frontend coverage as PR comment
+        if: github.event_name == 'pull_request'
+        uses: mshick/add-pr-comment@v2
+        with:
+          message-id: frontend-coverage
+          message-path: frontend-coverage-results.md
+          repo-token: ${{ github.token }}
+
+      - name: Upload frontend coverage HTML
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-html
+          path: frontend/coverage
+          retention-days: 7
+
+      - name: Install root test dependencies
+        run: npm ci
+
+      - name: Run legacy static JS tests
+        run: npx vitest run marreq-core/tests/js
 
   frontend-build:
     runs-on: ubuntu-latest
@@ -182,6 +213,7 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: mshick/add-pr-comment@v2
         with:
+          message-id: backend-coverage
           message-path: code-coverage-results.md
           repo-token: ${{ github.token }}
 

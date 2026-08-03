@@ -7,6 +7,8 @@
 # Code Coverage artifacts
 coverage_html/
 coverage/
+frontend-coverage-results.md
+code-coverage-results.md
 
 # IDE and editor files
 .vscode/

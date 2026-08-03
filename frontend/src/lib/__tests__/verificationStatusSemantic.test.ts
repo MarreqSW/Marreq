@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { statusSemanticGroup } from '../verificationStatusSemantic';
+import { statusGlyph, statusSemanticGroup } from '../verificationStatusSemantic';
 
 describe('statusSemanticGroup', () => {
   it('classifies fail and reject', () => {
@@ -40,5 +40,32 @@ describe('statusSemanticGroup', () => {
 
   it('maps unknown titles without tag color to other', () => {
     expect(statusSemanticGroup('Not Run')).toBe('other');
+  });
+});
+
+describe('statusGlyph', () => {
+  it('returns semantic glyph classes for known groups', () => {
+    expect(statusGlyph('Passed', null)).toEqual({
+      symbol: '✓',
+      className: 'text-emerald-400',
+    });
+    expect(statusGlyph('Failed', null)).toEqual({
+      symbol: '✗',
+      className: 'text-red-300',
+    });
+  });
+
+  it('clears className for other statuses with a valid hex tag color', () => {
+    expect(statusGlyph('Custom', '#AABBCC')).toEqual({
+      symbol: '●',
+      className: '',
+    });
+  });
+
+  it('keeps muted class for other statuses without a hex tag color', () => {
+    expect(statusGlyph('Not Run', null)).toEqual({
+      symbol: '●',
+      className: 'text-stitch-muted',
+    });
   });
 });

@@ -47,7 +47,9 @@ describe('StatusBadge', () => {
   it('falls back to a hashed hue style for unknown titles', () => {
     render(<StatusBadge title="CustomStatusXYZ" />);
     const el = screen.getByText('CustomStatusXYZ');
-    // happy-dom may normalize hsl() to rgb(); assert an inline style was applied.
-    expect(el.getAttribute('style') ?? '').toMatch(/background/i);
+    expect(el.className).toMatch(/border/);
+    // Keyword path would add semantic utility classes; hash fallback does not.
+    expect(el.className).not.toMatch(/bg-red-500|bg-amber-500|bg-stitch-accent/);
+    expect(el.getAttribute('style')).toBeTruthy();
   });
 });

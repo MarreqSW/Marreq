@@ -10,8 +10,8 @@
 
 #[test]
 fn project_requirement_listing_uses_bounded_bulk_enrichment_queries() {
-    let source_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("src/api/requirements.rs");
+    let source_path =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/api/requirements.rs");
     let source = std::fs::read_to_string(&source_path)
         .expect("requirements API source should be readable from the crate manifest directory");
 

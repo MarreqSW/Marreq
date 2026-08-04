@@ -30,6 +30,7 @@ pub mod permissions;
 pub mod repository;
 pub mod reqif;
 pub mod routes;
+pub mod saved_view_definition;
 pub mod schema;
 pub mod services;
 pub mod status_enums;

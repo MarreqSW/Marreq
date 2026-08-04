@@ -19,6 +19,7 @@ export async function createBaseline(
   name: string,
   description: string | null | undefined,
   csrfToken: string,
+  savedViewId?: number | null,
 ): Promise<Baseline> {
   return fetchJson<Baseline>(`/api/projects/${projectId}/baselines`, {
     method: 'POST',
@@ -29,6 +30,7 @@ export async function createBaseline(
     body: JSON.stringify({
       name,
       description: description?.trim() ? description.trim() : null,
+      saved_view_id: savedViewId ?? null,
     }),
   });
 }

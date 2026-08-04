@@ -62,6 +62,8 @@ pub struct DieselRepoMock {
     pub email_tokens: Vec<EmailToken>,
     pub next_email_token_id: i32,
     pub sessions: Vec<crate::models::entities::Session>,
+    pub saved_views: Vec<crate::models::SavedView>,
+    pub next_saved_view_id: i32,
 }
 
 fn epoch() -> NaiveDateTime {
@@ -119,6 +121,8 @@ impl Default for DieselRepoMock {
             email_tokens: Vec::new(),
             next_email_token_id: 1,
             sessions: Vec::new(),
+            saved_views: Vec::new(),
+            next_saved_view_id: 1,
         }
     }
 }
@@ -171,6 +175,8 @@ impl DieselRepoMock {
             email_tokens: Vec::new(),
             next_email_token_id: 1,
             sessions: Vec::new(),
+            saved_views: Vec::new(),
+            next_saved_view_id: 1,
         }
     }
     pub fn with_error() -> Self {
@@ -216,6 +222,8 @@ impl DieselRepoMock {
             email_tokens: Vec::new(),
             next_email_token_id: 1,
             sessions: Vec::new(),
+            saved_views: Vec::new(),
+            next_saved_view_id: 1,
         }
     }
 
@@ -2103,6 +2111,22 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
         }
         let id = self.next_baseline_id;
         self.next_baseline_id += 1;
+        let mut source_def = None;
+        if let Some(view_id) = payload.saved_view_id {
+            let view = self
+                .saved_views
+                .iter()
+                .find(|v| v.id == view_id)
+                .cloned()
+                .ok_or(RepoError::NotFound)?;
+            if view.project_id != project_id {
+                return Err(RepoError::BadInput(
+                    "saved view does not belong to this project".into(),
+                ));
+            }
+            source_def = Some(view.definition.clone());
+            self.lock_saved_view(view_id)?;
+        }
         let baseline = crate::models::Baseline {
             id,
             project_id,
@@ -2110,15 +2134,21 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
             description: payload.description.clone(),
             created_at: epoch(),
             created_by,
+            source_saved_view_id: payload.saved_view_id,
+            source_view_definition: source_def.clone(),
         };
         self.baselines.push(baseline.clone());
-        for req in self
+        let mut reqs: Vec<_> = self
             .requirements
             .values()
             .filter(|r| r.project_id == project_id)
-        {
+            .cloned()
+            .collect();
+        if let Some(def) = source_def.as_ref() {
+            reqs = crate::saved_view_definition::filter_requirements_by_definition(reqs, def);
+        }
+        for req in reqs {
             if let Some(version_id) = req.current_version_id {
-                // Include all current versions in baseline (point-in-time snapshot)
                 self.baseline_requirements
                     .push(crate::models::BaselineRequirement {
                         baseline_id: id,
@@ -2261,6 +2291,132 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
             .filter(|bv| bv.baseline_id == baseline_id)
             .cloned()
             .collect())
+    }
+}
+
+impl crate::repository::SavedViewRepository for DieselRepoMock {
+    fn list_saved_views_for_user(
+        &self,
+        project_id: i32,
+        user_id: i32,
+    ) -> Result<Vec<crate::models::SavedView>, RepoError> {
+        Ok(self
+            .saved_views
+            .iter()
+            .filter(|v| {
+                v.project_id == project_id
+                    && (v.visibility == "shared"
+                        || (v.visibility == "private" && v.owner_id == user_id))
+            })
+            .cloned()
+            .collect())
+    }
+
+    fn get_saved_view_by_id(&self, id: i32) -> Result<crate::models::SavedView, RepoError> {
+        self.saved_views
+            .iter()
+            .find(|v| v.id == id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn create_saved_view(
+        &mut self,
+        project_id: i32,
+        owner_id: i32,
+        payload: &crate::models::SavedViewPayload,
+    ) -> Result<crate::models::SavedView, RepoError> {
+        let visibility = crate::saved_view_definition::validate_visibility(&payload.visibility)?;
+        let definition =
+            crate::saved_view_definition::validate_saved_view_definition(&payload.definition)?;
+        let name = payload.name.trim().to_string();
+        if name.is_empty() {
+            return Err(RepoError::BadInput("name is required".into()));
+        }
+        let id = self.next_saved_view_id;
+        self.next_saved_view_id += 1;
+        let now = epoch();
+        let view = crate::models::SavedView {
+            id,
+            project_id,
+            owner_id,
+            name,
+            description: payload
+                .description
+                .as_ref()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty()),
+            visibility,
+            definition,
+            locked: false,
+            locked_at: None,
+            created_at: now,
+            updated_at: now,
+        };
+        self.saved_views.push(view.clone());
+        Ok(view)
+    }
+
+    fn update_saved_view(
+        &mut self,
+        id: i32,
+        payload: &crate::models::SavedViewPayload,
+    ) -> Result<crate::models::SavedView, RepoError> {
+        let existing = self.get_saved_view_by_id(id)?;
+        if existing.locked {
+            return Err(RepoError::BadInput(
+                "Saved views used in a baseline are immutable".into(),
+            ));
+        }
+        let visibility = crate::saved_view_definition::validate_visibility(&payload.visibility)?;
+        let definition =
+            crate::saved_view_definition::validate_saved_view_definition(&payload.definition)?;
+        let name = payload.name.trim().to_string();
+        if name.is_empty() {
+            return Err(RepoError::BadInput("name is required".into()));
+        }
+        let view = self
+            .saved_views
+            .iter_mut()
+            .find(|v| v.id == id)
+            .ok_or(RepoError::NotFound)?;
+        view.name = name;
+        view.description = payload
+            .description
+            .as_ref()
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty());
+        view.visibility = visibility;
+        view.definition = definition;
+        view.updated_at = epoch();
+        Ok(view.clone())
+    }
+
+    fn delete_saved_view(&mut self, id: i32) -> Result<(), RepoError> {
+        let existing = self.get_saved_view_by_id(id)?;
+        if existing.locked {
+            return Err(RepoError::BadInput(
+                "Saved views used in a baseline are immutable".into(),
+            ));
+        }
+        let before = self.saved_views.len();
+        self.saved_views.retain(|v| v.id != id);
+        if self.saved_views.len() == before {
+            return Err(RepoError::NotFound);
+        }
+        Ok(())
+    }
+
+    fn lock_saved_view(&mut self, id: i32) -> Result<(), RepoError> {
+        let view = self
+            .saved_views
+            .iter_mut()
+            .find(|v| v.id == id)
+            .ok_or(RepoError::NotFound)?;
+        view.locked = true;
+        view.locked_at = Some(epoch());
+        view.updated_at = epoch();
+        Ok(())
     }
 }
 

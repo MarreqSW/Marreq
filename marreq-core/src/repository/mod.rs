@@ -454,6 +454,28 @@ pub trait BaselineRepository {
     ) -> Result<Vec<crate::models::BaselineVerification>, RepoError>;
 }
 
+pub trait SavedViewRepository {
+    fn list_saved_views_for_user(
+        &self,
+        project_id: i32,
+        user_id: i32,
+    ) -> Result<Vec<crate::models::SavedView>, RepoError>;
+    fn get_saved_view_by_id(&self, id: i32) -> Result<crate::models::SavedView, RepoError>;
+    fn create_saved_view(
+        &mut self,
+        project_id: i32,
+        owner_id: i32,
+        payload: &crate::models::SavedViewPayload,
+    ) -> Result<crate::models::SavedView, RepoError>;
+    fn update_saved_view(
+        &mut self,
+        id: i32,
+        payload: &crate::models::SavedViewPayload,
+    ) -> Result<crate::models::SavedView, RepoError>;
+    fn delete_saved_view(&mut self, id: i32) -> Result<(), RepoError>;
+    fn lock_saved_view(&mut self, id: i32) -> Result<(), RepoError>;
+}
+
 pub trait LogRepository {
     fn insert_log(&mut self, new: &NewLog) -> Result<(), RepoError>;
     fn get_logs_recent(&self, limit: i64) -> Result<Vec<Log>, RepoError>;
@@ -555,6 +577,7 @@ pub trait Repository:
     + MatrixRepository
     + CustomFieldRepository
     + BaselineRepository
+    + SavedViewRepository
     + LogRepository
     + RequirementCommentsRepository
     + NotificationRepository
@@ -579,6 +602,7 @@ impl<T> Repository for T where
         + MatrixRepository
         + CustomFieldRepository
         + BaselineRepository
+        + SavedViewRepository
         + LogRepository
         + RequirementCommentsRepository
         + NotificationRepository

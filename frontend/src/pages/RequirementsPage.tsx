@@ -6,7 +6,8 @@ import { useDashboard } from '@/context/DashboardContext';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 export default function RequirementsPage() {
-  const { projectId, globalSearch, basePath } = useOutletContext<ProjectOutletContext>();
+  const { projectId, globalSearch, setGlobalSearch, basePath } =
+    useOutletContext<ProjectOutletContext>();
   const [searchParams] = useSearchParams();
   const { dashboard } = useDashboard();
   const pid = projectId;
@@ -34,7 +35,13 @@ export default function RequirementsPage() {
         <RequirementsViewSwitcher />
       </div>
 
-      <RequirementsTable projectId={projectId} basePath={basePath} globalSearch={globalSearch} viewMode={viewMode} />
+      <RequirementsTable
+        projectId={projectId}
+        basePath={basePath}
+        globalSearch={globalSearch}
+        setGlobalSearch={setGlobalSearch}
+        viewMode={viewMode}
+      />
     </div>
   );
 }

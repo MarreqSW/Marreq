@@ -1,9 +1,9 @@
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
-import { createBaseline, listBaselines } from '@/api/client';
+import { createBaseline, listBaselines, listSavedViews } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
-import type { Baseline } from '@/api/types';
+import type { Baseline, SavedView } from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 export default function BaselinesPage() {
@@ -12,10 +12,12 @@ export default function BaselinesPage() {
   const { csrfToken, dashboard } = useDashboard();
 
   const [rows, setRows] = useState<Baseline[]>([]);
+  const [views, setViews] = useState<SavedView[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [savedViewId, setSavedViewId] = useState<number | ''>('');
   const [creating, setCreating] = useState(false);
   const [createErr, setCreateErr] = useState<string | null>(null);
 
@@ -24,8 +26,9 @@ export default function BaselinesPage() {
     setLoading(true);
     setErr(null);
     try {
-      const list = await listBaselines(pid);
+      const [list, sv] = await Promise.all([listBaselines(pid), listSavedViews(pid)]);
       setRows(list);
+      setViews(sv.filter((v) => !v.locked));
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load baselines');
     } finally {
@@ -51,9 +54,16 @@ export default function BaselinesPage() {
     setCreateErr(null);
     setCreating(true);
     try {
-      await createBaseline(pid, name.trim(), description.trim() || null, token);
+      await createBaseline(
+        pid,
+        name.trim(),
+        description.trim() || null,
+        token,
+        savedViewId === '' ? null : savedViewId,
+      );
       setName('');
       setDescription('');
+      setSavedViewId('');
       await load();
     } catch (e) {
       setCreateErr(e instanceof Error ? e.message : 'Create failed');
@@ -121,6 +131,28 @@ export default function BaselinesPage() {
             className="w-full text-sm bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg"
           />
         </div>
+        <div>
+          <label className="block text-[10px] font-bold text-stitch-muted uppercase mb-1">
+            From saved view (optional)
+          </label>
+          <select
+            value={savedViewId === '' ? '' : String(savedViewId)}
+            onChange={(e) =>
+              setSavedViewId(e.target.value ? Number(e.target.value) : '')
+            }
+            className="w-full text-sm bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg"
+          >
+            <option value="">Entire project</option>
+            {views.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.name} ({v.visibility})
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-[10px] text-stitch-muted">
+            Using a saved view snapshots matching requirements and locks that view.
+          </p>
+        </div>
         {createErr && <p className="text-sm text-red-300">{createErr}</p>}
         <button
           type="submit"
@@ -136,6 +168,7 @@ export default function BaselinesPage() {
           <thead>
             <tr className="border-b border-stitch-border bg-stitch-elevated text-[10px] text-stitch-muted uppercase tracking-widest">
               <th className="px-4 py-3">Name</th>
+              <th className="px-4 py-3">Source view</th>
               <th className="px-4 py-3">Created</th>
               <th className="px-4 py-3 text-right">Open</th>
             </tr>
@@ -143,7 +176,7 @@ export default function BaselinesPage() {
           <tbody className="divide-y divide-stitch-border">
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={3} className="px-4 py-8 text-center text-stitch-muted">
+                <td colSpan={4} className="px-4 py-8 text-center text-stitch-muted">
                   No baselines yet.
                 </td>
               </tr>
@@ -151,6 +184,9 @@ export default function BaselinesPage() {
               rows.map((b) => (
                 <tr key={b.id} className="hover:bg-white/[0.03]">
                   <td className="px-4 py-3 text-stitch-fg font-medium">{b.name}</td>
+                  <td className="px-4 py-3 text-stitch-muted text-xs">
+                    {b.source_saved_view_id != null ? `#${b.source_saved_view_id}` : '—'}
+                  </td>
                   <td className="px-4 py-3 text-stitch-muted text-xs font-mono">
                     {b.created_at?.replace('T', ' ').slice(0, 16) ?? '—'}
                   </td>

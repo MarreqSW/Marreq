@@ -168,6 +168,34 @@ pub struct NewCustomFieldDefinitionRow {
     pub sort_order: i32,
 }
 
+/// Create / update payload for a saved view.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "rocket::serde")]
+pub struct SavedViewPayload {
+    pub name: String,
+    pub description: Option<String>,
+    /// `private` or `shared`
+    pub visibility: String,
+    pub definition: serde_json::Value,
+}
+
+/// Insertable row for saved_views.
+#[derive(Insertable, Clone, Debug)]
+#[diesel(table_name = crate::schema::saved_views)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewSavedViewRow {
+    pub project_id: i32,
+    pub owner_id: i32,
+    pub name: String,
+    pub description: Option<String>,
+    pub visibility: String,
+    pub definition: serde_json::Value,
+    pub locked: bool,
+    pub locked_at: Option<chrono::NaiveDateTime>,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
 /// One custom field value when creating/updating a requirement (field_id, value).
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "rocket::serde")]
@@ -195,6 +223,9 @@ pub struct NewMatrixLink {
 pub struct NewBaseline {
     pub name: String,
     pub description: Option<String>,
+    /// Optional saved view that produced this baseline (locks the view).
+    #[serde(default)]
+    pub saved_view_id: Option<i32>,
 }
 
 /// Insertable row for baselines table (id is SERIAL).
@@ -207,6 +238,8 @@ pub struct NewBaselineRow {
     pub description: Option<String>,
     pub created_at: chrono::NaiveDateTime,
     pub created_by: i32,
+    pub source_saved_view_id: Option<i32>,
+    pub source_view_definition: Option<serde_json::Value>,
 }
 
 /// Insertable row for baseline_requirements.

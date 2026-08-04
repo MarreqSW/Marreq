@@ -10,7 +10,7 @@ use crate::repository::{
     ApiTokensRepository, BaselineRepository, CustomFieldRepository, LogRepository,
     LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectReviewersRepository,
     ProjectsRepository, Repository, RequirementCommentsRepository,
-    RequirementVersionLinksRepository, RequirementsRepository, UserRepository,
+    RequirementVersionLinksRepository, RequirementsRepository, SavedViewRepository, UserRepository,
     VerificationsRepository,
 };
 use serde::{de::DeserializeOwned, Serialize};
@@ -1274,6 +1274,45 @@ impl<R: Repository> BaselineRepository for CacheRepository<R> {
     }
 }
 
+impl<R: Repository> SavedViewRepository for CacheRepository<R> {
+    fn list_saved_views_for_user(
+        &self,
+        project_id: i32,
+        user_id: i32,
+    ) -> Result<Vec<crate::models::SavedView>, RepoError> {
+        self.inner.list_saved_views_for_user(project_id, user_id)
+    }
+
+    fn get_saved_view_by_id(&self, id: i32) -> Result<crate::models::SavedView, RepoError> {
+        self.inner.get_saved_view_by_id(id)
+    }
+
+    fn create_saved_view(
+        &mut self,
+        project_id: i32,
+        owner_id: i32,
+        payload: &crate::models::SavedViewPayload,
+    ) -> Result<crate::models::SavedView, RepoError> {
+        self.inner.create_saved_view(project_id, owner_id, payload)
+    }
+
+    fn update_saved_view(
+        &mut self,
+        id: i32,
+        payload: &crate::models::SavedViewPayload,
+    ) -> Result<crate::models::SavedView, RepoError> {
+        self.inner.update_saved_view(id, payload)
+    }
+
+    fn delete_saved_view(&mut self, id: i32) -> Result<(), RepoError> {
+        self.inner.delete_saved_view(id)
+    }
+
+    fn lock_saved_view(&mut self, id: i32) -> Result<(), RepoError> {
+        self.inner.lock_saved_view(id)
+    }
+}
+
 impl<R: LogRepository> LogRepository for CacheRepository<R> {
     fn insert_log(&mut self, new: &NewLog) -> Result<(), RepoError> {
         self.inner.insert_log(new)
@@ -1586,6 +1625,8 @@ mod tests {
             baseline_traceability: Vec::new(),
             baseline_verifications: Vec::new(),
             next_baseline_id: 1,
+            saved_views: Vec::new(),
+            next_saved_view_id: 1,
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),
             next_custom_field_id: 1,

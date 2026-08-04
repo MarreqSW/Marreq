@@ -4,12 +4,14 @@ import { getCsrfToken, getDeploymentInfo, loginJson } from '@/api/client';
 import type { DeploymentInfo } from '@/api/types';
 import AuthLayout from '@/components/AuthLayout';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
+import { getFrontendBuildConstants } from '@/utils/semverRange';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [deployment, setDeployment] = useState<DeploymentInfo | null>(null);
+  const uiVersion = getFrontendBuildConstants().version;
 
   const { error, submitting, onSubmit } = useFormSubmit(async () => {
     const csrf = await getCsrfToken();
@@ -32,19 +34,24 @@ export default function LoginPage() {
       title="Welcome to Marreq"
       subtitle="Sign in to continue"
       footer={
-        showSelfService && (
-          <div className="space-y-3 text-center text-sm">
-            <Link to="/forgot-password" className="text-stitch-accent hover:underline">
-              Forgot your password?
-            </Link>
-            <p className="text-stitch-muted">
-              New to Marreq?{' '}
-              <Link to="/register" className="text-stitch-accent hover:underline">
-                Create an account
+        <div className="space-y-3 text-center text-sm">
+          {showSelfService && (
+            <>
+              <Link to="/forgot-password" className="text-stitch-accent hover:underline">
+                Forgot your password?
               </Link>
-            </p>
-          </div>
-        )
+              <p className="text-stitch-muted">
+                New to Marreq?{' '}
+                <Link to="/register" className="text-stitch-accent hover:underline">
+                  Create an account
+                </Link>
+              </p>
+            </>
+          )}
+          <p className="text-xs text-stitch-muted" data-testid="login-ui-version">
+            UI {uiVersion}
+          </p>
+        </div>
       }
     >
         <form onSubmit={onSubmit} className="space-y-4">

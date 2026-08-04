@@ -38,6 +38,7 @@ use rocket::Route;
 pub fn routes() -> Vec<Route> {
     let r = routes![
         meta::api_root,
+        meta::build_info,
         meta::deployment_info,
         meta::health,
         auth::auth_csrf,

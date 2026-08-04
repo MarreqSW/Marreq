@@ -14,6 +14,7 @@ pub mod api;
 pub mod app;
 pub mod auth;
 pub mod authorization;
+pub mod build_info;
 pub mod config;
 pub mod cors;
 pub mod db_types;

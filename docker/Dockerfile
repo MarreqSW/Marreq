@@ -2,6 +2,9 @@
 FROM rust:1-bookworm AS builder
 
 ARG MARREQ_BIN=marreq-server
+ARG MARREQ_VERSION=0.1.0
+ARG MARREQ_GIT_SHA=unknown
+ENV MARREQ_GIT_SHA=${MARREQ_GIT_SHA}
 
 # Native deps for libxlsxwriter-sys (build from source) and bindgen (libclang)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -34,12 +37,13 @@ RUN cargo install diesel_cli --no-default-features --features postgres
 # Copy real sources
 RUN rm -rf marreq-core/src marreq-server/src marreq-cloud/src
 COPY marreq-core/src ./marreq-core/src
+COPY marreq-core/frontend_compatibility.json ./marreq-core/frontend_compatibility.json
 COPY marreq-core/migrations ./marreq-core/migrations
 COPY marreq-core/scripts ./marreq-core/scripts
 COPY marreq-server/src ./marreq-server/src
 COPY marreq-cloud/src ./marreq-cloud/src
 
-# Build the selected binary
+# Build the selected binary (MARREQ_GIT_SHA baked via option_env!)
 RUN touch marreq-core/src/lib.rs marreq-server/src/main.rs marreq-cloud/src/main.rs && \
     cargo build --release -p ${MARREQ_BIN}
 
@@ -47,6 +51,10 @@ RUN touch marreq-core/src/lib.rs marreq-server/src/main.rs marreq-cloud/src/main
 FROM debian:bookworm-slim
 
 ARG MARREQ_BIN=marreq-server
+ARG MARREQ_VERSION=0.1.0
+ARG MARREQ_GIT_SHA=unknown
+LABEL org.opencontainers.image.version="${MARREQ_VERSION}" \
+      org.opencontainers.image.revision="${MARREQ_GIT_SHA}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \

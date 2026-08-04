@@ -49,6 +49,12 @@ describe('LoginPage', () => {
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
   });
 
+  it('shows UI version in the footer', async () => {
+    vi.mocked(apiClient.getDeploymentInfo).mockResolvedValue(serverDeployment);
+    renderLoginPage();
+    expect(screen.getByTestId('login-ui-version')).toHaveTextContent(/^UI /);
+  });
+
   it('hides self-service links in server mode', async () => {
     vi.mocked(apiClient.getDeploymentInfo).mockResolvedValue(serverDeployment);
     renderLoginPage();

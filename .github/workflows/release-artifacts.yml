@@ -1,0 +1,87 @@
+name: Release artifacts
+
+on:
+  push:
+    tags:
+      - 'marreq-server-v*'
+      - 'marreq-frontend-v*'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  backend:
+    if: startsWith(github.ref_name, 'marreq-server-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version and image name
+        id: ver
+        run: |
+          TAG="${GITHUB_REF_NAME#marreq-server-v}"
+          OWNER_LC="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "version=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${OWNER_LC}/marreq-server" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.ver.outputs.image }}:${{ steps.ver.outputs.version }}
+            ${{ steps.ver.outputs.image }}:latest
+          build-args: |
+            MARREQ_BIN=marreq-server
+            MARREQ_VERSION=${{ steps.ver.outputs.version }}
+            MARREQ_GIT_SHA=${{ github.sha }}
+
+  frontend:
+    if: startsWith(github.ref_name, 'marreq-frontend-v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version and image name
+        id: ver
+        run: |
+          TAG="${GITHUB_REF_NAME#marreq-frontend-v}"
+          OWNER_LC="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "version=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${OWNER_LC}/marreq-frontend" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.ver.outputs.image }}:${{ steps.ver.outputs.version }}
+            ${{ steps.ver.outputs.image }}:latest
+          build-args: |
+            MARREQ_VERSION=${{ steps.ver.outputs.version }}
+            MARREQ_GIT_SHA=${{ github.sha }}

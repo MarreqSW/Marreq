@@ -1,4 +1,5 @@
 import type { IncomingMessage } from 'node:http';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import react from '@vitejs/plugin-react';
@@ -9,6 +10,17 @@ type HttpProxyLike = {
 };
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8')) as {
+  version: string;
+};
+const compatibility = JSON.parse(
+  readFileSync(path.resolve(__dirname, 'compatibility.json'), 'utf-8'),
+) as {
+  requires_backend_min: string;
+  requires_backend_max: string;
+};
+const frontendGitSha = process.env.MARREQ_GIT_SHA ?? 'unknown';
 
 /** Shared by dev server and `vite preview` so `/api/*` always reaches Rocket when testing a production build locally. */
 const apiProxy = {
@@ -44,6 +56,12 @@ export default defineConfig({
   // Ensure `/projects`, `/user/...`, etc. serve `index.html` in dev so the SPA shell runs.
   appType: 'spa',
   plugins: [react()],
+  define: {
+    __FRONTEND_VERSION__: JSON.stringify(pkg.version),
+    __REQUIRES_BACKEND_MIN__: JSON.stringify(compatibility.requires_backend_min),
+    __REQUIRES_BACKEND_MAX__: JSON.stringify(compatibility.requires_backend_max),
+    __FRONTEND_GIT_SHA__: JSON.stringify(frontendGitSha),
+  },
   server: {
     port: 5173,
     proxy: apiProxy,

@@ -44,6 +44,7 @@ import GroupCreatePage from '@/pages/groups/GroupCreatePage';
 import GroupViewPage from '@/pages/groups/GroupViewPage';
 import GroupEditPage from '@/pages/groups/GroupEditPage';
 import GroupMembersPage from '@/pages/groups/GroupMembersPage';
+import CompatibilityBanner from '@/components/CompatibilityBanner';
 
 function ProtectedShell() {
   const { refresh, loading, dashboard, error } = useDashboard();
@@ -74,7 +75,12 @@ function ProtectedShell() {
     return null;
   }
 
-  return <Outlet />;
+  return (
+    <>
+      <CompatibilityBanner />
+      <Outlet />
+    </>
+  );
 }
 
 export default function App() {

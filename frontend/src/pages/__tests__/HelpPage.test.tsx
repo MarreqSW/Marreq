@@ -1,9 +1,12 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useOutletContext } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ThemeProvider } from '@/context/ThemeContext';
 import HelpPage from '../HelpPage';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
+import * as apiClient from '@/api/client';
+
+vi.mock('@/api/client');
 
 vi.mock('@/context/DashboardContext', () => ({
   useDashboard: () => ({
@@ -21,8 +24,20 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+const compatibleBuild = {
+  backend_version: '0.1.0',
+  backend_git_sha: 'abc',
+  deployment_mode: 'server',
+  frontend_compatibility: { min_version: '0.1.0', max_version: '0.1.99' },
+};
+
 describe('HelpPage', () => {
-  it('renders help sections and shortcut links', () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(apiClient.getBuildInfo).mockResolvedValue(compatibleBuild);
+  });
+
+  it('renders help sections and shortcut links', async () => {
     vi.mocked(useOutletContext).mockReturnValue({
       projectId: 5,
       basePath: '/alice/space-project',
@@ -55,5 +70,10 @@ describe('HelpPage', () => {
       'href',
       '/alice/space-project/settings',
     );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('help-compatible')).toHaveTextContent('yes'),
+    );
+    expect(screen.getByTestId('help-build-info')).toHaveTextContent(/0\.1\.0/);
   });
 });

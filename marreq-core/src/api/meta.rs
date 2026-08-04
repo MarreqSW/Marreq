@@ -42,3 +42,30 @@ pub fn deployment_info() -> Json<serde_json::Value> {
         "allows_self_administered_user_creation": mode.allows_self_administered_user_creation(),
     }))
 }
+
+/// `GET /api/meta/build` — backend version + frontend compatibility range (issue #213).
+#[get("/meta/build")]
+pub fn build_info() -> Json<serde_json::Value> {
+    let mode = crate::deployment::current();
+    Json(crate::build_info::build_info_json(mode.name()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rocket::local::blocking::Client;
+
+    #[test]
+    fn build_info_returns_backend_version() {
+        crate::deployment::install_test_server_mode();
+        let rocket = rocket::build().mount("/api", routes![build_info]);
+        let client = Client::tracked(rocket).expect("client");
+        let res = client.get("/api/meta/build").dispatch();
+        assert_eq!(res.status().code, 200);
+        let body: serde_json::Value = res.into_json().expect("json");
+        assert_eq!(body["backend_version"], crate::build_info::BACKEND_VERSION);
+        assert!(body["frontend_compatibility"]["min_version"].is_string());
+        assert!(body["frontend_compatibility"]["max_version"].is_string());
+        assert_eq!(body["deployment_mode"], "server");
+    }
+}

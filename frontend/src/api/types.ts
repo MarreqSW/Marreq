@@ -189,6 +189,19 @@ export interface DeploymentInfo {
   allows_self_administered_user_creation: boolean;
 }
 
+export interface FrontendCompatibility {
+  min_version: string;
+  max_version: string;
+}
+
+/** Response from `GET /api/meta/build` (issue #213). */
+export interface BuildInfo {
+  backend_version: string;
+  backend_git_sha: string;
+  deployment_mode: string;
+  frontend_compatibility: FrontendCompatibility;
+}
+
 export type RegistrationBody = {
   username: string;
   name: string;

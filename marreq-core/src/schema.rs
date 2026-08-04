@@ -76,6 +76,8 @@ diesel::table! {
         description -> Nullable<Text>,
         created_at -> Timestamp,
         created_by -> Int4,
+        source_saved_view_id -> Nullable<Int4>,
+        source_view_definition -> Nullable<Jsonb>,
     }
 }
 
@@ -422,6 +424,27 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    saved_views (id) {
+        id -> Int4,
+        project_id -> Int4,
+        owner_id -> Int4,
+        #[max_length = 255]
+        name -> Varchar,
+        description -> Nullable<Text>,
+        #[max_length = 20]
+        visibility -> Varchar,
+        definition -> Jsonb,
+        locked -> Bool,
+        locked_at -> Nullable<Timestamp>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     sessions (token_hash) {
         #[max_length = 64]
         token_hash -> Bpchar,
@@ -547,6 +570,7 @@ diesel::joinable!(baseline_traceability -> verifications (verification_id));
 diesel::joinable!(baseline_verifications -> baselines (baseline_id));
 diesel::joinable!(baseline_verifications -> projects (project_id));
 diesel::joinable!(baselines -> projects (project_id));
+diesel::joinable!(baselines -> saved_views (source_saved_view_id));
 diesel::joinable!(baselines -> users (created_by));
 diesel::joinable!(categories -> projects (project_id));
 diesel::joinable!(custom_field_definitions -> projects (project_id));
@@ -586,6 +610,8 @@ diesel::joinable!(requirement_versions -> applicability (applicability_id));
 diesel::joinable!(requirement_versions -> categories (category_id));
 diesel::joinable!(requirement_versions -> requirement_status (status_id));
 diesel::joinable!(requirements -> projects (project_id));
+diesel::joinable!(saved_views -> projects (project_id));
+diesel::joinable!(saved_views -> users (owner_id));
 diesel::joinable!(sessions -> users (user_id));
 diesel::joinable!(user_api_tokens -> projects (project_id));
 diesel::joinable!(user_api_tokens -> users (user_id));
@@ -623,6 +649,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     requirement_version_verification_methods,
     requirement_versions,
     requirements,
+    saved_views,
     sessions,
     user_api_tokens,
     users,

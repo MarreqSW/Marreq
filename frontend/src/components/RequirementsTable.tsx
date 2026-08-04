@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import { escapeCsv, downloadCsv } from '@/utils/tableUtils';
 import { Pagination } from '@/components/table/Pagination';
 import { CsvDownloadButton } from '@/components/table/CsvDownloadButton';
+import SavedViewsToolbar from '@/components/SavedViewsToolbar';
 import {
   getMyPermissions,
+  getSavedView,
   listCategories,
   listProjectMembers,
   listRequirementStatuses,
@@ -20,10 +22,18 @@ import type {
   ProjectMember,
   Requirement,
   RequirementPatchBody,
+  RequirementsColumnId,
+  RequirementsSortColumn,
   RequirementStatus,
+  SavedView,
   User,
   VerificationMethod,
 } from '@/api/types';
+import {
+  defaultQueryState,
+  parseSavedViewDefinition,
+  type RequirementsQueryState,
+} from '@/utils/savedViewDefinition';
 import { StatusBadge } from './StatusBadge';
 
 function formatModified(iso: string): string {
@@ -102,14 +112,25 @@ export default function RequirementsTable({
   projectId,
   basePath,
   globalSearch,
+  setGlobalSearch,
   viewMode,
 }: {
   projectId: number;
   basePath: string;
   globalSearch: string;
+  setGlobalSearch: (q: string) => void;
   viewMode: ViewMode;
 }) {
-  const { csrfToken } = useDashboard();
+  const { csrfToken, dashboard } = useDashboard();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const currentUserId =
+    dashboard?.user &&
+    typeof dashboard.user === 'object' &&
+    dashboard.user !== null &&
+    'id' in dashboard.user &&
+    typeof (dashboard.user as { id: unknown }).id === 'number'
+      ? (dashboard.user as { id: number }).id
+      : null;
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [statuses, setStatuses] = useState<RequirementStatus[]>([]);
   const [users, setUsers] = useState<User[] | null>(null);
@@ -125,10 +146,98 @@ export default function RequirementsTable({
   const baselineRef = useRef<Map<number, Requirement>>(new Map());
 
   const [statusFilter, setStatusFilter] = useState<'all' | number>('all');
+  const [categoryFilter, setCategoryFilter] = useState<'all' | number>('all');
+  const [approvalFilter, setApprovalFilter] = useState<'all' | string>('all');
+  const [sortColumn, setSortColumn] = useState<RequirementsSortColumn>(null);
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [visibleColumns, setVisibleColumns] = useState<RequirementsColumnId[]>(
+    () => defaultQueryState().columns,
+  );
+  const [selectedViewId, setSelectedViewId] = useState<number | null>(null);
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
   const [editCell, setEditCell] = useState<RequirementTableEditCell | null>(null);
   const inlineEditRef = useRef<HTMLDivElement | null>(null);
+  const deepLinkApplied = useRef(false);
+
+  const queryState: RequirementsQueryState = useMemo(
+    () => ({
+      statusFilter,
+      categoryFilter,
+      approvalFilter,
+      q: globalSearch,
+      sortColumn,
+      sortDir,
+      columns: visibleColumns,
+      viewMode,
+      pageSize,
+    }),
+    [
+      statusFilter,
+      categoryFilter,
+      approvalFilter,
+      globalSearch,
+      sortColumn,
+      sortDir,
+      visibleColumns,
+      viewMode,
+      pageSize,
+    ],
+  );
+
+  const applyQueryState = useCallback(
+    (state: RequirementsQueryState) => {
+      setStatusFilter(state.statusFilter);
+      setCategoryFilter(state.categoryFilter);
+      setApprovalFilter(state.approvalFilter);
+      setGlobalSearch(state.q);
+      setSortColumn(state.sortColumn);
+      setSortDir(state.sortDir);
+      setVisibleColumns(state.columns);
+      setPageSize(state.pageSize);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (state.viewMode === 'list') next.set('view', 'list');
+          else next.delete('view');
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setGlobalSearch, setSearchParams],
+  );
+
+  const onSelectView = useCallback(
+    (view: SavedView | null) => {
+      setSelectedViewId(view?.id ?? null);
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (view) next.set('saved_view', String(view.id));
+          else next.delete('saved_view');
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const colVisible = useCallback(
+    (id: RequirementsColumnId) => visibleColumns.includes(id),
+    [visibleColumns],
+  );
+
+  const toggleColumn = useCallback((id: RequirementsColumnId) => {
+    setVisibleColumns((prev) => {
+      if (prev.includes(id)) {
+        if (prev.length <= 1) return prev;
+        return prev.filter((c) => c !== id);
+      }
+      return [...prev, id];
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -136,8 +245,16 @@ export default function RequirementsTable({
       setLoading(true);
       setErr(null);
       try {
+        const listOpts = {
+          status_id: statusFilter === 'all' ? undefined : statusFilter,
+          category_id: categoryFilter === 'all' ? undefined : categoryFilter,
+          approval_state: approvalFilter === 'all' ? undefined : approvalFilter,
+          sort_column: sortColumn ?? undefined,
+          sort_dir: sortColumn ? sortDir : undefined,
+          view_id: selectedViewId ?? undefined,
+        };
         const [reqs, st, u, cat, mem, methods, permRes] = await Promise.all([
-          listRequirements(projectId),
+          listRequirements(projectId, listOpts),
           listRequirementStatuses(),
           listUsersOptional(),
           listCategories(),
@@ -163,7 +280,39 @@ export default function RequirementsTable({
     return () => {
       cancelled = true;
     };
-  }, [projectId]);
+  }, [
+    projectId,
+    statusFilter,
+    categoryFilter,
+    approvalFilter,
+    sortColumn,
+    sortDir,
+    selectedViewId,
+  ]);
+
+  // Deep-link: ?saved_view=<id>
+  useEffect(() => {
+    if (deepLinkApplied.current) return;
+    const raw = searchParams.get('saved_view');
+    if (!raw) return;
+    const id = Number(raw);
+    if (!Number.isFinite(id)) return;
+    deepLinkApplied.current = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        const view = await getSavedView(projectId, id);
+        if (cancelled) return;
+        setSelectedViewId(view.id);
+        applyQueryState(parseSavedViewDefinition(view.definition));
+      } catch {
+        /* ignore missing / forbidden view */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, projectId, applyQueryState]);
 
   const statusById = useMemo(() => {
     const m = new Map<number, RequirementStatus>();
@@ -254,24 +403,73 @@ export default function RequirementsTable({
   const q = globalSearch.trim().toLowerCase();
 
   const filtered = useMemo(() => {
-    return requirements.filter((req) => {
+    let rows = requirements.filter((req) => {
       if (statusFilter !== 'all' && req.status_id !== statusFilter) return false;
+      if (categoryFilter !== 'all' && req.category_id !== categoryFilter) return false;
+      if (
+        approvalFilter !== 'all' &&
+        req.approval_state.toLowerCase() !== approvalFilter.toLowerCase()
+      ) {
+        return false;
+      }
       if (!q) return true;
-      const blob = [
-        req.reference_code,
-        req.title,
-        req.description,
-        String(req.id),
-      ]
+      const blob = [req.reference_code, req.title, req.description, String(req.id)]
         .join(' ')
         .toLowerCase();
       return blob.includes(q);
     });
-  }, [requirements, statusFilter, q]);
+
+    if (sortColumn) {
+      const dir = sortDir === 'desc' ? -1 : 1;
+      rows = [...rows].sort((a, b) => {
+        const cmp = (left: string | number, right: string | number) => {
+          if (left < right) return -1 * dir;
+          if (left > right) return 1 * dir;
+          return 0;
+        };
+        switch (sortColumn) {
+          case 'key':
+            return cmp(a.reference_code || '', b.reference_code || '');
+          case 'title':
+            return cmp(a.title.toLowerCase(), b.title.toLowerCase());
+          case 'category':
+            return cmp(
+              (categoryById.get(a.category_id) ?? '').toLowerCase(),
+              (categoryById.get(b.category_id) ?? '').toLowerCase(),
+            );
+          case 'status':
+            return cmp(
+              (statusById.get(a.status_id)?.title ?? '').toLowerCase(),
+              (statusById.get(b.status_id)?.title ?? '').toLowerCase(),
+            );
+          case 'approval':
+            return cmp(a.approval_state, b.approval_state);
+          case 'modified':
+            return cmp(a.update_date, b.update_date);
+          case 'author':
+            return cmp(userLabel(a.author_id).toLowerCase(), userLabel(b.author_id).toLowerCase());
+          default:
+            return 0;
+        }
+      });
+    }
+    return rows;
+  }, [
+    requirements,
+    statusFilter,
+    categoryFilter,
+    approvalFilter,
+    q,
+    sortColumn,
+    sortDir,
+    categoryById,
+    statusById,
+    userLabel,
+  ]);
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, q, pageSize]);
+  }, [statusFilter, categoryFilter, approvalFilter, q, pageSize, sortColumn, sortDir]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pageCount);
@@ -324,6 +522,10 @@ export default function RequirementsTable({
 
   const resetFilters = useCallback(() => {
     setStatusFilter('all');
+    setCategoryFilter('all');
+    setApprovalFilter('all');
+    setSortColumn(null);
+    setSortDir('asc');
   }, []);
 
   const exportCsv = useCallback(() => {
@@ -386,6 +588,16 @@ export default function RequirementsTable({
           {saveErr}
         </div>
       ) : null}
+
+      <SavedViewsToolbar
+        projectId={projectId}
+        currentUserId={currentUserId}
+        query={queryState}
+        selectedViewId={selectedViewId}
+        onSelectView={onSelectView}
+        onApplyState={applyQueryState}
+      />
+
       {/* Filters bar — Image 2.html */}
       <div className="bg-stitch-elevated p-4 rounded-xl border border-stitch-border flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2 md:gap-3">
@@ -408,6 +620,100 @@ export default function RequirementsTable({
               ))}
             </select>
           </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
+            <span>Category:</span>
+            <select
+              value={categoryFilter === 'all' ? 'all' : String(categoryFilter)}
+              onChange={(e) => {
+                const v = e.target.value;
+                setCategoryFilter(v === 'all' ? 'all' : Number(v));
+              }}
+              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-none cursor-pointer"
+            >
+              <option value="all">All</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
+            <span>Approval:</span>
+            <select
+              value={approvalFilter}
+              onChange={(e) => setApprovalFilter(e.target.value)}
+              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-none cursor-pointer"
+            >
+              <option value="all">All</option>
+              <option value="draft">Draft</option>
+              <option value="reviewed">Reviewed</option>
+              <option value="approved">Approved</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
+            <span>Sort:</span>
+            <select
+              value={sortColumn ?? ''}
+              onChange={(e) => {
+                const v = e.target.value;
+                setSortColumn(v ? (v as Exclude<RequirementsSortColumn, null>) : null);
+              }}
+              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-none cursor-pointer"
+            >
+              <option value="">Default</option>
+              <option value="key">Key</option>
+              <option value="title">Title</option>
+              <option value="category">Category</option>
+              <option value="status">Status</option>
+              <option value="approval">Approval</option>
+              <option value="modified">Modified</option>
+              <option value="author">Author</option>
+            </select>
+            <button
+              type="button"
+              disabled={!sortColumn}
+              onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+              className="text-stitch-accent font-bold disabled:opacity-40"
+              title="Toggle sort direction"
+            >
+              {sortDir === 'asc' ? '↑' : '↓'}
+            </button>
+          </div>
+          <details className="relative">
+            <summary className="list-none cursor-pointer text-xs text-stitch-accent font-bold flex items-center gap-1">
+              <span className="material-symbols-outlined text-sm">view_column</span>
+              Columns
+            </summary>
+            <div className="absolute z-20 mt-2 left-0 min-w-[160px] rounded-lg border border-stitch-border bg-stitch-surface p-2 shadow-stitch space-y-1">
+              {(
+                [
+                  ['key', 'Key'],
+                  ['title', 'Title'],
+                  ['category', 'Category'],
+                  ['parents', 'Parents'],
+                  ['status', 'Status'],
+                  ['approval', 'Approval'],
+                  ['verification', 'Verification'],
+                  ['modified', 'Modified'],
+                  ['author', 'Author'],
+                  ['actions', 'Actions'],
+                ] as const
+              ).map(([id, label]) => (
+                <label
+                  key={id}
+                  className="flex items-center gap-2 text-xs text-stitch-fg/90 px-1 py-0.5"
+                >
+                  <input
+                    type="checkbox"
+                    checked={colVisible(id)}
+                    onChange={() => toggleColumn(id)}
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </details>
           <div className="hidden sm:block h-4 w-px bg-stitch-border mx-1" />
           <button
             type="button"
@@ -716,36 +1022,56 @@ export default function RequirementsTable({
           <table className="w-full text-left border-collapse min-w-[960px]">
             <thead>
               <tr className="border-b border-stitch-border bg-stitch-elevated">
+                {colVisible('key') && (
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider whitespace-nowrap sticky left-0 z-10 bg-stitch-elevated border-r border-stitch-border/60">
                   Key
                 </th>
+                )}
+                {colVisible('title') && (
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[140px]">
                   Title
                 </th>
+                )}
+                {colVisible('category') && (
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[120px]">
                   Category
                 </th>
+                )}
+                {colVisible('parents') && (
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[120px]">
                   Parents
                 </th>
+                )}
+                {colVisible('status') && (
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[110px]">
                   Status
                 </th>
+                )}
+                {colVisible('approval') && (
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider">
                   Approval
                 </th>
+                )}
+                {colVisible('verification') && (
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[140px]">
                   Verification
                 </th>
+                )}
+                {colVisible('modified') && (
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider whitespace-nowrap">
                   Modified
                 </th>
+                )}
+                {colVisible('author') && (
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider min-w-[120px]">
                   Author
                 </th>
+                )}
+                {colVisible('actions') && (
                 <th className="px-2 py-3 text-[10px] font-bold text-stitch-muted uppercase tracking-wider sticky right-0 bg-stitch-elevated min-w-[88px]">
                   Actions
                 </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-stitch-border">
@@ -755,12 +1081,15 @@ export default function RequirementsTable({
                 const busy = savingId === req.id;
                 return (
                   <tr key={req.id} className="hover:bg-white/[0.03] transition-colors">
-                    <td className="px-2 py-2 align-top sticky left-0 z-[1] bg-stitch-surface border-r border-stitch-border/60">
+                    {colVisible('key') && (
+                      <td className="px-2 py-2 align-top sticky left-0 z-[1] bg-stitch-surface border-r border-stitch-border/60">
                       <span className="text-xs font-mono text-stitch-accent font-semibold whitespace-nowrap">
                         {req.reference_code || `REQ-${req.id}`}
                       </span>
                     </td>
-                    <td className="px-2 py-2 align-top max-w-[min(280px,26vw)]">
+                    )}
+                    {colVisible('title') && (
+                      <td className="px-2 py-2 align-top max-w-[min(280px,26vw)]">
                       {editCell?.reqId === req.id && editCell.kind === 'title' && canEdit && !busy ? (
                         <div ref={inlineEditRef}>
                           <input
@@ -799,7 +1128,9 @@ export default function RequirementsTable({
                         </span>
                       )}
                     </td>
-                    <td className="px-2 py-2 align-top">
+                    )}
+                    {colVisible('category') && (
+                      <td className="px-2 py-2 align-top">
                       {editCell?.reqId === req.id && editCell.kind === 'category' && canEdit && !busy ? (
                         <div ref={inlineEditRef}>
                           <select
@@ -841,7 +1172,9 @@ export default function RequirementsTable({
                         </span>
                       )}
                     </td>
-                    <td className="px-2 py-2 align-top text-xs">
+                    )}
+                    {colVisible('parents') && (
+                      <td className="px-2 py-2 align-top text-xs">
                       {parentIds.length === 0 ? (
                         <span className="text-stitch-muted">—</span>
                       ) : (
@@ -860,7 +1193,9 @@ export default function RequirementsTable({
                         </ul>
                       )}
                     </td>
-                    <td className="px-2 py-2 align-top">
+                    )}
+                    {colVisible('status') && (
+                      <td className="px-2 py-2 align-top">
                       {editCell?.reqId === req.id && editCell.kind === 'status' && canEditStatus && !busy ? (
                         <div ref={inlineEditRef}>
                           <select
@@ -908,12 +1243,16 @@ export default function RequirementsTable({
                         </span>
                       )}
                     </td>
-                    <td className="px-2 py-2 align-top">
+                    )}
+                    {colVisible('approval') && (
+                      <td className="px-2 py-2 align-top">
                       <span className="text-[10px] font-bold uppercase text-stitch-muted border border-stitch-border rounded px-1.5 py-1 inline-block max-w-[120px] truncate">
                         {approvalLabel(req.approval_state)}
                       </span>
                     </td>
-                    <td className="px-2 py-2 align-top min-w-[140px] max-w-[min(320px,28vw)]">
+                    )}
+                    {colVisible('verification') && (
+                      <td className="px-2 py-2 align-top min-w-[140px] max-w-[min(320px,28vw)]">
                       {editCell?.reqId === req.id &&
                       editCell.kind === 'verification_methods' &&
                       canEdit &&
@@ -974,10 +1313,14 @@ export default function RequirementsTable({
                         </span>
                       )}
                     </td>
-                    <td className="px-2 py-2 align-top text-[11px] text-stitch-muted font-mono whitespace-nowrap">
+                    )}
+                    {colVisible('modified') && (
+                      <td className="px-2 py-2 align-top text-[11px] text-stitch-muted font-mono whitespace-nowrap">
                       {formatModified(req.update_date)}
                     </td>
-                    <td className="px-2 py-2 align-top">
+                    )}
+                    {colVisible('author') && (
+                      <td className="px-2 py-2 align-top">
                       {editCell?.reqId === req.id && editCell.kind === 'author' && canEdit && !busy ? (
                         <div ref={inlineEditRef}>
                           <select
@@ -1019,7 +1362,9 @@ export default function RequirementsTable({
                         </span>
                       )}
                     </td>
-                    <td className="px-2 py-2 align-top sticky right-0 z-[1] bg-stitch-surface border-l border-stitch-border/60">
+                    )}
+                    {colVisible('actions') && (
+                      <td className="px-2 py-2 align-top sticky right-0 z-[1] bg-stitch-surface border-l border-stitch-border/60">
                       <div className="flex items-center gap-1">
                         <Link
                           to={`${basePath}/requirements/${req.id}`}
@@ -1037,6 +1382,7 @@ export default function RequirementsTable({
                         </Link>
                       </div>
                     </td>
+                    )}
                   </tr>
                 );
               })}

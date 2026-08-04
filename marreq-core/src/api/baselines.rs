@@ -18,6 +18,8 @@ use crate::services::BaselineService;
 pub struct CreateBaselineRequest {
     pub name: String,
     pub description: Option<String>,
+    #[serde(default)]
+    pub saved_view_id: Option<i32>,
 }
 
 /// List baselines (session or Bearer). Project-scoped.
@@ -77,9 +79,26 @@ pub async fn create(
         Permission::EditRequirements,
     )?;
     let payload = payload.into_inner();
+    if let Some(view_id) = payload.saved_view_id {
+        use crate::repository::SavedViewRepository;
+        let view = state
+            .repo_read()
+            .get_saved_view_by_id(view_id)
+            .map_err(ApiError::from)?;
+        if view.project_id != project_id {
+            return Err(ApiError::NotFound("saved view not found".into()));
+        }
+        let visible = view.visibility == "shared"
+            || view.owner_id == access.user().id
+            || access.user().is_admin;
+        if !visible {
+            return Err(ApiError::NotFound("saved view not found".into()));
+        }
+    }
     let new_baseline = NewBaseline {
         name: payload.name,
         description: payload.description,
+        saved_view_id: payload.saved_view_id,
     };
     let service = BaselineService::new(state.inner());
     let baseline = service.create_baseline(project_id, access.user().id, &new_baseline)?;

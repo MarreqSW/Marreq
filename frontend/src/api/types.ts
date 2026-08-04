@@ -336,6 +336,74 @@ export interface Baseline {
   description: string | null;
   created_at: string;
   created_by: number;
+  source_saved_view_id?: number | null;
+  source_view_definition?: unknown | null;
+}
+
+/** Named project-scoped saved view (issue #110). */
+export interface SavedView {
+  id: number;
+  project_id: number;
+  owner_id: number;
+  name: string;
+  description: string | null;
+  visibility: 'private' | 'shared' | string;
+  definition: SavedViewDefinition;
+  locked: boolean;
+  locked_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type SavedViewVisibility = 'private' | 'shared';
+
+export type RequirementsColumnId =
+  | 'key'
+  | 'title'
+  | 'category'
+  | 'parents'
+  | 'status'
+  | 'approval'
+  | 'verification'
+  | 'modified'
+  | 'author'
+  | 'actions';
+
+export type RequirementsSortColumn =
+  | 'key'
+  | 'title'
+  | 'category'
+  | 'status'
+  | 'approval'
+  | 'modified'
+  | 'author'
+  | null;
+
+export interface SavedViewDefinition {
+  version: number;
+  entity: string;
+  filters: {
+    status_id?: number | null;
+    category_id?: number | null;
+    approval_state?: string | null;
+    q?: string;
+  };
+  sort: {
+    column: RequirementsSortColumn | string | null;
+    dir: 'asc' | 'desc' | string;
+  };
+  columns: RequirementsColumnId[] | string[] | null;
+  ui: {
+    view_mode?: 'table' | 'list' | string;
+    page_size?: number;
+  };
+}
+
+export interface SavedViewPayload {
+  name: string;
+  description?: string | null;
+  visibility: SavedViewVisibility | string;
+  definition: SavedViewDefinition | Record<string, unknown>;
 }
 
 export interface BaselineTraceabilityRow {

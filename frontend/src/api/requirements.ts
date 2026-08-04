@@ -10,8 +10,34 @@ import type {
 } from './types';
 import { fetchJson, JSON_HEADERS } from './transport';
 
-export async function listRequirements(projectId: number): Promise<Requirement[]> {
-  return fetchJson<Requirement[]>(`/api/projects/${projectId}/requirements`);
+export type RequirementListQuery = {
+  approval_state?: string;
+  has_tests?: boolean;
+  status_id?: number;
+  category_id?: number;
+  q?: string;
+  sort_column?: string;
+  sort_dir?: 'asc' | 'desc' | string;
+  view_id?: number;
+};
+
+export async function listRequirements(
+  projectId: number,
+  query: RequirementListQuery = {},
+): Promise<Requirement[]> {
+  const params = new URLSearchParams();
+  if (query.approval_state) params.set('approval_state', query.approval_state);
+  if (query.has_tests != null) params.set('has_tests', String(query.has_tests));
+  if (query.status_id != null) params.set('status_id', String(query.status_id));
+  if (query.category_id != null) params.set('category_id', String(query.category_id));
+  if (query.q) params.set('q', query.q);
+  if (query.sort_column) params.set('sort_column', query.sort_column);
+  if (query.sort_dir) params.set('sort_dir', query.sort_dir);
+  if (query.view_id != null) params.set('view_id', String(query.view_id));
+  const qs = params.toString();
+  return fetchJson<Requirement[]>(
+    `/api/projects/${projectId}/requirements${qs ? `?${qs}` : ''}`,
+  );
 }
 
 export async function createRequirementByProject(

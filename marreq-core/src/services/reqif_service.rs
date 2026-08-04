@@ -373,6 +373,8 @@ mod tests {
             description: None,
             created_at: epoch(),
             created_by: 1,
+            source_saved_view_id: None,
+            source_view_definition: None,
         });
         mock.requirement_statuses.insert(
             1,
@@ -476,6 +478,8 @@ mod tests {
             description: None,
             created_at: epoch(),
             created_by: 1,
+            source_saved_view_id: None,
+            source_view_definition: None,
         });
         let cached = CacheRepository::new(mock, 0);
         let state = AppState::<DieselCachedRepo> {

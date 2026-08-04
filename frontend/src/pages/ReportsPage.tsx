@@ -60,6 +60,14 @@ export default function ReportsPage() {
   const [baselineLoading, setBaselineLoading] = useState(false);
   const [baselineErr, setBaselineErr] = useState<string | null>(null);
 
+  const viewIdParam = useMemo(() => {
+    const sp = new URLSearchParams(location.search);
+    const raw = sp.get('saved_view');
+    if (!raw) return undefined;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : undefined;
+  }, [location.search]);
+
   const load = useCallback(async () => {
     if (!Number.isFinite(pid)) return;
     setLoading(true);
@@ -68,7 +76,7 @@ export default function ReportsPage() {
       const [rep, mx, reqs, vers, cats, u, bl] = await Promise.all([
         getCoverageReport(pid),
         listMatrix(pid),
-        listRequirements(pid),
+        listRequirements(pid, viewIdParam != null ? { view_id: viewIdParam } : {}),
         listVerifications(),
         listCategories(),
         listUsersOptional(),
@@ -86,7 +94,7 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [pid]);
+  }, [pid, viewIdParam]);
 
   useEffect(() => {
     void load();

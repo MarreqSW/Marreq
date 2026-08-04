@@ -24,6 +24,7 @@ pub mod projects_session;
 pub mod requirement_diff;
 pub mod requirement_version_links;
 pub mod requirements;
+pub mod saved_views;
 pub mod semantic_search;
 pub mod status;
 pub mod traceability;
@@ -158,6 +159,12 @@ pub fn routes() -> Vec<Route> {
         notifications::delete_preference,
         // Project creation
         projects::create,
+        // Saved views
+        saved_views::list,
+        saved_views::get,
+        saved_views::create,
+        saved_views::update,
+        saved_views::delete,
         // Group endpoints
         groups::list,
         groups::get,

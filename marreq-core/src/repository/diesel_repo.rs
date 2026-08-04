@@ -2784,12 +2784,38 @@ impl BaselineRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         conn.as_mut().transaction::<_, RepoError, _>(|conn| {
             let now = chrono::Utc::now().naive_utc();
+
+            let (source_saved_view_id, source_view_definition) =
+                if let Some(view_id) = payload.saved_view_id {
+                    use schema::saved_views::dsl as sv;
+                    let view: crate::models::SavedView = sv::saved_views
+                        .filter(sv::id.eq(view_id))
+                        .get_result(conn)
+                        .map_err(|e| {
+                            if e == diesel::result::Error::NotFound {
+                                RepoError::NotFound
+                            } else {
+                                e.into()
+                            }
+                        })?;
+                    if view.project_id != project_id {
+                        return Err(RepoError::BadInput(
+                            "saved view does not belong to this project".into(),
+                        ));
+                    }
+                    (Some(view.id), Some(view.definition.clone()))
+                } else {
+                    (None, None)
+                };
+
             let new_row = NewBaselineRow {
                 project_id,
                 name: payload.name.clone(),
                 description: payload.description.clone(),
                 created_at: now,
                 created_by,
+                source_saved_view_id,
+                source_view_definition: source_view_definition.clone(),
             };
             let baseline: Baseline = diesel::insert_into(baselines::table)
                 .values(&new_row)
@@ -2808,6 +2834,44 @@ impl BaselineRepository for DieselRepo {
                         RequirementVersion::as_select(),
                     ))
                     .load(conn)?;
+
+            let rows: Vec<(RequirementContainer, RequirementVersion)> =
+                if let Some(def) = source_view_definition.as_ref() {
+                    let applied = crate::saved_view_definition::filters_from_definition(def);
+                    rows.into_iter()
+                        .filter(|(_container, version)| {
+                            if let Some(sid) = applied.status_id {
+                                if version.status_id != sid {
+                                    return false;
+                                }
+                            }
+                            if let Some(cid) = applied.category_id {
+                                if version.category_id != cid {
+                                    return false;
+                                }
+                            }
+                            if let Some(state) = applied.approval_state.as_deref() {
+                                if !version.approval_state.eq_ignore_ascii_case(state) {
+                                    return false;
+                                }
+                            }
+                            if let Some(raw_q) = applied.q.as_deref() {
+                                let needle = raw_q.trim().to_lowercase();
+                                if !needle.is_empty() {
+                                    let blob = format!("{} {}", version.title, version.description)
+                                        .to_lowercase();
+                                    if !blob.contains(&needle) {
+                                        return false;
+                                    }
+                                }
+                            }
+                            true
+                        })
+                        .collect()
+                } else {
+                    rows
+                };
+
             for (container, version) in rows {
                 let br = NewBaselineRequirement {
                     baseline_id,
@@ -2858,6 +2922,17 @@ impl BaselineRepository for DieselRepo {
                 };
                 diesel::insert_into(baseline_verifications::table)
                     .values(&bv)
+                    .execute(conn)?;
+            }
+
+            if let Some(view_id) = source_saved_view_id {
+                use schema::saved_views::dsl as sv;
+                diesel::update(sv::saved_views.filter(sv::id.eq(view_id)))
+                    .set((
+                        sv::locked.eq(true),
+                        sv::locked_at.eq(Some(now)),
+                        sv::updated_at.eq(now),
+                    ))
                     .execute(conn)?;
             }
 
@@ -2959,6 +3034,154 @@ impl BaselineRepository for DieselRepo {
             .order(dsl::verification_id.asc())
             .load(conn.as_mut())
             .map_err(RepoError::from)
+    }
+}
+
+impl super::SavedViewRepository for DieselRepo {
+    fn list_saved_views_for_user(
+        &self,
+        project_id: i32,
+        user_id: i32,
+    ) -> Result<Vec<crate::models::SavedView>, RepoError> {
+        use schema::saved_views::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::saved_views
+            .filter(dsl::project_id.eq(project_id))
+            .filter(
+                dsl::visibility
+                    .eq("shared")
+                    .or(dsl::owner_id.eq(user_id).and(dsl::visibility.eq("private"))),
+            )
+            .order((dsl::visibility.asc(), dsl::name.asc(), dsl::id.asc()))
+            .load(conn.as_mut())
+            .map_err(RepoError::from)
+    }
+
+    fn get_saved_view_by_id(&self, id: i32) -> Result<crate::models::SavedView, RepoError> {
+        use schema::saved_views::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::saved_views
+            .filter(dsl::id.eq(id))
+            .get_result(conn.as_mut())
+            .map_err(|e| {
+                if e == diesel::result::Error::NotFound {
+                    RepoError::NotFound
+                } else {
+                    e.into()
+                }
+            })
+    }
+
+    fn create_saved_view(
+        &mut self,
+        project_id: i32,
+        owner_id: i32,
+        payload: &crate::models::SavedViewPayload,
+    ) -> Result<crate::models::SavedView, RepoError> {
+        use schema::saved_views::dsl;
+        let visibility = crate::saved_view_definition::validate_visibility(&payload.visibility)?;
+        let definition =
+            crate::saved_view_definition::validate_saved_view_definition(&payload.definition)?;
+        let name = payload.name.trim().to_string();
+        if name.is_empty() {
+            return Err(RepoError::BadInput("name is required".into()));
+        }
+        let now = chrono::Utc::now().naive_utc();
+        let row = crate::models::NewSavedViewRow {
+            project_id,
+            owner_id,
+            name,
+            description: payload
+                .description
+                .as_ref()
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty()),
+            visibility,
+            definition,
+            locked: false,
+            locked_at: None,
+            created_at: now,
+            updated_at: now,
+        };
+        let mut conn = self.get_conn()?;
+        diesel::insert_into(dsl::saved_views)
+            .values(&row)
+            .get_result(conn.as_mut())
+            .map_err(RepoError::from)
+    }
+
+    fn update_saved_view(
+        &mut self,
+        id: i32,
+        payload: &crate::models::SavedViewPayload,
+    ) -> Result<crate::models::SavedView, RepoError> {
+        use schema::saved_views::dsl;
+        let existing = self.get_saved_view_by_id(id)?;
+        if existing.locked {
+            return Err(RepoError::BadInput(
+                "Saved views used in a baseline are immutable".into(),
+            ));
+        }
+        let visibility = crate::saved_view_definition::validate_visibility(&payload.visibility)?;
+        let definition =
+            crate::saved_view_definition::validate_saved_view_definition(&payload.definition)?;
+        let name = payload.name.trim().to_string();
+        if name.is_empty() {
+            return Err(RepoError::BadInput("name is required".into()));
+        }
+        let now = chrono::Utc::now().naive_utc();
+        let mut conn = self.get_conn()?;
+        let affected = diesel::update(dsl::saved_views.filter(dsl::id.eq(id)))
+            .set((
+                dsl::name.eq(name),
+                dsl::description.eq(payload
+                    .description
+                    .as_ref()
+                    .map(|s| s.trim().to_string())
+                    .filter(|s| !s.is_empty())),
+                dsl::visibility.eq(visibility),
+                dsl::definition.eq(definition),
+                dsl::updated_at.eq(now),
+            ))
+            .execute(conn.as_mut())?;
+        if affected == 0 {
+            return Err(RepoError::NotFound);
+        }
+        self.get_saved_view_by_id(id)
+    }
+
+    fn delete_saved_view(&mut self, id: i32) -> Result<(), RepoError> {
+        use schema::saved_views::dsl;
+        let existing = self.get_saved_view_by_id(id)?;
+        if existing.locked {
+            return Err(RepoError::BadInput(
+                "Saved views used in a baseline are immutable".into(),
+            ));
+        }
+        let mut conn = self.get_conn()?;
+        let affected =
+            diesel::delete(dsl::saved_views.filter(dsl::id.eq(id))).execute(conn.as_mut())?;
+        if affected == 0 {
+            return Err(RepoError::NotFound);
+        }
+        Ok(())
+    }
+
+    fn lock_saved_view(&mut self, id: i32) -> Result<(), RepoError> {
+        use schema::saved_views::dsl;
+        let now = chrono::Utc::now().naive_utc();
+        let mut conn = self.get_conn()?;
+        let affected = diesel::update(dsl::saved_views.filter(dsl::id.eq(id)))
+            .set((
+                dsl::locked.eq(true),
+                dsl::locked_at.eq(Some(now)),
+                dsl::updated_at.eq(now),
+            ))
+            .execute(conn.as_mut())?;
+        if affected == 0 {
+            return Err(RepoError::NotFound);
+        }
+        Ok(())
     }
 }
 

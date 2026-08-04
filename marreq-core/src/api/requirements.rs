@@ -11,7 +11,10 @@ use crate::models::{
     CustomFieldValueInput, NewRequirement, Requirement, RequirementVersion, RequirementVersionLink,
     Verification,
 };
-use crate::repository::{errors::RepoError, MatrixRepository, RequirementsRepository};
+use crate::repository::{
+    errors::RepoError, MatrixRepository, RequirementsRepository, SavedViewRepository,
+    UserRepository,
+};
 use crate::services::RequirementService;
 use std::collections::HashSet;
 
@@ -218,12 +221,83 @@ fn filter_project_requirement_list(
     project_id: i32,
     approval_state: Option<&str>,
     has_tests: Option<bool>,
+    status_id: Option<i32>,
+    category_id: Option<i32>,
+    q: Option<&str>,
+    sort_column: Option<&str>,
+    sort_dir: Option<&str>,
+    view_id: Option<i32>,
+    viewer_user_id: i32,
 ) -> Result<Vec<Requirement>, RepoError> {
     let mut requirements = state.repo_read().get_requirements_by_project(project_id)?;
 
-    if let Some(state_filter) = approval_state {
+    let mut approval = approval_state.map(|s| s.to_string());
+    let mut status = status_id;
+    let mut category = category_id;
+    let mut query = q.map(|s| s.to_string());
+    let mut sort_col = sort_column.map(|s| s.to_string());
+    let mut sort_direction = sort_dir.unwrap_or("asc").to_string();
+
+    if let Some(vid) = view_id {
+        let view = state.repo_read().get_saved_view_by_id(vid)?;
+        if view.project_id != project_id {
+            return Err(RepoError::NotFound);
+        }
+        let visible = view.visibility == "shared"
+            || view.owner_id == viewer_user_id
+            || state
+                .repo_read()
+                .get_user_by_id(viewer_user_id)
+                .map(|u| u.is_admin)
+                .unwrap_or(false);
+        if !visible {
+            return Err(RepoError::NotFound);
+        }
+        let applied = crate::saved_view_definition::filters_from_definition(&view.definition);
+        if status.is_none() {
+            status = applied.status_id;
+        }
+        if category.is_none() {
+            category = applied.category_id;
+        }
+        if approval.is_none() {
+            approval = applied.approval_state;
+        }
+        if query.is_none() {
+            query = applied.q;
+        }
+        if sort_col.is_none() {
+            sort_col = applied.sort_column;
+            sort_direction = applied.sort_dir;
+        }
+    }
+
+    if let Some(state_filter) = approval.as_deref() {
         let state_lower = state_filter.to_lowercase();
         requirements.retain(|requirement| requirement.approval_state.to_lowercase() == state_lower);
+    }
+
+    if let Some(sid) = status {
+        requirements.retain(|requirement| requirement.status_id == sid);
+    }
+    if let Some(cid) = category {
+        requirements.retain(|requirement| requirement.category_id == cid);
+    }
+    if let Some(raw_q) = query.as_deref() {
+        let needle = raw_q.trim().to_lowercase();
+        if !needle.is_empty() {
+            requirements.retain(|requirement| {
+                [
+                    requirement.reference_code.as_str(),
+                    requirement.title.as_str(),
+                    requirement.description.as_str(),
+                    requirement.id.to_string().as_str(),
+                ]
+                .join(" ")
+                .to_lowercase()
+                .contains(&needle)
+            });
+        }
     }
 
     if let Some(has_tests_filter) = has_tests {
@@ -234,6 +308,27 @@ fn filter_project_requirement_list(
         } else {
             requirements.retain(|requirement| !req_ids_with_tests.contains(&requirement.id));
         }
+    }
+
+    if let Some(col) = sort_col.as_deref() {
+        let desc = sort_direction.eq_ignore_ascii_case("desc");
+        requirements.sort_by(|a, b| {
+            let ord = match col {
+                "key" => a.reference_code.cmp(&b.reference_code),
+                "title" => a.title.to_lowercase().cmp(&b.title.to_lowercase()),
+                "category" => a.category_id.cmp(&b.category_id),
+                "status" => a.status_id.cmp(&b.status_id),
+                "approval" => a.approval_state.cmp(&b.approval_state),
+                "modified" => a.update_date.cmp(&b.update_date),
+                "author" => a.author_id.cmp(&b.author_id),
+                _ => std::cmp::Ordering::Equal,
+            };
+            if desc {
+                ord.reverse()
+            } else {
+                ord
+            }
+        });
     }
 
     Ok(requirements)
@@ -437,13 +532,19 @@ pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec
 }
 
 /// Project-scoped list with optional filters (MCP and API). Accepts session or Bearer token.
-/// Query: approval_state (draft|reviewed|approved), has_tests (true|false).
-#[get("/projects/<project_id>/requirements?<approval_state>&<has_tests>")]
+/// Query: approval_state, has_tests, status_id, category_id, q, sort_column, sort_dir, view_id.
+#[get("/projects/<project_id>/requirements?<approval_state>&<has_tests>&<status_id>&<category_id>&<q>&<sort_column>&<sort_dir>&<view_id>")]
 pub async fn list_by_project(
     access: ProjectAccessOrBearer,
     project_id: i32,
     approval_state: Option<String>,
     has_tests: Option<bool>,
+    status_id: Option<i32>,
+    category_id: Option<i32>,
+    q: Option<String>,
+    sort_column: Option<String>,
+    sort_dir: Option<String>,
+    view_id: Option<i32>,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<RequirementListRow>>> {
     require_project_permission(
@@ -457,6 +558,13 @@ pub async fn list_by_project(
         project_id,
         approval_state.as_deref(),
         has_tests,
+        status_id,
+        category_id,
+        q.as_deref(),
+        sort_column.as_deref(),
+        sort_dir.as_deref(),
+        view_id,
+        access.user().id,
     )?;
     let rows = build_requirement_list_rows(state.inner(), project_id, requirements)?;
     Ok(Json(rows))

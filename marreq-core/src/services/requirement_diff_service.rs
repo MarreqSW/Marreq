@@ -330,6 +330,8 @@ mod tests {
             description: None,
             created_at: epoch(),
             created_by: 1,
+            source_saved_view_id: None,
+            source_view_definition: None,
         });
         let state = state_with_repo(mock);
         let service = RequirementDiffService::new(&state);

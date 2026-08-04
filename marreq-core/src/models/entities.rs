@@ -187,6 +187,8 @@ pub struct Baseline {
     pub description: Option<String>,
     pub created_at: chrono::NaiveDateTime,
     pub created_by: i32,
+    pub source_saved_view_id: Option<i32>,
+    pub source_view_definition: Option<serde_json::Value>,
 }
 
 /// Snapshot row: which requirement_version was in the baseline for each requirement.
@@ -421,6 +423,24 @@ pub struct CustomFieldDefinition {
     pub enum_values: Option<serde_json::Value>,
     pub sort_order: i32,
     pub created_at: chrono::NaiveDateTime,
+}
+
+/// Project-scoped saved view (filters / sort / columns JSON definition).
+#[derive(Serialize, Deserialize, Queryable, Selectable, Clone, Debug)]
+#[diesel(table_name = crate::schema::saved_views)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct SavedView {
+    pub id: i32,
+    pub project_id: i32,
+    pub owner_id: i32,
+    pub name: String,
+    pub description: Option<String>,
+    pub visibility: String,
+    pub definition: serde_json::Value,
+    pub locked: bool,
+    pub locked_at: Option<chrono::NaiveDateTime>,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
 }
 
 /// One stored custom field value per requirement version.

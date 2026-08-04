@@ -16,6 +16,7 @@ use crate::repository::{
     UserRepository,
 };
 use crate::services::RequirementService;
+use rocket::form::FromForm;
 use std::collections::HashSet;
 
 /// Trace summary for a requirement (parent, parent_links, children, linked tests). Used in project-scoped get.
@@ -216,29 +217,34 @@ fn apply_requirement_patch(
     })
 }
 
+#[derive(Debug, Default, FromForm)]
+pub struct RequirementListQuery {
+    pub approval_state: Option<String>,
+    pub has_tests: Option<bool>,
+    pub status_id: Option<i32>,
+    pub category_id: Option<i32>,
+    pub q: Option<String>,
+    pub sort_column: Option<String>,
+    pub sort_dir: Option<String>,
+    pub view_id: Option<i32>,
+}
+
 fn filter_project_requirement_list(
     state: &AppState,
     project_id: i32,
-    approval_state: Option<&str>,
-    has_tests: Option<bool>,
-    status_id: Option<i32>,
-    category_id: Option<i32>,
-    q: Option<&str>,
-    sort_column: Option<&str>,
-    sort_dir: Option<&str>,
-    view_id: Option<i32>,
+    query: &RequirementListQuery,
     viewer_user_id: i32,
 ) -> Result<Vec<Requirement>, RepoError> {
     let mut requirements = state.repo_read().get_requirements_by_project(project_id)?;
 
-    let mut approval = approval_state.map(|s| s.to_string());
-    let mut status = status_id;
-    let mut category = category_id;
-    let mut query = q.map(|s| s.to_string());
-    let mut sort_col = sort_column.map(|s| s.to_string());
-    let mut sort_direction = sort_dir.unwrap_or("asc").to_string();
+    let mut approval = query.approval_state.clone();
+    let mut status = query.status_id;
+    let mut category = query.category_id;
+    let mut text_query = query.q.clone();
+    let mut sort_col = query.sort_column.clone();
+    let mut sort_direction = query.sort_dir.clone().unwrap_or_else(|| "asc".to_string());
 
-    if let Some(vid) = view_id {
+    if let Some(vid) = query.view_id {
         let view = state.repo_read().get_saved_view_by_id(vid)?;
         if view.project_id != project_id {
             return Err(RepoError::NotFound);
@@ -263,8 +269,8 @@ fn filter_project_requirement_list(
         if approval.is_none() {
             approval = applied.approval_state;
         }
-        if query.is_none() {
-            query = applied.q;
+        if text_query.is_none() {
+            text_query = applied.q;
         }
         if sort_col.is_none() {
             sort_col = applied.sort_column;
@@ -283,7 +289,7 @@ fn filter_project_requirement_list(
     if let Some(cid) = category {
         requirements.retain(|requirement| requirement.category_id == cid);
     }
-    if let Some(raw_q) = query.as_deref() {
+    if let Some(raw_q) = text_query.as_deref() {
         let needle = raw_q.trim().to_lowercase();
         if !needle.is_empty() {
             requirements.retain(|requirement| {
@@ -300,7 +306,7 @@ fn filter_project_requirement_list(
         }
     }
 
-    if let Some(has_tests_filter) = has_tests {
+    if let Some(has_tests_filter) = query.has_tests {
         let links = state.repo_read().get_matrix_by_project(project_id)?;
         let req_ids_with_tests: HashSet<i32> = links.into_iter().map(|link| link.req_id).collect();
         if has_tests_filter {
@@ -533,18 +539,11 @@ pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec
 
 /// Project-scoped list with optional filters (MCP and API). Accepts session or Bearer token.
 /// Query: approval_state, has_tests, status_id, category_id, q, sort_column, sort_dir, view_id.
-#[get("/projects/<project_id>/requirements?<approval_state>&<has_tests>&<status_id>&<category_id>&<q>&<sort_column>&<sort_dir>&<view_id>")]
+#[get("/projects/<project_id>/requirements?<query..>")]
 pub async fn list_by_project(
     access: ProjectAccessOrBearer,
     project_id: i32,
-    approval_state: Option<String>,
-    has_tests: Option<bool>,
-    status_id: Option<i32>,
-    category_id: Option<i32>,
-    q: Option<String>,
-    sort_column: Option<String>,
-    sort_dir: Option<String>,
-    view_id: Option<i32>,
+    query: RequirementListQuery,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<RequirementListRow>>> {
     require_project_permission(
@@ -553,19 +552,8 @@ pub async fn list_by_project(
         project_id,
         Permission::ViewRequirements,
     )?;
-    let requirements = filter_project_requirement_list(
-        state.inner(),
-        project_id,
-        approval_state.as_deref(),
-        has_tests,
-        status_id,
-        category_id,
-        q.as_deref(),
-        sort_column.as_deref(),
-        sort_dir.as_deref(),
-        view_id,
-        access.user().id,
-    )?;
+    let requirements =
+        filter_project_requirement_list(state.inner(), project_id, &query, access.user().id)?;
     let rows = build_requirement_list_rows(state.inner(), project_id, requirements)?;
     Ok(Json(rows))
 }

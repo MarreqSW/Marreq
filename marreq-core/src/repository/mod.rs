@@ -4,7 +4,6 @@
 pub mod cache;
 pub mod cache_middleware;
 pub mod diesel_repo;
-pub mod diesel_repo_workspaces;
 // Make mock available for both unit tests and integration tests
 // This module is only used in test code and does not affect production builds
 pub mod diesel_repo_mock;

@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
-//! Diesel implementations for the deployment-mode-related repositories
-//! (`WorkspacesRepository`, `EmailTokensRepository`) and a few user lookups
-//! introduced for Cloud-mode flows. Kept in a separate file so that the
-//! large `diesel_repo.rs` does not need to be touched.
+//! Diesel implementations for deployment-mode repositories
+//! (`WorkspacesRepository`, `EmailTokensRepository`, `SessionRepository`)
+//! and Cloud-mode user lookup helpers.
 
-use super::diesel_repo::DieselRepo;
-use super::errors::RepoError;
-use super::{EmailTokensRepository, WorkspacesRepository};
+use super::DieselRepo;
 use crate::models::entities::{EmailToken, User, Workspace};
 use crate::models::forms::{NewEmailToken, NewWorkspace};
+use crate::repository::errors::RepoError;
+use crate::repository::{EmailTokensRepository, WorkspacesRepository};
 use crate::schema;
 use diesel::prelude::*;
 
@@ -126,7 +125,7 @@ impl DieselRepo {
     }
 }
 
-impl super::SessionRepository for DieselRepo {
+impl crate::repository::SessionRepository for DieselRepo {
     fn create_session(
         &mut self,
         new: &crate::models::entities::NewSession,

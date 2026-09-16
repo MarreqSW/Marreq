@@ -9,8 +9,9 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql
     # Host 5433 avoids clashing with a local PostgreSQL on 5432. Containers use db:5432.
+    # Bind to loopback so the database is not exposed on public host interfaces.
     ports:
-      - '5433:5432'
+      - '127.0.0.1:5433:5432'
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U rust -d marreq"]
       interval: 2s
@@ -22,8 +23,9 @@ services:
     image: ollama/ollama
     restart: unless-stopped
     # Host 11435 avoids clashing with a local Ollama on 11434. Backend still uses http://ollama:11434.
+    # Bind to loopback so Ollama is not exposed on public host interfaces.
     ports:
-      - '11435:11434'
+      - '127.0.0.1:11435:11434'
     volumes:
       - ollama_data:/root/.ollama
 
@@ -50,7 +52,7 @@ services:
       ROCKET_SECRET_KEY: ${ROCKET_SECRET_KEY:-UT5jxByH2kV2h9j/620KVP2w5NwZUEGVREFBbIKHVZk=}
       OLLAMA_URL: 'http://ollama:11434'
       # Must include the SPA origin so POST /api/* passes CSRF Origin check when header/cookie mismatch.
-      CSRF_ALLOWED_ORIGINS: 'http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:8000,http://localhost:8000'
+      CSRF_ALLOWED_ORIGINS: ${CSRF_ALLOWED_ORIGINS:-http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:8000,http://localhost:8000}
     ports:
       # API on host for debugging; web UI is still the SPA on :8080 (GET / here is JSON in api_only).
       - '127.0.0.1:8000:8000'
@@ -73,7 +75,8 @@ services:
       marreq-server:
         condition: service_healthy
     ports:
-      - '8080:80'
+      # Local entry point; production TLS terminates in an external reverse proxy.
+      - '127.0.0.1:${MARREQ_FRONTEND_PORT:-8080}:80'
 
   adminer:
     image: adminer
@@ -81,7 +84,7 @@ services:
     depends_on:
       - db
     ports:
-      - '8081:8080'
+      - '127.0.0.1:8081:8080'
 
   # Run the cloud (SaaS) binary alongside or instead of marreq-server.
   # Start with: docker compose -f docker/docker-compose.yml --profile cloud up -d marreq-cloud frontend-cloud
@@ -109,7 +112,7 @@ services:
       ROCKET_SECRET_KEY: ${ROCKET_SECRET_KEY:-UT5jxByH2kV2h9j/620KVP2w5NwZUEGVREFBbIKHVZk=}
       OLLAMA_URL: 'http://ollama:11434'
       MARREQ_PUBLIC_BASE_URL: ${MARREQ_PUBLIC_BASE_URL:-http://localhost:8082}
-      CSRF_ALLOWED_ORIGINS: 'http://127.0.0.1:8082,http://localhost:8082,http://127.0.0.1:8001,http://localhost:8001'
+      CSRF_ALLOWED_ORIGINS: ${CSRF_ALLOWED_ORIGINS:-http://127.0.0.1:8082,http://localhost:8082,http://127.0.0.1:8001,http://localhost:8001}
     ports:
       - '127.0.0.1:8001:8001'
     healthcheck:
@@ -132,7 +135,7 @@ services:
       marreq-cloud:
         condition: service_healthy
     ports:
-      - '8082:80'
+      - '127.0.0.1:${MARREQ_CLOUD_FRONTEND_PORT:-8082}:80'
 
 volumes:
   pgdata:

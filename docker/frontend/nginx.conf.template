@@ -2,6 +2,15 @@
 # after container recreate (avoids stale upstream IP → connection refused).
 resolver 127.0.0.11 valid=10s ipv6=off;
 
+# Preserve the original scheme supplied by a trusted outer reverse proxy. When
+# the frontend is accessed directly (local development), fall back to nginx's
+# own request scheme.
+map $http_x_forwarded_proto $marreq_forwarded_proto {
+    default $scheme;
+    http http;
+    https https;
+}
+
 server {
     listen 80;
     server_name _;
@@ -20,7 +29,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Proto $marreq_forwarded_proto;
         proxy_set_header X-Forwarded-Host $host;
         client_max_body_size 100m;
     }

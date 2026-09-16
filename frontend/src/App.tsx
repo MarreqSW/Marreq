@@ -13,6 +13,7 @@ import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
+import ChangePasswordPage from '@/pages/ChangePasswordPage';
 import VerifyEmailPage from '@/pages/VerifyEmailPage';
 import ProjectLayout from '@/pages/ProjectLayout';
 import AdminPage from '@/pages/AdminPage';
@@ -89,16 +90,18 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
-      <Route
-        element={
-          <DashboardProvider>
-            <ProtectedShell />
-          </DashboardProvider>
-        }
-      >
-        <Route index element={<HomeRedirect />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route
+          element={
+            <DashboardProvider>
+              <ProtectedShell />
+            </DashboardProvider>
+          }
+        >
+          <Route index element={<HomeRedirect />} />
+          <Route path="change-password" element={<ChangePasswordPage />} />
+          <Route path="change_password" element={<Navigate to="/change-password" replace />} />
         {/* Groups routes (reserved namespace — matched before :namespace catch-all) */}
         <Route path="groups" element={<GroupsListPage />} />
         <Route path="groups/new" element={<GroupCreatePage />} />

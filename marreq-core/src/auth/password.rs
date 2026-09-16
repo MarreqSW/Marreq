@@ -50,6 +50,11 @@ fn change_user_password_impl<R: Repository>(
     new_password: &str,
 ) -> Result<(), AuthError> {
     let user = repo.get_user_by_id(uid)?;
+    // `get_user_by_id` may be served from cache, which serializes `User`
+    // without `password_hash`. Username lookup always hits storage.
+    let user = repo
+        .get_user_by_username(&user.username)?
+        .ok_or(AuthError::NotLoggedIn)?;
 
     match verify_password(current_password, &user.password_hash) {
         Ok(true) => {

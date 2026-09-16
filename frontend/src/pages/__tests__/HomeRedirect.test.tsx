@@ -119,6 +119,10 @@ describe('NoProjectsHome', () => {
       'href',
       '/new_project',
     );
+    expect(screen.getByRole('link', { name: /change password/i })).toHaveAttribute(
+      'href',
+      '/change-password',
+    );
     expect(screen.getByText(/signed in as alice/i)).toBeInTheDocument();
   });
 

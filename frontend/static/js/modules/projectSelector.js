@@ -4,6 +4,7 @@ const RESERVED_ROOTS = new Set([
   'api',
   'cache',
   'change_password',
+  'change-password',
   'cleanup_logs',
   'error',
   'export_logs',

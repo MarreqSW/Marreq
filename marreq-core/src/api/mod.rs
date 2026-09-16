@@ -44,6 +44,7 @@ pub fn routes() -> Vec<Route> {
         auth::auth_csrf,
         auth::auth_login,
         auth::auth_logout,
+        auth::auth_change_password,
         auth::auth_me,
         dashboard::dashboard_json,
         projects_session::list_for_session,

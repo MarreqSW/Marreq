@@ -14,6 +14,7 @@ pub const RESERVED_NAMESPACE_SEGMENTS: &[&str] = &[
     "api",
     "cache",
     "change_password",
+    "change-password",
     "cleanup_logs",
     "error",
     "export_logs",
@@ -222,6 +223,8 @@ mod tests {
         assert!(is_reserved_namespace_segment("Admin"));
         assert!(is_reserved_namespace_segment("Projects"));
         assert!(is_reserved_namespace_segment("LOGIN"));
+        assert!(is_reserved_namespace_segment("change-password"));
+        assert!(is_reserved_namespace_segment("change_password"));
         assert!(!is_reserved_namespace_segment("mission_team"));
     }
 

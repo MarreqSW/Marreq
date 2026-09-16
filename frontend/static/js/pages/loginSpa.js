@@ -64,7 +64,8 @@ async function showAuthenticatedShell(data, path) {
     p === '/logs' ||
     p === '/new_project' ||
     p.startsWith('/user/') ||
-    p === '/change_password'
+    p === '/change_password' ||
+    p === '/change-password'
   ) {
     await spaHome.showStub(data, {
       pathname: p,

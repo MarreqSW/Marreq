@@ -15,6 +15,7 @@ use marreq_core::auth::csrf::CSRF_COOKIE;
 use marreq_core::auth::hash_password;
 use marreq_core::auth::session::{session_cookie_name_for_request, SESSION_COOKIE};
 use marreq_core::models::*;
+use marreq_core::repository::UserRepository;
 use marreq_core::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
@@ -121,6 +122,14 @@ mod test_support {
             },
         );
 
+        repo
+    }
+
+    pub fn hashed_user_repo() -> DieselRepoMock {
+        let mut repo = base_repo();
+        let mut user = repo.users.get(&2).cloned().expect("user");
+        user.password_hash = hash_password("Voyager!Marble_2026").expect("hashed password");
+        repo.users.insert(2, user);
         repo
     }
 }
@@ -749,4 +758,195 @@ async fn regular_user_can_access_endpoints() {
         .await;
 
     assert_eq!(response.status(), Status::Ok);
+}
+
+// ============================================================================
+// Auth API - Change password
+// ============================================================================
+
+#[rocket::async_test]
+async fn change_password_requires_authentication() {
+    let client = test_client(hashed_user_repo()).await;
+    let response = client
+        .post("/api/auth/change-password")
+        .header(ContentType::JSON)
+        .body(
+            json!({
+                "current_password": "Voyager!Marble_2026",
+                "new_password": "Another!Strong_2026",
+                "confirm_password": "Another!Strong_2026"
+            })
+            .to_string(),
+        )
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Unauthorized);
+}
+
+#[rocket::async_test]
+async fn change_password_rejects_mismatched_confirm() {
+    let client = test_client(hashed_user_repo()).await;
+    let cookie = session_cookie(&client, 2);
+    let before = {
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        state
+            .repo_read()
+            .inner_repo()
+            .get_user_by_id(2)
+            .expect("user")
+            .password_hash
+    };
+
+    let response = client
+        .post("/api/auth/change-password")
+        .header(ContentType::JSON)
+        .private_cookie(cookie)
+        .body(
+            json!({
+                "current_password": "Voyager!Marble_2026",
+                "new_password": "Another!Strong_2026",
+                "confirm_password": "Mismatch!Strong_2026"
+            })
+            .to_string(),
+        )
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::BadRequest);
+
+    let after = {
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        state
+            .repo_read()
+            .inner_repo()
+            .get_user_by_id(2)
+            .expect("user")
+            .password_hash
+    };
+    assert_eq!(before, after);
+}
+
+#[rocket::async_test]
+async fn change_password_rejects_wrong_current_password() {
+    let client = test_client(hashed_user_repo()).await;
+    let cookie = session_cookie(&client, 2);
+    let before = {
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        state
+            .repo_read()
+            .inner_repo()
+            .get_user_by_id(2)
+            .expect("user")
+            .password_hash
+    };
+
+    let response = client
+        .post("/api/auth/change-password")
+        .header(ContentType::JSON)
+        .private_cookie(cookie)
+        .body(
+            json!({
+                "current_password": "Wrong!Password_2026",
+                "new_password": "Another!Strong_2026",
+                "confirm_password": "Another!Strong_2026"
+            })
+            .to_string(),
+        )
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::BadRequest);
+    let body: Value = response.into_json().await.expect("json");
+    assert!(body["message"]
+        .as_str()
+        .unwrap_or_default()
+        .to_lowercase()
+        .contains("current password"));
+
+    let after = {
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        state
+            .repo_read()
+            .inner_repo()
+            .get_user_by_id(2)
+            .expect("user")
+            .password_hash
+    };
+    assert_eq!(before, after);
+}
+
+#[rocket::async_test]
+async fn change_password_rejects_policy_violation() {
+    let client = test_client(hashed_user_repo()).await;
+    let cookie = session_cookie(&client, 2);
+
+    let response = client
+        .post("/api/auth/change-password")
+        .header(ContentType::JSON)
+        .private_cookie(cookie)
+        .body(
+            json!({
+                "current_password": "Voyager!Marble_2026",
+                "new_password": "short",
+                "confirm_password": "short"
+            })
+            .to_string(),
+        )
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::BadRequest);
+    let body: Value = response.into_json().await.expect("json");
+    let msg = body["message"].as_str().unwrap_or_default();
+    assert!(
+        msg.to_lowercase().contains("at least"),
+        "expected policy message, got {msg}"
+    );
+}
+
+#[rocket::async_test]
+async fn change_password_updates_hash_and_revokes_session() {
+    let client = test_client(hashed_user_repo()).await;
+    let cookie = session_cookie(&client, 2);
+    let before = {
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        state
+            .repo_read()
+            .inner_repo()
+            .get_user_by_id(2)
+            .expect("user")
+            .password_hash
+    };
+
+    let response = client
+        .post("/api/auth/change-password")
+        .header(ContentType::JSON)
+        .private_cookie(cookie.clone())
+        .body(
+            json!({
+                "current_password": "Voyager!Marble_2026",
+                "new_password": "Another!Strong_2026",
+                "confirm_password": "Another!Strong_2026"
+            })
+            .to_string(),
+        )
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Ok);
+
+    let after = {
+        let state = client.rocket().state::<TestAppState>().expect("state");
+        state
+            .repo_read()
+            .inner_repo()
+            .get_user_by_id(2)
+            .expect("user")
+            .password_hash
+    };
+    assert_ne!(before, after);
+    assert!(after.starts_with("$argon2"));
+
+    let me = client
+        .get("/api/auth/me")
+        .private_cookie(cookie)
+        .dispatch()
+        .await;
+    assert_eq!(me.status(), Status::Unauthorized);
 }

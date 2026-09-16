@@ -32,6 +32,8 @@ export default function ProjectLayout() {
   const [globalSearch, setGlobalSearch] = useState('');
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
   const createMenuRef = useRef<HTMLDivElement | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
   const [resolvedPid, setResolvedPid] = useState<number | null>(null);
 
   const projects = dashboard?.projects ?? [];
@@ -92,13 +94,21 @@ export default function ProjectLayout() {
   const primaryCreate = createMenuItems[0];
 
   useEffect(() => {
-    if (!createMenuOpen) return;
+    if (!createMenuOpen && !userMenuOpen) return;
     const onDown = (e: MouseEvent) => {
-      if (createMenuRef.current?.contains(e.target as Node)) return;
-      setCreateMenuOpen(false);
+      const target = e.target as Node;
+      if (createMenuOpen && !createMenuRef.current?.contains(target)) {
+        setCreateMenuOpen(false);
+      }
+      if (userMenuOpen && !userMenuRef.current?.contains(target)) {
+        setUserMenuOpen(false);
+      }
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setCreateMenuOpen(false);
+      if (e.key === 'Escape') {
+        setCreateMenuOpen(false);
+        setUserMenuOpen(false);
+      }
     };
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
@@ -106,7 +116,7 @@ export default function ProjectLayout() {
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [createMenuOpen]);
+  }, [createMenuOpen, userMenuOpen]);
 
   const invalid = pid == null && projects.length > 0 && !currentProject;
   const user = useMemo(() => parseUser(dashboard?.user), [dashboard?.user]);
@@ -389,19 +399,45 @@ export default function ProjectLayout() {
                 </div>
               ) : null}
             </div>
-            <div
-              className="w-8 h-8 rounded-full border-2 border-stitch-accent/50 bg-stitch-elevated flex items-center justify-center text-[10px] font-bold text-stitch-fg"
-              title={user ? `${user.name} (${user.username})` : 'User'}
-            >
-              {user ? userInitials(user) : '?'}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                type="button"
+                className="w-8 h-8 rounded-full border-2 border-stitch-accent/50 bg-stitch-elevated flex items-center justify-center text-[10px] font-bold text-stitch-fg hover:opacity-90"
+                title={user ? `${user.name} (${user.username})` : 'User'}
+                aria-label="User menu"
+                aria-expanded={userMenuOpen}
+                aria-haspopup="menu"
+                onClick={() => setUserMenuOpen((o) => !o)}
+              >
+                {user ? userInitials(user) : '?'}
+              </button>
+              {userMenuOpen ? (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-[calc(100%+6px)] min-w-[180px] rounded-lg border border-stitch-border bg-stitch-surface shadow-stitch py-1 z-[60]"
+                >
+                  <Link
+                    role="menuitem"
+                    to="/change-password"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-stitch-fg hover:bg-stitch-elevated transition-colors"
+                  >
+                    Change password
+                  </Link>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      void logout().then(() => navigate('/login', { replace: true }));
+                    }}
+                    className="w-full text-left flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-stitch-muted hover:bg-stitch-elevated hover:text-stitch-fg transition-colors"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              ) : null}
             </div>
-            <button
-              type="button"
-              onClick={() => void logout().then(() => navigate('/login', { replace: true }))}
-              className="text-xs text-stitch-muted hover:text-stitch-fg transition-colors hidden sm:block"
-            >
-              Sign out
-            </button>
           </div>
         </header>
 

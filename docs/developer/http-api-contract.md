@@ -39,6 +39,7 @@ For **`POST /api/auth/login`** and **`POST /api/auth/logout`**, if the browser s
 | `GET` | `/api/auth/csrf` | Return CSRF token string; refreshes cookie if needed. |
 | `POST` | `/api/auth/login` | JSON body: `{ "username", "password" }` (same as `LoginForm`). Sets session + CSRF cookies on success. |
 | `POST` | `/api/auth/logout` | Clears session and CSRF. |
+| `POST` | `/api/auth/change-password` | JSON body: `{ "current_password", "new_password", "confirm_password" }`. Requires a session. On success, all sessions are revoked and cookies cleared. |
 | `GET` | `/api/auth/me` | Current user JSON; **401** if not authenticated (JSON body, not HTML). |
 
 ### Dashboard (SPA home)

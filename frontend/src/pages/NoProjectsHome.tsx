@@ -48,6 +48,12 @@ export default function NoProjectsHome({ isAdmin, displayName }: NoProjectsHomeP
           >
             Browse groups
           </Link>
+          <Link
+            to="/change-password"
+            className="w-full text-center rounded-lg border border-stitch-border bg-stitch-elevated text-stitch-fg font-semibold py-2.5 text-sm hover:bg-stitch-canvas"
+          >
+            Change password
+          </Link>
           <button
             type="button"
             onClick={() => {

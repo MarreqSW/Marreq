@@ -1,4 +1,4 @@
-import type { DeploymentInfo } from './types';
+import type { ChangePasswordBody, DeploymentInfo } from './types';
 import { fetchJson, JSON_HEADERS } from './transport';
 
 export async function getCsrfToken(): Promise<string> {
@@ -29,6 +29,20 @@ export async function logoutJson(csrfToken: string): Promise<void> {
       'X-CSRF-Token': csrfToken,
     },
     body: '{}',
+  });
+}
+
+export async function changePassword(
+  body: ChangePasswordBody,
+  csrfToken: string,
+): Promise<void> {
+  await fetchJson<{ status: string }>('/api/auth/change-password', {
+    method: 'POST',
+    headers: {
+      ...JSON_HEADERS,
+      'X-CSRF-Token': csrfToken,
+    },
+    body: JSON.stringify(body),
   });
 }
 

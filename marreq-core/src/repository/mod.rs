@@ -38,6 +38,20 @@ pub trait UserRepository {
     fn set_user_email_verified(&mut self, user_id: i32, verified: bool) -> Result<(), RepoError>;
 }
 
+/// Persistence operations for federated identities. The database unique
+/// constraint remains the final authority for `(issuer, subject)` ownership.
+pub trait ExternalIdentityRepository {
+    fn get_identity(&self, issuer: &str, subject: &str) -> Result<Option<UserIdentity>, RepoError>;
+    fn get_identities_for_user(&self, user_id: i32) -> Result<Vec<UserIdentity>, RepoError>;
+    fn insert_identity(&mut self, identity: &NewUserIdentity) -> Result<i32, RepoError>;
+    fn touch_identity_login(
+        &mut self,
+        id: i32,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError>;
+    fn delete_identity(&mut self, id: i32, user_id: i32) -> Result<bool, RepoError>;
+}
+
 /// Personal / shared workspaces (Cloud-only data, dormant in Server mode).
 pub trait WorkspacesRepository {
     fn insert_workspace(&mut self, new: &NewWorkspace) -> Result<i32, RepoError>;

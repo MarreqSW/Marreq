@@ -23,6 +23,19 @@ pub fn login_user<R: Repository>(
 ) -> Result<User, AuthError> {
     let user = authenticate_user(&*repo, &login_form.username, login_form.password.trim())?;
 
+    complete_login(repo, user, cookies, user_agent, ip_addr)
+}
+
+/// Finish every human browser login in one place. Password and federated
+/// adapters must call this after authenticating an identity, so session
+/// rotation, CSRF rotation and audit semantics cannot drift between methods.
+pub fn complete_login<R: Repository>(
+    repo: &mut R,
+    user: User,
+    cookies: &CookieJar<'_>,
+    user_agent: Option<String>,
+    ip_addr: Option<String>,
+) -> Result<User, AuthError> {
     // Cloud mode: refuse login until the user has confirmed their email.
     if crate::deployment::current().requires_email_verification() && !user.email_verified {
         return Err(AuthError::EmailNotVerified);

@@ -493,6 +493,18 @@ diesel::table! {
 }
 
 diesel::table! {
+    user_identities (id) {
+        id -> Int4,
+        user_id -> Int4,
+        provider_key -> Varchar,
+        issuer -> Varchar,
+        subject -> Varchar,
+        created_at -> Timestamp,
+        last_login_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
@@ -615,6 +627,7 @@ diesel::joinable!(saved_views -> users (owner_id));
 diesel::joinable!(sessions -> users (user_id));
 diesel::joinable!(user_api_tokens -> projects (project_id));
 diesel::joinable!(user_api_tokens -> users (user_id));
+diesel::joinable!(user_identities -> users (user_id));
 diesel::joinable!(verification_methods -> projects (project_id));
 diesel::joinable!(verification_status -> projects (project_id));
 diesel::joinable!(verifications -> projects (project_id));
@@ -652,6 +665,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     saved_views,
     sessions,
     user_api_tokens,
+    user_identities,
     users,
     verification_methods,
     verification_status,

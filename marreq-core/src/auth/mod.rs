@@ -3,6 +3,7 @@
 
 pub mod csrf;
 pub mod errors;
+pub mod external;
 pub mod guards;
 pub mod login;
 pub mod logout;
@@ -13,6 +14,7 @@ pub mod session;
 
 pub use csrf::*;
 pub use errors::*;
+pub use external::*;
 pub use guards::*;
 pub use login::*;
 pub use logout::*;

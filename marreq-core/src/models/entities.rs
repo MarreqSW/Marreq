@@ -257,6 +257,20 @@ pub struct User {
     pub email_verified: bool,
 }
 
+/// An external account bound to a Marreq user. `(issuer, subject)` is the
+/// authoritative identity; email and provider usernames are not identifiers.
+#[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::user_identities)]
+pub struct UserIdentity {
+    pub id: i32,
+    pub user_id: i32,
+    pub provider_key: String,
+    pub issuer: String,
+    pub subject: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub last_login_at: Option<chrono::NaiveDateTime>,
+}
+
 fn default_email_verified() -> bool {
     true
 }

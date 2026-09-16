@@ -311,6 +311,15 @@ pub struct NewUser {
     pub email_verified: Option<bool>,
 }
 
+#[derive(Insertable, Debug, Clone)]
+#[diesel(table_name = user_identities)]
+pub struct NewUserIdentity {
+    pub user_id: i32,
+    pub provider_key: String,
+    pub issuer: String,
+    pub subject: String,
+}
+
 /// Partial user information used when editing an existing user.
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]

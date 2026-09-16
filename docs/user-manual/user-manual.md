@@ -90,7 +90,7 @@ The top navigation bar includes:
 In the top-right:
 
 - **Theme toggle** (sun/moon) for light/dark mode
-- **User menu**: My Profile, Change Password, Logout
+- **User menu** (avatar): Change password, Sign out
 
 Requirements, Verifications, Reports, Members, and Baselines are **project-scoped**: select a project first (e.g. by opening it from Home or Projects) so these links apply to that project.
 
@@ -497,10 +497,10 @@ You see: full name, username, email, member since, last login. Click **Edit Prof
 
 ### 12.3 Change Password
 
-- **User menu → Change Password**.
-- URL: `/change_password`.
+- **User menu (avatar, top-right) → Change password**. Users with no projects can use **Change password** on the empty home screen.
+- URL: `/change-password`.
 
-Enter **Current password**, **New password**, and **Confirm new password**. Passwords must meet the minimum length (e.g. 8 characters). Submit; success or error message is shown.
+Enter **Current password**, **New password**, and **Confirm new password**. Passwords must be at least 8 characters and must not be common, breached, or based on your name or username. Submit; on success you are signed out and redirected to sign in.
 
 ---
 

@@ -10,11 +10,14 @@ use rocket::serde::json::{json, Json};
 
 use crate::api::guards::OptionalSessionUser;
 use crate::api::prelude::*;
+use crate::auth::csrf::clear_csrf_cookie;
 use crate::auth::login::login_user;
 use crate::auth::logout::logout_user;
+use crate::auth::password::change_user_password;
 use crate::auth::rate_limiter::LoginRateLimiter;
+use crate::auth::session::clear_session_cookie;
 use crate::auth::AuthError;
-use crate::models::forms::LoginForm;
+use crate::models::forms::{ChangePasswordForm, LoginForm};
 
 /// Mint or return the CSRF token for the current anonymous or authenticated session.
 /// Safe method — no CSRF body required. SPA calls this before `POST /api/auth/login`.
@@ -89,6 +92,57 @@ pub fn auth_logout(
     let mut repo = state.repo_write();
     logout_user(cookies, &mut *repo);
     Ok(Json(json!({ "status": "ok" })))
+}
+
+/// Change the signed-in user's password. Requires the current password.
+/// On success, all sessions (including this one) are revoked and cookies cleared.
+#[post("/auth/change-password", data = "<body>", format = "json")]
+pub fn auth_change_password(
+    opt: OptionalSessionUser,
+    body: Json<ChangePasswordForm>,
+    cookies: &CookieJar<'_>,
+    state: &State<AppState>,
+) -> ApiResult<Json<serde_json::Value>> {
+    let _user = opt
+        .0
+        .ok_or_else(|| ApiError::Unauthorized("not authenticated".into()))?;
+    let form = body.into_inner();
+    if form.new_password != form.confirm_password {
+        return Err(ApiError::BadRequest("Passwords do not match".into()));
+    }
+
+    let mut repo = state.repo_write();
+    match change_user_password(
+        &mut *repo,
+        &form.current_password,
+        &form.new_password,
+        cookies,
+    ) {
+        Ok(()) => {
+            clear_session_cookie(cookies, &mut *repo);
+            clear_csrf_cookie(cookies);
+            Ok(Json(json!({ "status": "ok" })))
+        }
+        Err(err) => Err(map_change_password_error(err)),
+    }
+}
+
+fn map_change_password_error(err: AuthError) -> ApiError {
+    match err {
+        AuthError::NotLoggedIn | AuthError::InvalidSession => {
+            ApiError::Unauthorized("not authenticated".into())
+        }
+        AuthError::InvalidCredentials => {
+            ApiError::BadRequest("Current password is incorrect".into())
+        }
+        AuthError::PasswordPolicy(msg) => ApiError::BadRequest(msg),
+        AuthError::Verify(_) => ApiError::BadRequest("Password verification failed".into()),
+        AuthError::Db(_) | AuthError::Repo(_) => ApiError::Internal("Internal server error".into()),
+        AuthError::Audit(_) => ApiError::Internal("Internal server error".into()),
+        AuthError::EmailNotVerified => {
+            ApiError::BadRequest("Email address has not been verified".into())
+        }
+    }
 }
 
 /// Current authenticated user (session cookie). JSON `401` if not logged in (not HTML login page).

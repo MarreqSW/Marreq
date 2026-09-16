@@ -197,7 +197,7 @@ function renderSidebar(user, pathname = '/') {
               </a>
             </li>
             <li>
-              <a class="dropdown-item" href="/change_password">
+              <a class="dropdown-item" href="/change-password">
                 <i class="fas fa-key me-2"></i> Change Password
               </a>
             </li>

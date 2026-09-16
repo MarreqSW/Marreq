@@ -218,6 +218,12 @@ export type ResetPasswordBody = {
   new_password: string;
 };
 
+export type ChangePasswordBody = {
+  current_password: string;
+  new_password: string;
+  confirm_password: string;
+};
+
 /** `GET /api/projects/:pid/requirements/:id` — requirement fields flattened + trace_summary. */
 export interface RequirementVersionLink {
   id: number;

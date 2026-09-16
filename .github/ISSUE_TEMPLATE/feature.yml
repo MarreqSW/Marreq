@@ -1,0 +1,73 @@
+name: Feature request
+description: Suggest a new capability or an improvement to existing behavior
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Describe the problem or use case first, then the change you would like to see.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or motivation
+      description: What problem would this solve, or what workflow would it improve?
+      placeholder: Describe the user need or limitation.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior or capability you would like Marreq to provide.
+      placeholder: What should Marreq do?
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: Give a concrete example of how this feature would be used.
+      placeholder: As a ..., I want ..., so that ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected component
+      multiple: true
+      options:
+        - Backend (Rust / Rocket)
+        - Frontend (Handlebars / JavaScript / CSS)
+        - Database / migrations
+        - REST API
+        - Import / export / ReqIF
+        - MCP server
+        - Authentication / authorization
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe workarounds or alternative designs you considered, if any.
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Add mockups, examples, related issues, standards, or other relevant context.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for similar requests.
+          required: true

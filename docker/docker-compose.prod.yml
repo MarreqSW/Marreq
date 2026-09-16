@@ -1,14 +1,21 @@
 # Production hardening for the split SPA stack.
 #
-# Use together with docker/docker-compose.yml. TLS is intentionally terminated
+# Use together with either docker/docker-compose.yml (full stack with Ollama) or
+# docker/docker-compose.light.yml (no Ollama). TLS is intentionally terminated
 # by an external reverse proxy (Caddy, nginx, Traefik, etc.) which forwards to
 # the loopback-bound frontend port.
 #
-# Example:
+# Full-stack example:
 #   docker compose \
 #     -f docker/docker-compose.yml \
 #     -f docker/docker-compose.prod.yml \
 #     up -d --build db ollama marreq-server frontend
+#
+# Light-stack example:
+#   docker compose \
+#     -f docker/docker-compose.light.yml \
+#     -f docker/docker-compose.prod.yml \
+#     up -d --build db marreq-server frontend
 
 services:
   marreq-server:

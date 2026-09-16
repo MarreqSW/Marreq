@@ -1745,7 +1745,7 @@ impl ProjectsRepository for DieselRepoMock {
             0 => Err(RepoError::NotFound),
             1 => Ok(matches.into_iter().next().expect("single project")),
             _ => Err(RepoError::BadInput(format!(
-                "project slug '{slug}' is ambiguous across namespaces"
+                "project slug '{slug}' is ambiguous"
             ))),
         }
     }
@@ -1785,15 +1785,12 @@ impl ProjectsRepository for DieselRepoMock {
     }
 
     fn insert_new_project(&mut self, _new: &NewProjectRow) -> Result<i32, RepoError> {
-        let duplicate_in_namespace = self.projects.values().any(|project| {
-            project.slug == _new.slug
-                && project.group_id == _new.group_id
-                && (project.group_id.is_some() || project.owner_id == _new.owner_id)
-        });
-        if duplicate_in_namespace {
-            return Err(RepoError::Duplicate(
-                "project slug is already used in this namespace".into(),
-            ));
+        let duplicate_slug = self
+            .projects
+            .values()
+            .any(|project| project.slug == _new.slug);
+        if duplicate_slug {
+            return Err(RepoError::Duplicate("project slug is already used".into()));
         }
 
         let id = self.projects.keys().max().map(|i| i + 1).unwrap_or(1);
@@ -1824,16 +1821,12 @@ impl ProjectsRepository for DieselRepoMock {
             .map(|project| project.slug.clone())
             .ok_or(RepoError::NotFound)?;
         let next_slug = _update.slug.clone().unwrap_or(current_slug);
-        let duplicate_in_namespace = self.projects.values().any(|project| {
-            project.id != _project_id
-                && project.slug == next_slug
-                && project.group_id == _update.group_id
-                && (project.group_id.is_some() || project.owner_id == _update.owner_id)
-        });
-        if duplicate_in_namespace {
-            return Err(RepoError::Duplicate(
-                "project slug is already used in this namespace".into(),
-            ));
+        let duplicate_slug = self
+            .projects
+            .values()
+            .any(|project| project.id != _project_id && project.slug == next_slug);
+        if duplicate_slug {
+            return Err(RepoError::Duplicate("project slug is already used".into()));
         }
 
         match self.projects.get_mut(&_project_id) {

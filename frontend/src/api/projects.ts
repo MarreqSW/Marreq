@@ -19,11 +19,8 @@ export async function createProject(
   });
 }
 
-export async function getProjectFromPath(
-  namespace: string,
-  slug: string,
-): Promise<ProjectFromPath> {
-  return fetchJson<ProjectFromPath>(`/api/project-from-path/${namespace}/${slug}`);
+export async function getProjectFromPath(slug: string): Promise<ProjectFromPath> {
+  return fetchJson<ProjectFromPath>(`/api/project-from-path/${encodeURIComponent(slug)}`);
 }
 
 export async function listProjectMembers(projectId: number): Promise<ProjectMember[]> {

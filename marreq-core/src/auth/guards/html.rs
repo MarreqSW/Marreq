@@ -133,7 +133,7 @@ impl<'r> FromRequest<'r> for HtmlProjectAccess {
                     }
                 };
                 let project_slug = project.slug.clone();
-                let project_route_slug = format!("{namespace}/{project_slug}");
+                let project_route_slug = project.slug.clone();
                 match session_user_has_project_access(state, &user, project.id) {
                     Ok(true) => Outcome::Success(HtmlProjectAccess {
                         user,

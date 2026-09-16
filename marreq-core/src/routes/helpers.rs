@@ -17,7 +17,7 @@ use crate::helper_functions::{
 use crate::models::{
     Category, DecoratedVerification, Group, Project, ProjectMember, Requirement, User, Verification,
 };
-use crate::namespaces::{project_base_path, project_route_slug};
+use crate::namespaces::project_base_path;
 use crate::repository::PooledConnectionWrapper;
 use crate::repository::{
     GroupMembersRepository, GroupsRepository, LookupRepository, ProjectMembersRepository,
@@ -119,7 +119,7 @@ pub(crate) fn resolve_selected_project_id(
 }
 
 pub(crate) fn resolve_selected_project_slug(
-    state: &AppState,
+    _state: &AppState,
     selected_project_id: Option<i32>,
     projects: &[Project],
 ) -> Option<String> {
@@ -127,7 +127,7 @@ pub(crate) fn resolve_selected_project_slug(
         projects
             .iter()
             .find(|project| project.id == project_id)
-            .map(|project| project_route_slug_safe(state, project))
+            .map(|project| project.slug.clone())
     })
 }
 
@@ -265,8 +265,8 @@ pub(crate) fn decorate_projects_for_listing(
 
         decorated.push(json!({
             "project_id": project.id,
-            "project_slug": project_route_slug_safe(state, project),
-            "project_base_path": project_base_path_safe(state, project),
+            "project_slug": project.slug,
+            "project_base_path": project_base_path(project),
             "name": project.name,
             "description": project.description,
             "creation_date": project
@@ -391,7 +391,7 @@ pub(crate) fn get_project_slug_by_id_pooled_safe(
 ) -> String {
     ProjectService::new(state.inner())
         .get_by_id(project_id)
-        .map(|project| project_route_slug_safe(state.inner(), &project))
+        .map(|project| project.slug.clone())
         .unwrap_or_else(|_| "unknown-project".to_string())
 }
 
@@ -399,20 +399,9 @@ pub(crate) fn project_base_path_from_route_slug(route_slug: &str) -> String {
     format!("/{}", route_slug.trim_start_matches('/'))
 }
 
-pub(crate) fn project_route_slug_safe(state: &AppState, project: &Project) -> String {
-    let repo = state.repo_read();
-    project_route_slug(&*repo, project).unwrap_or_else(|_| project.slug.clone())
-}
-
-pub(crate) fn project_base_path_safe(state: &AppState, project: &Project) -> String {
-    let repo = state.repo_read();
-    project_base_path(&*repo, project)
-        .unwrap_or_else(|_| project_base_path_from_route_slug(&project.slug))
-}
-
-pub(crate) fn project_to_template_value(state: &AppState, project: &Project) -> Value {
-    let route_slug = project_route_slug_safe(state, project);
-    let base_path = project_base_path_from_route_slug(&route_slug);
+pub(crate) fn project_to_template_value(_state: &AppState, project: &Project) -> Value {
+    let route_slug = project.slug.clone();
+    let base_path = project_base_path(project);
     let mut value = json!(project);
 
     if let Some(project_obj) = value.as_object_mut() {

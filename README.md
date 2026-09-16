@@ -202,7 +202,7 @@ Behind the Docker frontend (or Vite dev), use the **same origin** as the SPA (e.
 - `POST /auth/logout` — clears session
 - `GET /auth/me` — current user or **401** JSON (not HTML login page)
 - `GET /projects` — projects for logged-in user (admin: all; others: memberships)
-- `GET /project-from-path/{namespace}/{slug}` — resolve `/{namespace}/{slug}` to project id (SPA deep links; **403** if not a member)
+- `GET /project-from-path/{slug}` — resolve `/{slug}` to project id (SPA deep links; **403** if not a member)
 - `GET /projects/{project_id}/verifications` — list verifications (tests) in the project (`ViewRequirements`)
 
 #### Requirements

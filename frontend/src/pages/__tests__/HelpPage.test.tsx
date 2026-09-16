@@ -40,16 +40,16 @@ describe('HelpPage', () => {
   it('renders help sections and shortcut links', async () => {
     vi.mocked(useOutletContext).mockReturnValue({
       projectId: 5,
-      basePath: '/alice/space-project',
+      basePath: '/space-project',
       globalSearch: '',
       setGlobalSearch: vi.fn(),
     } satisfies ProjectOutletContext);
 
     render(
       <ThemeProvider>
-        <MemoryRouter initialEntries={['/alice/space-project/help']}>
+        <MemoryRouter initialEntries={['/space-project/help']}>
           <Routes>
-            <Route path="/:ns/:slug/help" element={<HelpPage />} />
+            <Route path="/:projectSlug/help" element={<HelpPage />} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>,
@@ -60,15 +60,15 @@ describe('HelpPage', () => {
     expect(screen.getByRole('heading', { name: /^traceability$/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute(
       'href',
-      '/alice/space-project/dashboard',
+      '/space-project/dashboard',
     );
     expect(screen.getByRole('link', { name: /reports/i })).toHaveAttribute(
       'href',
-      '/alice/space-project/reports',
+      '/space-project/reports',
     );
     expect(screen.getByRole('link', { name: /settings/i })).toHaveAttribute(
       'href',
-      '/alice/space-project/settings',
+      '/space-project/settings',
     );
 
     await waitFor(() =>

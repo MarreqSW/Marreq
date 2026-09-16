@@ -19,7 +19,7 @@ const BASE_URL = process.env.MARREQ_URL || 'http://localhost:8000';
 const USER = process.env.MARREQ_USER || 'alice';
 const PASS = process.env.MARREQ_PASS || 'ChangeMe123!';
 const PROJECT_BASE_PATH =
-  process.env.MARREQ_PROJECT_BASE_PATH || '/dr_smith/space-project';
+  process.env.MARREQ_PROJECT_BASE_PATH || '/space-project';
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });

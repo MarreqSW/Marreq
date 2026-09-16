@@ -23,7 +23,7 @@ function userInitials(u: User): string {
 }
 
 export default function ProjectLayout() {
-  const { namespace, projectSlug } = useParams();
+  const { projectSlug } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const { dashboard, setSelectedProjectId, refresh, logout } = useDashboard();
@@ -37,15 +37,14 @@ export default function ProjectLayout() {
   const [resolvedPid, setResolvedPid] = useState<number | null>(null);
 
   const projects = dashboard?.projects ?? [];
-  const compositeSlug = `${namespace}/${projectSlug}`;
-  const basePath = `/${compositeSlug}`;
+  const basePath = projectSlug ? `/${projectSlug}` : '';
 
-  const currentProject = projects.find((p) => p.slug === compositeSlug);
+  const currentProject = projects.find((p) => p.slug === projectSlug);
   const pid = currentProject?.id ?? resolvedPid;
 
   useEffect(() => {
-    if (currentProject || !namespace || !projectSlug) return;
-    getProjectFromPath(namespace, projectSlug)
+    if (currentProject || !projectSlug) return;
+    getProjectFromPath(projectSlug)
       .then((p) => setResolvedPid(p.id))
       .catch(() => {
         if (projects.length > 0) {
@@ -53,7 +52,7 @@ export default function ProjectLayout() {
           navigate(`${fallback.project_base_path}/dashboard`, { replace: true });
         }
       });
-  }, [namespace, projectSlug, currentProject, projects, navigate]);
+  }, [projectSlug, currentProject, projects, navigate]);
 
   const onVerificationsSection = /\/verifications(\/|$)/.test(location.pathname);
 

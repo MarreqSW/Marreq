@@ -8,6 +8,7 @@ const RESERVED_ROOTS = new Set([
   'cleanup_logs',
   'error',
   'export_logs',
+  'forgot-password',
   'groups',
   'log_analytics',
   'login',
@@ -16,9 +17,26 @@ const RESERVED_ROOTS = new Set([
   'new_project',
   'profile',
   'projects',
+  'register',
+  'reset-password',
   'static',
   'status',
   'user',
+  'verify-email',
+]);
+const PROJECT_CHILD_SEGMENTS = new Set([
+  'admin',
+  'baselines',
+  'catalog',
+  'dashboard',
+  'help',
+  'matrix',
+  'members',
+  'reports',
+  'requirements',
+  'settings',
+  'traceability',
+  'verifications',
 ]);
 
 function setCookie(name, value) {
@@ -31,16 +49,21 @@ function getProjectSlugFromPath() {
     .filter(Boolean)
     .map((segment) => decodeURIComponent(segment));
 
-  if (segments.length < 2) {
+  if (segments.length < 1) {
     return null;
   }
 
-  const [namespace, projectSlug] = segments;
-  if (!namespace || !projectSlug || projectSlug === '-' || RESERVED_ROOTS.has(namespace)) {
+  const first = segments[0];
+  if (!first || RESERVED_ROOTS.has(first)) {
     return null;
   }
 
-  return `${namespace}/${projectSlug}`;
+  const second = segments[1];
+  if (second && second !== '-' && !PROJECT_CHILD_SEGMENTS.has(second)) {
+    return second;
+  }
+
+  return first;
 }
 
 function resolveProjectId(explicit) {
@@ -87,17 +110,19 @@ function navigateToProject(projectId, selector) {
 
   const path = window.location.pathname;
   const segments = path.split('/').filter(Boolean);
-  const projectSegments = projectSlug.split('/').filter(Boolean);
-
-  if (segments.length >= 2 && projectSegments.length === 2 && getProjectSlugFromPath()) {
-    segments[0] = projectSegments[0];
-    segments[1] = projectSegments[1];
-    const newPath = `/${segments.join('/')}`;
-    const suffix = window.location.search + window.location.hash;
-    window.location.assign(`${newPath}${suffix}`);
-  } else {
+  const nextSlug = projectSlug.split('/').filter(Boolean).pop();
+  if (!nextSlug || !getProjectSlugFromPath()) {
     window.location.reload();
+    return;
   }
+
+  const rest =
+    segments.length >= 2 && !PROJECT_CHILD_SEGMENTS.has(segments[1])
+      ? segments.slice(2)
+      : segments.slice(1);
+  const newPath = `/${[nextSlug, ...rest].join('/')}`;
+  const suffix = window.location.search + window.location.hash;
+  window.location.assign(`${newPath}${suffix}`);
 }
 
 export function initProjectSelector() {

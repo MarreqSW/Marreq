@@ -39,10 +39,11 @@ pub(crate) fn map_db_error(e: diesel::result::Error) -> RepoError {
                     {
                         "tag is already used in this project".to_string()
                     }
-                    c if c.contains("idx_projects_owner_slug_unique")
+                    c if c.contains("projects_slug_unique")
+                        || c.contains("idx_projects_owner_slug_unique")
                         || c.contains("idx_projects_group_slug_unique") =>
                     {
-                        "project slug is already used in this namespace".to_string()
+                        "project slug is already used".to_string()
                     }
                     _ => "value is already taken".to_string(),
                 };

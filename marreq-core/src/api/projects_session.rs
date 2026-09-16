@@ -29,13 +29,12 @@ pub fn list_for_session(
     Ok(Json(projects))
 }
 
-/// Resolve `/{namespace}/{project_slug}` URL segments to a project (SPA deep links).
+/// Resolve `/{project_slug}` URL segments to a project (SPA deep links).
 /// Mounted at `/api/project-from-path/...` (not under `/api/projects/...`) so Rocket does not
 /// report route collisions with `/api/projects/<project_id>/...` handlers.
-#[get("/project-from-path/<namespace>/<slug>")]
+#[get("/project-from-path/<slug>")]
 pub fn project_from_path(
     opt: OptionalSessionUser,
-    namespace: &str,
     slug: &str,
     state: &State<AppState>,
 ) -> ApiResult<Json<Value>> {
@@ -45,7 +44,7 @@ pub fn project_from_path(
 
     let service = ProjectService::new(state.inner());
     let project = service
-        .get_by_namespace_and_slug(namespace, slug)
+        .get_by_slug(slug)
         .map_err(|_| ApiError::NotFound("project not found".into()))?;
 
     if !user.is_admin {
@@ -59,12 +58,11 @@ pub fn project_from_path(
         }
     }
 
-    let route_slug = format!("{namespace}/{slug}");
     Ok(Json(json!({
         "id": project.id,
         "name": project.name,
         "description": project.description,
         "slug": project.slug,
-        "route_slug": route_slug,
+        "route_slug": project.slug,
     })))
 }

@@ -197,7 +197,7 @@ impl ProjectsRepository for DieselRepo {
             0 => Err(RepoError::NotFound),
             1 => Ok(projects.into_iter().next().expect("single project")),
             _ => Err(RepoError::BadInput(format!(
-                "project slug '{project_slug}' is ambiguous across namespaces"
+                "project slug '{project_slug}' is ambiguous"
             ))),
         }
     }

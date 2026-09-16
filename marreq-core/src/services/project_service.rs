@@ -111,7 +111,7 @@ impl<'a> ProjectService<'a> {
         }
 
         self.prepare_new_payload(&mut payload)?;
-        let slug = self.generate_slug(&payload.name, payload.owner_id, payload.group_id, None)?;
+        let slug = self.generate_slug(&payload.name, None)?;
 
         let owner_id = payload.owner_id.unwrap_or(actor.id);
         let id = {
@@ -208,18 +208,6 @@ impl<'a> ProjectService<'a> {
         self.prepare_update_payload(&mut payload)?;
         payload.slug = None;
 
-        if self.namespace_changed(&before, &payload) {
-            let next_slug = self.generate_slug(
-                &before.slug,
-                payload.owner_id,
-                payload.group_id,
-                Some(before.id),
-            )?;
-            if next_slug != before.slug {
-                payload.slug = Some(next_slug);
-            }
-        }
-
         {
             let mut repo = self.state.repo_write();
             let updated = repo.edit_project(id, &payload)?;
@@ -276,46 +264,25 @@ impl<'a> ProjectService<'a> {
     fn generate_slug(
         &self,
         name_or_slug_seed: &str,
-        owner_id: Option<i32>,
-        group_id: Option<i32>,
         exclude_project_id: Option<i32>,
     ) -> Result<String, RepoError> {
-        let existing = self.existing_namespace_slugs(owner_id, group_id, exclude_project_id)?;
-
+        let existing = self.existing_slugs(exclude_project_id)?;
         Ok(generate_unique_project_slug(name_or_slug_seed, existing))
     }
 
-    fn existing_namespace_slugs(
-        &self,
-        owner_id: Option<i32>,
-        group_id: Option<i32>,
-        exclude_project_id: Option<i32>,
-    ) -> Result<Vec<String>, RepoError> {
+    fn existing_slugs(&self, exclude_project_id: Option<i32>) -> Result<Vec<String>, RepoError> {
         let projects = self.state.repo_read().get_projects_all()?;
-        Ok(projects
+        let mut slugs: Vec<String> = projects
             .into_iter()
             .filter(|project| exclude_project_id != Some(project.id))
-            .filter(|project| self.project_in_namespace(project, owner_id, group_id))
             .map(|project| project.slug)
-            .collect())
-    }
-
-    fn project_in_namespace(
-        &self,
-        project: &Project,
-        owner_id: Option<i32>,
-        group_id: Option<i32>,
-    ) -> bool {
-        if let Some(group_id) = group_id {
-            return project.group_id == Some(group_id);
-        }
-
-        project.group_id.is_none() && project.owner_id == owner_id
-    }
-
-    fn namespace_changed(&self, before: &Project, payload: &UpdateProject) -> bool {
-        before.group_id != payload.group_id
-            || (payload.group_id.is_none() && before.owner_id != payload.owner_id)
+            .collect();
+        slugs.extend(
+            crate::namespaces::RESERVED_NAMESPACE_SEGMENTS
+                .iter()
+                .map(|segment| (*segment).to_string()),
+        );
+        Ok(slugs)
     }
 }
 

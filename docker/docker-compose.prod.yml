@@ -1,0 +1,32 @@
+# Production hardening for the split SPA stack.
+#
+# Use together with docker/docker-compose.yml. TLS is intentionally terminated
+# by an external reverse proxy (Caddy, nginx, Traefik, etc.) which forwards to
+# the loopback-bound frontend port.
+#
+# Example:
+#   docker compose \
+#     -f docker/docker-compose.yml \
+#     -f docker/docker-compose.prod.yml \
+#     up -d --build db ollama marreq-server frontend
+
+services:
+  marreq-server:
+    environment:
+      # Production must never use the development fallback key.
+      ROCKET_SECRET_KEY: ${ROCKET_SECRET_KEY:?Set ROCKET_SECRET_KEY in .env for production}
+      MARREQ_SECURE_SESSION_COOKIE: '1'
+      MARREQ_PUBLIC_BASE_URL: ${MARREQ_PUBLIC_BASE_URL:?Set MARREQ_PUBLIC_BASE_URL to the public HTTPS origin}
+      CSRF_ALLOWED_ORIGINS: ${CSRF_ALLOWED_ORIGINS:?Set CSRF_ALLOWED_ORIGINS to the public HTTPS origin}
+
+  # Keep Adminer opt-in in production. Start it explicitly with --profile admin
+  # and access it only through the host loopback interface / SSH tunnel.
+  adminer:
+    profiles: ["admin"]
+
+  marreq-cloud:
+    environment:
+      ROCKET_SECRET_KEY: ${ROCKET_SECRET_KEY:?Set ROCKET_SECRET_KEY in .env for production}
+      MARREQ_SECURE_SESSION_COOKIE: '1'
+      MARREQ_PUBLIC_BASE_URL: ${MARREQ_PUBLIC_BASE_URL:?Set MARREQ_PUBLIC_BASE_URL to the public HTTPS origin}
+      CSRF_ALLOWED_ORIGINS: ${CSRF_ALLOWED_ORIGINS:?Set CSRF_ALLOWED_ORIGINS to the public HTTPS origin}

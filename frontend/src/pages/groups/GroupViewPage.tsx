@@ -110,7 +110,7 @@ export default function GroupViewPage() {
       setShowCreateProject(false);
       await refreshDashboard();
       await load();
-      navigate(`/${group!.slug}/${result.slug}/dashboard`);
+      navigate(`/${result.slug}/dashboard`);
     } catch (e) {
       setCreateProjectError(e instanceof Error ? e.message : 'Failed to create project');
     } finally {
@@ -277,7 +277,7 @@ export default function GroupViewPage() {
                     const dashProject = dashboard?.projects?.find((dp) => dp.id === p.id);
                     const href = dashProject
                       ? `${dashProject.project_base_path}/dashboard`
-                      : `/${group.slug}/${p.slug}/dashboard`;
+                      : `/${p.slug}/dashboard`;
                     return (
                       <li key={p.id}>
                         <Link
@@ -287,7 +287,7 @@ export default function GroupViewPage() {
                           <div className="min-w-0">
                             <span className="font-semibold text-stitch-fg text-sm">{p.name}</span>
                             <span className="block text-xs text-stitch-muted font-mono">
-                              /{group.slug}/{p.slug}
+                              /{p.slug}
                             </span>
                           </div>
                           <span className="material-symbols-outlined text-stitch-muted text-sm">

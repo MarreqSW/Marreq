@@ -216,12 +216,12 @@ function renderMatrixView(routeSlug, meta, links, reqById, verById) {
  * @param {{ namespace: string, projectSlug: string, routeSlug: string, view: string }} parsed
  */
 export async function showProjectWorkspace(dashboardData, parsed) {
-  const { namespace, projectSlug, routeSlug, view } = parsed;
+  const { projectSlug, routeSlug, view } = parsed;
   const pathname = window.location.pathname;
 
   try {
     const enc = (x) => encodeURIComponent(x);
-    const meta = await apiJson(`/api/project-from-path/${enc(namespace)}/${enc(projectSlug)}`);
+    const meta = await apiJson(`/api/project-from-path/${enc(projectSlug)}`);
 
     let mainHtml;
     if (view === 'home') {

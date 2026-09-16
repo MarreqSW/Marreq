@@ -18,6 +18,7 @@ pub const RESERVED_NAMESPACE_SEGMENTS: &[&str] = &[
     "cleanup_logs",
     "error",
     "export_logs",
+    "forgot-password",
     "groups",
     "log_analytics",
     "login",
@@ -26,9 +27,12 @@ pub const RESERVED_NAMESPACE_SEGMENTS: &[&str] = &[
     "new_project",
     "profile",
     "projects",
+    "register",
+    "reset-password",
     "static",
     "status",
     "user",
+    "verify-email",
 ];
 
 /// Generic collision message used when a user/group namespace is already claimed.
@@ -187,22 +191,14 @@ where
     )))
 }
 
-pub fn project_route_slug<R>(repo: &R, project: &Project) -> Result<String, RepoError>
-where
-    R: UserRepository + GroupsRepository,
-{
-    Ok(format!(
-        "{}/{}",
-        project_namespace_segment(repo, project)?,
-        project.slug
-    ))
+/// Browser path for a project workspace: `/<slug>`.
+pub fn project_route_slug(project: &Project) -> &str {
+    &project.slug
 }
 
-pub fn project_base_path<R>(repo: &R, project: &Project) -> Result<String, RepoError>
-where
-    R: UserRepository + GroupsRepository,
-{
-    Ok(format!("/{}", project_route_slug(repo, project)?))
+/// Absolute SPA path for a project workspace: `/<slug>`.
+pub fn project_base_path(project: &Project) -> String {
+    format!("/{}", project.slug)
 }
 
 #[cfg(test)]
@@ -223,8 +219,8 @@ mod tests {
         assert!(is_reserved_namespace_segment("Admin"));
         assert!(is_reserved_namespace_segment("Projects"));
         assert!(is_reserved_namespace_segment("LOGIN"));
-        assert!(is_reserved_namespace_segment("change-password"));
-        assert!(is_reserved_namespace_segment("change_password"));
+        assert!(is_reserved_namespace_segment("forgot-password"));
+        assert!(is_reserved_namespace_segment("register"));
         assert!(!is_reserved_namespace_segment("mission_team"));
     }
 
@@ -327,5 +323,22 @@ mod tests {
         );
 
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn project_urls_use_slug_only() {
+        let project = Project {
+            id: 1,
+            name: "Space".into(),
+            description: None,
+            creation_date: None,
+            update_date: None,
+            status: crate::status_enums::ProjectStatus::Active,
+            owner_id: Some(1),
+            slug: "space-project".into(),
+            group_id: None,
+        };
+        assert_eq!(project_route_slug(&project), "space-project");
+        assert_eq!(project_base_path(&project), "/space-project");
     }
 }

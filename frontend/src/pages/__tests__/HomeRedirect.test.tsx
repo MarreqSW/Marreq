@@ -78,8 +78,8 @@ describe('HomeRedirect', () => {
       dashboard: {
         user: { id: 1, username: 'alice', name: 'Alice', is_admin: true },
         projects: [
-          { id: 10, name: 'Space', project_base_path: '/alice/space-project' },
-          { id: 11, name: 'Other', project_base_path: '/alice/other' },
+          { id: 10, name: 'Space', project_base_path: '/space-project' },
+          { id: 11, name: 'Other', project_base_path: '/other' },
         ],
         selected_project_id: 10,
       },
@@ -92,7 +92,7 @@ describe('HomeRedirect', () => {
       </MemoryRouter>,
     );
     await waitFor(() =>
-      expect(navigate).toHaveBeenCalledWith('/alice/space-project/dashboard', { replace: true }),
+      expect(navigate).toHaveBeenCalledWith('/space-project/dashboard', { replace: true }),
     );
     expect(screen.getByText(/opening project/i)).toBeInTheDocument();
   });

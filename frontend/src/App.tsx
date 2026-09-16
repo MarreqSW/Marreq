@@ -16,6 +16,7 @@ import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import ChangePasswordPage from '@/pages/ChangePasswordPage';
 import VerifyEmailPage from '@/pages/VerifyEmailPage';
 import ProjectLayout from '@/pages/ProjectLayout';
+import LegacyNamespaceProjectRedirect from '@/pages/LegacyNamespaceProjectRedirect';
 import AdminPage from '@/pages/AdminPage';
 import CreateRequirementPage from '@/pages/CreateRequirementPage';
 import CreateVerificationPage from '@/pages/CreateVerificationPage';
@@ -90,26 +91,26 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/verify-email" element={<VerifyEmailPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route
-          element={
-            <DashboardProvider>
-              <ProtectedShell />
-            </DashboardProvider>
-          }
-        >
-          <Route index element={<HomeRedirect />} />
-          <Route path="change-password" element={<ChangePasswordPage />} />
-          <Route path="change_password" element={<Navigate to="/change-password" replace />} />
-        {/* Groups routes (reserved namespace — matched before :namespace catch-all) */}
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route
+        element={
+          <DashboardProvider>
+            <ProtectedShell />
+          </DashboardProvider>
+        }
+      >
+        <Route index element={<HomeRedirect />} />
+        <Route path="change-password" element={<ChangePasswordPage />} />
+        <Route path="change_password" element={<Navigate to="/change-password" replace />} />
+        {/* Groups routes (reserved — matched before :projectSlug catch-all) */}
         <Route path="groups" element={<GroupsListPage />} />
         <Route path="groups/new" element={<GroupCreatePage />} />
         <Route path="groups/:groupId" element={<GroupViewPage />} />
         <Route path="groups/:groupId/edit" element={<GroupEditPage />} />
         <Route path="groups/:groupId/members" element={<GroupMembersPage />} />
-        {/* Namespace-scoped project routes: /:namespace/:projectSlug */}
-        <Route path=":namespace/:projectSlug" element={<ProjectLayout />}>
+        {/* Project workspace: /:projectSlug/... */}
+        <Route path=":projectSlug" element={<ProjectLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="requirements/new" element={<CreateRequirementPage />} />
@@ -140,6 +141,10 @@ export default function App() {
           <Route path="help" element={<HelpPage />} />
           <Route path="admin" element={<AdminPage />} />
         </Route>
+        <Route
+          path=":namespace/:projectSlug/*"
+          element={<LegacyNamespaceProjectRedirect />}
+        />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

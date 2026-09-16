@@ -17,8 +17,8 @@ function project(overrides: Partial<DashboardProject> = {}): DashboardProject {
 
 describe('projectPath', () => {
   it('uses project_base_path when available', () => {
-    const p = project({ project_base_path: '/orgs/acme/demo', slug: 'demo' });
-    expect(projectPath(p, 'matrix')).toBe('/orgs/acme/demo/matrix');
+    const p = project({ project_base_path: '/demo', slug: 'demo' });
+    expect(projectPath(p, 'matrix')).toBe('/demo/matrix');
   });
 
   it('falls back to /<slug> when base path is empty string', () => {
@@ -33,6 +33,6 @@ describe('projectPathFromSlug', () => {
   });
 
   it('keeps an existing leading slash', () => {
-    expect(projectPathFromSlug('/orgs/acme/demo', 'matrix')).toBe('/orgs/acme/demo/matrix');
+    expect(projectPathFromSlug('/demo', 'matrix')).toBe('/demo/matrix');
   });
 });

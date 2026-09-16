@@ -1,0 +1,59 @@
+name: Documentation issue
+description: Report missing, incorrect, outdated, or unclear documentation
+title: "[Docs]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for documentation problems in the README, user manual, developer docs, architecture docs, API docs, or MCP docs.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Documentation area
+      options:
+        - README
+        - User manual
+        - Developer documentation
+        - Architecture documentation
+        - REST API documentation
+        - MCP documentation
+        - Setup / deployment documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Page or file
+      description: Link to the page or provide the repository path if known.
+      placeholder: e.g. docs/developer/database-setup.md
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong or missing?
+      description: Explain what is inaccurate, unclear, outdated, or absent.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested improvement
+      description: Describe what the documentation should say or how it could be clearer.
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional context
+      description: Add screenshots, related issues, examples, or other useful context.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues for the same documentation problem.
+          required: true

@@ -249,7 +249,7 @@ pub struct User {
     pub creation_date: chrono::NaiveDateTime,
     pub last_login: chrono::NaiveDateTime,
     #[serde(skip_serializing, default)]
-    pub password_hash: String,
+    pub password_hash: Option<String>,
     pub is_admin: bool,
     /// Cloud-mode email-verification flag. Defaults to TRUE in the database so
     /// existing rows and Server-mode deployments behave as before.

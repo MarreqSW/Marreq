@@ -76,7 +76,7 @@ impl<'a> UserService<'a> {
             username: request.username,
             name: request.name,
             email: request.email,
-            password_hash,
+            password_hash: Some(password_hash),
             is_admin: request.is_admin,
             email_verified: None,
         };
@@ -332,8 +332,14 @@ mod tests {
         assert_eq!(stored.name, "Bob Example");
         assert_eq!(stored.email, "bob@example.com");
         // Password should be hashed (argon2 hashes start with $argon2)
-        assert!(stored.password_hash.starts_with("$argon2"));
-        assert_ne!(stored.password_hash, "Skyline!Current_2026");
+        assert!(stored
+            .password_hash
+            .as_deref()
+            .is_some_and(|hash| hash.starts_with("$argon2")));
+        assert_ne!(
+            stored.password_hash.as_deref(),
+            Some("Skyline!Current_2026")
+        );
     }
 
     #[test]

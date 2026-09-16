@@ -68,6 +68,23 @@ impl UserRepository for DieselRepo {
         }
     }
 
+    fn update_user_last_login(
+        &mut self,
+        user_id: i32,
+        at: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        use crate::schema::users::dsl;
+        let mut conn = self.get_conn()?;
+        let affected = diesel::update(dsl::users.filter(dsl::id.eq(user_id)))
+            .set(dsl::last_login.eq(at))
+            .execute(conn.as_mut())?;
+        if affected == 1 {
+            Ok(())
+        } else {
+            Err(RepoError::NotFound)
+        }
+    }
+
     fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
         let mut conn = self.get_conn()?;
         let id = conn

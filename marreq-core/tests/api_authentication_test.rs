@@ -128,7 +128,7 @@ mod test_support {
     pub fn hashed_user_repo() -> DieselRepoMock {
         let mut repo = base_repo();
         let mut user = repo.users.get(&2).cloned().expect("user");
-        user.password_hash = hash_password("Voyager!Marble_2026").expect("hashed password");
+        user.password_hash = Some(hash_password("Voyager!Marble_2026").expect("hashed password"));
         repo.users.insert(2, user);
         repo
     }
@@ -141,10 +141,37 @@ use test_support::*;
 // ============================================================================
 
 #[rocket::async_test]
+async fn auth_provider_discovery_defaults_to_password_only() {
+    let client = test_client(base_repo()).await;
+    let response = client.get("/api/auth/providers").dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let body: Value = response.into_json().await.expect("json");
+    assert_eq!(body["password_enabled"], true);
+    assert_eq!(body["external"], json!([]));
+}
+
+#[rocket::async_test]
+async fn external_callback_rejects_missing_single_use_transaction() {
+    let client = test_client(base_repo()).await;
+    let response = client
+        .get("/api/auth/external/github/callback?code=secret&state=wrong")
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::BadRequest);
+    let body: Value = response.into_json().await.expect("json");
+    assert!(body["message"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("missing or already used"));
+}
+
+#[rocket::async_test]
 async fn auth_login_returns_authenticated_user_and_sets_cookies() {
     let mut repo = base_repo();
     let mut admin = repo.users.get(&1).cloned().expect("admin user");
-    admin.password_hash = hash_password("Voyager!Marble_2026").expect("hashed password");
+    admin.password_hash = Some(hash_password("Voyager!Marble_2026").expect("hashed password"));
     repo.users.insert(1, admin);
 
     let client = test_client(repo).await;
@@ -941,7 +968,9 @@ async fn change_password_updates_hash_and_revokes_session() {
             .password_hash
     };
     assert_ne!(before, after);
-    assert!(after.starts_with("$argon2"));
+    assert!(after
+        .as_deref()
+        .is_some_and(|hash| hash.starts_with("$argon2")));
 
     let me = client
         .get("/api/auth/me")

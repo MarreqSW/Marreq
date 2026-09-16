@@ -62,6 +62,8 @@ pub struct DieselRepoMock {
     pub email_tokens: Vec<EmailToken>,
     pub next_email_token_id: i32,
     pub sessions: Vec<crate::models::entities::Session>,
+    pub user_identities: Vec<UserIdentity>,
+    pub next_user_identity_id: i32,
     pub saved_views: Vec<crate::models::SavedView>,
     pub next_saved_view_id: i32,
 }
@@ -121,6 +123,8 @@ impl Default for DieselRepoMock {
             email_tokens: Vec::new(),
             next_email_token_id: 1,
             sessions: Vec::new(),
+            user_identities: Vec::new(),
+            next_user_identity_id: 1,
             saved_views: Vec::new(),
             next_saved_view_id: 1,
         }
@@ -175,6 +179,8 @@ impl DieselRepoMock {
             email_tokens: Vec::new(),
             next_email_token_id: 1,
             sessions: Vec::new(),
+            user_identities: Vec::new(),
+            next_user_identity_id: 1,
             saved_views: Vec::new(),
             next_saved_view_id: 1,
         }
@@ -222,6 +228,8 @@ impl DieselRepoMock {
             email_tokens: Vec::new(),
             next_email_token_id: 1,
             sessions: Vec::new(),
+            user_identities: Vec::new(),
+            next_user_identity_id: 1,
             saved_views: Vec::new(),
             next_saved_view_id: 1,
         }
@@ -242,7 +250,7 @@ impl DieselRepoMock {
             email: "email@example.com".into(),
             creation_date: epoch(),
             last_login: epoch(),
-            password_hash: stored_pw.into(),
+            password_hash: Some(stored_pw.into()),
             is_admin: false,
             email_verified: true,
         }
@@ -292,11 +300,21 @@ impl UserRepository for DieselRepoMock {
         }
         match self.users.get_mut(&user_id) {
             Some(user) => {
-                user.password_hash = new_hash.to_string();
+                user.password_hash = Some(new_hash.to_string());
                 Ok(())
             }
             None => Err(RepoError::NotFound),
         }
+    }
+
+    fn update_user_last_login(
+        &mut self,
+        user_id: i32,
+        at: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        let user = self.users.get_mut(&user_id).ok_or(RepoError::NotFound)?;
+        user.last_login = at;
+        Ok(())
     }
 
     fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError> {
@@ -386,6 +404,8 @@ impl UserRepository for DieselRepoMock {
     fn delete_user(&mut self, user_id: i32) -> Result<User, RepoError> {
         let user = self.users.remove(&user_id).ok_or(RepoError::NotFound)?;
         self.project_members.retain(|pm| pm.user_id != user_id);
+        self.user_identities
+            .retain(|identity| identity.user_id != user_id);
         Ok(user)
     }
 
@@ -409,6 +429,73 @@ impl UserRepository for DieselRepoMock {
             }
             None => Err(RepoError::NotFound),
         }
+    }
+}
+
+impl ExternalIdentityRepository for DieselRepoMock {
+    fn get_identity(&self, issuer: &str, subject: &str) -> Result<Option<UserIdentity>, RepoError> {
+        Ok(self
+            .user_identities
+            .iter()
+            .find(|identity| identity.issuer == issuer && identity.subject == subject)
+            .cloned())
+    }
+
+    fn get_identities_for_user(&self, user_id: i32) -> Result<Vec<UserIdentity>, RepoError> {
+        Ok(self
+            .user_identities
+            .iter()
+            .filter(|identity| identity.user_id == user_id)
+            .cloned()
+            .collect())
+    }
+
+    fn insert_identity(&mut self, new: &NewUserIdentity) -> Result<i32, RepoError> {
+        if self
+            .user_identities
+            .iter()
+            .any(|identity| identity.issuer == new.issuer && identity.subject == new.subject)
+        {
+            return Err(RepoError::Duplicate(
+                "external identity is already connected".into(),
+            ));
+        }
+        if !self.users.contains_key(&new.user_id) {
+            return Err(RepoError::NotFound);
+        }
+        let id = self.next_user_identity_id;
+        self.next_user_identity_id += 1;
+        self.user_identities.push(UserIdentity {
+            id,
+            user_id: new.user_id,
+            provider_key: new.provider_key.clone(),
+            issuer: new.issuer.clone(),
+            subject: new.subject.clone(),
+            created_at: epoch(),
+            last_login_at: None,
+        });
+        Ok(id)
+    }
+
+    fn touch_identity_login(
+        &mut self,
+        id: i32,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        let identity = self
+            .user_identities
+            .iter_mut()
+            .find(|identity| identity.id == id)
+            .ok_or(RepoError::NotFound)?;
+        identity.last_login_at = Some(now);
+        Ok(())
+    }
+
+    fn delete_identity(&mut self, id: i32, user_id: i32) -> Result<bool, RepoError> {
+        let before = self.user_identities.len();
+        self.user_identities
+            .retain(|identity| identity.id != id || identity.user_id != user_id);
+        Ok(before != self.user_identities.len())
     }
 }
 

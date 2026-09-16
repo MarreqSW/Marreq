@@ -438,7 +438,7 @@ mod tests {
             email: "test@example.com".to_string(),
             creation_date: test_datetime(),
             last_login: test_datetime(),
-            password_hash: "hash".to_string(),
+            password_hash: Some("hash".to_string()),
             is_admin: false,
             email_verified: true,
         }

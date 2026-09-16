@@ -486,7 +486,7 @@ diesel::table! {
         creation_date -> Timestamp,
         last_login -> Timestamp,
         #[max_length = 255]
-        password_hash -> Varchar,
+        password_hash -> Nullable<Varchar>,
         is_admin -> Bool,
         email_verified -> Bool,
     }

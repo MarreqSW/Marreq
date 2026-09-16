@@ -14,6 +14,7 @@ import RegisterPage from '@/pages/RegisterPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
 import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import ChangePasswordPage from '@/pages/ChangePasswordPage';
+import AccountPage from '@/pages/AccountPage';
 import VerifyEmailPage from '@/pages/VerifyEmailPage';
 import ProjectLayout from '@/pages/ProjectLayout';
 import LegacyNamespaceProjectRedirect from '@/pages/LegacyNamespaceProjectRedirect';
@@ -102,6 +103,7 @@ export default function App() {
       >
         <Route index element={<HomeRedirect />} />
         <Route path="change-password" element={<ChangePasswordPage />} />
+        <Route path="account" element={<AccountPage />} />
         <Route path="change_password" element={<Navigate to="/change-password" replace />} />
         {/* Groups routes (reserved — matched before :projectSlug catch-all) */}
         <Route path="groups" element={<GroupsListPage />} />

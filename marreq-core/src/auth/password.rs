@@ -56,7 +56,11 @@ fn change_user_password_impl<R: Repository>(
         .get_user_by_username(&user.username)?
         .ok_or(AuthError::NotLoggedIn)?;
 
-    match verify_password(current_password, &user.password_hash) {
+    let password_hash = user
+        .password_hash
+        .as_deref()
+        .ok_or(AuthError::InvalidCredentials)?;
+    match verify_password(current_password, password_hash) {
         Ok(true) => {
             validate_password(
                 new_password,
@@ -161,9 +165,12 @@ mod tests {
 
         // Assert: stored hash changed AND matches the new password
         let updated = repo.get_user_by_id(1).unwrap();
-        assert_ne!(updated.password_hash, current_hash);
-        assert!(verify_password(newpw, &updated.password_hash).unwrap());
-        assert!(!verify_password(current, &updated.password_hash).unwrap());
+        assert_ne!(
+            updated.password_hash.as_deref(),
+            Some(current_hash.as_str())
+        );
+        assert!(verify_password(newpw, updated.password_hash.as_deref().unwrap()).unwrap());
+        assert!(!verify_password(current, updated.password_hash.as_deref().unwrap()).unwrap());
     }
 
     #[test]
@@ -177,7 +184,7 @@ mod tests {
 
         // Ensure nothing was changed
         let stored = repo.get_user_by_id(7).unwrap().password_hash;
-        assert_eq!(stored, current_hash);
+        assert_eq!(stored.as_deref(), Some(current_hash.as_str()));
     }
 
     #[test]
@@ -225,9 +232,13 @@ mod tests {
         admin_set_user_password(&mut repo, 1, "new-password-123").expect("should succeed");
 
         let updated = repo.get_user_by_id(1).unwrap();
-        assert_ne!(updated.password_hash, old_hash);
-        assert!(verify_password("new-password-123", &updated.password_hash).unwrap());
-        assert!(!verify_password("old-secret", &updated.password_hash).unwrap());
+        assert_ne!(updated.password_hash.as_deref(), Some(old_hash.as_str()));
+        assert!(verify_password(
+            "new-password-123",
+            updated.password_hash.as_deref().unwrap()
+        )
+        .unwrap());
+        assert!(!verify_password("old-secret", updated.password_hash.as_deref().unwrap()).unwrap());
     }
 
     #[test]

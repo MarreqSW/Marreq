@@ -302,7 +302,7 @@ pub struct NewUser {
     pub name: String,
     pub email: String,
     #[serde(skip_serializing, default)]
-    pub password_hash: String,
+    pub password_hash: Option<String>,
     pub is_admin: bool,
     /// Optional override for `email_verified`. Omit (`None`) to fall back to
     /// the database default (`TRUE`); set to `Some(false)` for Cloud-mode
@@ -681,7 +681,7 @@ mod forms_tests {
             username: "alice".into(),
             name: "Alice".into(),
             email: "a@b.com".into(),
-            password_hash: "hash".into(),
+            password_hash: Some("hash".into()),
             is_admin: false,
             email_verified: None,
         };

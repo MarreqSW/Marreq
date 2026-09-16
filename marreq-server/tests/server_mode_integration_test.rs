@@ -64,7 +64,7 @@ async fn deployment_info_returns_server_mode_payload() {
 async fn login_succeeds_despite_unverified_email_in_server_mode() {
     let mut repo = DieselRepoMock::default();
     let mut user = DieselRepoMock::make_user(1, "alice", "");
-    user.password_hash = hash_password("Voyage!Silver_2026").expect("hash");
+    user.password_hash = Some(hash_password("Voyage!Silver_2026").expect("hash"));
     user.email_verified = false; // not verified — server mode must not reject this
     repo.users.insert(1, user);
 

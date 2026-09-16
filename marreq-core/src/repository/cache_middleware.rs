@@ -7,9 +7,9 @@ use crate::models::*;
 use crate::namespaces::project_namespace_segment;
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    ApiTokensRepository, BaselineRepository, CustomFieldRepository, LogRepository,
-    LookupRepository, MatrixRepository, ProjectMembersRepository, ProjectReviewersRepository,
-    ProjectsRepository, Repository, RequirementCommentsRepository,
+    ApiTokensRepository, BaselineRepository, CustomFieldRepository, ExternalIdentityRepository,
+    LogRepository, LookupRepository, MatrixRepository, ProjectMembersRepository,
+    ProjectReviewersRepository, ProjectsRepository, Repository, RequirementCommentsRepository,
     RequirementVersionLinksRepository, RequirementsRepository, SavedViewRepository, UserRepository,
     VerificationsRepository,
 };
@@ -358,6 +358,16 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
         Ok(())
     }
 
+    fn update_user_last_login(
+        &mut self,
+        user_id: i32,
+        at: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        self.inner.update_user_last_login(user_id, at)?;
+        self.cache.invalidate_user(user_id);
+        Ok(())
+    }
+
     fn update_user(&mut self, user_data: &NewUser) -> Result<bool, RepoError> {
         let username = user_data.id.and_then(|id| {
             self.inner
@@ -436,6 +446,28 @@ impl<R: Repository> UserRepository for CacheRepository<R> {
         self.inner.set_user_email_verified(user_id, verified)?;
         self.cache.invalidate_user(user_id);
         Ok(())
+    }
+}
+
+impl<R: Repository> ExternalIdentityRepository for CacheRepository<R> {
+    fn get_identity(&self, issuer: &str, subject: &str) -> Result<Option<UserIdentity>, RepoError> {
+        self.inner.get_identity(issuer, subject)
+    }
+    fn get_identities_for_user(&self, user_id: i32) -> Result<Vec<UserIdentity>, RepoError> {
+        self.inner.get_identities_for_user(user_id)
+    }
+    fn insert_identity(&mut self, identity: &NewUserIdentity) -> Result<i32, RepoError> {
+        self.inner.insert_identity(identity)
+    }
+    fn touch_identity_login(
+        &mut self,
+        id: i32,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        self.inner.touch_identity_login(id, now)
+    }
+    fn delete_identity(&mut self, id: i32, user_id: i32) -> Result<bool, RepoError> {
+        self.inner.delete_identity(id, user_id)
     }
 }
 
@@ -1643,6 +1675,8 @@ mod tests {
             email_tokens: Vec::new(),
             next_email_token_id: 1,
             sessions: Vec::new(),
+            user_identities: Vec::new(),
+            next_user_identity_id: 1,
         }
     }
 
@@ -1662,7 +1696,7 @@ mod tests {
             username: "eve".into(),
             name: "Eve".into(),
             email: "eve@example.com".into(),
-            password_hash: "pw".into(),
+            password_hash: Some("pw".into()),
             is_admin: false,
             email_verified: None,
         };
@@ -1756,7 +1790,7 @@ mod tests {
             username: "charlie".into(),
             name: "Charlie".into(),
             email: "charlie@example.com".into(),
-            password_hash: "pw".into(),
+            password_hash: Some("pw".into()),
             is_admin: false,
             email_verified: None,
         };
@@ -1811,7 +1845,7 @@ mod tests {
             username: "bob".into(),
             name: "Bob".into(),
             email: "b@example.com".into(),
-            password_hash: "pw".into(),
+            password_hash: Some("pw".into()),
             is_admin: false,
             email_verified: None,
         };
@@ -1827,7 +1861,7 @@ mod tests {
             username: "bob".into(),
             name: "Bob".into(),
             email: "b@example.com".into(),
-            password_hash: "pw".into(),
+            password_hash: Some("pw".into()),
             is_admin: false,
             email_verified: None,
         };
@@ -2121,7 +2155,7 @@ mod tests {
             username: "test".into(),
             name: "Test".into(),
             email: "test@example.com".into(),
-            password_hash: "hash".into(),
+            password_hash: Some("hash".into()),
             is_admin: false,
             email_verified: None,
         };

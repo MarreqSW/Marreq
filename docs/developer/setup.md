@@ -10,6 +10,7 @@ This is the canonical setup guide for local Marreq environments. It explains how
 | `marreq-cloud` | Hosted / SaaS-style deployments | Site-admin bootstrap + self-registration | Docker API on `http://127.0.0.1:8001` or direct Rocket on `http://127.0.0.1:8000` |
 
 For architecture and deployment-mode differences, see [workspace-layout.md](workspace-layout.md).
+Federated login and Server OIDC configuration are documented in [authentication.md](authentication.md).
 
 ## Shared prerequisites
 

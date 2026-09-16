@@ -417,6 +417,14 @@ export default function ProjectLayout() {
                 >
                   <Link
                     role="menuitem"
+                    to="/account"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-stitch-fg hover:bg-stitch-elevated transition-colors"
+                  >
+                    Account settings
+                  </Link>
+                  <Link
+                    role="menuitem"
                     to="/change-password"
                     onClick={() => setUserMenuOpen(false)}
                     className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-stitch-fg hover:bg-stitch-elevated transition-colors"

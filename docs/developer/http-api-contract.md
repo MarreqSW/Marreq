@@ -41,6 +41,12 @@ For **`POST /api/auth/login`** and **`POST /api/auth/logout`**, if the browser s
 | `POST` | `/api/auth/logout` | Clears session and CSRF. |
 | `POST` | `/api/auth/change-password` | JSON body: `{ "current_password", "new_password", "confirm_password" }`. Requires a session. On success, all sessions are revoked and cookies cleared. |
 | `GET` | `/api/auth/me` | Current user JSON; **401** if not authenticated (JSON body, not HTML). |
+| `GET` | `/api/auth/providers` | Enabled password/external methods; never includes client credentials. |
+| `GET` | `/api/auth/external/{provider}/start` | Begin Authorization Code + PKCE login. |
+| `GET` | `/api/auth/external/{provider}/callback` | Single-use provider callback. |
+| `GET` | `/api/auth/identities` | List connected identities for the current user. |
+| `POST` | `/api/auth/external/{provider}/link` | Begin an explicit, CSRF-protected account link. |
+| `DELETE` | `/api/auth/identities/{id}` | Disconnect an identity if another login method remains. |
 
 ### Dashboard (SPA home)
 

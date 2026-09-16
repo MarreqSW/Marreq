@@ -23,7 +23,7 @@ pub fn login_user<R: Repository>(
 ) -> Result<User, AuthError> {
     let user = authenticate_user(&*repo, &login_form.username, login_form.password.trim())?;
 
-    complete_login(repo, user, cookies, user_agent, ip_addr)
+    complete_login(repo, user, "password", cookies, user_agent, ip_addr)
 }
 
 /// Finish every human browser login in one place. Password and federated
@@ -32,6 +32,7 @@ pub fn login_user<R: Repository>(
 pub fn complete_login<R: Repository>(
     repo: &mut R,
     user: User,
+    authentication_method: &str,
     cookies: &CookieJar<'_>,
     user_agent: Option<String>,
     ip_addr: Option<String>,
@@ -41,8 +42,13 @@ pub fn complete_login<R: Repository>(
         return Err(AuthError::EmailNotVerified);
     }
 
-    // Store session information.
-    set_session_cookie(cookies, repo, user.id, user_agent, ip_addr);
+    repo.update_user_last_login(user.id, chrono::Utc::now().naive_utc())?;
+
+    // Rotate any pre-existing authenticated session before issuing a new one.
+    crate::auth::clear_session_cookie(cookies, repo);
+    let audit_user_agent = user_agent.clone();
+    let audit_ip_addr = ip_addr.clone();
+    set_session_cookie(cookies, repo, user.id, user_agent, ip_addr)?;
 
     // Mint a fresh CSRF token on every login so that pre-login tokens are
     // invalidated (CSRF token rotation – mitigates session-fixation variants).
@@ -56,10 +62,12 @@ pub fn complete_login<R: Repository>(
         project_id: None,
         entity_id: Some(user.id),
         old_values: None,
-        new_values: None,
-        description: Some("User logged in".to_string()),
-        ip_address: None,
-        user_agent: None,
+        new_values: Some(
+            serde_json::json!({ "authentication_method": authentication_method }).to_string(),
+        ),
+        description: Some(format!("User logged in using {authentication_method}")),
+        ip_address: audit_ip_addr,
+        user_agent: audit_user_agent,
     };
     let _ = repo.insert_log(&log);
 
@@ -82,7 +90,10 @@ fn authenticate_user<R: Repository>(
         None => return Err(AuthError::InvalidCredentials),
     };
 
-    match super::verify_password(password, &user.password_hash) {
+    let Some(password_hash) = user.password_hash.as_deref() else {
+        return Err(AuthError::InvalidCredentials);
+    };
+    match super::verify_password(password, password_hash) {
         Ok(true) => Ok(user),
         Ok(false) => Err(AuthError::InvalidCredentials),
         Err(e) => Err(AuthError::Verify(e.to_string())),
@@ -128,6 +139,17 @@ mod tests {
             Err(AuthError::InvalidCredentials) => (),
             _ => panic!("Expected InvalidCredentials error"),
         }
+    }
+
+    #[test]
+    fn external_only_user_cannot_use_password_login() {
+        let mut user = DieselRepoMock::make_user(1, "external", "unused");
+        user.password_hash = None;
+        let repo = DieselRepoMock::with_users([user]);
+        assert!(matches!(
+            authenticate_user(&repo, "external", "anything"),
+            Err(AuthError::InvalidCredentials)
+        ));
     }
 
     #[test]

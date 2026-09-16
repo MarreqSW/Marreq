@@ -336,7 +336,7 @@ async fn password_field_is_not_present() {
         .await;
 
     let user: User = response.into_json().await.expect("json");
-    assert!(user.password_hash.is_empty());
+    assert!(user.password_hash.as_deref().unwrap_or_default().is_empty());
 }
 
 // ============================================================================

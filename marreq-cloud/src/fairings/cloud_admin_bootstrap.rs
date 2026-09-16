@@ -95,7 +95,7 @@ impl Fairing for CloudAdminBootstrapFairing {
                     username,
                     name: "Site Administrator".into(),
                     email: email_norm.clone(),
-                    password_hash: hash,
+                    password_hash: Some(hash),
                     is_admin: true,
                     email_verified: Some(true),
                 };

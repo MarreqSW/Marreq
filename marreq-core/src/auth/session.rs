@@ -13,6 +13,7 @@
 
 use crate::app::AppState;
 use crate::models::entities::NewSession;
+use crate::repository::errors::RepoError;
 use crate::repository::SessionRepository;
 use base64::Engine;
 use rocket::http::{Cookie, CookieJar, SameSite};
@@ -91,7 +92,7 @@ pub fn set_session_cookie<R: SessionRepository>(
     user_id: i32,
     user_agent: Option<String>,
     ip_addr: Option<String>,
-) {
+) -> Result<(), RepoError> {
     let raw = generate_raw_token();
     let token_hash = hash_token(&raw);
     let expires_at = chrono::Utc::now().naive_utc() + chrono::Duration::days(SESSION_TTL_DAYS);
@@ -104,9 +105,9 @@ pub fn set_session_cookie<R: SessionRepository>(
         ip_addr,
     };
 
-    if repo.create_session(&new).is_ok() {
-        cookies.add_private(build_cookie(cookie_name(), raw));
-    }
+    repo.create_session(&new)?;
+    cookies.add_private(build_cookie(cookie_name(), raw));
+    Ok(())
 }
 
 /// Resolve the cookie to a `user_id`, validating the session against the DB.

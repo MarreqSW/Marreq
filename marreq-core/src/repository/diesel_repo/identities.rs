@@ -37,7 +37,7 @@ impl ExternalIdentityRepository for DieselRepo {
             .values(identity)
             .returning(crate::schema::user_identities::id)
             .get_result(conn.as_mut())
-            .map_err(Into::into)
+            .map_err(super::map_unique_violation)
     }
     fn touch_identity_login(
         &mut self,

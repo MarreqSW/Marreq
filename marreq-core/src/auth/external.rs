@@ -10,6 +10,7 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 
 const ENTROPY_BYTES: usize = 32;
 
@@ -38,7 +39,7 @@ pub struct ProviderDiscovery {
 
 /// Sensitive, short-lived browser-bound transaction state. It belongs only in
 /// server-side storage or a Rocket private cookie, never in a URL or log.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct OAuthTransaction {
     pub provider_key: String,
     pub state: String,
@@ -47,9 +48,10 @@ pub struct OAuthTransaction {
     pub return_to: String,
     pub expires_at: chrono::NaiveDateTime,
     pub operation: OAuthOperation,
+    pub link_user_id: Option<i32>,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum OAuthOperation {
     Login,
     Link,
@@ -80,8 +82,20 @@ impl OAuthTransaction {
             pkce_verifier: random_urlsafe(),
             return_to: return_to.to_owned(),
             operation,
+            link_user_id: None,
             expires_at: now + chrono::Duration::minutes(10),
         })
+    }
+
+    pub fn for_link(
+        provider_key: impl Into<String>,
+        return_to: &str,
+        user_id: i32,
+        now: chrono::NaiveDateTime,
+    ) -> Result<Self, TransactionError> {
+        let mut transaction = Self::new(provider_key, return_to, OAuthOperation::Link, now)?;
+        transaction.link_user_id = Some(user_id);
+        Ok(transaction)
     }
 
     /// Validate before token exchange. The caller must delete the transaction
@@ -98,11 +112,19 @@ impl OAuthTransaction {
         if self.provider_key != provider {
             return Err(TransactionError::WrongProvider);
         }
-        if state != Some(self.state.as_str()) {
+        if !state.is_some_and(|candidate| secret_matches(candidate, &self.state)) {
             return Err(TransactionError::InvalidState);
         }
         Ok(())
     }
+}
+
+pub fn pkce_challenge(verifier: &str) -> String {
+    URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()))
+}
+
+fn secret_matches(left: &str, right: &str) -> bool {
+    Sha256::digest(left.as_bytes()) == Sha256::digest(right.as_bytes())
 }
 
 fn random_urlsafe() -> String {
@@ -169,5 +191,14 @@ mod tests {
         assert!(!may_unlink_identity(false, 1));
         assert!(may_unlink_identity(true, 1));
         assert!(may_unlink_identity(false, 2));
+    }
+
+    #[test]
+    fn pkce_uses_rfc7636_s256_encoding() {
+        let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";
+        assert_eq!(
+            pkce_challenge(verifier),
+            "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"
+        );
     }
 }

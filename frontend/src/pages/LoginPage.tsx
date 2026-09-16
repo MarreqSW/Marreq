@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getCsrfToken, getDeploymentInfo, loginJson } from '@/api/client';
-import type { DeploymentInfo } from '@/api/types';
+import { getAuthProviders, getCsrfToken, getDeploymentInfo, loginJson } from '@/api/client';
+import type { AuthProviderDiscovery, DeploymentInfo } from '@/api/types';
 import AuthLayout from '@/components/AuthLayout';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { getFrontendBuildConstants } from '@/utils/semverRange';
@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [deployment, setDeployment] = useState<DeploymentInfo | null>(null);
+  const [providers, setProviders] = useState<AuthProviderDiscovery>({ password_enabled: true, external: [] });
   const uiVersion = getFrontendBuildConstants().version;
 
   const { error, submitting, onSubmit } = useFormSubmit(async () => {
@@ -24,6 +25,9 @@ export default function LoginPage() {
     getDeploymentInfo()
       .then((info) => { if (alive) setDeployment(info); })
       .catch(() => { if (alive) setDeployment(null); });
+    getAuthProviders()
+      .then((info) => { if (alive) setProviders(info); })
+      .catch(() => { if (alive) setProviders({ password_enabled: true, external: [] }); });
     return () => { alive = false; };
   }, []);
 
@@ -54,12 +58,27 @@ export default function LoginPage() {
         </div>
       }
     >
-        <form onSubmit={onSubmit} className="space-y-4">
+        <div className="space-y-4">
           {error && (
             <div className="rounded-lg bg-red-500/10 border border-red-500/25 px-3 py-2 text-sm text-red-800 dark:text-red-200">
               {error}
             </div>
           )}
+          {providers.external.map((provider) => (
+            <a
+              key={provider.id}
+              href={`/api/auth/external/${encodeURIComponent(provider.id)}/start`}
+              className="block w-full rounded-lg border border-stitch-border bg-stitch-elevated px-3 py-2.5 text-center text-sm font-semibold text-stitch-fg hover:bg-stitch-muted/10"
+            >
+              Continue with {provider.display_name}
+            </a>
+          ))}
+          {providers.external.length > 0 && providers.password_enabled && (
+            <div className="flex items-center gap-3 text-xs text-stitch-muted" aria-label="or">
+              <span className="h-px flex-1 bg-stitch-border" />or<span className="h-px flex-1 bg-stitch-border" />
+            </div>
+          )}
+          {providers.password_enabled && <form onSubmit={onSubmit} className="space-y-4">
           <div>
             <label
               htmlFor="username"
@@ -100,7 +119,8 @@ export default function LoginPage() {
           >
             {submitting ? 'Signing in…' : 'Sign in'}
           </button>
-        </form>
+          </form>}
+        </div>
     </AuthLayout>
   );
 }

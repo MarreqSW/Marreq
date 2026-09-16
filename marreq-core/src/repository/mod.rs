@@ -26,6 +26,11 @@ pub trait UserRepository {
 
     fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError>;
     fn update_user_password(&mut self, user_id: i32, new_hash: &str) -> Result<(), RepoError>;
+    fn update_user_last_login(
+        &mut self,
+        user_id: i32,
+        at: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError>;
     fn update_user(&mut self, user_data: &NewUser) -> Result<bool, RepoError>;
     fn update_user_without_password(&mut self, user_data: &UpdateUser) -> Result<bool, RepoError>;
     fn delete_user(&mut self, user_id: i32) -> Result<User, RepoError>;
@@ -578,6 +583,7 @@ pub trait NotificationRepository {
 pub trait Repository:
     ApiTokensRepository
     + UserRepository
+    + ExternalIdentityRepository
     + LookupRepository
     + RequirementsRepository
     + RequirementVersionLinksRepository
@@ -603,6 +609,7 @@ pub trait Repository:
 impl<T> Repository for T where
     T: ApiTokensRepository
         + UserRepository
+        + ExternalIdentityRepository
         + LookupRepository
         + RequirementsRepository
         + RequirementVersionLinksRepository

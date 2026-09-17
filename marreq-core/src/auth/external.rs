@@ -142,13 +142,6 @@ pub fn is_safe_return_to(value: &str) -> bool {
         && !value.contains('\n')
 }
 
-/// A user may remove a linked identity only when a different usable login
-/// method remains. Callers supply the already-authorized user's credential
-/// state; this function intentionally does not infer ownership from email.
-pub fn may_unlink_identity(has_password: bool, identity_count: usize) -> bool {
-    has_password || identity_count > 1
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -186,13 +179,6 @@ mod tests {
             assert!(!is_safe_return_to(bad));
         }
     }
-    #[test]
-    fn cannot_remove_last_login_method() {
-        assert!(!may_unlink_identity(false, 1));
-        assert!(may_unlink_identity(true, 1));
-        assert!(may_unlink_identity(false, 2));
-    }
-
     #[test]
     fn pkce_uses_rfc7636_s256_encoding() {
         let verifier = "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk";

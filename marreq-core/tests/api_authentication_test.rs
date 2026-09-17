@@ -45,9 +45,17 @@ mod test_support {
     }
 
     pub async fn test_client(repo: DieselRepoMock) -> Client {
+        test_client_with_auth(repo, marreq_core::auth::AuthConfig::default()).await
+    }
+
+    pub async fn test_client_with_auth(
+        repo: DieselRepoMock,
+        auth_config: marreq_core::auth::AuthConfig,
+    ) -> Client {
         marreq_core::deployment::install_test_server_mode();
         let rocket = rocket::build()
             .manage(managed_state(repo))
+            .manage(auth_config)
             .manage(marreq_core::auth::rate_limiter::LoginRateLimiter::new())
             .mount("/api", marreq_core::api::routes());
 
@@ -149,6 +157,73 @@ async fn auth_provider_discovery_defaults_to_password_only() {
     let body: Value = response.into_json().await.expect("json");
     assert_eq!(body["password_enabled"], true);
     assert_eq!(body["external"], json!([]));
+}
+
+#[rocket::async_test]
+async fn separate_apps_keep_independent_auth_configurations() {
+    let password_client = test_client_with_auth(
+        base_repo(),
+        marreq_core::auth::AuthConfig::new(true, Vec::new()),
+    )
+    .await;
+    let external_only_client = test_client_with_auth(
+        base_repo(),
+        marreq_core::auth::AuthConfig::new(false, Vec::new()),
+    )
+    .await;
+
+    let password_discovery: Value = password_client
+        .get("/api/auth/providers")
+        .dispatch()
+        .await
+        .into_json()
+        .await
+        .expect("password discovery");
+    let external_discovery: Value = external_only_client
+        .get("/api/auth/providers")
+        .dispatch()
+        .await
+        .into_json()
+        .await
+        .expect("external-only discovery");
+
+    assert_eq!(password_discovery["password_enabled"], true);
+    assert_eq!(external_discovery["password_enabled"], false);
+}
+
+#[rocket::async_test]
+async fn deleting_unknown_external_identity_returns_not_found() {
+    let client = test_client(base_repo()).await;
+    let response = client
+        .delete("/api/auth/identities/999")
+        .private_cookie(session_cookie(&client, 2))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::NotFound);
+}
+
+#[rocket::async_test]
+async fn deleting_another_users_identity_returns_not_found() {
+    use marreq_core::repository::ExternalIdentityRepository;
+
+    let mut repo = base_repo();
+    let identity_id = repo
+        .insert_identity(&NewUserIdentity {
+            user_id: 1,
+            provider_key: "github".into(),
+            issuer: "https://github.com".into(),
+            subject: "admin-subject".into(),
+        })
+        .expect("identity");
+    let client = test_client(repo).await;
+    let response = client
+        .delete(format!("/api/auth/identities/{identity_id}"))
+        .private_cookie(session_cookie(&client, 2))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::NotFound);
 }
 
 #[rocket::async_test]

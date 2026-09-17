@@ -76,7 +76,6 @@ pub fn build_with_auth(
     // Register the mode into the OnceLock so `deployment::current()` works
     // without per-call lookups.
     crate::deployment::set_current(mode);
-    crate::auth::AuthConfig::install(auth_config);
     eprintln!("[marreq] deployment mode: {}", mode.name());
 
     #[cfg(not(any(test, feature = "test-helpers")))]
@@ -106,6 +105,7 @@ pub fn build_with_auth(
 
     let mut rocket = rocket::build()
         .manage(AppState { repo })
+        .manage(auth_config)
         .manage(mode)
         .manage(crate::auth::rate_limiter::LoginRateLimiter::new())
         .mount(

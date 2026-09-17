@@ -35,8 +35,10 @@ pub struct ExternalCallbackQuery {
 }
 
 #[get("/auth/providers")]
-pub fn auth_providers() -> Json<crate::auth::ProviderDiscovery> {
-    Json(crate::auth::AuthConfig::current().discovery())
+pub fn auth_providers(
+    auth_config: &State<crate::auth::AuthConfig>,
+) -> Json<crate::auth::ProviderDiscovery> {
+    Json(auth_config.discovery())
 }
 
 #[get("/auth/external/<provider>/start?<query..>")]
@@ -44,8 +46,9 @@ pub async fn auth_external_start(
     provider: &str,
     query: ExternalStartQuery,
     cookies: &CookieJar<'_>,
+    auth_config: &State<crate::auth::AuthConfig>,
 ) -> ApiResult<Redirect> {
-    let provider_config = crate::auth::AuthConfig::current()
+    let provider_config = auth_config
         .provider(provider)
         .ok_or_else(|| ApiError::NotFound("authentication provider not found".into()))?;
     let transaction = crate::auth::OAuthTransaction::new(
@@ -73,11 +76,12 @@ pub async fn auth_external_link_start(
     body: Json<serde_json::Value>,
     session: OptionalSessionUser,
     cookies: &CookieJar<'_>,
+    auth_config: &State<crate::auth::AuthConfig>,
 ) -> ApiResult<Json<serde_json::Value>> {
     let user = session
         .0
         .ok_or_else(|| ApiError::Unauthorized("not authenticated".into()))?;
-    let provider_config = crate::auth::AuthConfig::current()
+    let provider_config = auth_config
         .provider(provider)
         .ok_or_else(|| ApiError::NotFound("authentication provider not found".into()))?;
     let return_to = body
@@ -110,6 +114,7 @@ pub async fn auth_external_callback(
     session: OptionalSessionUser,
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
+    auth_config: &State<crate::auth::AuthConfig>,
 ) -> ApiResult<Redirect> {
     let transaction = crate::auth::transaction_cookie::take(cookies).ok_or_else(|| {
         ApiError::BadRequest("authentication transaction is missing or already used".into())
@@ -132,7 +137,7 @@ pub async fn auth_external_callback(
         .code
         .as_deref()
         .ok_or_else(|| ApiError::BadRequest("authorization code is missing".into()))?;
-    let provider_config = crate::auth::AuthConfig::current()
+    let provider_config = auth_config
         .provider(provider)
         .ok_or_else(|| ApiError::NotFound("authentication provider not found".into()))?;
     let external = crate::auth::provider::exchange_code(
@@ -182,6 +187,7 @@ fn map_external_repo_error(error: RepoError) -> ApiError {
         ),
         RepoError::Duplicate(message) => ApiError::Conflict(message),
         RepoError::BadInput(message) => ApiError::BadRequest(message),
+        RepoError::NotFound => ApiError::NotFound("external identity not found".into()),
         _ => ApiError::Internal("external authentication failed".into()),
     }
 }
@@ -201,9 +207,10 @@ pub fn auth_login(
     cookies: &CookieJar<'_>,
     state: &State<AppState>,
     limiter: &State<LoginRateLimiter>,
+    auth_config: &State<crate::auth::AuthConfig>,
     client_ip: Option<IpAddr>,
 ) -> ApiResult<(Status, Json<serde_json::Value>)> {
-    if !crate::auth::AuthConfig::current().password_enabled {
+    if !auth_config.password_enabled {
         return Err(ApiError::Gone("password authentication is disabled".into()));
     }
     let form = body.into_inner();
@@ -278,6 +285,7 @@ pub fn auth_identity_delete(
     identity_id: i32,
     session: OptionalSessionUser,
     state: &State<AppState>,
+    auth_config: &State<crate::auth::AuthConfig>,
 ) -> ApiResult<Status> {
     let user = session
         .0
@@ -285,8 +293,13 @@ pub fn auth_identity_delete(
     let mut repo = state
         .try_repo_write()
         .map_err(|_| ApiError::Internal("repository unavailable".into()))?;
-    crate::services::external_auth_service::unlink_identity(&mut *repo, user.id, identity_id)
-        .map_err(map_external_repo_error)?;
+    crate::services::external_auth_service::unlink_identity(
+        &mut *repo,
+        auth_config,
+        user.id,
+        identity_id,
+    )
+    .map_err(map_external_repo_error)?;
     Ok(Status::NoContent)
 }
 

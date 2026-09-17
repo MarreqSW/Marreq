@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
-use crate::auth::{may_unlink_identity, ExternalIdentity};
+use crate::auth::{AuthConfig, ExternalIdentity};
 use crate::models::{NewLog, NewUserIdentity, User, UserIdentity};
 use crate::repository::errors::RepoError;
 use crate::repository::Repository;
@@ -89,6 +89,7 @@ pub fn link_identity<R: Repository>(
 
 pub fn unlink_identity<R: Repository>(
     repo: &mut R,
+    auth_config: &AuthConfig,
     user_id: i32,
     identity_id: i32,
 ) -> Result<(), RepoError> {
@@ -97,7 +98,9 @@ pub fn unlink_identity<R: Repository>(
     if !identities.iter().any(|identity| identity.id == identity_id) {
         return Err(RepoError::NotFound);
     }
-    if !may_unlink_identity(user.password_hash.is_some(), identities.len()) {
+    let usable_methods =
+        auth_config.usable_authentication_methods(user.password_hash.is_some(), &identities);
+    if !usable_methods.allows_unlinking(identity_id) {
         return Err(RepoError::BadInput(
             "cannot remove the last authentication method".into(),
         ));
@@ -147,19 +150,50 @@ fn audit_identity<R: Repository>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::auth::{AuthProviderConfig, ProviderKind};
     use crate::repository::diesel_repo_mock::DieselRepoMock;
-    use crate::repository::{ExternalIdentityRepository, UserRepository};
+    use crate::repository::ExternalIdentityRepository;
 
     fn external(subject: &str, email: &str) -> ExternalIdentity {
+        external_for("github", subject, email)
+    }
+
+    fn external_for(provider_key: &str, subject: &str, email: &str) -> ExternalIdentity {
         ExternalIdentity {
-            provider_key: "github".into(),
-            issuer: "https://github.com".into(),
+            provider_key: provider_key.into(),
+            issuer: if provider_key == "github" {
+                "https://github.com".into()
+            } else {
+                format!("https://{provider_key}.example.test")
+            },
             subject: subject.into(),
             email: Some(email.into()),
             email_verified: true,
             username: Some("alice".into()),
             display_name: Some("Alice".into()),
         }
+    }
+
+    fn auth_config(password_enabled: bool, providers: &[&str]) -> AuthConfig {
+        AuthConfig::new(
+            password_enabled,
+            providers
+                .iter()
+                .map(|key| AuthProviderConfig {
+                    key: (*key).into(),
+                    display_name: (*key).into(),
+                    kind: ProviderKind::OAuth2 {
+                        issuer: format!("https://{key}.example.test"),
+                        authorization_url: format!("https://{key}.example.test/authorize"),
+                        token_url: format!("https://{key}.example.test/token"),
+                        userinfo_url: format!("https://{key}.example.test/user"),
+                    },
+                    client_id: "client-id".into(),
+                    client_secret: "client-secret".into(),
+                    auto_register: true,
+                })
+                .collect(),
+        )
     }
 
     #[test]
@@ -223,16 +257,91 @@ mod tests {
     }
 
     #[test]
-    fn final_external_method_cannot_be_unlinked() {
+    fn enabled_password_allows_unlinking_only_external_identity() {
+        let mut repo = DieselRepoMock::with_users([DieselRepoMock::make_user(1, "alice", "hash")]);
+        let id = link_identity(&mut repo, 1, &external("42", "alice@example.test")).unwrap();
+
+        assert!(unlink_identity(&mut repo, &auth_config(true, &["github"]), 1, id).is_ok());
+    }
+
+    #[test]
+    fn disabled_password_does_not_allow_unlinking_only_external_identity() {
+        let mut repo = DieselRepoMock::with_users([DieselRepoMock::make_user(1, "alice", "hash")]);
+        let id = link_identity(&mut repo, 1, &external("42", "alice@example.test")).unwrap();
+
+        assert!(matches!(
+            unlink_identity(&mut repo, &auth_config(false, &["github"]), 1, id),
+            Err(RepoError::BadInput(_))
+        ));
+    }
+
+    #[test]
+    fn external_only_user_cannot_unlink_only_enabled_identity() {
         let mut user = DieselRepoMock::make_user(1, "alice", "hash");
         user.password_hash = None;
         let mut repo = DieselRepoMock::with_users([user]);
         let id = link_identity(&mut repo, 1, &external("42", "alice@example.test")).unwrap();
+
         assert!(matches!(
-            unlink_identity(&mut repo, 1, id),
+            unlink_identity(&mut repo, &auth_config(true, &["github"]), 1, id),
             Err(RepoError::BadInput(_))
         ));
-        repo.update_user_password(1, "new-hash").unwrap();
-        assert!(unlink_identity(&mut repo, 1, id).is_ok());
+    }
+
+    #[test]
+    fn two_enabled_external_identities_allow_unlinking_one() {
+        let mut user = DieselRepoMock::make_user(1, "alice", "hash");
+        user.password_hash = None;
+        let mut repo = DieselRepoMock::with_users([user]);
+        let github = link_identity(&mut repo, 1, &external("42", "alice@example.test")).unwrap();
+        link_identity(
+            &mut repo,
+            1,
+            &external_for("gitlab", "84", "alice@example.test"),
+        )
+        .unwrap();
+
+        assert!(unlink_identity(
+            &mut repo,
+            &auth_config(true, &["github", "gitlab"]),
+            1,
+            github,
+        )
+        .is_ok());
+    }
+
+    #[test]
+    fn disabled_provider_identity_does_not_make_enabled_identity_removable() {
+        let mut user = DieselRepoMock::make_user(1, "alice", "hash");
+        user.password_hash = None;
+        let mut repo = DieselRepoMock::with_users([user]);
+        let github = link_identity(&mut repo, 1, &external("42", "alice@example.test")).unwrap();
+        link_identity(
+            &mut repo,
+            1,
+            &external_for("disabled", "84", "alice@example.test"),
+        )
+        .unwrap();
+
+        assert!(matches!(
+            unlink_identity(&mut repo, &auth_config(true, &["github"]), 1, github),
+            Err(RepoError::BadInput(_))
+        ));
+    }
+
+    #[test]
+    fn stale_identity_can_be_removed_when_an_enabled_identity_remains() {
+        let mut user = DieselRepoMock::make_user(1, "alice", "hash");
+        user.password_hash = None;
+        let mut repo = DieselRepoMock::with_users([user]);
+        link_identity(&mut repo, 1, &external("42", "alice@example.test")).unwrap();
+        let stale = link_identity(
+            &mut repo,
+            1,
+            &external_for("disabled", "84", "alice@example.test"),
+        )
+        .unwrap();
+
+        assert!(unlink_identity(&mut repo, &auth_config(true, &["github"]), 1, stale).is_ok());
     }
 }

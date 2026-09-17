@@ -2,10 +2,9 @@
 // Copyright (C) 2026 Marreq
 
 use super::{ProviderDiscovery, PublicAuthProvider};
-use std::sync::OnceLock;
+use crate::models::UserIdentity;
+use std::collections::HashSet;
 use url::Url;
-
-static AUTH_CONFIG: OnceLock<AuthConfig> = OnceLock::new();
 
 #[derive(Clone)]
 pub struct AuthProviderConfig {
@@ -42,16 +41,34 @@ pub struct AuthConfig {
     providers: Vec<AuthProviderConfig>,
 }
 
-impl AuthConfig {
-    pub fn install(config: Self) {
-        let _ = AUTH_CONFIG.set(config);
-    }
+#[derive(Debug, PartialEq, Eq)]
+pub struct UsableAuthenticationMethods {
+    password: bool,
+    external_identity_ids: HashSet<i32>,
+}
 
-    pub fn current() -> &'static Self {
-        AUTH_CONFIG.get_or_init(|| Self {
-            password_enabled: true,
-            providers: Vec::new(),
-        })
+impl UsableAuthenticationMethods {
+    pub fn allows_unlinking(&self, identity_id: i32) -> bool {
+        self.password
+            || self
+                .external_identity_ids
+                .iter()
+                .any(|candidate| *candidate != identity_id)
+    }
+}
+
+impl Default for AuthConfig {
+    fn default() -> Self {
+        Self::new(true, Vec::new())
+    }
+}
+
+impl AuthConfig {
+    pub fn new(password_enabled: bool, providers: Vec<AuthProviderConfig>) -> Self {
+        Self {
+            password_enabled,
+            providers,
+        }
     }
 
     pub fn from_env(deployment: &str) -> Result<Self, String> {
@@ -79,6 +96,22 @@ impl AuthConfig {
 
     pub fn provider(&self, key: &str) -> Option<&AuthProviderConfig> {
         self.providers.iter().find(|provider| provider.key == key)
+    }
+
+    pub fn usable_authentication_methods(
+        &self,
+        password_configured: bool,
+        identities: &[UserIdentity],
+    ) -> UsableAuthenticationMethods {
+        let external_identity_ids = identities
+            .iter()
+            .filter(|identity| self.provider(&identity.provider_key).is_some())
+            .map(|identity| identity.id)
+            .collect();
+        UsableAuthenticationMethods {
+            password: self.password_enabled && password_configured,
+            external_identity_ids,
+        }
     }
 
     pub fn discovery(&self) -> ProviderDiscovery {

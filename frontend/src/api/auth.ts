@@ -1,4 +1,4 @@
-import type { ChangePasswordBody, DeploymentInfo } from './types';
+import type { AuthProviderDiscovery, ChangePasswordBody, ConnectedIdentities, DeploymentInfo } from './types';
 import { fetchJson, JSON_HEADERS } from './transport';
 
 export async function getCsrfToken(): Promise<string> {
@@ -48,4 +48,23 @@ export async function changePassword(
 
 export async function getDeploymentInfo(): Promise<DeploymentInfo> {
   return fetchJson<DeploymentInfo>('/api/meta/deployment');
+}
+
+export async function getAuthProviders(): Promise<AuthProviderDiscovery> {
+  return fetchJson<AuthProviderDiscovery>('/api/auth/providers');
+}
+
+export async function getConnectedIdentities(): Promise<ConnectedIdentities> {
+  return fetchJson<ConnectedIdentities>('/api/auth/identities');
+}
+
+export async function startIdentityLink(provider: string, csrfToken: string): Promise<string> {
+  const response = await fetchJson<{ authorization_url: string }>(`/api/auth/external/${encodeURIComponent(provider)}/link`, {
+    method: 'POST', headers: { ...JSON_HEADERS, 'X-CSRF-Token': csrfToken }, body: JSON.stringify({ return_to: '/account' }),
+  });
+  return response.authorization_url;
+}
+
+export async function disconnectIdentity(identityId: number, csrfToken: string): Promise<void> {
+  await fetchJson<void>(`/api/auth/identities/${identityId}`, { method: 'DELETE', headers: { 'X-CSRF-Token': csrfToken } });
 }

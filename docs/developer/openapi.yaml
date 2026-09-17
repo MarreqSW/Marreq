@@ -12,6 +12,63 @@ servers:
     description: Direct Rocket (local)
 
 paths:
+  /auth/providers:
+    get:
+      summary: Discover enabled browser authentication methods
+      operationId: authProviders
+      responses:
+        '200':
+          description: Public provider names only; no credentials or protocol secrets
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [password_enabled, external]
+                properties:
+                  password_enabled:
+                    type: boolean
+                  external:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, display_name]
+                      properties:
+                        id: { type: string }
+                        display_name: { type: string }
+  /auth/external/{provider}/start:
+    get:
+      summary: Begin an external Authorization Code + PKCE login
+      operationId: authExternalStart
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema: { type: string }
+        - in: query
+          name: return_to
+          schema: { type: string, example: /projects }
+      responses:
+        '303': { description: Redirect to the provider }
+        '400': { $ref: '#/components/responses/ApiError' }
+        '404': { $ref: '#/components/responses/ApiError' }
+  /auth/external/{provider}/callback:
+    get:
+      summary: Consume a single-use external authentication callback
+      operationId: authExternalCallback
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema: { type: string }
+        - in: query
+          name: code
+          schema: { type: string }
+        - in: query
+          name: state
+          schema: { type: string }
+      responses:
+        '303': { description: Login or link completed; redirect to the local return path }
+        '400': { $ref: '#/components/responses/ApiError' }
   /auth/csrf:
     get:
       summary: Get or mint CSRF token

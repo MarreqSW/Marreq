@@ -189,6 +189,23 @@ export interface DeploymentInfo {
   allows_self_administered_user_creation: boolean;
 }
 
+export interface AuthProviderDiscovery {
+  password_enabled: boolean;
+  external: Array<{ id: string; display_name: string }>;
+}
+
+export interface ConnectedIdentity {
+  id: number;
+  provider: string;
+  created_at: string;
+  last_login_at: string | null;
+}
+
+export interface ConnectedIdentities {
+  password_configured: boolean;
+  identities: ConnectedIdentity[];
+}
+
 export interface FrontendCompatibility {
   min_version: string;
   max_version: string;

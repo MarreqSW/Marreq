@@ -36,6 +36,7 @@ mod test_support {
         marreq_core::deployment::install_test_server_mode();
         let rocket = rocket::build()
             .manage(managed_state(repo))
+            .manage(marreq_core::auth::AuthConfig::default())
             .manage(marreq_core::auth::rate_limiter::LoginRateLimiter::new())
             .mount("/api", marreq_core::api::routes());
 
@@ -336,7 +337,7 @@ async fn password_field_is_not_present() {
         .await;
 
     let user: User = response.into_json().await.expect("json");
-    assert!(user.password_hash.is_empty());
+    assert!(user.password_hash.as_deref().unwrap_or_default().is_empty());
 }
 
 // ============================================================================

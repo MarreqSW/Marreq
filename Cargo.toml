@@ -24,6 +24,8 @@ csv = "1.4"
 diesel = { version = "2.3.6", features = ["postgres", "chrono", "r2d2", "serde_json"] }
 dotenvy = "0.15.7"
 lazy_static = "1.5"
+openidconnect = { version = "4.0.1", features = ["reqwest"] }
+oauth2 = { version = "5.0.0", features = ["reqwest"] }
 lettre = { version = "0.11.20", features = ["builder", "smtp-transport", "tokio1-native-tls"] }
 pgvector = { version = "0.4.1", features = ["diesel"] }
 printpdf = "0.9.1"
@@ -41,4 +43,5 @@ thiserror = "2"
 time = "0.3"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync"] }
 urlencoding = "2.1"
+url = "2.5"
 xlsxwriter = "0.6.1"

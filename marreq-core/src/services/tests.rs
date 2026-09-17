@@ -68,7 +68,7 @@ fn sample_user() -> User {
         email: "tester@example.com".into(),
         creation_date: timestamp(),
         last_login: timestamp(),
-        password_hash: "secret".into(),
+        password_hash: Some("secret".into()),
         is_admin: false,
         email_verified: true,
     }

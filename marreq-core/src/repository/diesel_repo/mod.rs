@@ -256,6 +256,7 @@ pub(crate) mod baselines;
 pub(crate) mod comments;
 pub(crate) mod custom_fields;
 pub(crate) mod groups;
+pub(crate) mod identities;
 pub(crate) mod logs;
 pub(crate) mod lookups;
 pub(crate) mod matrix;

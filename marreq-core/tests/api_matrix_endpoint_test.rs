@@ -46,6 +46,7 @@ mod test_support {
         marreq_core::deployment::install_test_server_mode();
         let rocket = rocket::build()
             .manage(managed_state(repo))
+            .manage(marreq_core::auth::AuthConfig::default())
             .manage(marreq_core::auth::rate_limiter::LoginRateLimiter::new())
             .mount("/api", marreq_core::api::routes());
 

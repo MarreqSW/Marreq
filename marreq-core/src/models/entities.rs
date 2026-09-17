@@ -249,12 +249,26 @@ pub struct User {
     pub creation_date: chrono::NaiveDateTime,
     pub last_login: chrono::NaiveDateTime,
     #[serde(skip_serializing, default)]
-    pub password_hash: String,
+    pub password_hash: Option<String>,
     pub is_admin: bool,
     /// Cloud-mode email-verification flag. Defaults to TRUE in the database so
     /// existing rows and Server-mode deployments behave as before.
     #[serde(default = "default_email_verified")]
     pub email_verified: bool,
+}
+
+/// An external account bound to a Marreq user. `(issuer, subject)` is the
+/// authoritative identity; email and provider usernames are not identifiers.
+#[derive(Queryable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::user_identities)]
+pub struct UserIdentity {
+    pub id: i32,
+    pub user_id: i32,
+    pub provider_key: String,
+    pub issuer: String,
+    pub subject: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub last_login_at: Option<chrono::NaiveDateTime>,
 }
 
 fn default_email_verified() -> bool {

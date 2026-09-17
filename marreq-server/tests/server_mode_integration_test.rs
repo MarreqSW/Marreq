@@ -28,6 +28,7 @@ async fn server_client_with(repo: DieselRepoMock) -> Client {
     marreq_core::deployment::install_test_server_mode();
     let rocket = rocket::build()
         .manage(state_from(repo))
+        .manage(marreq_core::auth::AuthConfig::default())
         .manage(marreq_core::auth::rate_limiter::LoginRateLimiter::new())
         .mount("/api", marreq_core::api::routes());
     Client::tracked(rocket).await.unwrap()
@@ -64,7 +65,7 @@ async fn deployment_info_returns_server_mode_payload() {
 async fn login_succeeds_despite_unverified_email_in_server_mode() {
     let mut repo = DieselRepoMock::default();
     let mut user = DieselRepoMock::make_user(1, "alice", "");
-    user.password_hash = hash_password("Voyage!Silver_2026").expect("hash");
+    user.password_hash = Some(hash_password("Voyage!Silver_2026").expect("hash"));
     user.email_verified = false; // not verified — server mode must not reject this
     repo.users.insert(1, user);
 

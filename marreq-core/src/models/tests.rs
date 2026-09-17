@@ -358,7 +358,7 @@ mod tests {
                 email: "test@example.com".to_string(),
                 creation_date: test_timestamp(),
                 last_login: test_timestamp(),
-                password_hash: "hash".to_string(),
+                password_hash: Some("hash".to_string()),
                 is_admin: false,
                 email_verified: true,
             };
@@ -432,7 +432,7 @@ mod tests {
                 email: "email@test.com".to_string(),
                 creation_date: test_timestamp(),
                 last_login: test_timestamp(),
-                password_hash: "hash123".to_string(),
+                password_hash: Some("hash123".to_string()),
                 is_admin: true,
                 email_verified: true,
             };
@@ -564,7 +564,7 @@ mod tests {
                 email: "email@test.com".to_string(),
                 creation_date: test_timestamp(),
                 last_login: test_timestamp(),
-                password_hash: "secret_hash".to_string(),
+                password_hash: Some("secret_hash".to_string()),
                 is_admin: false,
                 email_verified: true,
             };
@@ -728,7 +728,7 @@ mod tests {
                 username: "testuser".to_string(),
                 name: "Test User".to_string(),
                 email: "test@example.com".to_string(),
-                password_hash: "hash".to_string(),
+                password_hash: Some("hash".to_string()),
                 is_admin: false,
                 email_verified: None,
             };
@@ -1010,7 +1010,7 @@ mod tests {
                 username: "user".to_string(),
                 name: "Name".to_string(),
                 email: "email@test.com".to_string(),
-                password_hash: "secret_hash".to_string(),
+                password_hash: Some("secret_hash".to_string()),
                 is_admin: false,
                 email_verified: None,
             };
@@ -1340,7 +1340,7 @@ mod tests {
                 email: "email@test.com".to_string(),
                 creation_date: test_timestamp(),
                 last_login: test_timestamp(),
-                password_hash: "hash".to_string(),
+                password_hash: Some("hash".to_string()),
                 is_admin: true,
                 email_verified: true,
             };

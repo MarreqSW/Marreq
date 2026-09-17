@@ -45,9 +45,17 @@ mod test_support {
     }
 
     pub async fn test_client(repo: DieselRepoMock) -> Client {
+        test_client_with_auth(repo, marreq_core::auth::AuthConfig::default()).await
+    }
+
+    pub async fn test_client_with_auth(
+        repo: DieselRepoMock,
+        auth_config: marreq_core::auth::AuthConfig,
+    ) -> Client {
         marreq_core::deployment::install_test_server_mode();
         let rocket = rocket::build()
             .manage(managed_state(repo))
+            .manage(auth_config)
             .manage(marreq_core::auth::rate_limiter::LoginRateLimiter::new())
             .mount("/api", marreq_core::api::routes());
 
@@ -128,7 +136,7 @@ mod test_support {
     pub fn hashed_user_repo() -> DieselRepoMock {
         let mut repo = base_repo();
         let mut user = repo.users.get(&2).cloned().expect("user");
-        user.password_hash = hash_password("Voyager!Marble_2026").expect("hashed password");
+        user.password_hash = Some(hash_password("Voyager!Marble_2026").expect("hashed password"));
         repo.users.insert(2, user);
         repo
     }
@@ -141,10 +149,104 @@ use test_support::*;
 // ============================================================================
 
 #[rocket::async_test]
+async fn auth_provider_discovery_defaults_to_password_only() {
+    let client = test_client(base_repo()).await;
+    let response = client.get("/api/auth/providers").dispatch().await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let body: Value = response.into_json().await.expect("json");
+    assert_eq!(body["password_enabled"], true);
+    assert_eq!(body["external"], json!([]));
+}
+
+#[rocket::async_test]
+async fn separate_apps_keep_independent_auth_configurations() {
+    let password_client = test_client_with_auth(
+        base_repo(),
+        marreq_core::auth::AuthConfig::new(true, Vec::new()),
+    )
+    .await;
+    let external_only_client = test_client_with_auth(
+        base_repo(),
+        marreq_core::auth::AuthConfig::new(false, Vec::new()),
+    )
+    .await;
+
+    let password_discovery: Value = password_client
+        .get("/api/auth/providers")
+        .dispatch()
+        .await
+        .into_json()
+        .await
+        .expect("password discovery");
+    let external_discovery: Value = external_only_client
+        .get("/api/auth/providers")
+        .dispatch()
+        .await
+        .into_json()
+        .await
+        .expect("external-only discovery");
+
+    assert_eq!(password_discovery["password_enabled"], true);
+    assert_eq!(external_discovery["password_enabled"], false);
+}
+
+#[rocket::async_test]
+async fn deleting_unknown_external_identity_returns_not_found() {
+    let client = test_client(base_repo()).await;
+    let response = client
+        .delete("/api/auth/identities/999")
+        .private_cookie(session_cookie(&client, 2))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::NotFound);
+}
+
+#[rocket::async_test]
+async fn deleting_another_users_identity_returns_not_found() {
+    use marreq_core::repository::ExternalIdentityRepository;
+
+    let mut repo = base_repo();
+    let identity_id = repo
+        .insert_identity(&NewUserIdentity {
+            user_id: 1,
+            provider_key: "github".into(),
+            issuer: "https://github.com".into(),
+            subject: "admin-subject".into(),
+        })
+        .expect("identity");
+    let client = test_client(repo).await;
+    let response = client
+        .delete(format!("/api/auth/identities/{identity_id}"))
+        .private_cookie(session_cookie(&client, 2))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::NotFound);
+}
+
+#[rocket::async_test]
+async fn external_callback_rejects_missing_single_use_transaction() {
+    let client = test_client(base_repo()).await;
+    let response = client
+        .get("/api/auth/external/github/callback?code=secret&state=wrong")
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::BadRequest);
+    let body: Value = response.into_json().await.expect("json");
+    assert!(body["message"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("missing or already used"));
+}
+
+#[rocket::async_test]
 async fn auth_login_returns_authenticated_user_and_sets_cookies() {
     let mut repo = base_repo();
     let mut admin = repo.users.get(&1).cloned().expect("admin user");
-    admin.password_hash = hash_password("Voyager!Marble_2026").expect("hashed password");
+    admin.password_hash = Some(hash_password("Voyager!Marble_2026").expect("hashed password"));
     repo.users.insert(1, admin);
 
     let client = test_client(repo).await;
@@ -941,7 +1043,9 @@ async fn change_password_updates_hash_and_revokes_session() {
             .password_hash
     };
     assert_ne!(before, after);
-    assert!(after.starts_with("$argon2"));
+    assert!(after
+        .as_deref()
+        .is_some_and(|hash| hash.starts_with("$argon2")));
 
     let me = client
         .get("/api/auth/me")

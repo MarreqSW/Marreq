@@ -25,7 +25,7 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 - **Applicability**: Define product lines, system types, or project scopes (project-specific)
 - **Status Tracking**: Track requirement status (Draft, Accepted, Rejected, etc.)
 - **Verification Methods**: Specify verification types (Test, Analysis, Review, etc.)
-- **Authentication**: Secure login system with password management
+- **Authentication**: Password plus federated Google/GitHub/GitLab login in Cloud and configurable OIDC SSO in Server; see [authentication configuration](docs/developer/authentication.md)
 - **Project Isolation**: Data separation between different projects
 
 ### 📊 Reporting & Export

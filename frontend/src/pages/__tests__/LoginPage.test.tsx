@@ -39,6 +39,16 @@ const cloudDeployment = {
 describe('LoginPage', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(apiClient.getAuthProviders).mockResolvedValue({ password_enabled: true, external: [] });
+  });
+
+  it('renders configured providers and links to the backend flow', async () => {
+    vi.mocked(apiClient.getDeploymentInfo).mockResolvedValue(serverDeployment);
+    vi.mocked(apiClient.getAuthProviders).mockResolvedValue({ password_enabled: false, external: [{ id: 'oidc', display_name: 'Company SSO' }] });
+    renderLoginPage();
+    const link = await screen.findByRole('link', { name: /continue with company sso/i });
+    expect(link).toHaveAttribute('href', '/api/auth/external/oidc/start');
+    expect(screen.queryByLabelText(/username/i)).not.toBeInTheDocument();
   });
 
   it('renders the username and password fields and sign-in button', async () => {

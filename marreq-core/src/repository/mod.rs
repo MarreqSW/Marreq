@@ -26,6 +26,11 @@ pub trait UserRepository {
 
     fn insert_user(&mut self, new: &NewUser) -> Result<i32, RepoError>;
     fn update_user_password(&mut self, user_id: i32, new_hash: &str) -> Result<(), RepoError>;
+    fn update_user_last_login(
+        &mut self,
+        user_id: i32,
+        at: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError>;
     fn update_user(&mut self, user_data: &NewUser) -> Result<bool, RepoError>;
     fn update_user_without_password(&mut self, user_data: &UpdateUser) -> Result<bool, RepoError>;
     fn delete_user(&mut self, user_id: i32) -> Result<User, RepoError>;
@@ -36,6 +41,28 @@ pub trait UserRepository {
 
     /// Set the `email_verified` flag on a user. Cloud-only.
     fn set_user_email_verified(&mut self, user_id: i32, verified: bool) -> Result<(), RepoError>;
+}
+
+/// Persistence operations for federated identities. The database unique
+/// constraint remains the final authority for `(issuer, subject)` ownership.
+pub trait ExternalIdentityRepository {
+    fn get_identity(&self, issuer: &str, subject: &str) -> Result<Option<UserIdentity>, RepoError>;
+    fn get_identities_for_user(&self, user_id: i32) -> Result<Vec<UserIdentity>, RepoError>;
+    fn insert_identity(&mut self, identity: &NewUserIdentity) -> Result<i32, RepoError>;
+    fn touch_identity_login(
+        &mut self,
+        id: i32,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError>;
+    fn delete_identity(&mut self, id: i32, user_id: i32) -> Result<bool, RepoError>;
+    /// Serialize unlink decisions for an account and delete only when another
+    /// currently usable authentication method remains.
+    fn delete_identity_preserving_login(
+        &mut self,
+        id: i32,
+        user_id: i32,
+        auth_config: &crate::auth::AuthConfig,
+    ) -> Result<String, RepoError>;
 }
 
 /// Personal / shared workspaces (Cloud-only data, dormant in Server mode).
@@ -564,6 +591,7 @@ pub trait NotificationRepository {
 pub trait Repository:
     ApiTokensRepository
     + UserRepository
+    + ExternalIdentityRepository
     + LookupRepository
     + RequirementsRepository
     + RequirementVersionLinksRepository
@@ -589,6 +617,7 @@ pub trait Repository:
 impl<T> Repository for T where
     T: ApiTokensRepository
         + UserRepository
+        + ExternalIdentityRepository
         + LookupRepository
         + RequirementsRepository
         + RequirementVersionLinksRepository

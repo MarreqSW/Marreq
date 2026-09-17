@@ -772,7 +772,7 @@ mod tests {
                 username: "validuser".to_string(),
                 name: "Valid User Name".to_string(),
                 email: "user@example.com".to_string(),
-                password_hash: "hash".to_string(),
+                password_hash: Some("hash".to_string()),
                 is_admin: false,
                 email_verified: None,
             }

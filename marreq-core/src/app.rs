@@ -60,6 +60,19 @@ pub fn build_with(
     extra_routes: Vec<rocket::Route>,
     extra_fairings: Vec<std::sync::Arc<dyn rocket::fairing::Fairing>>,
 ) -> Rocket<Build> {
+    let auth_config = crate::auth::AuthConfig::from_env(mode.name()).unwrap_or_else(|error| {
+        eprintln!("Invalid authentication configuration: {error}");
+        std::process::exit(2);
+    });
+    build_with_auth(mode, auth_config, extra_routes, extra_fairings)
+}
+
+pub fn build_with_auth(
+    mode: &'static dyn crate::deployment::DeploymentMode,
+    auth_config: crate::auth::AuthConfig,
+    extra_routes: Vec<rocket::Route>,
+    extra_fairings: Vec<std::sync::Arc<dyn rocket::fairing::Fairing>>,
+) -> Rocket<Build> {
     // Register the mode into the OnceLock so `deployment::current()` works
     // without per-call lookups.
     crate::deployment::set_current(mode);
@@ -92,6 +105,7 @@ pub fn build_with(
 
     let mut rocket = rocket::build()
         .manage(AppState { repo })
+        .manage(auth_config)
         .manage(mode)
         .manage(crate::auth::rate_limiter::LoginRateLimiter::new())
         .mount(

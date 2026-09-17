@@ -18,12 +18,11 @@ use thiserror::Error;
 use marreq_core::app::{AppState, DieselCachedRepo};
 use marreq_core::auth::password::hash_password;
 use marreq_core::auth::password_policy::{validate_password, PasswordContext};
-use marreq_core::models::{
-    EmailToken, NewEmailToken, NewUser, NewWorkspace, RegistrationRequest, User,
-};
+use marreq_core::models::{EmailToken, NewEmailToken, NewUser, RegistrationRequest, User};
 use marreq_core::repository::errors::RepoError;
-use marreq_core::repository::{EmailTokensRepository, UserRepository, WorkspacesRepository};
+use marreq_core::repository::{EmailTokensRepository, UserRepository};
 use marreq_core::services::email_sender;
+use marreq_core::services::UserProvisioningService;
 use marreq_core::validation::{sanitize_string, validate_user};
 
 const VERIFY_TOKEN_TTL_HOURS: i64 = 24;
@@ -90,7 +89,7 @@ impl<'a> RegistrationService<'a> {
             username: request.username,
             name: request.name,
             email: request.email,
-            password_hash,
+            password_hash: Some(password_hash),
             is_admin: false,
             email_verified: Some(false),
         };
@@ -104,34 +103,11 @@ impl<'a> RegistrationService<'a> {
 
         let user_id = {
             let mut repo = self.state.repo_write();
-            let id = repo.insert_user(&new_user).map_err(map_insert_err)?;
-
-            // Personal workspace named after the user.
-            let workspace = NewWorkspace {
-                slug: new_user.username.clone(),
-                name: new_user.name.clone(),
-                owner_user_id: id,
-                kind: "personal".into(),
-            };
-            // If a workspace with that slug already exists (e.g., a stray row),
-            // fall back to a numbered variant rather than failing the registration.
-            if let Err(RepoError::Duplicate(_)) = repo.insert_workspace(&workspace) {
-                let mut suffix = 2u32;
-                loop {
-                    let candidate = NewWorkspace {
-                        slug: format!("{}-{suffix}", new_user.username),
-                        name: workspace.name.clone(),
-                        owner_user_id: id,
-                        kind: "personal".into(),
-                    };
-                    match repo.insert_workspace(&candidate) {
-                        Ok(_) => break,
-                        Err(RepoError::Duplicate(_)) if suffix < 100 => suffix += 1,
-                        Err(e) => return Err(e.into()),
-                    }
-                }
-            }
-            id
+            UserProvisioningService::create_user_with_personal_workspace(
+                &mut *repo, &new_user, true,
+            )
+            .map_err(map_insert_err)?
+            .id
         };
 
         let plain_token = mint_token();
@@ -337,8 +313,9 @@ fn send_password_reset_email(to: &str, token: &str) -> Result<(), email_sender::
 #[cfg(test)]
 mod tests {
     use super::*;
+    use marreq_core::models::NewWorkspace;
     use marreq_core::repository::diesel_repo_mock::DieselRepoMock;
-    use marreq_core::repository::CacheRepository;
+    use marreq_core::repository::{CacheRepository, WorkspacesRepository};
     use std::sync::{Arc, RwLock};
 
     fn state_with_repo(repo: DieselRepoMock) -> AppState<DieselCachedRepo> {
@@ -413,7 +390,7 @@ mod tests {
                 username: "alice".into(),
                 name: "Alice Example".into(),
                 email: "alice@example.com".into(),
-                password_hash: "hash".into(),
+                password_hash: Some("hash".into()),
                 is_admin: false,
                 email_verified: Some(false),
             })
@@ -456,7 +433,7 @@ mod tests {
                 username: "alice".into(),
                 name: "Alice Example".into(),
                 email: "alice@example.com".into(),
-                password_hash: "old-hash".into(),
+                password_hash: Some("old-hash".into()),
                 is_admin: false,
                 email_verified: Some(true),
             })

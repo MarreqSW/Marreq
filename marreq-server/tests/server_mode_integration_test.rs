@@ -28,6 +28,7 @@ async fn server_client_with(repo: DieselRepoMock) -> Client {
     marreq_core::deployment::install_test_server_mode();
     let rocket = rocket::build()
         .manage(state_from(repo))
+        .manage(marreq_core::auth::AuthConfig::default())
         .manage(marreq_core::auth::rate_limiter::LoginRateLimiter::new())
         .mount("/api", marreq_core::api::routes());
     Client::tracked(rocket).await.unwrap()

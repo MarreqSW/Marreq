@@ -51,5 +51,6 @@ url = { workspace = true }
 xlsxwriter = { workspace = true }
 
 [dev-dependencies]
+rsa = "0.9"
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["rt"] }

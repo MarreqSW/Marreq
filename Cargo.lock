@@ -2386,6 +2386,7 @@ dependencies = [
  "reqwest 0.13.3",
  "rocket",
  "rocket_sync_db_pools",
+ "rsa",
  "serde",
  "serde_json",
  "sha2",

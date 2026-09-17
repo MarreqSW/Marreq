@@ -313,6 +313,11 @@ fn oauth_client(
 mod tests {
     use super::*;
     use crate::auth::OAuthOperation;
+    use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+    use rsa::pkcs1v15::SigningKey;
+    use rsa::signature::{SignatureEncoding, Signer};
+    use rsa::traits::PublicKeyParts;
+    use rsa::{RsaPrivateKey, RsaPublicKey};
     use std::io::{Read, Write};
     use std::net::{TcpListener, TcpStream};
 
@@ -449,6 +454,41 @@ mod tests {
         );
     }
 
+    #[rocket::async_test]
+    async fn oidc_exchange_rejects_validly_signed_token_with_wrong_nonce() {
+        let mut transaction = transaction();
+        transaction.provider_key = "oidc".into();
+        let (issuer, server) = mock_oidc_token_server("different-transaction-nonce");
+
+        let result = exchange_code(
+            &oidc_provider(&issuer),
+            "authorization-code",
+            &transaction,
+            "https://marreq.example.test",
+        )
+        .await;
+        server.join().unwrap();
+
+        assert_eq!(result.unwrap_err(), "ID token validation failed");
+    }
+
+    #[rocket::async_test]
+    async fn oidc_discovery_rejects_trailing_slash_issuer_mismatch() {
+        let (issuer, server) = mock_oidc_issuer_mismatch_server();
+        let mut transaction = transaction();
+        transaction.provider_key = "oidc".into();
+
+        let result = authorization_url(
+            &oidc_provider(&issuer),
+            &transaction,
+            "https://marreq.example.test",
+        )
+        .await;
+        server.join().unwrap();
+
+        assert_eq!(result.unwrap_err(), "OIDC discovery failed");
+    }
+
     #[test]
     fn oidc_discovery_issuer_must_match_exactly() {
         assert!(issuer_matches(
@@ -528,6 +568,112 @@ mod tests {
             respond(stream, "200 OK", r#"{"keys":[]}"#);
         });
         (issuer, server)
+    }
+
+    fn mock_oidc_issuer_mismatch_server() -> (String, std::thread::JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let issuer = format!("http://{address}");
+        let discovered_issuer = format!("{issuer}/");
+        let server = std::thread::spawn(move || {
+            let (stream, request) = read_request(&listener);
+            assert!(request.starts_with("GET /.well-known/openid-configuration "));
+            let metadata = serde_json::json!({
+                "issuer": discovered_issuer,
+                "authorization_endpoint": format!("{discovered_issuer}authorize"),
+                "token_endpoint": format!("{discovered_issuer}token"),
+                "jwks_uri": format!("{discovered_issuer}jwks"),
+                "response_types_supported": ["code"],
+                "subject_types_supported": ["public"],
+                "id_token_signing_alg_values_supported": ["RS256"]
+            })
+            .to_string();
+            respond(stream, "200 OK", &metadata);
+        });
+        (issuer, server)
+    }
+
+    fn mock_oidc_token_server(token_nonce: &str) -> (String, std::thread::JoinHandle<()>) {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let issuer = format!("http://{address}");
+        let server_issuer = issuer.clone();
+        let token_nonce = token_nonce.to_owned();
+        let private_key = RsaPrivateKey::new(&mut rand::thread_rng(), 2048).unwrap();
+        let public_key = RsaPublicKey::from(&private_key);
+        let modulus = URL_SAFE_NO_PAD.encode(public_key.n().to_bytes_be());
+        let exponent = URL_SAFE_NO_PAD.encode(public_key.e().to_bytes_be());
+        let server = std::thread::spawn(move || {
+            let (stream, request) = read_request(&listener);
+            assert!(request.starts_with("GET /.well-known/openid-configuration "));
+            let metadata = serde_json::json!({
+                "issuer": server_issuer,
+                "authorization_endpoint": format!("{server_issuer}/authorize"),
+                "token_endpoint": format!("{server_issuer}/token"),
+                "jwks_uri": format!("{server_issuer}/jwks"),
+                "response_types_supported": ["code"],
+                "subject_types_supported": ["public"],
+                "id_token_signing_alg_values_supported": ["RS256"]
+            })
+            .to_string();
+            respond(stream, "200 OK", &metadata);
+
+            let (stream, request) = read_request(&listener);
+            assert!(request.starts_with("GET /jwks "));
+            let jwks = serde_json::json!({
+                "keys": [{
+                    "kty": "RSA",
+                    "use": "sig",
+                    "kid": "test-key",
+                    "alg": "RS256",
+                    "n": modulus,
+                    "e": exponent
+                }]
+            })
+            .to_string();
+            respond(stream, "200 OK", &jwks);
+
+            let (stream, request) = read_request(&listener);
+            assert!(request.starts_with("POST /token "));
+            let id_token = signed_id_token(&private_key, &server_issuer, &token_nonce);
+            let token_response = serde_json::json!({
+                "access_token": "temporary-access-token",
+                "token_type": "Bearer",
+                "expires_in": 300,
+                "id_token": id_token
+            })
+            .to_string();
+            respond(stream, "200 OK", &token_response);
+        });
+        (issuer, server)
+    }
+
+    fn signed_id_token(private_key: &RsaPrivateKey, issuer: &str, nonce: &str) -> String {
+        let header = URL_SAFE_NO_PAD.encode(
+            serde_json::json!({ "alg": "RS256", "kid": "test-key", "typ": "JWT" }).to_string(),
+        );
+        let now = chrono::Utc::now().timestamp();
+        let claims = URL_SAFE_NO_PAD.encode(
+            serde_json::json!({
+                "iss": issuer,
+                "sub": "test-subject",
+                "aud": "client-id",
+                "exp": now + 300,
+                "iat": now,
+                "nonce": nonce,
+                "email": "alice@example.test",
+                "email_verified": true
+            })
+            .to_string(),
+        );
+        let signing_input = format!("{header}.{claims}");
+        let signature = SigningKey::<sha2::Sha256>::new(private_key.clone())
+            .sign(signing_input.as_bytes())
+            .to_bytes();
+        format!(
+            "{signing_input}.{}",
+            URL_SAFE_NO_PAD.encode(signature.as_ref())
+        )
     }
 
     fn read_request(listener: &TcpListener) -> (TcpStream, String) {

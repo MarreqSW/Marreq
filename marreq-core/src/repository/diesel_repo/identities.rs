@@ -64,4 +64,50 @@ impl ExternalIdentityRepository for DieselRepo {
         .map(|n| n == 1)
         .map_err(Into::into)
     }
+
+    fn delete_identity_preserving_login(
+        &mut self,
+        identity_id: i32,
+        owner: i32,
+        auth_config: &crate::auth::AuthConfig,
+    ) -> Result<String, RepoError> {
+        use crate::schema::{user_identities, users};
+        let mut conn = self.get_conn()?;
+        conn.transaction(|conn| {
+            let user = users::table
+                .filter(users::id.eq(owner))
+                .for_update()
+                .first::<crate::models::User>(conn)
+                .map_err(RepoError::from)?;
+            let identities = user_identities::table
+                .filter(user_identities::user_id.eq(owner))
+                .order(user_identities::id)
+                .load::<UserIdentity>(conn)
+                .map_err(RepoError::from)?;
+            let selected = identities
+                .iter()
+                .find(|identity| identity.id == identity_id)
+                .ok_or(RepoError::NotFound)?;
+            let usable_methods = auth_config
+                .usable_authentication_methods(user.password_hash.is_some(), &identities);
+            if !usable_methods.allows_unlinking(identity_id) {
+                return Err(RepoError::BadInput(
+                    "cannot remove the last authentication method".into(),
+                ));
+            }
+            let provider = selected.provider_key.clone();
+            let deleted = diesel::delete(
+                user_identities::table
+                    .filter(user_identities::id.eq(identity_id))
+                    .filter(user_identities::user_id.eq(owner)),
+            )
+            .execute(conn)
+            .map_err(RepoError::from)?;
+            if deleted == 1 {
+                Ok(provider)
+            } else {
+                Err(RepoError::NotFound)
+            }
+        })
+    }
 }

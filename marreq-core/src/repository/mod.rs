@@ -55,6 +55,14 @@ pub trait ExternalIdentityRepository {
         now: chrono::NaiveDateTime,
     ) -> Result<(), RepoError>;
     fn delete_identity(&mut self, id: i32, user_id: i32) -> Result<bool, RepoError>;
+    /// Serialize unlink decisions for an account and delete only when another
+    /// currently usable authentication method remains.
+    fn delete_identity_preserving_login(
+        &mut self,
+        id: i32,
+        user_id: i32,
+        auth_config: &crate::auth::AuthConfig,
+    ) -> Result<String, RepoError>;
 }
 
 /// Personal / shared workspaces (Cloud-only data, dormant in Server mode).

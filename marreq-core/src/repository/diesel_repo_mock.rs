@@ -497,6 +497,33 @@ impl ExternalIdentityRepository for DieselRepoMock {
             .retain(|identity| identity.id != id || identity.user_id != user_id);
         Ok(before != self.user_identities.len())
     }
+
+    fn delete_identity_preserving_login(
+        &mut self,
+        id: i32,
+        user_id: i32,
+        auth_config: &crate::auth::AuthConfig,
+    ) -> Result<String, RepoError> {
+        let user = self.get_user_by_id(user_id)?;
+        let identities = self.get_identities_for_user(user_id)?;
+        let selected = identities
+            .iter()
+            .find(|identity| identity.id == id)
+            .ok_or(RepoError::NotFound)?;
+        let usable_methods =
+            auth_config.usable_authentication_methods(user.password_hash.is_some(), &identities);
+        if !usable_methods.allows_unlinking(id) {
+            return Err(RepoError::BadInput(
+                "cannot remove the last authentication method".into(),
+            ));
+        }
+        let provider = selected.provider_key.clone();
+        if self.delete_identity(id, user_id)? {
+            Ok(provider)
+        } else {
+            Err(RepoError::NotFound)
+        }
+    }
 }
 
 impl WorkspacesRepository for DieselRepoMock {

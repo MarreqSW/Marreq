@@ -93,35 +93,15 @@ pub fn unlink_identity<R: Repository>(
     user_id: i32,
     identity_id: i32,
 ) -> Result<(), RepoError> {
-    let user = repo.get_user_by_id(user_id)?;
-    let identities = repo.get_identities_for_user(user_id)?;
-    if !identities.iter().any(|identity| identity.id == identity_id) {
-        return Err(RepoError::NotFound);
-    }
-    let usable_methods =
-        auth_config.usable_authentication_methods(user.password_hash.is_some(), &identities);
-    if !usable_methods.allows_unlinking(identity_id) {
-        return Err(RepoError::BadInput(
-            "cannot remove the last authentication method".into(),
-        ));
-    }
-    let provider = identities
-        .iter()
-        .find(|identity| identity.id == identity_id)
-        .map(|identity| identity.provider_key.clone())
-        .unwrap_or_default();
-    if repo.delete_identity(identity_id, user_id)? {
-        audit_identity(
-            repo,
-            user_id,
-            identity_id,
-            "AUTH_IDENTITY_UNLINK",
-            &provider,
-        );
-        Ok(())
-    } else {
-        Err(RepoError::NotFound)
-    }
+    let provider = repo.delete_identity_preserving_login(identity_id, user_id, auth_config)?;
+    audit_identity(
+        repo,
+        user_id,
+        identity_id,
+        "AUTH_IDENTITY_UNLINK",
+        &provider,
+    );
+    Ok(())
 }
 
 fn audit_identity<R: Repository>(

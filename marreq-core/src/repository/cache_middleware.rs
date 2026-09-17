@@ -469,6 +469,16 @@ impl<R: Repository> ExternalIdentityRepository for CacheRepository<R> {
     fn delete_identity(&mut self, id: i32, user_id: i32) -> Result<bool, RepoError> {
         self.inner.delete_identity(id, user_id)
     }
+
+    fn delete_identity_preserving_login(
+        &mut self,
+        id: i32,
+        user_id: i32,
+        auth_config: &crate::auth::AuthConfig,
+    ) -> Result<String, RepoError> {
+        self.inner
+            .delete_identity_preserving_login(id, user_id, auth_config)
+    }
 }
 
 impl<R: Repository> super::WorkspacesRepository for CacheRepository<R> {

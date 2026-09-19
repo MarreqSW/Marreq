@@ -2,7 +2,9 @@
 
 Use Marreq tools as a constrained requirements-engineering interface. Resolve
 the project with `list_projects` first and pass its `project_id` to every
-project-scoped tool. Do not guess a project from its display name.
+project-scoped tool. Do not guess a project from its display name. For an
+ambiguous write retry, reuse the same `idempotency_key`; never reuse a key for
+a different operation, target, or payload.
 
 ## Review
 
@@ -18,8 +20,7 @@ project-scoped tool. Do not guess a project from its display name.
 
 Before creation, search for overlap, inspect the project catalog, and determine
 the correct parent/hierarchy. Draft one atomic, testable requirement. Create it
-only when requested and return its stable reference code. Reuse the same unique
-`reference_code`, title, and description when retrying an ambiguous create.
+only when requested and return its stable reference code.
 
 ## Modify
 

@@ -1,7 +1,8 @@
 import type { SessionContext } from "./context.js";
+import { currentBearer } from "./credentials.js";
 
 export class MarreqAuthenticationError extends Error {
-  constructor(public readonly status: number) {
+  constructor(public readonly status: number, public readonly challenge?: string) {
     super("Marreq authorization is required");
   }
 }
@@ -17,6 +18,16 @@ export class MarreqClient {
     return this.request("/api/projects");
   }
 
+  async getPrincipal(): Promise<{
+    user_id: number;
+    authentication_type: string;
+    principal_id: string;
+    client_id?: string;
+    grant_id?: number;
+  }> {
+    return this.request("/api/mcp/principal");
+  }
+
   private async request<T>(
     path: string,
     options: RequestInit = {}
@@ -25,15 +36,15 @@ export class MarreqClient {
     const res = await fetch(url, {
       ...options,
       headers: {
-        Authorization: `Bearer ${this.ctx.apiToken}`,
+        Authorization: `Bearer ${this.ctx.remote ? currentBearer() ?? this.ctx.apiToken : this.ctx.apiToken}`,
         "Content-Type": "application/json",
         ...options.headers,
       },
     });
     if (!res.ok) {
       const text = await res.text();
-      if (res.status === 401 || res.status === 403) {
-        throw new MarreqAuthenticationError(res.status);
+      if (res.status === 401 || (res.status === 403 && res.headers.has("www-authenticate"))) {
+        throw new MarreqAuthenticationError(res.status, res.headers.get("www-authenticate") ?? undefined);
       }
       throw new Error(`Marreq API ${res.status}: ${text}`);
     }

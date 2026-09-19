@@ -6,7 +6,11 @@
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::auth::guards::{ApiUser, ProjectTraceabilityRead, ProjectTraceabilityWrite};
+use crate::auth::guards::{
+    ApiUser, ProjectRequirementsAndTraceabilityRead,
+    ProjectRequirementsVerificationsAndTraceabilityRead, ProjectTraceabilityRead,
+    ProjectTraceabilityWrite,
+};
 use crate::models::{Requirement, Verification};
 use crate::repository::{MatrixRepository, RequirementsRepository, VerificationsRepository};
 use crate::services::{MatrixService, RequirementService};
@@ -22,7 +26,7 @@ pub struct ClearSuspectRequest {
 /// Returns multiple parents from requirement version links (DAG).
 #[get("/projects/<project_id>/requirements/<id>/trace_up")]
 pub async fn trace_up(
-    access: ProjectTraceabilityRead,
+    access: ProjectRequirementsAndTraceabilityRead,
     project_id: i32,
     id: i32,
     state: &State<AppState>,
@@ -74,7 +78,7 @@ pub struct TraceUpResponse {
 /// Trace down: child requirements and linked tests. Project-scoped; accepts session or Bearer.
 #[get("/projects/<project_id>/requirements/<id>/trace_down")]
 pub async fn trace_down(
-    access: ProjectTraceabilityRead,
+    access: ProjectRequirementsVerificationsAndTraceabilityRead,
     project_id: i32,
     id: i32,
     state: &State<AppState>,

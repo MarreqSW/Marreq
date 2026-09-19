@@ -1,4 +1,4 @@
-import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
 import type { Request, Response } from "express";
 import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
@@ -6,6 +6,16 @@ import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { loadContext, type SessionContext } from "./context.js";
+import { MarreqClient } from "./client.js";
+import { withBearer } from "./credentials.js";
+
+interface Principal {
+  user_id: number;
+  authentication_type: string;
+  principal_id: string;
+  client_id?: string;
+  grant_id?: number;
+}
 
 export interface RemoteTransportConfig {
   kind: "http";
@@ -24,7 +34,7 @@ export type TransportConfig = RemoteTransportConfig | { kind: "stdio" };
 interface RemoteSession {
   transport: StreamableHTTPServerTransport;
   server: McpServer;
-  tokenBinding: Buffer;
+  principal: Principal;
   createdAt: number;
   lastSeenAt: number;
 }
@@ -81,12 +91,12 @@ function bearerToken(header: string | undefined): string | undefined {
   return match?.[1];
 }
 
-function bindToken(token: string): Buffer {
-  return createHash("sha256").update(token).digest();
-}
-
-function sameBinding(left: Buffer, right: Buffer): boolean {
-  return left.length === right.length && timingSafeEqual(left, right);
+function samePrincipal(left: Principal, right: Principal): boolean {
+  return left.user_id === right.user_id &&
+    left.authentication_type === right.authentication_type &&
+    left.principal_id === right.principal_id &&
+    left.client_id === right.client_id &&
+    left.grant_id === right.grant_id;
 }
 
 function jsonError(res: Response, status: number, message: string) {
@@ -107,6 +117,7 @@ export async function startRemoteServer(
     allowedHosts: config.allowedHosts,
   });
   const sessions = new Map<string, RemoteSession>();
+  app.get("/healthz", (_req, res) => res.status(200).json({ status: "ok" }));
   const idleMs = config.sessionIdleMs ?? 30 * 60_000;
   const absoluteMs = config.sessionAbsoluteMs ?? 8 * 60 * 60_000;
   const maxSessions = config.maxSessions ?? 1_000;
@@ -124,7 +135,7 @@ export async function startRemoteServer(
   }, Math.max(1_000, Math.min(idleMs, 60_000)));
   cleanup.unref();
 
-  const authenticate = (req: Request, res: Response): { token: string; binding: Buffer } | undefined => {
+  const authenticate = (req: Request, res: Response): { token: string } | undefined => {
     const token = bearerToken(req.headers.authorization);
     if (!token) {
       const publicUrl = new URL(config.publicUrl);
@@ -133,7 +144,16 @@ export async function startRemoteServer(
       jsonError(res, 401, "Bearer authentication required");
       return undefined;
     }
-    return { token, binding: bindToken(token) };
+    return { token };
+  };
+
+  const resolvePrincipal = async (token: string): Promise<Principal | undefined> => {
+    const client = new MarreqClient({ ...baseContext, apiToken: "", remote: true });
+    try {
+      return await withBearer(token, () => client.getPrincipal());
+    } catch {
+      return undefined;
+    }
   };
 
   app.post(config.path, async (req, res) => {
@@ -151,8 +171,13 @@ export async function startRemoteServer(
       jsonError(res, 404, "Unknown or expired MCP session");
       return;
     }
-    if (session && !sameBinding(session.tokenBinding, auth.binding)) {
-      jsonError(res, 403, "MCP session does not belong to this credential");
+    const principal = await resolvePrincipal(auth.token);
+    if (!principal) {
+      jsonError(res, 401, "Bearer credential was rejected");
+      return;
+    }
+    if (session && !samePrincipal(session.principal, principal)) {
+      jsonError(res, 403, "MCP session does not belong to this credential grant");
       return;
     }
     if (!session) {
@@ -170,29 +195,15 @@ export async function startRemoteServer(
           if (session) sessions.set(id, session);
         },
       });
-      const authenticatedClient = new (await import("./client.js")).MarreqClient({
-        ...baseContext,
-        apiToken: auth.token,
-        projectId: 0,
-        remote: true,
-        mode: "draft_write",
-        traceWrite: true,
-      });
-      try {
-        await authenticatedClient.listProjects();
-      } catch {
-        jsonError(res, 401, "Bearer credential was rejected");
-        return;
-      }
       const server = createServer({
         ...baseContext,
-        apiToken: auth.token,
+        apiToken: "",
         sessionId: undefined,
         projectId: 0,
         remote: true,
       });
       const now = Date.now();
-      session = { transport, server, tokenBinding: auth.binding, createdAt: now, lastSeenAt: now };
+      session = { transport, server, principal, createdAt: now, lastSeenAt: now };
       transport.onclose = () => {
         const id = transport.sessionId;
         if (id) sessions.delete(id);
@@ -203,13 +214,13 @@ export async function startRemoteServer(
     session.lastSeenAt = Date.now();
 
     try {
-      await session.transport.handleRequest(req, res, req.body);
+      await withBearer(auth.token, () => session!.transport.handleRequest(req, res, req.body));
     } catch {
       if (!res.headersSent) jsonError(res, 500, "MCP request failed");
     }
   });
 
-  const existingSession = (req: Request, res: Response): RemoteSession | undefined => {
+  const existingSession = async (req: Request, res: Response): Promise<{ session: RemoteSession; token: string } | undefined> => {
     const auth = authenticate(req, res);
     if (!auth) return undefined;
     const id = req.headers["mcp-session-id"] as string | undefined;
@@ -222,26 +233,34 @@ export async function startRemoteServer(
       jsonError(res, 404, "Unknown or expired MCP session");
       return undefined;
     }
-    if (!sameBinding(session.tokenBinding, auth.binding)) {
-      jsonError(res, 403, "MCP session does not belong to this credential");
+    const principal = await resolvePrincipal(auth.token);
+    if (!principal) {
+      jsonError(res, 401, "Bearer credential was rejected");
+      return undefined;
+    }
+    if (!samePrincipal(session.principal, principal)) {
+      jsonError(res, 403, "MCP session does not belong to this credential grant");
       return undefined;
     }
     session.lastSeenAt = Date.now();
-    return session;
+    return { session, token: auth.token };
   };
 
   app.get(config.path, async (req, res) => {
-    const session = existingSession(req, res);
-    if (session) await session.transport.handleRequest(req, res);
+    const current = await existingSession(req, res);
+    if (current) await withBearer(current.token, () => current.session.transport.handleRequest(req, res));
   });
   app.delete(config.path, async (req, res) => {
-    const session = existingSession(req, res);
-    if (session) await session.transport.handleRequest(req, res);
+    const current = await existingSession(req, res);
+    if (current) await withBearer(current.token, () => current.session.transport.handleRequest(req, res));
   });
 
   return await new Promise<Server>((resolve, reject) => {
     const listener = app.listen(config.port, config.host, () => resolve(listener));
-    listener.on("close", () => clearInterval(cleanup));
+    listener.on("close", () => {
+      clearInterval(cleanup);
+      for (const [id, session] of sessions) void removeSession(id, session);
+    });
     listener.on("error", reject);
   });
 }

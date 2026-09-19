@@ -11,6 +11,23 @@ use rocket::{async_trait, Request};
 use sha2::{Digest, Sha256};
 use std::ops::Deref;
 
+fn bearer_challenge(request: &Request<'_>, error: Option<(&str, &str)>, scope: Option<&str>) {
+    let resource = &crate::config::AppConfig::current().mcp_public_url;
+    let mut value = format!(
+        "Bearer resource_metadata=\"{}/.well-known/oauth-protected-resource/mcp\"",
+        resource.trim_end_matches("/mcp").trim_end_matches('/')
+    );
+    if let Some((code, description)) = error {
+        value.push_str(&format!(
+            ", error=\"{code}\", error_description=\"{description}\""
+        ));
+    }
+    if let Some(scope) = scope {
+        value.push_str(&format!(", scope=\"{scope}\""));
+    }
+    crate::fairings::oauth_challenge::set_oauth_challenge(request, value);
+}
+
 fn hash_token(token: &str) -> String {
     Sha256::digest(token.as_bytes())
         .iter()
@@ -23,6 +40,7 @@ pub enum AuthenticationSource {
     Session,
     ApiToken {
         project_scope: Option<i32>,
+        token_hash: String,
     },
     DelegatedOAuth {
         client_id: String,
@@ -50,7 +68,7 @@ impl ApiUserOrBearer {
     }
     pub fn token_project_scope(&self) -> Option<i32> {
         match self.source {
-            AuthenticationSource::ApiToken { project_scope } => project_scope,
+            AuthenticationSource::ApiToken { project_scope, .. } => project_scope,
             _ => None,
         }
     }
@@ -70,6 +88,15 @@ impl ApiUserOrBearer {
         match self.source {
             AuthenticationSource::DelegatedOAuth { grant_id, .. } => Some(grant_id),
             _ => None,
+        }
+    }
+    pub fn idempotency_principal(&self) -> String {
+        match &self.source {
+            AuthenticationSource::Session => format!("session:user:{}", self.user().id),
+            AuthenticationSource::ApiToken { token_hash, .. } => format!("api_token:{token_hash}"),
+            AuthenticationSource::DelegatedOAuth { grant_id, .. } => {
+                format!("oauth_grant:{grant_id}")
+            }
         }
     }
 }
@@ -113,7 +140,10 @@ async fn authenticate(
         .filter(|v| !v.is_empty())
     {
         Some(v) => v,
-        None => return Outcome::Error((Status::Unauthorized, ())),
+        None => {
+            bearer_challenge(request, None, None);
+            return Outcome::Error((Status::Unauthorized, ()));
+        }
     };
     let state = match request.rocket().state::<AppState>() {
         Some(v) => v.clone(),
@@ -129,22 +159,28 @@ async fn authenticate(
     let (user, source) = match result {
         Ok(Ok((user, project_scope))) => {
             let update_state = state.clone();
-            let update_hash = token_hash;
+            let update_hash = token_hash.clone();
             let _ = rocket::tokio::task::spawn_blocking(move || {
                 update_state
                     .try_repo_write()?
                     .update_api_token_last_used_at(&update_hash)
             })
             .await;
-            (user, AuthenticationSource::ApiToken { project_scope })
+            (
+                user,
+                AuthenticationSource::ApiToken {
+                    project_scope,
+                    token_hash,
+                },
+            )
         }
         Ok(Err(RepoError::NotFound)) => {
-            let required = match policy {
+            match policy {
                 DelegatedPolicy::Deny => return Outcome::Error((Status::Forbidden, ())),
-                DelegatedPolicy::Scope(s) => Some(s),
-                DelegatedPolicy::Scopes(_) => None,
-                DelegatedPolicy::McpAudit => None,
-            };
+                DelegatedPolicy::Scope(_)
+                | DelegatedPolicy::Scopes(_)
+                | DelegatedPolicy::McpAudit => {}
+            }
             let resource = crate::config::AppConfig::current()
                 .mcp_public_url
                 .trim_end_matches('/')
@@ -154,22 +190,40 @@ async fn authenticate(
                     &*repo,
                     token,
                     &resource,
-                    required,
+                    None,
                     chrono::Utc::now().naive_utc(),
                 )
                 .map_err(|_| RepoError::Unauthorized)
             }) {
                 Ok(v) => v,
-                Err(RepoError::Unauthorized) => return Outcome::Error((Status::Forbidden, ())),
+                Err(RepoError::Unauthorized) => {
+                    bearer_challenge(
+                        request,
+                        Some(("invalid_token", "The access token is invalid or expired")),
+                        None,
+                    );
+                    return Outcome::Error((Status::Unauthorized, ()));
+                }
                 Err(_) => return Outcome::Error((Status::InternalServerError, ())),
             };
-            if let DelegatedPolicy::Scopes(required) = policy {
-                if required
-                    .iter()
-                    .any(|scope| !principal.scopes.iter().any(|held| held == scope))
-                {
-                    return Outcome::Error((Status::Forbidden, ()));
-                }
+            let required: Vec<&str> = match policy {
+                DelegatedPolicy::Scope(scope) => vec![scope],
+                DelegatedPolicy::Scopes(scopes) => scopes.to_vec(),
+                DelegatedPolicy::Deny | DelegatedPolicy::McpAudit => vec![],
+            };
+            if required
+                .iter()
+                .any(|scope| !principal.scopes.iter().any(|held| held == scope))
+            {
+                bearer_challenge(
+                    request,
+                    Some((
+                        "insufficient_scope",
+                        "The access token lacks a required scope",
+                    )),
+                    Some(&required.join(" ")),
+                );
+                return Outcome::Error((Status::Forbidden, ()));
             }
             let grant_id = principal.grant_id;
             let access_hash = hash_token(token);
@@ -253,6 +307,43 @@ impl Deref for RequirementsAndBaselinesRead {
         &self.0
     }
 }
+
+macro_rules! composite_guard {
+    ($name:ident, [$($scope:literal),+ $(,)?]) => {
+        pub struct $name(pub ApiUserOrBearer);
+        impl Deref for $name {
+            type Target = ApiUserOrBearer;
+            fn deref(&self) -> &Self::Target { &self.0 }
+        }
+        impl $name {
+            pub fn into_inner(self) -> ApiUserOrBearer { self.0 }
+        }
+        #[async_trait]
+        impl<'r> FromRequest<'r> for $name {
+            type Error = ();
+            async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+                match authenticate(request, DelegatedPolicy::Scopes(&[$($scope),+])).await {
+                    Outcome::Success(value) => Outcome::Success(Self(value)),
+                    Outcome::Error(error) => Outcome::Error(error),
+                    Outcome::Forward(forward) => Outcome::Forward(forward),
+                }
+            }
+        }
+    };
+}
+
+composite_guard!(
+    RequirementsAndTraceabilityRead,
+    ["requirements:read", "traceability:read"]
+);
+composite_guard!(
+    RequirementsVerificationsAndTraceabilityRead,
+    [
+        "requirements:read",
+        "verifications:read",
+        "traceability:read",
+    ]
+);
 impl RequirementsAndBaselinesRead {
     pub fn into_inner(self) -> ApiUserOrBearer {
         self.0
@@ -280,6 +371,27 @@ impl Deref for McpAuditAuth {
     type Target = ApiUserOrBearer;
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+/// Authentication for MCP session establishment. Delegated OAuth credentials
+/// need no domain scope here: individual API routes enforce their own scopes.
+pub struct McpPrincipalAuth(pub ApiUserOrBearer);
+impl Deref for McpPrincipalAuth {
+    type Target = ApiUserOrBearer;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+#[async_trait]
+impl<'r> FromRequest<'r> for McpPrincipalAuth {
+    type Error = ();
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        match authenticate(request, DelegatedPolicy::McpAudit).await {
+            Outcome::Success(v) => Outcome::Success(Self(v)),
+            Outcome::Error(e) => Outcome::Error(e),
+            Outcome::Forward(f) => Outcome::Forward(f),
+        }
     }
 }
 #[async_trait]

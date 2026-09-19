@@ -586,23 +586,40 @@ impl<R: Repository> super::IdempotencyRepository for CacheRepository<R> {
     fn claim_idempotency(
         &mut self,
         user_id: i32,
+        principal_key: &str,
+        target_key: &str,
         operation: &str,
         key: &str,
         request_hash: &str,
         now: chrono::NaiveDateTime,
     ) -> Result<super::IdempotencyClaim, RepoError> {
-        self.inner
-            .claim_idempotency(user_id, operation, key, request_hash, now)
+        self.inner.claim_idempotency(
+            user_id,
+            principal_key,
+            target_key,
+            operation,
+            key,
+            request_hash,
+            now,
+        )
     }
     fn complete_idempotency(
         &mut self,
         user_id: i32,
+        principal_key: &str,
+        target_key: &str,
         operation: &str,
         key: &str,
         response: &serde_json::Value,
     ) -> Result<(), RepoError> {
-        self.inner
-            .complete_idempotency(user_id, operation, key, response)
+        self.inner.complete_idempotency(
+            user_id,
+            principal_key,
+            target_key,
+            operation,
+            key,
+            response,
+        )
     }
 }
 

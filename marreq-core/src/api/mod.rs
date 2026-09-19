@@ -169,6 +169,7 @@ pub fn routes() -> Vec<Route> {
         semantic_search::index_status,
         semantic_search::search_status,
         mcp::audit,
+        mcp::principal,
         // Notifications
         notifications::list,
         notifications::unread_count,

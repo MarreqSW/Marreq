@@ -83,6 +83,8 @@ pub async fn create(
     if let Some(response) = crate::api::idempotency::claim(
         state,
         access.user().id,
+        &access.auth().idempotency_principal(),
+        &format!("project:{project_id}"),
         "create_baseline",
         &idempotency_key,
         &payload,
@@ -117,6 +119,8 @@ pub async fn create(
     crate::api::idempotency::complete(
         state,
         access.user().id,
+        &access.auth().idempotency_principal(),
+        &format!("project:{project_id}"),
         "create_baseline",
         &idempotency_key,
         &response,

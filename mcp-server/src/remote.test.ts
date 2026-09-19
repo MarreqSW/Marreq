@@ -21,12 +21,23 @@ async function listen(server: Server): Promise<number> {
 async function startApi(): Promise<number> {
   return listen(
     createServer((req, res) => {
-      if (rejectApiCredential || req.headers.authorization !== "Bearer valid-token") {
+      const token = req.headers.authorization?.replace(/^Bearer /, "");
+      const known = ["valid-token", "refreshed-token", "different-token"].includes(token ?? "");
+      if (!known || (rejectApiCredential && req.url !== "/api/mcp/principal")) {
         res.writeHead(401).end('{"error":"unauthorized"}');
         return;
       }
       res.setHeader("content-type", "application/json");
-      if (req.url === "/api/projects/7/requirements/42") {
+      if (req.url === "/api/mcp/principal") {
+        const other = token === "different-token";
+        res.end(JSON.stringify({
+          user_id: other ? 2 : 1,
+          authentication_type: "delegated_oauth",
+          principal_id: other ? "grant:2" : "grant:1",
+          client_id: "client-1",
+          grant_id: other ? 2 : 1,
+        }));
+      } else if (req.url === "/api/projects/7/requirements/42") {
         res.end('{"id":42,"title":"Remote requirement"}');
       } else if (req.url === "/api/mcp/audit" && req.method === "POST") {
         res.end('{"status":"ok"}');
@@ -62,6 +73,24 @@ function client(url: URL, token = "valid-token") {
   };
 }
 
+async function rawRpc(url: URL, sessionId: string, token: string, body: object) {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: "application/json, text/event-stream",
+      "Content-Type": "application/json",
+      "mcp-session-id": sessionId,
+    },
+    body: JSON.stringify(body),
+  });
+  const text = await response.text();
+  const payload = response.headers.get("content-type")?.includes("text/event-stream")
+    ? text.split("\n").find((line) => line.startsWith("data: "))?.slice(6)
+    : text;
+  return { response, json: JSON.parse(payload ?? "null") };
+}
+
 describe("remote Streamable HTTP transport", () => {
   beforeEach(() => {
     process.env.MARREQ_MODE = "read_only";
@@ -92,12 +121,17 @@ describe("remote Streamable HTTP transport", () => {
     expect(tools.tools.map((tool) => tool.name)).toContain("get_requirement");
     expect(tools.tools.map((tool) => tool.name)).toContain("create_requirement");
     expect(tools.tools.map((tool) => tool.name)).toContain("put_verification_matrix");
-    const requirement = tools.tools.find((tool) => tool.name === "get_requirement");
-    expect(requirement?._meta?.securitySchemes).toEqual([
+    const wire = await rawRpc(url, remote.transport.sessionId!, "valid-token", {
+      jsonrpc: "2.0", id: 50, method: "tools/list",
+    });
+    const wireTools = wire.json.result.tools as Array<Record<string, unknown>>;
+    const requirement = wireTools.find((tool) => tool.name === "get_requirement");
+    expect(requirement?.securitySchemes).toEqual([
       { type: "oauth2", scopes: ["requirements:read"] },
     ]);
-    const composite = tools.tools.find((tool) => tool.name === "diff_baseline_vs_current");
-    expect(composite?._meta?.securitySchemes).toEqual([
+    expect((requirement?._meta as Record<string, unknown> | undefined)?.securitySchemes).toBeUndefined();
+    const composite = wireTools.find((tool) => tool.name === "diff_baseline_vs_current");
+    expect(composite?.securitySchemes).toEqual([
       { type: "oauth2", scopes: ["requirements:read", "baselines:read"] },
     ]);
     const result = await remote.client.callTool({
@@ -183,6 +217,25 @@ describe("remote Streamable HTTP transport", () => {
     await owner.transport.terminateSession();
   });
 
+  it("continues a session with a refreshed token from the same OAuth grant", async () => {
+    const apiPort = await startApi();
+    const { url } = await startMcp(apiPort);
+    const owner = client(url);
+    await owner.client.connect(owner.transport);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer refreshed-token",
+        Accept: "application/json, text/event-stream",
+        "Content-Type": "application/json",
+        "mcp-session-id": owner.transport.sessionId!,
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 3, method: "tools/list" }),
+    });
+    expect(response.status).toBe(200);
+    await owner.transport.terminateSession();
+  });
+
   it("returns an MCP reauthorization challenge when a credential expires", async () => {
     const apiPort = await startApi();
     const { url } = await startMcp(apiPort);
@@ -195,7 +248,7 @@ describe("remote Streamable HTTP transport", () => {
     });
     expect(result.isError).toBe(true);
     expect(result._meta?.["mcp/www_authenticate"]).toBe(
-      `Bearer resource_metadata="http://127.0.0.1:${apiPort}/.well-known/oauth-protected-resource/mcp"`
+      `Bearer resource_metadata="http://127.0.0.1:${apiPort}/.well-known/oauth-protected-resource/mcp", error="invalid_token", error_description="The access token is invalid or expired"`
     );
     await remote.transport.terminateSession();
   });

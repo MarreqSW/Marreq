@@ -149,12 +149,14 @@ impl IdempotencyRepository for DieselRepoMock {
     fn claim_idempotency(
         &mut self,
         user_id: i32,
+        principal_key: &str,
+        target_key: &str,
         operation: &str,
         key: &str,
         request_hash: &str,
         _now: NaiveDateTime,
     ) -> Result<IdempotencyClaim, RepoError> {
-        let storage_key = format!("{user_id}:{operation}:{key}");
+        let storage_key = format!("{user_id}:{principal_key}:{target_key}:{operation}:{key}");
         match self.idempotency.get(&storage_key) {
             None => {
                 self.idempotency
@@ -171,11 +173,13 @@ impl IdempotencyRepository for DieselRepoMock {
     fn complete_idempotency(
         &mut self,
         user_id: i32,
+        principal_key: &str,
+        target_key: &str,
         operation: &str,
         key: &str,
         response: &serde_json::Value,
     ) -> Result<(), RepoError> {
-        let storage_key = format!("{user_id}:{operation}:{key}");
+        let storage_key = format!("{user_id}:{principal_key}:{target_key}:{operation}:{key}");
         let stored = self
             .idempotency
             .get_mut(&storage_key)

@@ -12,8 +12,10 @@ Marreq can be used from AI assistants (Cursor, Claude, etc.) via an optional **M
 mode creates an independent MCP server/transport for every initialized session;
 request identity is never stored in a process-global variable. Until delegated
 OAuth is configured, remote mode accepts an existing Marreq API token as its
-Bearer credential. The credential is bound to the MCP session using a one-way
-SHA-256 fingerprint so a session ID cannot be reused with another credential.
+Bearer credential. The credential is resolved to a stable user/client/grant
+principal. OAuth access-token rotation therefore does not break an established
+session, while a token from another grant cannot assume it. The bearer from the
+current MCP request is always the one forwarded to Rocket.
 Sessions expire after 30 minutes idle or eight hours absolute and the process
 admits at most 1,000 concurrent sessions. Closing the transport removes its
 state; credentials are still sent and checked on every downstream REST call.

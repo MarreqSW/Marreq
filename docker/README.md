@@ -12,14 +12,15 @@ For the end-to-end setup flows for **`marreq-server`** and **`marreq-cloud`** (D
 
 ## Files
 
-- `docker-compose.yml`: Primary local stack — **`db`**, **`ollama`**, **`marreq-server`** (Rocket API; default profile), **`marreq-cloud`** (Rocket API; `cloud` profile), **`frontend`** (self-hosted nginx + SPA), **`frontend-cloud`** (cloud nginx + SPA; `cloud` profile), **`adminer`**
+- `docker-compose.yml`: Primary local stack — database, optional Ollama, Rocket, the dedicated MCP Node service, nginx + SPA, and Adminer. Cloud variants use the `cloud` profile.
 - `docker-compose.light.yml`: Self-contained lightweight stack with the same Marreq services but no Ollama; embeddings and RAG are forced off (see [LIGHT.md](LIGHT.md))
 - `docker-compose.prod.yml`: Production hardening override for HTTPS deployments behind an external TLS reverse proxy; works with either the full or light base stack
 - `docker-compose.dev.yml`: Developer override for running Marreq via `cargo run` inside Docker (`marreq-dev` on host port **8000**)
 - `docker-compose.ci.yml`: CI-specific compose overrides
 - `Dockerfile`: Marreq image (Rust binary; build context: repository root). Accepts `MARREQ_BIN` build-arg (`marreq-server` by default; `marreq-cloud` for the cloud variant).
 - `frontend/Dockerfile`: **Frontend** image (multi-stage: `npm run build` + nginx)
-- `frontend/nginx.conf.template`: nginx template used by both frontend containers; serves the SPA and proxies `/api/` to either `marreq-server:8000` or `marreq-cloud:8001`
+- `frontend/nginx.conf.template`: nginx template used by both frontend containers; serves the SPA and proxies `/api/`, `/oauth/`, and `/.well-known/` to Rocket and `/mcp` to Node
+- `../mcp-server/Dockerfile`: production MCP image (TypeScript build stage; non-root Node runtime)
 - `Dockerfile.dockerignore`: Build context exclusions for `Dockerfile`
 - `docker-entrypoint.sh`: Backend container startup (wait for DB + migrations + start app)
 
@@ -35,6 +36,7 @@ The default `docker-compose.yml` uses a **split SPA stack**: nginx serves the Vi
 | `marreq-cloud` | Hosted (SaaS) Rocket binary on **`127.0.0.1:8001`**. Started only by the **`cloud`** compose profile. Reads cloud-only env (`MARREQ_SITE_ADMIN_EMAIL`, `MARREQ_SITE_ADMIN_BOOTSTRAP_PASSWORD`, `MARREQ_PUBLIC_BASE_URL`, `SMTP_*`) from `../.env`. Compose defaults `MARREQ_PUBLIC_BASE_URL` to **http://localhost:8082**. |
 | `frontend` | Nginx: SPA on **http://127.0.0.1:8080** (configurable with `MARREQ_FRONTEND_PORT`) with `/api/` proxied to **`marreq-server:8000`**. |
 | `frontend-cloud` | Nginx: same SPA on host **http://127.0.0.1:8082** (configurable with `MARREQ_CLOUD_FRONTEND_PORT`) with `/api/` proxied to **`marreq-cloud:8001`**. Started only by the **`cloud`** compose profile. |
+| `mcp-server` / `mcp-cloud` | Internal-only Streamable HTTP MCP services. nginx exposes them at the selected frontend origin's exact `/mcp` path. |
 | `adminer` | Database UI on host **http://127.0.0.1:8081** (avoids clashing with frontend **8080**). |
 
 Use the UI at **http://localhost:8080** for self-hosted mode, or **http://localhost:8082** for cloud mode, so session cookies stay on the same origin as `/api`.
@@ -91,10 +93,12 @@ Point the public hostname (for example `marreq.example.com`) at the server, then
 ROCKET_SECRET_KEY=<output of: openssl rand -base64 32>
 MARREQ_SECURE_SESSION_COOKIE=1
 MARREQ_PUBLIC_BASE_URL=https://marreq.example.com
+MARREQ_MCP_PUBLIC_URL=https://marreq.example.com/mcp
+MARREQ_MCP_ALLOWED_HOSTS=marreq.example.com
 CSRF_ALLOWED_ORIGINS=https://marreq.example.com
 ```
 
-`docker-compose.prod.yml` requires `ROCKET_SECRET_KEY`, `MARREQ_PUBLIC_BASE_URL`, and `CSRF_ALLOWED_ORIGINS`; Compose fails during configuration if any of them are missing. It also forces secure session cookies for the backend.
+`docker-compose.prod.yml` also requires the canonical HTTPS MCP URL and its allowed public hostname. For cloud deployments use `MARREQ_CLOUD_MCP_PUBLIC_URL` and `MARREQ_CLOUD_MCP_ALLOWED_HOSTS`. Compose fails during configuration when a required value is missing.
 
 ### 2. Start the production stack
 
@@ -113,7 +117,7 @@ Then build and start the self-hosted production services:
 docker compose \
   -f docker/docker-compose.yml \
   -f docker/docker-compose.prod.yml \
-  up -d --build db ollama marreq-server frontend
+  up -d --build db ollama marreq-server mcp-server frontend
 ```
 
 For a resource-constrained host that does not need semantic search or RAG, use the light base instead:
@@ -127,7 +131,7 @@ docker compose \
 docker compose \
   -f docker/docker-compose.light.yml \
   -f docker/docker-compose.prod.yml \
-  up -d --build db marreq-server frontend
+  up -d --build db marreq-server mcp-server frontend
 ```
 
 Adminer is opt-in with the production override. If it is needed temporarily, start it with the `admin` profile and keep access local or through an SSH tunnel. Use the same base file (`docker-compose.yml` or `docker-compose.light.yml`) selected for the deployment:
@@ -151,7 +155,7 @@ marreq.example.com {
 
 With DNS pointing to the server and ports 80/443 reachable, Caddy can obtain and renew the public certificate automatically. Equivalent nginx or Traefik configurations are also valid.
 
-The frontend nginx preserves a trusted incoming `X-Forwarded-Proto: https` value when proxying `/api/`, so the original public scheme survives the proxy chain. Direct local access falls back to nginx's own request scheme.
+The frontend nginx preserves the trusted outer scheme across all proxied routes. `/mcp` uses HTTP/1.1 with response and request buffering disabled and forwards `Authorization`, `Mcp-Session-Id`, and `Last-Event-ID`. The default access log does not include request headers or bodies.
 
 ### 4. Firewall and exposure
 
@@ -170,7 +174,14 @@ After the proxy is configured, verify the public origin rather than the internal
 ```bash
 curl -I https://marreq.example.com/
 curl -I https://marreq.example.com/api/auth/csrf
+curl https://marreq.example.com/.well-known/oauth-authorization-server
+curl https://marreq.example.com/.well-known/oauth-protected-resource/mcp
+curl -i -X POST https://marreq.example.com/mcp
 ```
+
+The last request should reach MCP and return an OAuth challenge (normally 401), not SPA HTML. The same origin exposes `/oauth/authorize` and `/oauth/token`; the authorization endpoint is browser-driven and the token endpoint requires a valid OAuth request.
+
+For cloud mode, start `marreq-cloud mcp-cloud frontend-cloud` with `--profile cloud` and use the cloud MCP environment variables. Both `docker-compose.yml` and `docker-compose.light.yml` implement this topology; `docker-compose.prod.yml` is the hardening overlay for either base.
 
 The browser should receive Marreq over HTTPS and authenticated sessions should use the secure `__Host-session` cookie.
 

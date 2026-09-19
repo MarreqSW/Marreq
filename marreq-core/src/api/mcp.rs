@@ -7,7 +7,7 @@ use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
 use crate::auth::guards::session::session_user_has_project_access;
-use crate::auth::guards::{AuthenticationSource, McpAuditAuth};
+use crate::auth::guards::{AuthenticationSource, McpAuditAuth, McpPrincipalAuth};
 use crate::models::forms::NewLog;
 use crate::repository::LogRepository;
 
@@ -26,6 +26,48 @@ pub struct McpAuditRequest {
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct McpAuditResponse {
     pub status: &'static str,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(crate = "rocket::serde", rename_all = "snake_case")]
+pub struct McpPrincipalResponse {
+    pub user_id: i32,
+    pub authentication_type: &'static str,
+    pub principal_id: String,
+    pub client_id: Option<String>,
+    pub grant_id: Option<i32>,
+}
+
+/// Return the stable identity represented by a credential without requiring a
+/// project/domain scope. The opaque principal id lets the MCP transport accept
+/// rotated OAuth access tokens only when they belong to the same grant.
+#[get("/mcp/principal")]
+pub fn principal(user: McpPrincipalAuth) -> Json<McpPrincipalResponse> {
+    let (authentication_type, principal_id, client_id, grant_id) = match user.source() {
+        AuthenticationSource::Session => {
+            ("session", format!("user:{}", user.user().id), None, None)
+        }
+        AuthenticationSource::ApiToken { token_hash, .. } => {
+            ("api_token", format!("token:{token_hash}"), None, None)
+        }
+        AuthenticationSource::DelegatedOAuth {
+            client_id,
+            grant_id,
+            ..
+        } => (
+            "delegated_oauth",
+            format!("grant:{grant_id}"),
+            Some(client_id.clone()),
+            Some(*grant_id),
+        ),
+    };
+    Json(McpPrincipalResponse {
+        user_id: user.user().id,
+        authentication_type,
+        principal_id,
+        client_id,
+        grant_id,
+    })
 }
 
 const MCP_TOOL_NAMES: &[&str] = &[
@@ -85,7 +127,7 @@ pub async fn audit(
     if matches!(
         user.source(),
         AuthenticationSource::ApiToken {
-            project_scope: Some(scope)
+            project_scope: Some(scope), ..
         } if payload.project_id.is_some_and(|project_id| *scope != project_id)
     ) {
         return Err(ApiError::Forbidden("project access denied".into()));

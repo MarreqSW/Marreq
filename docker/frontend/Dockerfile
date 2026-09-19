@@ -18,6 +18,8 @@ LABEL org.opencontainers.image.version="${MARREQ_VERSION}" \
 ENV NGINX_ENVSUBST_FILTER=^MARREQ_
 ENV MARREQ_BACKEND_HOST=marreq-server
 ENV MARREQ_BACKEND_PORT=8000
+ENV MARREQ_MCP_HOST=mcp-server
+ENV MARREQ_MCP_PORT=3000
 COPY --from=build /build/frontend/dist /usr/share/nginx/html
 COPY docker/frontend/nginx.conf.template /etc/nginx/templates/default.conf.template
 EXPOSE 80

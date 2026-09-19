@@ -71,12 +71,33 @@ services:
     environment:
       MARREQ_BACKEND_HOST: marreq-server
       MARREQ_BACKEND_PORT: '8000'
+      MARREQ_MCP_HOST: mcp-server
+      MARREQ_MCP_PORT: '3000'
     depends_on:
       marreq-server:
+        condition: service_healthy
+      mcp-server:
         condition: service_healthy
     ports:
       # Local entry point; production TLS terminates in an external reverse proxy.
       - '127.0.0.1:${MARREQ_FRONTEND_PORT:-8080}:80'
+
+  mcp-server:
+    build:
+      context: ..
+      dockerfile: mcp-server/Dockerfile
+    restart: always
+    depends_on:
+      marreq-server:
+        condition: service_healthy
+    environment:
+      MARREQ_MCP_TRANSPORT: http
+      MARREQ_MCP_HOST: 0.0.0.0
+      MARREQ_MCP_PORT: '3000'
+      MARREQ_MCP_PATH: /mcp
+      MARREQ_BASE_URL: http://marreq-server:8000
+      MARREQ_MCP_PUBLIC_URL: ${MARREQ_MCP_PUBLIC_URL:-http://localhost:8080/mcp}
+      MARREQ_MCP_ALLOWED_HOSTS: ${MARREQ_MCP_ALLOWED_HOSTS:-localhost,127.0.0.1}
 
   adminer:
     image: adminer
@@ -131,11 +152,33 @@ services:
     environment:
       MARREQ_BACKEND_HOST: marreq-cloud
       MARREQ_BACKEND_PORT: '8001'
+      MARREQ_MCP_HOST: mcp-cloud
+      MARREQ_MCP_PORT: '3000'
     depends_on:
       marreq-cloud:
         condition: service_healthy
+      mcp-cloud:
+        condition: service_healthy
     ports:
       - '127.0.0.1:${MARREQ_CLOUD_FRONTEND_PORT:-8082}:80'
+
+  mcp-cloud:
+    profiles: ["cloud"]
+    build:
+      context: ..
+      dockerfile: mcp-server/Dockerfile
+    restart: always
+    depends_on:
+      marreq-cloud:
+        condition: service_healthy
+    environment:
+      MARREQ_MCP_TRANSPORT: http
+      MARREQ_MCP_HOST: 0.0.0.0
+      MARREQ_MCP_PORT: '3000'
+      MARREQ_MCP_PATH: /mcp
+      MARREQ_BASE_URL: http://marreq-cloud:8001
+      MARREQ_MCP_PUBLIC_URL: ${MARREQ_CLOUD_MCP_PUBLIC_URL:-http://localhost:8082/mcp}
+      MARREQ_MCP_ALLOWED_HOSTS: ${MARREQ_CLOUD_MCP_ALLOWED_HOSTS:-localhost,127.0.0.1}
 
 volumes:
   pgdata:

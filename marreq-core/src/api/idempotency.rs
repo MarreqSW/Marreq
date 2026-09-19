@@ -31,6 +31,8 @@ impl<'r> FromRequest<'r> for OptionalIdempotencyKey {
 pub fn claim(
     state: &State<AppState>,
     user_id: i32,
+    principal_key: &str,
+    target_key: &str,
     operation: &str,
     key: &OptionalIdempotencyKey,
     payload: &impl serde::Serialize,
@@ -43,6 +45,8 @@ pub fn claim(
     let hash = format!("{:x}", Sha256::digest(encoded));
     match state.repo_write().claim_idempotency(
         user_id,
+        principal_key,
+        target_key,
         operation,
         key,
         &hash,
@@ -62,14 +66,21 @@ pub fn claim(
 pub fn complete(
     state: &State<AppState>,
     user_id: i32,
+    principal_key: &str,
+    target_key: &str,
     operation: &str,
     key: &OptionalIdempotencyKey,
     response: &serde_json::Value,
 ) -> ApiResult<()> {
     if let Some(key) = key.0.as_deref() {
-        state
-            .repo_write()
-            .complete_idempotency(user_id, operation, key, response)?;
+        state.repo_write().complete_idempotency(
+            user_id,
+            principal_key,
+            target_key,
+            operation,
+            key,
+            response,
+        )?;
     }
     Ok(())
 }
@@ -84,27 +95,92 @@ mod tests {
         let mut repo = DieselRepoMock::default();
         let now = chrono::Utc::now().naive_utc();
         assert_eq!(
-            repo.claim_idempotency(1, "create_requirement", "key", "hash-a", now)
-                .unwrap(),
+            repo.claim_idempotency(
+                1,
+                "session:user:1",
+                "project:7",
+                "create_requirement",
+                "key",
+                "hash-a",
+                now
+            )
+            .unwrap(),
             IdempotencyClaim::Acquired
         );
         assert_eq!(
-            repo.claim_idempotency(1, "create_requirement", "key", "hash-a", now)
-                .unwrap(),
+            repo.claim_idempotency(
+                1,
+                "session:user:1",
+                "project:7",
+                "create_requirement",
+                "key",
+                "hash-a",
+                now
+            )
+            .unwrap(),
             IdempotencyClaim::Pending
         );
         let response = serde_json::json!({"id": 42});
-        repo.complete_idempotency(1, "create_requirement", "key", &response)
-            .unwrap();
+        repo.complete_idempotency(
+            1,
+            "session:user:1",
+            "project:7",
+            "create_requirement",
+            "key",
+            &response,
+        )
+        .unwrap();
         assert_eq!(
-            repo.claim_idempotency(1, "create_requirement", "key", "hash-a", now)
-                .unwrap(),
+            repo.claim_idempotency(
+                1,
+                "session:user:1",
+                "project:7",
+                "create_requirement",
+                "key",
+                "hash-a",
+                now
+            )
+            .unwrap(),
             IdempotencyClaim::Replay(response)
         );
         assert_eq!(
-            repo.claim_idempotency(1, "create_requirement", "key", "hash-b", now)
-                .unwrap(),
+            repo.claim_idempotency(
+                1,
+                "session:user:1",
+                "project:7",
+                "create_requirement",
+                "key",
+                "hash-b",
+                now
+            )
+            .unwrap(),
             IdempotencyClaim::PayloadConflict
         );
+    }
+
+    #[test]
+    fn same_key_is_independent_across_projects_resources_and_grants() {
+        let mut repo = DieselRepoMock::default();
+        let now = chrono::Utc::now().naive_utc();
+        for (principal, target) in [
+            ("oauth_grant:1", "project:7"),
+            ("oauth_grant:1", "project:8"),
+            ("oauth_grant:1", "project:7:requirement:42"),
+            ("oauth_grant:2", "project:7"),
+        ] {
+            assert_eq!(
+                repo.claim_idempotency(
+                    1,
+                    principal,
+                    target,
+                    "create_requirement_comment",
+                    "same-key",
+                    "same-hash",
+                    now,
+                )
+                .unwrap(),
+                IdempotencyClaim::Acquired
+            );
+        }
     }
 }

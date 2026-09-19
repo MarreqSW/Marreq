@@ -148,9 +148,12 @@ pub enum IdempotencyClaim {
 }
 
 pub trait IdempotencyRepository {
+    #[allow(clippy::too_many_arguments)]
     fn claim_idempotency(
         &mut self,
         _user_id: i32,
+        _principal_key: &str,
+        _target_key: &str,
         _operation: &str,
         _key: &str,
         _request_hash: &str,
@@ -163,6 +166,8 @@ pub trait IdempotencyRepository {
     fn complete_idempotency(
         &mut self,
         _user_id: i32,
+        _principal_key: &str,
+        _target_key: &str,
         _operation: &str,
         _key: &str,
         _response: &serde_json::Value,

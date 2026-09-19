@@ -1,8 +1,11 @@
+import { currentBearer } from "./credentials.js";
 export class MarreqAuthenticationError extends Error {
     status;
-    constructor(status) {
+    challenge;
+    constructor(status, challenge) {
         super("Marreq authorization is required");
         this.status = status;
+        this.challenge = challenge;
     }
 }
 export class MarreqClient {
@@ -16,20 +19,23 @@ export class MarreqClient {
     async listProjects() {
         return this.request("/api/projects");
     }
+    async getPrincipal() {
+        return this.request("/api/mcp/principal");
+    }
     async request(path, options = {}) {
         const url = `${this.ctx.baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
         const res = await fetch(url, {
             ...options,
             headers: {
-                Authorization: `Bearer ${this.ctx.apiToken}`,
+                Authorization: `Bearer ${this.ctx.remote ? currentBearer() ?? this.ctx.apiToken : this.ctx.apiToken}`,
                 "Content-Type": "application/json",
                 ...options.headers,
             },
         });
         if (!res.ok) {
             const text = await res.text();
-            if (res.status === 401 || res.status === 403) {
-                throw new MarreqAuthenticationError(res.status);
+            if (res.status === 401 || (res.status === 403 && res.headers.has("www-authenticate"))) {
+                throw new MarreqAuthenticationError(res.status, res.headers.get("www-authenticate") ?? undefined);
             }
             throw new Error(`Marreq API ${res.status}: ${text}`);
         }

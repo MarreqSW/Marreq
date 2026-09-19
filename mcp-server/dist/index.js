@@ -59,6 +59,30 @@ export function createMarreqServer(ctx) {
         name: "marreq-mcp-server",
         version: "0.1.0",
     });
+    // MCP SDK 1.x does not yet model ChatGPT's top-level `securitySchemes`
+    // extension. Decorate only the public tools/list handler result so the wire
+    // representation is correct while keeping the SDK responsible for schemas,
+    // dispatch, and validation.
+    const protocol = server.server;
+    const setRequestHandler = protocol.setRequestHandler.bind(protocol);
+    protocol.setRequestHandler = (schema, handler) => setRequestHandler(schema, async (...args) => {
+        const result = await handler(...args);
+        if (Array.isArray(result?.tools)) {
+            result.tools = result.tools.map((tool) => {
+                const metadata = tool._meta;
+                const securitySchemes = metadata?.securitySchemes;
+                if (!securitySchemes)
+                    return tool;
+                const { securitySchemes: _legacy, ...remainingMetadata } = metadata;
+                return {
+                    ...tool,
+                    securitySchemes,
+                    ...(Object.keys(remainingMetadata).length ? { _meta: remainingMetadata } : { _meta: undefined }),
+                };
+            });
+        }
+        return result;
+    });
     const toolScopes = {
         list_projects: ["projects:read"],
         get_requirement: ["requirements:read"],
@@ -78,8 +102,8 @@ export function createMarreqServer(ctx) {
         get_verification_activity: ["verifications:read"],
         create_verification: ["verifications:write"],
         update_verification: ["verifications:write"],
-        trace_up: ["traceability:read"],
-        trace_down: ["traceability:read"],
+        trace_up: ["requirements:read", "traceability:read"],
+        trace_down: ["requirements:read", "verifications:read", "traceability:read"],
         coverage_report: ["traceability:read"],
         get_verification_matrix: ["traceability:read"],
         put_verification_matrix: ["traceability:write"],
@@ -95,11 +119,11 @@ export function createMarreqServer(ctx) {
     server.registerTool = ((name, config, callback) => {
         const scopes = toolScopes[name];
         const mutating = scopes?.some((scope) => scope.endsWith(":write") || scope.endsWith(":approve")) ?? false;
-        const naturallyIdempotent = ["patch_requirement", "set_approval", "update_verification", "put_verification_matrix", "clear_suspect"].includes(name);
+        const replayProtectedCreate = ["create_requirement", "create_baseline", "create_requirement_comment", "create_verification"].includes(name);
         const annotations = {
             readOnlyHint: !mutating,
             destructiveHint: false,
-            idempotentHint: naturallyIdempotent || (["create_requirement", "create_baseline", "create_requirement_comment", "create_verification"].includes(name)),
+            idempotentHint: !mutating || replayProtectedCreate,
             openWorldHint: false,
             ...(config.annotations ?? {}),
         };
@@ -112,7 +136,7 @@ export function createMarreqServer(ctx) {
             }
             catch (error) {
                 if (ctx.remote && error instanceof MarreqAuthenticationError) {
-                    const challenge = `Bearer resource_metadata="${new URL(ctx.mcpPublicUrl).origin}/.well-known/oauth-protected-resource${new URL(ctx.mcpPublicUrl).pathname}"`;
+                    const challenge = error.challenge ?? `Bearer resource_metadata="${new URL(ctx.mcpPublicUrl).origin}/.well-known/oauth-protected-resource${new URL(ctx.mcpPublicUrl).pathname}", error="invalid_token", error_description="The access token is invalid or expired"`;
                     return {
                         isError: true,
                         content: [{ type: "text", text: "Marreq authorization is required" }],
@@ -507,7 +531,10 @@ export function createMarreqServer(ctx) {
 async function main() {
     const transportConfig = loadTransportConfig();
     if (transportConfig.kind === "http") {
-        await startRemoteServer(transportConfig, createMarreqServer);
+        const listener = await startRemoteServer(transportConfig, createMarreqServer);
+        const shutdown = () => listener.close();
+        process.once("SIGTERM", shutdown);
+        process.once("SIGINT", shutdown);
         return;
     }
     const server = createMarreqServer(loadContext());

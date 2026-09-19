@@ -11,6 +11,7 @@ pub mod comments;
 pub mod custom_fields;
 pub mod dashboard;
 pub mod error;
+pub mod exports;
 pub mod groups;
 pub mod guards;
 pub mod imports;
@@ -186,6 +187,8 @@ pub fn routes() -> Vec<Route> {
         groups::remove_member,
         imports::preview_excel,
         imports::commit_excel,
+        exports::export_requirements_xlsx,
+        exports::export_verifications_xlsx,
     ];
     r
 }

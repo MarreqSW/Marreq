@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import { escapeCsv, downloadCsv } from '@/utils/tableUtils';
 import { Pagination } from '@/components/table/Pagination';
-import { CsvDownloadButton } from '@/components/table/CsvDownloadButton';
+import { CsvDownloadButton, ExcelDownloadButton } from '@/components/table/CsvDownloadButton';
 import {
   getMyPermissions,
   listUsersOptional,
@@ -11,6 +11,7 @@ import {
   listVerificationStatuses,
   listVerifications,
   updateVerificationField,
+  downloadVerificationsXlsx,
 } from '@/api/client';
 import type {
   EffectivePermissions,
@@ -49,6 +50,8 @@ export default function VerificationsTable({
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [saveErr, setSaveErr] = useState<string | null>(null);
+  const [exportingXlsx, setExportingXlsx] = useState(false);
+  const [exportErr, setExportErr] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [editCell, setEditCell] = useState<VerificationTableEditCell | null>(null);
   const inlineEditRef = useRef<HTMLDivElement | null>(null);
@@ -234,6 +237,18 @@ export default function VerificationsTable({
     downloadCsv(`verifications-project-${projectId}.csv`, headers, csvRows);
   }, [filtered, statusById, methods, rows, projectId, userLabel]);
 
+  const exportXlsx = useCallback(async () => {
+    setExportErr(null);
+    setExportingXlsx(true);
+    try {
+      await downloadVerificationsXlsx(projectId);
+    } catch (e) {
+      setExportErr(e instanceof Error ? e.message : 'Excel export failed');
+    } finally {
+      setExportingXlsx(false);
+    }
+  }, [projectId]);
+
   const canEditFields = Boolean(perms?.edit_requirements && (csrfToken ?? '').length);
   const canEditVerificationStatus = Boolean(
     perms?.edit_requirements && perms?.is_project_reviewer && (csrfToken ?? '').length,
@@ -336,15 +351,15 @@ export default function VerificationsTable({
             {filtered.length.toLocaleString()} Verifications found
           </p>
           <CsvDownloadButton onClick={exportCsv} />
-          <a
-            href={`${basePath}/verifications.xls`}
-            title="Download Excel (classic)"
-            className="p-2 text-stitch-muted hover:text-stitch-accent transition-colors"
-          >
-            <span className="material-symbols-outlined">table_chart</span>
-          </a>
+          <ExcelDownloadButton onClick={exportXlsx} busy={exportingXlsx} />
         </div>
       </div>
+
+      {exportErr ? (
+        <p className="mb-4 text-xs text-red-300" role="alert">
+          {exportErr}
+        </p>
+      ) : null}
 
       {viewMode === 'list' ? (
         filtered.length === 0 ? (

@@ -14,14 +14,19 @@ export function paginationItems(current: number, total: number): (number | 'dots
   return [1, 'dots', current - 1, current, current + 1, 'dots', total];
 }
 
-/** Builds a CSV string from headers + rows and triggers a browser download. */
-export function downloadCsv(filename: string, headers: string[], rows: string[][]): void {
-  const lines = [headers.join(','), ...rows.map((r) => r.join(','))];
-  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+/** Saves a blob to disk under the given filename. */
+export function triggerDownload(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+/** Builds a CSV string from headers + rows and triggers a browser download. */
+export function downloadCsv(filename: string, headers: string[], rows: string[][]): void {
+  const lines = [headers.join(','), ...rows.map((r) => r.join(','))];
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  triggerDownload(blob, filename);
 }

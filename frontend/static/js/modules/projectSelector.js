@@ -87,6 +87,11 @@ function projectSlugForId(selector, projectId) {
   return option?.dataset?.projectSlug || projectId;
 }
 
+/** Workspace URLs carry the project slug alone, so drop any legacy group prefix. */
+function workspaceSlug(slug) {
+  return (slug || '').split('/').filter(Boolean).pop() || null;
+}
+
 function resolveProjectIdFromCurrentPath(selector) {
   const currentPathSegment = getProjectSlugFromPath();
   if (!currentPathSegment) {
@@ -95,7 +100,9 @@ function resolveProjectIdFromCurrentPath(selector) {
 
   const options = Array.from(selector?.options || []);
 
-  const bySlug = options.find((item) => item.dataset?.projectSlug === currentPathSegment);
+  const bySlug = options.find(
+    (item) => workspaceSlug(item.dataset?.projectSlug) === currentPathSegment,
+  );
   if (bySlug?.value) {
     return bySlug.value;
   }
@@ -110,7 +117,7 @@ function navigateToProject(projectId, selector) {
 
   const path = window.location.pathname;
   const segments = path.split('/').filter(Boolean);
-  const nextSlug = projectSlug.split('/').filter(Boolean).pop();
+  const nextSlug = workspaceSlug(projectSlug);
   if (!nextSlug || !getProjectSlugFromPath()) {
     window.location.reload();
     return;

@@ -39,5 +39,6 @@ export function loadContext(options = {}) {
         mode,
         traceWrite,
         remote: options.remote,
+        mcpPublicUrl: options.remote ? process.env.MARREQ_MCP_PUBLIC_URL?.replace(/\/$/, "") : undefined,
     };
 }

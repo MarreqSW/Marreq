@@ -20,6 +20,7 @@ export interface SessionContext {
   /** When true, register `put_verification_matrix` and `clear_suspect` (requires API permissions). */
   traceWrite: boolean;
   remote?: boolean;
+  mcpPublicUrl?: string;
 }
 
 function parseMarreqMode(raw: string | undefined): MarreqMode {
@@ -70,5 +71,6 @@ export function loadContext(options: { apiTokenRequired?: boolean; projectRequir
     mode,
     traceWrite,
     remote: options.remote,
+    mcpPublicUrl: options.remote ? process.env.MARREQ_MCP_PUBLIC_URL?.replace(/\/$/, "") : undefined,
   };
 }

@@ -12,6 +12,7 @@ export interface RemoteTransportConfig {
   host: string;
   port: number;
   path: string;
+  publicUrl: string;
   allowedHosts?: string[];
   sessionIdleMs?: number;
   sessionAbsoluteMs?: number;
@@ -44,6 +45,16 @@ function parsePath(raw: string | undefined): string {
   return path;
 }
 
+function parsePublicUrl(raw: string | undefined): string {
+  if (!raw) throw new Error("MARREQ_MCP_PUBLIC_URL must be set for HTTP transport");
+  const url = new URL(raw);
+  const local = url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+  if ((url.protocol !== "https:" && !local) || url.search || url.hash || url.pathname.replace(/\/$/, "") !== "/mcp") {
+    throw new Error("MARREQ_MCP_PUBLIC_URL must be an HTTPS /mcp URL (or localhost HTTP) without query or fragment");
+  }
+  return url.toString().replace(/\/$/, "");
+}
+
 export function loadTransportConfig(): TransportConfig {
   const raw = (process.env.MARREQ_MCP_TRANSPORT ?? "stdio").trim().toLowerCase();
   if (raw === "stdio") return { kind: "stdio" };
@@ -59,6 +70,7 @@ export function loadTransportConfig(): TransportConfig {
     host: process.env.MARREQ_MCP_HOST?.trim() || "127.0.0.1",
     port: parsePort(process.env.MARREQ_MCP_PORT),
     path: parsePath(process.env.MARREQ_MCP_PATH),
+    publicUrl: parsePublicUrl(process.env.MARREQ_MCP_PUBLIC_URL),
     allowedHosts: hosts?.length ? hosts : undefined,
   };
 }
@@ -115,7 +127,8 @@ export async function startRemoteServer(
   const authenticate = (req: Request, res: Response): { token: string; binding: Buffer } | undefined => {
     const token = bearerToken(req.headers.authorization);
     if (!token) {
-      const metadata = `${baseContext.baseUrl}/.well-known/oauth-protected-resource/mcp`;
+      const publicUrl = new URL(config.publicUrl);
+      const metadata = `${publicUrl.origin}/.well-known/oauth-protected-resource${publicUrl.pathname}`;
       res.setHeader("WWW-Authenticate", `Bearer resource_metadata="${metadata}"`);
       jsonError(res, 401, "Bearer authentication required");
       return undefined;

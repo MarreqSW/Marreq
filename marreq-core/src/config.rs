@@ -21,6 +21,8 @@ pub struct AppConfig {
     /// Public URL the application is reachable at, used in outgoing emails
     /// and OAuth callbacks. Defaults to `http://localhost:8000`.
     pub public_base_url: String,
+    /// Canonical public MCP OAuth resource URL. May differ from internal API URLs.
+    pub mcp_public_url: String,
     /// When true (default), POSTing a comment against an approved
     /// requirement_version_id returns 403.
     pub lock_approved_version_comments: bool,
@@ -73,6 +75,21 @@ impl AppConfig {
 
         let public_base_url = std::env::var("MARREQ_PUBLIC_BASE_URL")
             .unwrap_or_else(|_| "http://localhost:8000".into());
+        let mcp_public_url = std::env::var("MARREQ_MCP_PUBLIC_URL")
+            .unwrap_or_else(|_| format!("{}/mcp", public_base_url.trim_end_matches('/')));
+        match url::Url::parse(&mcp_public_url) {
+            Ok(url)
+                if url.fragment().is_none()
+                    && url.query().is_none()
+                    && url.path().trim_end_matches('/') == "/mcp"
+                    && (url.scheme() == "https"
+                        || (url.scheme() == "http"
+                            && matches!(url.host_str(), Some("localhost" | "127.0.0.1" | "[::1]")))) => {}
+            _ => issues.push(
+                "MARREQ_MCP_PUBLIC_URL must be an HTTPS /mcp URL (HTTP is allowed only for localhost) without query or fragment"
+                    .into(),
+            ),
+        }
 
         let lock_approved_version_comments = parse_bool_env("LOCK_APPROVED_VERSION_COMMENTS", true);
         let secure_session_cookie = parse_bool_env("MARREQ_SECURE_SESSION_COOKIE", false);
@@ -97,6 +114,7 @@ impl AppConfig {
         Ok(AppConfig {
             database_url,
             public_base_url,
+            mcp_public_url,
             lock_approved_version_comments,
             secure_session_cookie,
             cors,

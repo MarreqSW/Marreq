@@ -116,6 +116,7 @@ pub fn build_with_auth(
             ],
         )
         .mount("/api", api_routes)
+        .mount("/", crate::api::oauth::routes())
         .register(
             "/",
             catchers![

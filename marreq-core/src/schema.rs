@@ -7,6 +7,73 @@ pub mod sql_types {
 }
 
 diesel::table! {
+    oauth_clients (client_id) {
+        client_id -> Varchar,
+        name -> Varchar,
+        redirect_uris -> Jsonb,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    oauth_grants (id) {
+        id -> Int4,
+        user_id -> Int4,
+        client_id -> Varchar,
+        scopes -> Array<Text>,
+        resource -> Varchar,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+        last_used_at -> Nullable<Timestamp>,
+        revoked_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
+    oauth_authorization_codes (code_hash) {
+        code_hash -> Varchar,
+        grant_id -> Int4,
+        client_id -> Varchar,
+        redirect_uri -> Varchar,
+        code_challenge -> Varchar,
+        scopes -> Array<Text>,
+        resource -> Varchar,
+        expires_at -> Timestamp,
+        used_at -> Nullable<Timestamp>,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    oauth_access_tokens (token_hash) {
+        token_hash -> Varchar,
+        grant_id -> Int4,
+        client_id -> Varchar,
+        scopes -> Array<Text>,
+        resource -> Varchar,
+        expires_at -> Timestamp,
+        created_at -> Timestamp,
+        last_used_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
+    oauth_refresh_tokens (token_hash) {
+        token_hash -> Varchar,
+        family_id -> Varchar,
+        grant_id -> Int4,
+        client_id -> Varchar,
+        scopes -> Array<Text>,
+        resource -> Varchar,
+        expires_at -> Timestamp,
+        created_at -> Timestamp,
+        used_at -> Nullable<Timestamp>,
+        revoked_at -> Nullable<Timestamp>,
+        replaced_by_hash -> Nullable<Varchar>,
+    }
+}
+
+diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
@@ -603,6 +670,14 @@ diesel::joinable!(matrix -> verifications (verification_id));
 diesel::joinable!(notification_preferences -> projects (project_id));
 diesel::joinable!(notification_preferences -> users (user_id));
 diesel::joinable!(notifications -> projects (project_id));
+diesel::joinable!(oauth_access_tokens -> oauth_clients (client_id));
+diesel::joinable!(oauth_access_tokens -> oauth_grants (grant_id));
+diesel::joinable!(oauth_authorization_codes -> oauth_clients (client_id));
+diesel::joinable!(oauth_authorization_codes -> oauth_grants (grant_id));
+diesel::joinable!(oauth_grants -> oauth_clients (client_id));
+diesel::joinable!(oauth_grants -> users (user_id));
+diesel::joinable!(oauth_refresh_tokens -> oauth_clients (client_id));
+diesel::joinable!(oauth_refresh_tokens -> oauth_grants (grant_id));
 diesel::joinable!(project_members -> projects (project_id));
 diesel::joinable!(project_members -> users (user_id));
 diesel::joinable!(project_reviewers -> projects (project_id));
@@ -652,6 +727,11 @@ diesel::allow_tables_to_appear_in_same_query!(
     matrix,
     notification_preferences,
     notifications,
+    oauth_access_tokens,
+    oauth_authorization_codes,
+    oauth_clients,
+    oauth_grants,
+    oauth_refresh_tokens,
     project_members,
     project_reviewers,
     projects,

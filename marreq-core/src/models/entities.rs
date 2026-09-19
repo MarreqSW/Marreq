@@ -271,6 +271,73 @@ pub struct UserIdentity {
     pub last_login_at: Option<chrono::NaiveDateTime>,
 }
 
+#[derive(Queryable, Selectable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_clients)]
+pub struct OAuthClient {
+    pub client_id: String,
+    pub name: String,
+    pub redirect_uris: serde_json::Value,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+#[derive(Queryable, Selectable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_grants)]
+pub struct OAuthGrant {
+    pub id: i32,
+    pub user_id: i32,
+    pub client_id: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+    pub last_used_at: Option<chrono::NaiveDateTime>,
+    pub revoked_at: Option<chrono::NaiveDateTime>,
+}
+
+#[derive(Queryable, Selectable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_authorization_codes)]
+pub struct OAuthAuthorizationCode {
+    pub code_hash: String,
+    pub grant_id: i32,
+    pub client_id: String,
+    pub redirect_uri: String,
+    pub code_challenge: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+    pub expires_at: chrono::NaiveDateTime,
+    pub used_at: Option<chrono::NaiveDateTime>,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+#[derive(Queryable, Selectable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_access_tokens)]
+pub struct OAuthAccessToken {
+    pub token_hash: String,
+    pub grant_id: i32,
+    pub client_id: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+    pub expires_at: chrono::NaiveDateTime,
+    pub created_at: chrono::NaiveDateTime,
+    pub last_used_at: Option<chrono::NaiveDateTime>,
+}
+
+#[derive(Queryable, Selectable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_refresh_tokens)]
+pub struct OAuthRefreshToken {
+    pub token_hash: String,
+    pub family_id: String,
+    pub grant_id: i32,
+    pub client_id: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+    pub expires_at: chrono::NaiveDateTime,
+    pub created_at: chrono::NaiveDateTime,
+    pub used_at: Option<chrono::NaiveDateTime>,
+    pub revoked_at: Option<chrono::NaiveDateTime>,
+    pub replaced_by_hash: Option<String>,
+}
+
 fn default_email_verified() -> bool {
     true
 }

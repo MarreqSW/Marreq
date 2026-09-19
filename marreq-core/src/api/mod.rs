@@ -20,6 +20,7 @@ pub mod mcp;
 pub mod members;
 pub mod meta;
 pub mod notifications;
+pub mod oauth;
 pub mod prelude;
 pub mod projects;
 pub mod projects_session;

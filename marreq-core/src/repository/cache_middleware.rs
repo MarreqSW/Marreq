@@ -481,6 +481,96 @@ impl<R: Repository> ExternalIdentityRepository for CacheRepository<R> {
     }
 }
 
+impl<R: Repository> super::DelegatedOAuthRepository for CacheRepository<R> {
+    fn insert_oauth_client(&mut self, v: &crate::models::NewOAuthClient) -> Result<(), RepoError> {
+        self.inner.insert_oauth_client(v)
+    }
+    fn get_oauth_client(&self, id: &str) -> Result<crate::models::OAuthClient, RepoError> {
+        self.inner.get_oauth_client(id)
+    }
+    fn upsert_oauth_grant(
+        &mut self,
+        v: &crate::models::NewOAuthGrant,
+    ) -> Result<crate::models::OAuthGrant, RepoError> {
+        self.inner.upsert_oauth_grant(v)
+    }
+    fn list_oauth_grants(
+        &self,
+        user_id: i32,
+    ) -> Result<Vec<(crate::models::OAuthGrant, crate::models::OAuthClient)>, RepoError> {
+        self.inner.list_oauth_grants(user_id)
+    }
+    fn revoke_oauth_grant(
+        &mut self,
+        id: i32,
+        user_id: i32,
+        now: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError> {
+        self.inner.revoke_oauth_grant(id, user_id, now)
+    }
+    fn insert_oauth_code(
+        &mut self,
+        v: &crate::models::NewOAuthAuthorizationCode,
+    ) -> Result<(), RepoError> {
+        self.inner.insert_oauth_code(v)
+    }
+    fn get_oauth_code(
+        &self,
+        hash: &str,
+    ) -> Result<crate::models::OAuthAuthorizationCode, RepoError> {
+        self.inner.get_oauth_code(hash)
+    }
+    fn consume_oauth_code(
+        &mut self,
+        hash: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError> {
+        self.inner.consume_oauth_code(hash, now)
+    }
+    fn insert_oauth_tokens(
+        &mut self,
+        a: &crate::models::NewOAuthAccessToken,
+        r: &crate::models::NewOAuthRefreshToken,
+    ) -> Result<(), RepoError> {
+        self.inner.insert_oauth_tokens(a, r)
+    }
+    fn get_oauth_access_token(
+        &self,
+        hash: &str,
+    ) -> Result<
+        (
+            crate::models::OAuthAccessToken,
+            crate::models::OAuthGrant,
+            crate::models::User,
+        ),
+        RepoError,
+    > {
+        self.inner.get_oauth_access_token(hash)
+    }
+    fn get_oauth_refresh_token(
+        &self,
+        hash: &str,
+    ) -> Result<(crate::models::OAuthRefreshToken, crate::models::OAuthGrant), RepoError> {
+        self.inner.get_oauth_refresh_token(hash)
+    }
+    fn rotate_oauth_refresh_token(
+        &mut self,
+        old: &str,
+        a: &crate::models::NewOAuthAccessToken,
+        r: &crate::models::NewOAuthRefreshToken,
+        now: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError> {
+        self.inner.rotate_oauth_refresh_token(old, a, r, now)
+    }
+    fn revoke_oauth_refresh_family(
+        &mut self,
+        family: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        self.inner.revoke_oauth_refresh_family(family, now)
+    }
+}
+
 impl<R: Repository> super::WorkspacesRepository for CacheRepository<R> {
     fn insert_workspace(&mut self, new: &crate::models::NewWorkspace) -> Result<i32, RepoError> {
         self.inner.insert_workspace(new)
@@ -1687,6 +1777,12 @@ mod tests {
             sessions: Vec::new(),
             user_identities: Vec::new(),
             next_user_identity_id: 1,
+            oauth_clients: HashMap::new(),
+            oauth_grants: HashMap::new(),
+            oauth_codes: HashMap::new(),
+            oauth_access_tokens: HashMap::new(),
+            oauth_refresh_tokens: HashMap::new(),
+            next_oauth_grant_id: 1,
         }
     }
 

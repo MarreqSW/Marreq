@@ -32,6 +32,9 @@ pub struct ApiUserOrBearer {
     api_user: ApiUser,
     /// When Some(p), auth was via Bearer token scoped to project p. When None, session or unscoped token.
     token_project_scope: Option<i32>,
+    delegated_scopes: Option<Vec<String>>,
+    oauth_client_id: Option<String>,
+    oauth_grant_id: Option<i32>,
 }
 
 impl ApiUserOrBearer {
@@ -52,6 +55,69 @@ impl ApiUserOrBearer {
     pub fn token_project_scope(&self) -> Option<i32> {
         self.token_project_scope
     }
+
+    pub fn delegated_scopes(&self) -> Option<&[String]> {
+        self.delegated_scopes.as_deref()
+    }
+    pub fn oauth_client_id(&self) -> Option<&str> {
+        self.oauth_client_id.as_deref()
+    }
+    pub fn oauth_grant_id(&self) -> Option<i32> {
+        self.oauth_grant_id
+    }
+}
+
+fn required_delegated_scope(request: &Request<'_>) -> Option<&'static str> {
+    let path = request.uri().path().as_str();
+    let write = matches!(
+        request.method(),
+        rocket::http::Method::Post
+            | rocket::http::Method::Put
+            | rocket::http::Method::Patch
+            | rocket::http::Method::Delete
+    );
+    if path.contains("/approval") {
+        return Some("requirements:approve");
+    }
+    if path.contains("baseline") {
+        return Some(if write {
+            "baselines:write"
+        } else {
+            "baselines:read"
+        });
+    }
+    if path.contains("verification") && !path.contains("verification-method") {
+        return Some(if write {
+            "verifications:write"
+        } else {
+            "verifications:read"
+        });
+    }
+    if path.contains("trace") || path.contains("matrix") || path.contains("coverage") {
+        return Some(if write {
+            "traceability:write"
+        } else {
+            "traceability:read"
+        });
+    }
+    if path.contains("requirement")
+        || path.contains("categories")
+        || path.contains("applicability")
+        || path.contains("status")
+        || path.contains("custom_fields")
+        || path.contains("verification-method")
+        || path == "/api/mcp/audit"
+    {
+        return Some(if write && path != "/api/mcp/audit" {
+            "requirements:write"
+        } else {
+            "requirements:read"
+        });
+    }
+    if path == "/api/projects" || path.starts_with("/api/project-from-path") {
+        return Some("projects:read");
+    }
+    None
 }
 
 impl Deref for ApiUserOrBearer {
@@ -75,6 +141,9 @@ impl<'r> FromRequest<'r> for ApiUserOrBearer {
                 return Outcome::Success(ApiUserOrBearer {
                     api_user: ApiUser::new(user, log_ctx),
                     token_project_scope: None,
+                    delegated_scopes: None,
+                    oauth_client_id: None,
+                    oauth_grant_id: None,
                 });
             }
             Outcome::Forward(_) => {}
@@ -115,9 +184,38 @@ impl<'r> FromRequest<'r> for ApiUserOrBearer {
         })
         .await;
 
-        let (user, project_scope) = match result {
-            Ok(Ok(pair)) => pair,
-            Ok(Err(RepoError::NotFound)) => return Outcome::Error((Status::Unauthorized, ())),
+        let (user, project_scope, delegated_scopes, oauth_client_id, oauth_grant_id) = match result
+        {
+            Ok(Ok((user, scope))) => (user, scope, None, None, None),
+            Ok(Err(RepoError::NotFound)) => {
+                let required = required_delegated_scope(request);
+                let expected_resource = format!(
+                    "{}/mcp",
+                    crate::config::AppConfig::current()
+                        .public_base_url
+                        .trim_end_matches('/')
+                );
+                let oauth = match state.try_repo_read().and_then(|repo| {
+                    crate::auth::delegated::validate_access(
+                        &*repo,
+                        token,
+                        &expected_resource,
+                        required,
+                        chrono::Utc::now().naive_utc(),
+                    )
+                    .map_err(|_| RepoError::Unauthorized)
+                }) {
+                    Ok(principal) => principal,
+                    Err(_) => return Outcome::Error((Status::Unauthorized, ())),
+                };
+                (
+                    oauth.user,
+                    None,
+                    Some(oauth.scopes),
+                    Some(oauth.client_id),
+                    Some(oauth.grant_id),
+                )
+            }
             Ok(Err(_)) => return Outcome::Error((Status::InternalServerError, ())),
             Err(_) => return Outcome::Error((Status::InternalServerError, ())),
         };
@@ -137,6 +235,9 @@ impl<'r> FromRequest<'r> for ApiUserOrBearer {
         Outcome::Success(ApiUserOrBearer {
             api_user: ApiUser::new(user, log_ctx),
             token_project_scope: project_scope,
+            delegated_scopes,
+            oauth_client_id,
+            oauth_grant_id,
         })
     }
 }

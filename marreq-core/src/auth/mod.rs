@@ -3,6 +3,7 @@
 
 pub mod config;
 pub mod csrf;
+pub mod delegated;
 pub mod errors;
 pub mod external;
 pub mod guards;

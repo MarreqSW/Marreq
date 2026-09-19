@@ -225,7 +225,10 @@ impl Fairing for CsrfFairing {
         // Scoped to login/logout only so other `/api/*` mutating calls still require a matching
         // `X-CSRF-Token` + `csrf` cookie (non-browser clients cannot forge a browser `Origin`).
         let path = req.uri().path().as_str();
-        let api_auth_origin_only = matches!(path, "/api/auth/login" | "/api/auth/logout");
+        let api_auth_origin_only = matches!(
+            path,
+            "/api/auth/login" | "/api/auth/logout" | "/oauth/authorize"
+        );
         if api_auth_origin_only {
             if let Some(origin) = req.headers().get_one("Origin") {
                 if self.is_allowed(origin) {

@@ -87,6 +87,51 @@ pub trait ApiTokensRepository {
     fn update_api_token_last_used_at(&mut self, token_hash: &str) -> Result<(), RepoError>;
 }
 
+pub trait DelegatedOAuthRepository {
+    fn insert_oauth_client(&mut self, client: &NewOAuthClient) -> Result<(), RepoError>;
+    fn get_oauth_client(&self, client_id: &str) -> Result<OAuthClient, RepoError>;
+    fn upsert_oauth_grant(&mut self, grant: &NewOAuthGrant) -> Result<OAuthGrant, RepoError>;
+    fn list_oauth_grants(&self, user_id: i32) -> Result<Vec<(OAuthGrant, OAuthClient)>, RepoError>;
+    fn revoke_oauth_grant(
+        &mut self,
+        grant_id: i32,
+        user_id: i32,
+        now: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError>;
+    fn insert_oauth_code(&mut self, code: &NewOAuthAuthorizationCode) -> Result<(), RepoError>;
+    fn get_oauth_code(&self, code_hash: &str) -> Result<OAuthAuthorizationCode, RepoError>;
+    fn consume_oauth_code(
+        &mut self,
+        code_hash: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError>;
+    fn insert_oauth_tokens(
+        &mut self,
+        access: &NewOAuthAccessToken,
+        refresh: &NewOAuthRefreshToken,
+    ) -> Result<(), RepoError>;
+    fn get_oauth_access_token(
+        &self,
+        token_hash: &str,
+    ) -> Result<(OAuthAccessToken, OAuthGrant, User), RepoError>;
+    fn get_oauth_refresh_token(
+        &self,
+        token_hash: &str,
+    ) -> Result<(OAuthRefreshToken, OAuthGrant), RepoError>;
+    fn rotate_oauth_refresh_token(
+        &mut self,
+        old_hash: &str,
+        new_access: &NewOAuthAccessToken,
+        new_refresh: &NewOAuthRefreshToken,
+        now: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError>;
+    fn revoke_oauth_refresh_family(
+        &mut self,
+        family_id: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError>;
+}
+
 /// Server-side authenticated sessions backed by `sessions(token_hash, user_id, ...)`.
 ///
 /// The cookie carries a 256-bit base64url **raw** token; the SHA-256 of that
@@ -590,6 +635,7 @@ pub trait NotificationRepository {
 
 pub trait Repository:
     ApiTokensRepository
+    + DelegatedOAuthRepository
     + UserRepository
     + ExternalIdentityRepository
     + LookupRepository
@@ -616,6 +662,7 @@ pub trait Repository:
 
 impl<T> Repository for T where
     T: ApiTokensRepository
+        + DelegatedOAuthRepository
         + UserRepository
         + ExternalIdentityRepository
         + LookupRepository

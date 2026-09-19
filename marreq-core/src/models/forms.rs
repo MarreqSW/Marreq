@@ -320,6 +320,59 @@ pub struct NewUserIdentity {
     pub subject: String,
 }
 
+#[derive(Insertable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_clients)]
+pub struct NewOAuthClient {
+    pub client_id: String,
+    pub name: String,
+    pub redirect_uris: serde_json::Value,
+}
+
+#[derive(Insertable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_grants)]
+pub struct NewOAuthGrant {
+    pub user_id: i32,
+    pub client_id: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+}
+
+#[derive(Insertable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_authorization_codes)]
+pub struct NewOAuthAuthorizationCode {
+    pub code_hash: String,
+    pub grant_id: i32,
+    pub client_id: String,
+    pub redirect_uri: String,
+    pub code_challenge: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+    pub expires_at: chrono::NaiveDateTime,
+}
+
+#[derive(Insertable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_access_tokens)]
+pub struct NewOAuthAccessToken {
+    pub token_hash: String,
+    pub grant_id: i32,
+    pub client_id: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+    pub expires_at: chrono::NaiveDateTime,
+}
+
+#[derive(Insertable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_refresh_tokens)]
+pub struct NewOAuthRefreshToken {
+    pub token_hash: String,
+    pub family_id: String,
+    pub grant_id: i32,
+    pub client_id: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+    pub expires_at: chrono::NaiveDateTime,
+}
+
 /// Partial user information used when editing an existing user.
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]

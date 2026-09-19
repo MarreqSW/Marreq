@@ -66,6 +66,12 @@ pub struct DieselRepoMock {
     pub next_user_identity_id: i32,
     pub saved_views: Vec<crate::models::SavedView>,
     pub next_saved_view_id: i32,
+    pub oauth_clients: HashMap<String, OAuthClient>,
+    pub oauth_grants: HashMap<i32, OAuthGrant>,
+    pub oauth_codes: HashMap<String, OAuthAuthorizationCode>,
+    pub oauth_access_tokens: HashMap<String, OAuthAccessToken>,
+    pub oauth_refresh_tokens: HashMap<String, OAuthRefreshToken>,
+    pub next_oauth_grant_id: i32,
 }
 
 fn epoch() -> NaiveDateTime {
@@ -118,6 +124,12 @@ impl Default for DieselRepoMock {
             next_notification_id: 1,
             notification_preferences: Vec::new(),
             next_notification_pref_id: 1,
+            oauth_clients: HashMap::new(),
+            oauth_grants: HashMap::new(),
+            oauth_codes: HashMap::new(),
+            oauth_access_tokens: HashMap::new(),
+            oauth_refresh_tokens: HashMap::new(),
+            next_oauth_grant_id: 1,
             workspaces: Vec::new(),
             next_workspace_id: 1,
             email_tokens: Vec::new(),
@@ -128,6 +140,229 @@ impl Default for DieselRepoMock {
             saved_views: Vec::new(),
             next_saved_view_id: 1,
         }
+    }
+}
+
+impl DelegatedOAuthRepository for DieselRepoMock {
+    fn insert_oauth_client(&mut self, v: &NewOAuthClient) -> Result<(), RepoError> {
+        if self.oauth_clients.contains_key(&v.client_id) {
+            return Err(RepoError::Duplicate("client_id".into()));
+        }
+        self.oauth_clients.insert(
+            v.client_id.clone(),
+            OAuthClient {
+                client_id: v.client_id.clone(),
+                name: v.name.clone(),
+                redirect_uris: v.redirect_uris.clone(),
+                created_at: epoch(),
+            },
+        );
+        Ok(())
+    }
+    fn get_oauth_client(&self, id: &str) -> Result<OAuthClient, RepoError> {
+        self.oauth_clients
+            .get(id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+    fn upsert_oauth_grant(&mut self, v: &NewOAuthGrant) -> Result<OAuthGrant, RepoError> {
+        if let Some(grant) = self.oauth_grants.values_mut().find(|g| {
+            g.user_id == v.user_id && g.client_id == v.client_id && g.resource == v.resource
+        }) {
+            grant.scopes = v.scopes.clone();
+            grant.revoked_at = None;
+            return Ok(grant.clone());
+        }
+        let id = self.next_oauth_grant_id;
+        self.next_oauth_grant_id += 1;
+        let grant = OAuthGrant {
+            id,
+            user_id: v.user_id,
+            client_id: v.client_id.clone(),
+            scopes: v.scopes.clone(),
+            resource: v.resource.clone(),
+            created_at: epoch(),
+            updated_at: epoch(),
+            last_used_at: None,
+            revoked_at: None,
+        };
+        self.oauth_grants.insert(id, grant.clone());
+        Ok(grant)
+    }
+    fn list_oauth_grants(&self, owner: i32) -> Result<Vec<(OAuthGrant, OAuthClient)>, RepoError> {
+        Ok(self
+            .oauth_grants
+            .values()
+            .filter(|g| g.user_id == owner && g.revoked_at.is_none())
+            .filter_map(|g| {
+                self.oauth_clients
+                    .get(&g.client_id)
+                    .cloned()
+                    .map(|c| (g.clone(), c))
+            })
+            .collect())
+    }
+    fn revoke_oauth_grant(
+        &mut self,
+        id: i32,
+        owner: i32,
+        now: NaiveDateTime,
+    ) -> Result<bool, RepoError> {
+        let Some(g) = self.oauth_grants.get_mut(&id) else {
+            return Ok(false);
+        };
+        if g.user_id != owner {
+            return Ok(false);
+        }
+        g.revoked_at = Some(now);
+        self.oauth_access_tokens.retain(|_, t| t.grant_id != id);
+        for t in self
+            .oauth_refresh_tokens
+            .values_mut()
+            .filter(|t| t.grant_id == id)
+        {
+            t.revoked_at = Some(now);
+        }
+        Ok(true)
+    }
+    fn insert_oauth_code(&mut self, v: &NewOAuthAuthorizationCode) -> Result<(), RepoError> {
+        self.oauth_codes.insert(
+            v.code_hash.clone(),
+            OAuthAuthorizationCode {
+                code_hash: v.code_hash.clone(),
+                grant_id: v.grant_id,
+                client_id: v.client_id.clone(),
+                redirect_uri: v.redirect_uri.clone(),
+                code_challenge: v.code_challenge.clone(),
+                scopes: v.scopes.clone(),
+                resource: v.resource.clone(),
+                expires_at: v.expires_at,
+                used_at: None,
+                created_at: epoch(),
+            },
+        );
+        Ok(())
+    }
+    fn get_oauth_code(&self, hash: &str) -> Result<OAuthAuthorizationCode, RepoError> {
+        self.oauth_codes
+            .get(hash)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+    fn consume_oauth_code(&mut self, hash: &str, now: NaiveDateTime) -> Result<bool, RepoError> {
+        let Some(c) = self.oauth_codes.get_mut(hash) else {
+            return Ok(false);
+        };
+        if c.used_at.is_some() || c.expires_at <= now {
+            return Ok(false);
+        }
+        c.used_at = Some(now);
+        Ok(true)
+    }
+    fn insert_oauth_tokens(
+        &mut self,
+        a: &NewOAuthAccessToken,
+        r: &NewOAuthRefreshToken,
+    ) -> Result<(), RepoError> {
+        self.oauth_access_tokens.insert(
+            a.token_hash.clone(),
+            OAuthAccessToken {
+                token_hash: a.token_hash.clone(),
+                grant_id: a.grant_id,
+                client_id: a.client_id.clone(),
+                scopes: a.scopes.clone(),
+                resource: a.resource.clone(),
+                expires_at: a.expires_at,
+                created_at: epoch(),
+                last_used_at: None,
+            },
+        );
+        self.oauth_refresh_tokens.insert(
+            r.token_hash.clone(),
+            OAuthRefreshToken {
+                token_hash: r.token_hash.clone(),
+                family_id: r.family_id.clone(),
+                grant_id: r.grant_id,
+                client_id: r.client_id.clone(),
+                scopes: r.scopes.clone(),
+                resource: r.resource.clone(),
+                expires_at: r.expires_at,
+                created_at: epoch(),
+                used_at: None,
+                revoked_at: None,
+                replaced_by_hash: None,
+            },
+        );
+        Ok(())
+    }
+    fn get_oauth_access_token(
+        &self,
+        hash: &str,
+    ) -> Result<(OAuthAccessToken, OAuthGrant, User), RepoError> {
+        let t = self
+            .oauth_access_tokens
+            .get(hash)
+            .cloned()
+            .ok_or(RepoError::NotFound)?;
+        let g = self
+            .oauth_grants
+            .get(&t.grant_id)
+            .cloned()
+            .ok_or(RepoError::NotFound)?;
+        let u = self
+            .users
+            .get(&g.user_id)
+            .cloned()
+            .ok_or(RepoError::NotFound)?;
+        Ok((t, g, u))
+    }
+    fn get_oauth_refresh_token(
+        &self,
+        hash: &str,
+    ) -> Result<(OAuthRefreshToken, OAuthGrant), RepoError> {
+        let t = self
+            .oauth_refresh_tokens
+            .get(hash)
+            .cloned()
+            .ok_or(RepoError::NotFound)?;
+        let g = self
+            .oauth_grants
+            .get(&t.grant_id)
+            .cloned()
+            .ok_or(RepoError::NotFound)?;
+        Ok((t, g))
+    }
+    fn rotate_oauth_refresh_token(
+        &mut self,
+        old: &str,
+        a: &NewOAuthAccessToken,
+        r: &NewOAuthRefreshToken,
+        now: NaiveDateTime,
+    ) -> Result<bool, RepoError> {
+        let Some(t) = self.oauth_refresh_tokens.get_mut(old) else {
+            return Ok(false);
+        };
+        if t.used_at.is_some() || t.revoked_at.is_some() || t.expires_at <= now {
+            return Ok(false);
+        }
+        t.used_at = Some(now);
+        t.replaced_by_hash = Some(r.token_hash.clone());
+        self.insert_oauth_tokens(a, r)?;
+        Ok(true)
+    }
+    fn revoke_oauth_refresh_family(
+        &mut self,
+        family: &str,
+        now: NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        for t in self
+            .oauth_refresh_tokens
+            .values_mut()
+            .filter(|t| t.family_id == family)
+        {
+            t.revoked_at = Some(now);
+        }
+        Ok(())
     }
 }
 
@@ -183,6 +418,12 @@ impl DieselRepoMock {
             next_user_identity_id: 1,
             saved_views: Vec::new(),
             next_saved_view_id: 1,
+            oauth_clients: HashMap::new(),
+            oauth_grants: HashMap::new(),
+            oauth_codes: HashMap::new(),
+            oauth_access_tokens: HashMap::new(),
+            oauth_refresh_tokens: HashMap::new(),
+            next_oauth_grant_id: 1,
         }
     }
     pub fn with_error() -> Self {
@@ -232,6 +473,12 @@ impl DieselRepoMock {
             next_user_identity_id: 1,
             saved_views: Vec::new(),
             next_saved_view_id: 1,
+            oauth_clients: HashMap::new(),
+            oauth_grants: HashMap::new(),
+            oauth_codes: HashMap::new(),
+            oauth_access_tokens: HashMap::new(),
+            oauth_refresh_tokens: HashMap::new(),
+            next_oauth_grant_id: 1,
         }
     }
 

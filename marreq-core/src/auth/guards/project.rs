@@ -11,9 +11,9 @@ use crate::app::AppState;
 use crate::auth::guards::route_params::extract_route_param;
 use crate::auth::guards::session::session_user_has_project_access;
 use crate::auth::guards::{
-    ApiUserOrBearer, BaselinesRead, BaselinesWrite, RequirementsApprove, RequirementsRead,
-    RequirementsWrite, SessionUser, TraceabilityRead, TraceabilityWrite, VerificationsRead,
-    VerificationsWrite,
+    ApiUserOrBearer, BaselinesRead, BaselinesWrite, RequirementsAndBaselinesRead,
+    RequirementsApprove, RequirementsRead, RequirementsWrite, SessionUser, TraceabilityRead,
+    TraceabilityWrite, VerificationsRead, VerificationsWrite,
 };
 use crate::models::User;
 
@@ -227,3 +227,7 @@ scoped_project_guard!(ProjectTraceabilityRead, TraceabilityRead);
 scoped_project_guard!(ProjectTraceabilityWrite, TraceabilityWrite);
 scoped_project_guard!(ProjectBaselinesRead, BaselinesRead);
 scoped_project_guard!(ProjectBaselinesWrite, BaselinesWrite);
+scoped_project_guard!(
+    ProjectRequirementsAndBaselinesRead,
+    RequirementsAndBaselinesRead
+);

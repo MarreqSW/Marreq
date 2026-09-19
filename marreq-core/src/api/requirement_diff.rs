@@ -4,7 +4,7 @@
 //! API endpoints for requirement version diffs (read-only, deterministic).
 
 use crate::api::prelude::*;
-use crate::auth::guards::ProjectRequirementsRead;
+use crate::auth::guards::{ProjectRequirementsAndBaselinesRead, ProjectRequirementsRead};
 use crate::diff::RequirementDiff;
 use crate::services::{RequirementDiffService, RequirementService};
 
@@ -52,7 +52,7 @@ pub async fn diff_versions_by_project(
 /// Diff the requirement as stored in the baseline vs the current version (session or Bearer).
 #[get("/projects/<project_id>/baselines/<baseline_id>/requirements/<req_id>/diff/current")]
 pub async fn diff_baseline_vs_current(
-    access: ProjectRequirementsRead,
+    access: ProjectRequirementsAndBaselinesRead,
     project_id: i32,
     baseline_id: i32,
     req_id: i32,

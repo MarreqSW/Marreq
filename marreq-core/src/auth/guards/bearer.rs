@@ -83,6 +83,7 @@ impl Deref for ApiUserOrBearer {
 enum DelegatedPolicy {
     Deny,
     Scope(&'static str),
+    Scopes(&'static [&'static str]),
     McpAudit,
 }
 
@@ -141,14 +142,13 @@ async fn authenticate(
             let required = match policy {
                 DelegatedPolicy::Deny => return Outcome::Error((Status::Forbidden, ())),
                 DelegatedPolicy::Scope(s) => Some(s),
+                DelegatedPolicy::Scopes(_) => None,
                 DelegatedPolicy::McpAudit => None,
             };
-            let resource = format!(
-                "{}/mcp",
-                crate::config::AppConfig::current()
-                    .public_base_url
-                    .trim_end_matches('/')
-            );
+            let resource = crate::config::AppConfig::current()
+                .mcp_public_url
+                .trim_end_matches('/')
+                .to_owned();
             let principal = match state.try_repo_read().and_then(|repo| {
                 crate::auth::delegated::validate_access(
                     &*repo,
@@ -163,6 +163,14 @@ async fn authenticate(
                 Err(RepoError::Unauthorized) => return Outcome::Error((Status::Forbidden, ())),
                 Err(_) => return Outcome::Error((Status::InternalServerError, ())),
             };
+            if let DelegatedPolicy::Scopes(required) = policy {
+                if required
+                    .iter()
+                    .any(|scope| !principal.scopes.iter().any(|held| held == scope))
+                {
+                    return Outcome::Error((Status::Forbidden, ()));
+                }
+            }
             let grant_id = principal.grant_id;
             let access_hash = hash_token(token);
             let update_state = state.clone();
@@ -237,6 +245,35 @@ scoped_guard!(TraceabilityRead, "traceability:read");
 scoped_guard!(TraceabilityWrite, "traceability:write");
 scoped_guard!(BaselinesRead, "baselines:read");
 scoped_guard!(BaselinesWrite, "baselines:write");
+
+pub struct RequirementsAndBaselinesRead(pub ApiUserOrBearer);
+impl Deref for RequirementsAndBaselinesRead {
+    type Target = ApiUserOrBearer;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+impl RequirementsAndBaselinesRead {
+    pub fn into_inner(self) -> ApiUserOrBearer {
+        self.0
+    }
+}
+#[async_trait]
+impl<'r> FromRequest<'r> for RequirementsAndBaselinesRead {
+    type Error = ();
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        match authenticate(
+            request,
+            DelegatedPolicy::Scopes(&["requirements:read", "baselines:read"]),
+        )
+        .await
+        {
+            Outcome::Success(value) => Outcome::Success(Self(value)),
+            Outcome::Error(error) => Outcome::Error(error),
+            Outcome::Forward(forward) => Outcome::Forward(forward),
+        }
+    }
+}
 
 pub struct McpAuditAuth(pub ApiUserOrBearer);
 impl Deref for McpAuditAuth {

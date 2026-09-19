@@ -45,7 +45,7 @@ export default function AccountPage() {
       <h2 className="pt-3 text-sm font-semibold text-stitch-fg">Connected applications</h2>
       {applications.length === 0 && <p className="text-sm text-stitch-muted">No applications are connected.</p>}
       {applications.map((application) => <div key={application.id} className="rounded-lg border border-stitch-border px-3 py-3">
-        <div className="flex items-start justify-between gap-3"><div><div className="font-semibold text-stitch-fg">{application.application_name}</div><div className="mt-1 text-xs text-stitch-muted">Authorized {new Date(application.created_at).toLocaleString()}</div></div><button type="button" onClick={() => void revoke(application.id)} className="text-sm text-red-700 dark:text-red-300 hover:underline">Revoke</button></div>
+        <div className="flex items-start justify-between gap-3"><div><div className="font-semibold text-stitch-fg">{application.application_name}</div><div className="mt-1 text-xs text-stitch-muted">Authorized {new Date(application.created_at).toLocaleString()}</div><div className="mt-1 text-xs text-stitch-muted">{application.last_used_at ? `Last used ${new Date(application.last_used_at).toLocaleString()}` : 'Not used yet'}</div></div><button type="button" onClick={() => void revoke(application.id)} className="text-sm text-red-700 dark:text-red-300 hover:underline">Revoke</button></div>
         <div className="mt-2 flex flex-wrap gap-1">{application.scopes.map((scope) => <span key={scope} className="rounded bg-stitch-muted/10 px-2 py-1 text-xs text-stitch-muted">{scope}</span>)}</div>
       </div>)}
     </div>

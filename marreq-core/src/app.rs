@@ -108,6 +108,7 @@ pub fn build_with_auth(
         .manage(auth_config)
         .manage(mode)
         .manage(crate::auth::rate_limiter::LoginRateLimiter::new())
+        .manage(crate::api::oauth::OAuthRegistrationRateLimiter::new())
         .mount(
             "/",
             routes![

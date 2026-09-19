@@ -3,6 +3,11 @@ use rocket::http::Status;
 use rocket::response::content::RawHtml;
 use rocket::response::Redirect;
 use rocket::serde::json::{json, Json};
+use rocket::{Request, Response};
+use std::collections::HashMap;
+use std::net::IpAddr;
+use std::sync::Mutex;
+use std::time::{Duration, Instant};
 
 use crate::api::prelude::*;
 use crate::auth::delegated::{self, AuthorizeRequest, DelegatedOAuthError, SCOPES};
@@ -33,6 +38,51 @@ fn oauth_error(error: DelegatedOAuthError) -> ApiError {
         }
     }
 }
+
+#[derive(Debug, serde::Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct OAuthProtocolError {
+    error: String,
+}
+impl OAuthProtocolError {
+    fn new(error: impl Into<String>) -> Self {
+        Self {
+            error: error.into(),
+        }
+    }
+}
+impl<'r> rocket::response::Responder<'r, 'static> for OAuthProtocolError {
+    fn respond_to(self, request: &'r Request<'_>) -> rocket::response::Result<'static> {
+        let status = match self.error.as_str() {
+            "invalid_client" => Status::Unauthorized,
+            "temporarily_unavailable" => Status::ServiceUnavailable,
+            _ => Status::BadRequest,
+        };
+        Response::build_from(Json(self).respond_to(request)?)
+            .status(status)
+            .ok()
+    }
+}
+
+pub struct OAuthRegistrationRateLimiter(Mutex<HashMap<IpAddr, Vec<Instant>>>);
+impl OAuthRegistrationRateLimiter {
+    pub fn new() -> Self {
+        Self(Mutex::new(HashMap::new()))
+    }
+    fn allow(&self, ip: IpAddr) -> bool {
+        let Ok(mut entries) = self.0.lock() else {
+            return false;
+        };
+        let now = Instant::now();
+        let attempts = entries.entry(ip).or_default();
+        attempts.retain(|at| now.duration_since(*at) < Duration::from_secs(3600));
+        if attempts.len() >= 20 {
+            return false;
+        }
+        attempts.push(now);
+        true
+    }
+}
 fn escape(value: &str) -> String {
     value
         .replace('&', "&amp;")
@@ -46,7 +96,7 @@ fn escape(value: &str) -> String {
 pub fn authorization_server_metadata() -> Json<serde_json::Value> {
     let base = issuer();
     Json(
-        json!({ "issuer": base, "authorization_endpoint": format!("{base}/oauth/authorize"), "token_endpoint": format!("{base}/oauth/token"), "registration_endpoint": format!("{base}/oauth/register"), "response_types_supported": ["code"], "grant_types_supported": ["authorization_code", "refresh_token"], "code_challenge_methods_supported": ["S256"], "scopes_supported": SCOPES, "token_endpoint_auth_methods_supported": ["none"] }),
+        json!({ "issuer": base, "authorization_endpoint": format!("{base}/oauth/authorize"), "token_endpoint": format!("{base}/oauth/token"), "registration_endpoint": format!("{base}/oauth/register"), "response_types_supported": ["code"], "grant_types_supported": ["authorization_code", "refresh_token"], "code_challenge_methods_supported": ["S256"], "scopes_supported": SCOPES, "token_endpoint_auth_methods_supported": ["none"], "authorization_response_iss_parameter_supported": true }),
     )
 }
 
@@ -73,13 +123,18 @@ pub struct RegistrationRequest {
 pub fn register(
     body: Json<RegistrationRequest>,
     state: &State<AppState>,
-) -> ApiResult<(Status, Json<serde_json::Value>)> {
+    limiter: &State<OAuthRegistrationRateLimiter>,
+    client_ip: Option<IpAddr>,
+) -> Result<(Status, Json<serde_json::Value>), OAuthProtocolError> {
+    if client_ip.is_some_and(|ip| !limiter.allow(ip)) {
+        return Err(OAuthProtocolError::new("temporarily_unavailable"));
+    }
     let mut repo = state
         .try_repo_write()
-        .map_err(|_| ApiError::Internal("repository unavailable".into()))?;
+        .map_err(|_| OAuthProtocolError::new("temporarily_unavailable"))?;
     let client =
         delegated::register_client(&mut *repo, &body.client_name, body.redirect_uris.clone())
-            .map_err(oauth_error)?;
+            .map_err(|error| OAuthProtocolError::new(error.to_string()))?;
     Ok((
         Status::Created,
         Json(
@@ -165,7 +220,7 @@ pub fn authorize_page(
         .map(|s| format!("<li>{}</li>", escape(s)))
         .collect::<String>();
     Ok(RawHtml(format!(
-        r#"<!doctype html><html><head><meta charset="utf-8"><title>Authorize {name}</title></head><body><main><h1>Authorize {name}</h1><p>Signed in as <strong>{user}</strong></p><p>This application requests:</p><ul>{capabilities}</ul><form method="post" action="/oauth/authorize">{hidden}<input type="hidden" name="csrf" value="{csrf}"><button name="decision" value="allow">Allow</button><button name="decision" value="deny">Deny</button></form></main></body></html>"#,
+        r#"<!doctype html><html><head><meta charset="utf-8"><title>Authorize {name}</title></head><body><main><h1>Authorize {name}</h1><p>This name is registered metadata; the application's identity has not been independently verified.</p><p>Signed in as <strong>{user}</strong></p><p>This application requests:</p><ul>{capabilities}</ul><form method="post" action="/oauth/authorize">{hidden}<input type="hidden" name="csrf" value="{csrf}"><button name="decision" value="allow">Allow</button><button name="decision" value="deny">Deny</button></form></main></body></html>"#,
         name = escape(&client.name),
         user = escape(&user.username),
         capabilities = capabilities,
@@ -213,7 +268,8 @@ pub fn authorize_decision(
     if form.decision != "allow" {
         url.query_pairs_mut()
             .append_pair("error", "access_denied")
-            .append_pair("state", &form.state);
+            .append_pair("state", &form.state)
+            .append_pair("iss", &issuer());
         return Ok(Redirect::to(url.to_string()));
     }
     let scopes = form.scope.split_whitespace().map(str::to_owned).collect();
@@ -250,7 +306,8 @@ pub fn authorize_decision(
     });
     url.query_pairs_mut()
         .append_pair("code", &code)
-        .append_pair("state", &form.state);
+        .append_pair("state", &form.state)
+        .append_pair("iss", &issuer());
     Ok(Redirect::to(url.to_string()))
 }
 
@@ -269,25 +326,25 @@ pub struct TokenForm {
 pub fn token(
     form: Form<TokenForm>,
     state: &State<AppState>,
-) -> ApiResult<Json<delegated::TokenResponse>> {
+) -> Result<Json<delegated::TokenResponse>, OAuthProtocolError> {
     let form = form.into_inner();
     let now = chrono::Utc::now().naive_utc();
     let mut repo = state
         .try_repo_write()
-        .map_err(|_| ApiError::Internal("repository unavailable".into()))?;
+        .map_err(|_| OAuthProtocolError::new("temporarily_unavailable"))?;
     let response = match form.grant_type.as_str() {
         "authorization_code" => delegated::exchange_code(
             &mut *repo,
             form.code
                 .as_deref()
-                .ok_or_else(|| ApiError::BadRequest("invalid_request".into()))?,
+                .ok_or_else(|| OAuthProtocolError::new("invalid_request"))?,
             form.code_verifier
                 .as_deref()
-                .ok_or_else(|| ApiError::BadRequest("invalid_request".into()))?,
+                .ok_or_else(|| OAuthProtocolError::new("invalid_request"))?,
             &form.client_id,
             form.redirect_uri
                 .as_deref()
-                .ok_or_else(|| ApiError::BadRequest("invalid_request".into()))?,
+                .ok_or_else(|| OAuthProtocolError::new("invalid_request"))?,
             &form.resource,
             now,
         ),
@@ -295,14 +352,14 @@ pub fn token(
             &mut *repo,
             form.refresh_token
                 .as_deref()
-                .ok_or_else(|| ApiError::BadRequest("invalid_request".into()))?,
+                .ok_or_else(|| OAuthProtocolError::new("invalid_request"))?,
             &form.client_id,
             &form.resource,
             now,
         ),
-        _ => return Err(ApiError::BadRequest("unsupported_grant_type".into())),
+        _ => return Err(OAuthProtocolError::new("unsupported_grant_type")),
     }
-    .map_err(oauth_error)?;
+    .map_err(|error| OAuthProtocolError::new(error.to_string()))?;
     Ok(Json(response))
 }
 

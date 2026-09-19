@@ -26,6 +26,12 @@ impl Fairing for AntiCacheFairing {
     async fn on_response<'r>(&self, request: &'r Request<'_>, response: &mut Response<'r>) {
         let path = request.uri().path().as_str();
 
+        if path == "/oauth/token" {
+            response.set_header(Header::new("Cache-Control", "no-store"));
+            response.set_header(Header::new("Pragma", "no-cache"));
+            return;
+        }
+
         // Skip static assets – they should be cacheable.
         if path.starts_with("/static") {
             return;
@@ -69,6 +75,11 @@ mod tests {
         (rocket::http::ContentType::CSS, "body{}")
     }
 
+    #[rocket::post("/oauth/token")]
+    fn fake_token() -> rocket::serde::json::Json<serde_json::Value> {
+        rocket::serde::json::Json(serde_json::json!({"access_token":"secret"}))
+    }
+
     #[test]
     fn static_assets_not_tagged() {
         let rocket = rocket::build()
@@ -90,5 +101,19 @@ mod tests {
         assert_eq!(response.status(), Status::Ok);
         // plain text endpoint, not HTML → no anti-cache
         assert!(response.headers().get_one("Cache-Control").is_none());
+    }
+
+    #[test]
+    fn oauth_token_response_is_never_cacheable() {
+        let rocket = rocket::build()
+            .mount("/", routes![fake_token])
+            .attach(AntiCacheFairing);
+        let client = Client::tracked(rocket).expect("valid rocket");
+        let response = client.post("/oauth/token").dispatch();
+        assert_eq!(
+            response.headers().get_one("Cache-Control"),
+            Some("no-store")
+        );
+        assert_eq!(response.headers().get_one("Pragma"), Some("no-cache"));
     }
 }

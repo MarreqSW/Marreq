@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<reqif:REQ-IF xmlns:reqif="http://www.omg.org/spec/ReqIF/20110401/reqif.xsd">
+  <reqif:CORE-CONTENT>
+    <reqif:REQ-IF-CONTENT>
+      <reqif:SPEC-TYPES>
+        <reqif:SPEC-OBJECT-TYPE IDENTIFIER="t1">
+          <reqif:SPEC-ATTRIBUTES>
+            <reqif:ATTRIBUTE-DEFINITION-STRING IDENTIFIER="ad1" LONG-NAME="ReqIF.Name"/>
+          </reqif:SPEC-ATTRIBUTES>
+        </reqif:SPEC-OBJECT-TYPE>
+      </reqif:SPEC-TYPES>
+      <reqif:SPEC-OBJECTS>
+        <reqif:SPEC-OBJECT IDENTIFIER="ns-1">
+          <reqif:VALUES>
+            <reqif:ATTRIBUTE-VALUE-STRING THE-VALUE="NS">
+              <reqif:DEFINITION>
+                <reqif:ATTRIBUTE-DEFINITION-STRING-REF>ad1</reqif:ATTRIBUTE-DEFINITION-STRING-REF>
+              </reqif:DEFINITION>
+            </reqif:ATTRIBUTE-VALUE-STRING>
+          </reqif:VALUES>
+        </reqif:SPEC-OBJECT>
+      </reqif:SPEC-OBJECTS>
+    </reqif:REQ-IF-CONTENT>
+  </reqif:CORE-CONTENT>
+</reqif:REQ-IF>

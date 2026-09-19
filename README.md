@@ -31,7 +31,7 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 ### 📊 Reporting & Export
 - **Excel Export**: Export requirements with all fields to Excel format; includes a **Comments** sheet (requirement_id, version_id, author, created_at, body)
 - **Matrix Export**: Export traceability matrix to Excel
-- **ReqIF 1.2**: Import and export requirements as ReqIF XML; export current project or an immutable baseline; comments included as **Remarks** attribute per requirement when present
+- **ReqIF 1.2 (partial)**: Backend import/export with hierarchy and representable relations; custom datatypes, rich XHTML, attachments, ReqIFZ and lossless vendor round-trips remain limited. See the [compatibility report](docs/developer/reqif-import-compatibility-report.md)
 - **Comprehensive Data**: All metadata included in exports (categories, applicability, dates, comments, etc.)
 
 ### 📸 Immutable Baselines

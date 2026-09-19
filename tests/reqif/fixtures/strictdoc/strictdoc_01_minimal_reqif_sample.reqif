@@ -1,0 +1,4 @@
+<!-- Modified from https://github.com/strictdoc-project/reqif/blob/main/tests/integration/reqif/01_minimal_reqif/sample.reqif -->
+<?xml version="1.0" encoding="UTF-8"?>
+<REQ-IF xmlns="http://www.omg.org/spec/ReqIF/20110401/reqif.xsd">
+</REQ-IF>

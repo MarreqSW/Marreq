@@ -13,4 +13,7 @@ pub mod schema;
 pub use export::to_reqif;
 pub use import::{parse_reqif, ImportConfig, ImportResult, ParsedDocument};
 pub use mapping::default_attribute_mapping;
-pub use schema::{ParsedSpecObject, ParsedSpecRelation};
+pub use schema::{ParsedHierarchyEdge, ParsedSpecObject, ParsedSpecRelation};
+
+#[cfg(test)]
+mod vendor_import_tests;

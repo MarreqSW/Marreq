@@ -8,6 +8,7 @@ use crate::api::prelude::*;
 use crate::auth::delegated::{self, AuthorizeRequest, DelegatedOAuthError, SCOPES};
 use crate::auth::guards::SessionUser;
 use crate::repository::DelegatedOAuthRepository;
+use crate::repository::LogRepository;
 
 fn issuer() -> String {
     crate::config::AppConfig::current()
@@ -211,6 +212,8 @@ pub fn authorize_decision(
         return Ok(Redirect::to(url.to_string()));
     }
     let scopes = form.scope.split_whitespace().map(str::to_owned).collect();
+    let audit_client_id = form.client_id.clone();
+    let audit_resource = form.resource.clone();
     let mut repo = state
         .try_repo_write()
         .map_err(|_| ApiError::Internal("repository unavailable".into()))?;
@@ -228,6 +231,18 @@ pub fn authorize_decision(
         chrono::Utc::now().naive_utc(),
     )
     .map_err(oauth_error)?;
+    let _ = repo.insert_log(&crate::models::NewLog {
+        user_id: user.id,
+        action_type: "OAUTH_GRANT_CREATED".into(),
+        entity_type: "OAUTH_GRANT".into(),
+        entity_id: None,
+        project_id: None,
+        old_values: None,
+        new_values: Some(json!({"client_id": audit_client_id, "scopes": form.scope.split_whitespace().collect::<Vec<_>>(), "resource": audit_resource}).to_string()),
+        description: Some("Delegated application authorized".into()),
+        ip_address: None,
+        user_agent: None,
+    });
     url.query_pairs_mut()
         .append_pair("code", &code)
         .append_pair("state", &form.state);
@@ -308,6 +323,18 @@ pub fn revoke_grant(id: i32, user: SessionUser, state: &State<AppState>) -> ApiR
         .revoke_oauth_grant(id, user.id, chrono::Utc::now().naive_utc())
         .map_err(|_| ApiError::Internal("repository unavailable".into()))?
     {
+        let _ = repo.insert_log(&crate::models::NewLog {
+            user_id: user.id,
+            action_type: "OAUTH_GRANT_REVOKED".into(),
+            entity_type: "OAUTH_GRANT".into(),
+            entity_id: Some(id),
+            project_id: None,
+            old_values: None,
+            new_values: None,
+            description: Some("Delegated application revoked".into()),
+            ip_address: None,
+            user_agent: None,
+        });
         Ok(Status::NoContent)
     } else {
         Err(ApiError::NotFound("grant not found".into()))

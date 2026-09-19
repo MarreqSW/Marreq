@@ -1,4 +1,4 @@
-import type { AuthProviderDiscovery, ChangePasswordBody, ConnectedIdentities, DeploymentInfo } from './types';
+import type { AuthProviderDiscovery, ChangePasswordBody, ConnectedApplication, ConnectedIdentities, DeploymentInfo } from './types';
 import { fetchJson, JSON_HEADERS } from './transport';
 
 export async function getCsrfToken(): Promise<string> {
@@ -67,4 +67,13 @@ export async function startIdentityLink(provider: string, csrfToken: string): Pr
 
 export async function disconnectIdentity(identityId: number, csrfToken: string): Promise<void> {
   await fetchJson<void>(`/api/auth/identities/${identityId}`, { method: 'DELETE', headers: { 'X-CSRF-Token': csrfToken } });
+}
+
+export async function getConnectedApplications(): Promise<ConnectedApplication[]> {
+  const response = await fetchJson<{ grants: ConnectedApplication[] }>('/api/oauth/grants');
+  return response.grants;
+}
+
+export async function revokeConnectedApplication(grantId: number, csrfToken: string): Promise<void> {
+  await fetchJson<void>(`/api/oauth/grants/${grantId}`, { method: 'DELETE', headers: { 'X-CSRF-Token': csrfToken } });
 }

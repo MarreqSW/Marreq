@@ -5,6 +5,49 @@ binaries share session rotation, CSRF rotation, OAuth transaction validation,
 identity resolution, provisioning, account linking, and audit behavior.
 Bearer API tokens and MCP authentication are separate and unchanged.
 
+## Delegated applications
+
+Federated identities answer how a person signs in. Delegated OAuth grants are a
+separate domain: they record which external application may act for that signed-in
+user. Marreq never gives an external client an upstream Google, GitHub, GitLab,
+or OIDC credential.
+
+Marreq is an OAuth authorization server for the remote MCP resource. It supports
+Authorization Code with mandatory PKCE S256 and rotating refresh tokens. The
+browser authorization endpoint requires the existing Marreq session and displays
+the application name, signed-in account, and requested scopes before Allow/Deny.
+Account settings lists active applications and can revoke a grant immediately.
+
+The access-token design is opaque: authorization codes, access tokens, and
+refresh tokens are random 256-bit values, while PostgreSQL stores SHA-256 hashes.
+Codes expire after five minutes and are single use; access tokens expire after
+15 minutes; refresh tokens expire after 30 days and rotate on every use. Reuse
+of a rotated refresh token revokes its token family. Grant revocation deletes
+active access tokens and revokes all refresh tokens for the grant.
+
+OAuth endpoints:
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/.well-known/oauth-authorization-server` | Authorization-server metadata. |
+| `GET` | `/.well-known/oauth-protected-resource` | MCP protected-resource metadata. |
+| `POST` | `/oauth/register` | Register a public client and exact redirect URIs. |
+| `GET` | `/oauth/authorize` | Validate the request and show consent. |
+| `POST` | `/oauth/authorize` | Allow or deny using the authenticated browser session. |
+| `POST` | `/oauth/token` | Exchange a code or rotate a refresh token. |
+| `GET` | `/api/oauth/grants` | List the user's connected applications. |
+| `DELETE` | `/api/oauth/grants/{id}` | Revoke an owned grant (CSRF protected). |
+
+The MCP resource indicator is `<MARREQ_PUBLIC_BASE_URL>/mcp`. Redirect URIs use
+exact matching; HTTPS is mandatory except for loopback localhost development.
+
+Supported scopes are `projects:read`, `requirements:read`,
+`requirements:write`, `requirements:approve`, `verifications:read`,
+`verifications:write`, `traceability:read`, `traceability:write`,
+`baselines:read`, and `baselines:write`. Scope is only a delegation ceiling:
+the authenticated Marreq user's normal membership, role, reviewer, and project
+authorization checks still run on every REST request.
+
 ## Identity model
 
 Local passwords are optional. External identities are keyed only by the stable

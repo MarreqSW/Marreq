@@ -211,6 +211,14 @@ impl Fairing for CsrfFairing {
             return;
         }
 
+        // OAuth protocol endpoints are called by non-browser clients and do
+        // not authenticate with cookies. Browser consent remains protected
+        // below by same-origin validation.
+        let path = req.uri().path().as_str();
+        if matches!(path, "/oauth/token" | "/oauth/register") {
+            return;
+        }
+
         // --- Exemption: Bearer API-token auth is not CSRF-vulnerable ---
         if req
             .headers()
@@ -224,7 +232,6 @@ impl Fairing for CsrfFairing {
         // SPA auth endpoints: allow allowlisted `Origin` / `Referer` before double-submit checks.
         // Scoped to login/logout only so other `/api/*` mutating calls still require a matching
         // `X-CSRF-Token` + `csrf` cookie (non-browser clients cannot forge a browser `Origin`).
-        let path = req.uri().path().as_str();
         let api_auth_origin_only = matches!(
             path,
             "/api/auth/login" | "/api/auth/logout" | "/oauth/authorize"

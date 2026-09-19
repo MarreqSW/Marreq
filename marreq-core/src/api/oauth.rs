@@ -57,6 +57,11 @@ pub fn protected_resource_metadata() -> Json<serde_json::Value> {
     )
 }
 
+#[get("/.well-known/oauth-protected-resource/mcp")]
+pub fn protected_resource_metadata_mcp() -> Json<serde_json::Value> {
+    protected_resource_metadata()
+}
+
 #[derive(serde::Deserialize)]
 #[serde(crate = "rocket::serde")]
 pub struct RegistrationRequest {
@@ -345,6 +350,7 @@ pub fn routes() -> Vec<rocket::Route> {
     routes![
         authorization_server_metadata,
         protected_resource_metadata,
+        protected_resource_metadata_mcp,
         register,
         authorize_page,
         authorize_decision,

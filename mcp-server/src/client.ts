@@ -1,5 +1,11 @@
 import type { SessionContext } from "./context.js";
 
+export class MarreqAuthenticationError extends Error {
+  constructor(public readonly status: number) {
+    super("Marreq authorization is required");
+  }
+}
+
 export class MarreqClient {
   constructor(private ctx: SessionContext) {}
 
@@ -26,6 +32,9 @@ export class MarreqClient {
     });
     if (!res.ok) {
       const text = await res.text();
+      if (res.status === 401 || res.status === 403) {
+        throw new MarreqAuthenticationError(res.status);
+      }
       throw new Error(`Marreq API ${res.status}: ${text}`);
     }
     if (res.status === 204 || res.headers.get("content-length") === "0") {
@@ -115,27 +124,36 @@ export class MarreqClient {
     category_id: number;
     status_id: number;
     applicability_id: number;
-    project_id: number;
+    project_id?: number;
     justification?: string | null;
     verification_method_ids: number[];
     custom_fields?: Array<{ field_id: number; value: string }>;
+    parent_links?: Array<{ target_version_id: number; link_type: string; rationale?: string | null }>;
+  }, idempotencyKey: string) {
+    return this.request(
+      `/api/projects/${this.ctx.projectId}/requirements`,
+      { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify(payload) }
+    );
+  }
+
+  async createVerification(payload: {
+    reference_code: string; name: string; description: string; source: string;
+    status_id: number; parent_id?: number | null; project_id: number;
+    verification_method_id?: number | null; author_id: number; reviewer_id: number;
+  }, idempotencyKey: string) {
+    return this.request(`/api/projects/${this.ctx.projectId}/verifications`, {
+      method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify(payload),
+    });
+  }
+
+  async updateVerification(id: number, payload: {
+    id?: number; reference_code: string; name: string; description: string; source: string;
+    status_id: number; parent_id?: number | null; project_id: number;
+    verification_method_id?: number | null; author_id: number; reviewer_id: number;
   }) {
-    try {
-      return await this.request(
-        `/api/projects/${this.ctx.projectId}/requirements`,
-        { method: "POST", body: JSON.stringify(payload) }
-      );
-    } catch (error) {
-      // reference_code is database-unique within a project. On an ambiguous
-      // retry, return the already-created row only when its stable identity
-      // and authored content match; never treat a conflicting requirement as
-      // a successful retry.
-      if (!(error instanceof Error) || !error.message.startsWith("Marreq API 409:")) throw error;
-      const rows = await this.listRequirements() as Array<{ id: number; reference_code: string; title: string; description: string }>;
-      const existing = rows.find((row) => row.reference_code === payload.reference_code && row.title === payload.title && row.description === payload.description);
-      if (!existing) throw error;
-      return { status: "existing", id: existing.id, idempotent_replay: true };
-    }
+    return this.request(`/api/projects/${this.ctx.projectId}/verifications/${id}`, {
+      method: "PUT", body: JSON.stringify(payload),
+    });
   }
 
   /** Phase 2 draft_write: patch requirement (project from context). */
@@ -172,15 +190,15 @@ export class MarreqClient {
   }
 
   /** Phase 2 draft_write: create baseline (project from context). */
-  async createBaseline(payload: { name: string; description?: string | null }) {
+  async createBaseline(payload: { name: string; description?: string | null }, idempotencyKey: string) {
     return this.request(
       `/api/projects/${this.ctx.projectId}/baselines`,
-      { method: "POST", body: JSON.stringify(payload) }
+      { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify(payload) }
     );
   }
 
   async postAudit(payload: {
-    project_id: number;
+    project_id?: number;
     session_id?: string;
     tool_name: string;
     params_summary?: string;
@@ -274,10 +292,12 @@ export class MarreqClient {
   async createRequirementComment(
     requirementId: number,
     body: string,
-    requirementVersionId?: number | null
+    requirementVersionId: number | null | undefined,
+    idempotencyKey: string
   ) {
     return this.request(`/api/projects/${this.ctx.projectId}/requirements/${requirementId}/comments`, {
       method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
       body: JSON.stringify({
         body,
         requirement_version_id:

@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 import { pathToFileURL } from "node:url";
+import { randomUUID } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { contextAllowsReadExtended, loadContext } from "./context.js";
 import type { SessionContext } from "./context.js";
-import { MarreqClient } from "./client.js";
+import { MarreqAuthenticationError, MarreqClient } from "./client.js";
 import { loadTransportConfig, startRemoteServer } from "./remote.js";
 
 function jsonContent(data: unknown) {
@@ -29,7 +30,7 @@ async function withAudit(
         ? JSON.stringify(out).slice(0, 500)
         : String(out);
     await client.postAudit({
-      project_id: client.projectId,
+      project_id: client.projectId || undefined,
       session_id: client.sessionId,
       tool_name: toolName,
       params_summary: paramsSummary,
@@ -40,7 +41,7 @@ async function withAudit(
   } catch (err) {
     resultSummary = err instanceof Error ? err.message : String(err);
     await client.postAudit({
-      project_id: client.projectId,
+      project_id: client.projectId || undefined,
       session_id: client.sessionId,
       tool_name: toolName,
       params_summary: paramsSummary,
@@ -54,6 +55,9 @@ async function withAudit(
 export function createMarreqServer(ctx: SessionContext) {
   const client = new MarreqClient(ctx);
   const projectField = { project_id: z.number().int().positive().optional() };
+  const operationKey = ctx.remote
+    ? z.string().min(16).max(200)
+    : z.string().min(16).max(200).optional();
   const forProject = (projectId: number | undefined) => {
     if (!ctx.remote) return client;
     if (!projectId) throw new Error("project_id is required in remote mode");
@@ -65,6 +69,74 @@ export function createMarreqServer(ctx: SessionContext) {
     version: "0.1.0",
   });
 
+  const toolScopes: Record<string, string[]> = {
+    list_projects: ["projects:read"],
+    get_requirement: ["requirements:read"],
+    list_requirements: ["requirements:read"],
+    get_versions: ["requirements:read"],
+    semantic_search_requirements: ["requirements:read"],
+    compare_versions: ["requirements:read"],
+    get_requirement_activity: ["requirements:read"],
+    list_requirement_comments: ["requirements:read"],
+    list_project_catalog: ["requirements:read"],
+    create_requirement: ["requirements:write"],
+    patch_requirement: ["requirements:write"],
+    create_requirement_comment: ["requirements:write"],
+    set_approval: ["requirements:approve"],
+    list_verifications: ["verifications:read"],
+    get_verification: ["verifications:read"],
+    get_verification_activity: ["verifications:read"],
+    create_verification: ["verifications:write"],
+    update_verification: ["verifications:write"],
+    trace_up: ["traceability:read"],
+    trace_down: ["traceability:read"],
+    coverage_report: ["traceability:read"],
+    get_verification_matrix: ["traceability:read"],
+    put_verification_matrix: ["traceability:write"],
+    clear_suspect: ["traceability:write"],
+    get_baseline: ["baselines:read"],
+    list_baselines: ["baselines:read"],
+    diff_baselines: ["baselines:read"],
+    diff_baseline_vs_current: ["requirements:read", "baselines:read"],
+    create_baseline: ["baselines:write"],
+  };
+  const originalRegisterTool = server.registerTool.bind(server);
+  const unsafeRegisterTool = originalRegisterTool as unknown as (
+    name: string,
+    config: Record<string, unknown>,
+    callback: (...args: unknown[]) => Promise<unknown>
+  ) => unknown;
+  server.registerTool = ((name: string, config: Record<string, unknown>, callback: (...args: unknown[]) => unknown) => {
+    const scopes = toolScopes[name];
+    const mutating = scopes?.some((scope) => scope.endsWith(":write") || scope.endsWith(":approve")) ?? false;
+    const naturallyIdempotent = ["patch_requirement", "set_approval", "update_verification", "put_verification_matrix", "clear_suspect"].includes(name);
+    const annotations = {
+      readOnlyHint: !mutating,
+      destructiveHint: false,
+      idempotentHint: naturallyIdempotent || (["create_requirement", "create_baseline", "create_requirement_comment", "create_verification"].includes(name)),
+      openWorldHint: false,
+      ...((config.annotations as Record<string, unknown> | undefined) ?? {}),
+    };
+    const securedConfig = ctx.remote && scopes
+      ? { ...config, annotations, _meta: { ...((config._meta as Record<string, unknown> | undefined) ?? {}), securitySchemes: [{ type: "oauth2", scopes }] } }
+      : { ...config, annotations };
+    return unsafeRegisterTool(name, securedConfig, async (...args: unknown[]) => {
+      try {
+        return await callback(...args);
+      } catch (error) {
+        if (ctx.remote && error instanceof MarreqAuthenticationError) {
+          const challenge = `Bearer resource_metadata="${new URL(ctx.mcpPublicUrl!).origin}/.well-known/oauth-protected-resource${new URL(ctx.mcpPublicUrl!).pathname}"`;
+          return {
+            isError: true,
+            content: [{ type: "text", text: "Marreq authorization is required" }],
+            _meta: { "mcp/www_authenticate": challenge },
+          };
+        }
+        throw error;
+      }
+    });
+  }) as typeof server.registerTool;
+
   server.registerTool(
     "list_projects",
     {
@@ -72,7 +144,10 @@ export function createMarreqServer(ctx: SessionContext) {
       inputSchema: z.object({}),
       annotations: { readOnlyHint: true },
     },
-    async () => ({ content: [jsonContent(await client.listProjects())] })
+    async () => {
+      const out = await withAudit(client, "list_projects", "{}", false, () => client.listProjects());
+      return { content: [jsonContent(out)] };
+    }
   );
 
   server.registerTool(
@@ -411,7 +486,6 @@ export function createMarreqServer(ctx: SessionContext) {
           "List comments for a requirement. Optional requirement_version_id filters by version.",
         inputSchema: z.object({
           ...projectField,
-          ...projectField,
           requirement_id: z.string(),
           requirement_version_id: z.number().optional(),
         }),
@@ -507,6 +581,7 @@ export function createMarreqServer(ctx: SessionContext) {
           "Create a new draft requirement. reference_code is the persistent idempotency identity: retry with the same reference, title, and description returns the existing requirement; conflicting content is rejected.",
         inputSchema: z.object({
           ...projectField,
+          idempotency_key: operationKey,
           title: z.string(),
           description: z.string(),
           reference_code: z.string(),
@@ -520,14 +595,20 @@ export function createMarreqServer(ctx: SessionContext) {
           custom_fields: z
             .array(z.object({ field_id: z.number(), value: z.string() }))
             .optional(),
+          parent_links: z.array(z.object({
+            target_version_id: z.number().int().positive(),
+            link_type: z.string().min(1),
+            rationale: z.string().nullable().optional(),
+          })).optional(),
         }),
       },
       async (args) => {
+        const { idempotency_key, ...request } = args;
         const projectId = ctx.remote ? args.project_id : ctx.projectId;
         if (!projectId) throw new Error("project_id is required in remote mode");
         const toolClient = forProject(projectId);
         const payload = {
-          ...args,
+          ...request,
           project_id: projectId,
         };
         const out = await withAudit(
@@ -535,8 +616,50 @@ export function createMarreqServer(ctx: SessionContext) {
           "create_requirement",
           JSON.stringify({ ...args, project_id: projectId }),
           true,
-          () => toolClient.createRequirement(payload)
+          () => toolClient.createRequirement(payload, idempotency_key ?? randomUUID())
         );
+        return { content: [jsonContent(out)] };
+      }
+    );
+
+    const verificationInput = z.object({
+      reference_code: z.string(),
+      name: z.string(),
+      description: z.string(),
+      source: z.string(),
+      status_id: z.number().int().positive(),
+      parent_id: z.number().int().positive().nullable().optional(),
+      verification_method_id: z.number().int().positive().nullable().optional(),
+      author_id: z.number().int().positive(),
+      reviewer_id: z.number().int().positive(),
+    });
+
+    server.registerTool(
+      "create_verification",
+      {
+        description: "Create a project-scoped verification without exposing deletion.",
+        inputSchema: z.object({ ...projectField, idempotency_key: operationKey, verification: verificationInput }),
+      },
+      async ({ project_id, idempotency_key, verification }) => {
+        const toolClient = forProject(project_id);
+        const payload = { ...verification, project_id: toolClient.projectId };
+        const out = await withAudit(toolClient, "create_verification", JSON.stringify(payload), true,
+          () => toolClient.createVerification(payload, idempotency_key ?? randomUUID()));
+        return { content: [jsonContent(out)] };
+      }
+    );
+
+    server.registerTool(
+      "update_verification",
+      {
+        description: "Update a project-scoped verification; status changes retain reviewer enforcement.",
+        inputSchema: z.object({ ...projectField, verification_id: z.number().int().positive(), verification: verificationInput }),
+      },
+      async ({ project_id, verification_id, verification }) => {
+        const toolClient = forProject(project_id);
+        const payload = { ...verification, id: verification_id, project_id: toolClient.projectId };
+        const out = await withAudit(toolClient, "update_verification", JSON.stringify({ verification_id }), true,
+          () => toolClient.updateVerification(verification_id, payload));
         return { content: [jsonContent(out)] };
       }
     );
@@ -611,6 +734,7 @@ export function createMarreqServer(ctx: SessionContext) {
           "Create a new baseline snapshot for the project. Requires draft_write mode.",
         inputSchema: z.object({
           ...projectField,
+          idempotency_key: operationKey,
           name: z.string(),
           description: z.string().nullable().optional(),
         }),
@@ -626,7 +750,7 @@ export function createMarreqServer(ctx: SessionContext) {
           "create_baseline",
           JSON.stringify(args),
           true,
-          () => toolClient.createBaseline(payload)
+          () => toolClient.createBaseline(payload, args.idempotency_key ?? randomUUID())
         );
         return { content: [jsonContent(out)] };
       }
@@ -639,12 +763,13 @@ export function createMarreqServer(ctx: SessionContext) {
           "Add a comment on a requirement. Optional requirement_version_id ties the comment to a version.",
         inputSchema: z.object({
           ...projectField,
+          idempotency_key: operationKey,
           requirement_id: z.string(),
           body: z.string(),
           requirement_version_id: z.number().optional(),
         }),
       },
-      async ({ project_id, requirement_id, body, requirement_version_id }) => {
+      async ({ project_id, idempotency_key, requirement_id, body, requirement_version_id }) => {
         const id = parseInt(requirement_id, 10);
         const toolClient = forProject(project_id);
         const out = await withAudit(
@@ -660,7 +785,8 @@ export function createMarreqServer(ctx: SessionContext) {
             toolClient.createRequirementComment(
               id,
               body,
-              requirement_version_id ?? null
+              requirement_version_id ?? null,
+              idempotency_key ?? randomUUID()
             )
         );
         return { content: [jsonContent(out)] };

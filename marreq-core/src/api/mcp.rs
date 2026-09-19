@@ -14,7 +14,7 @@ use crate::repository::LogRepository;
 #[derive(Debug, Deserialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct McpAuditRequest {
-    pub project_id: i32,
+    pub project_id: Option<i32>,
     pub session_id: Option<String>,
     pub tool_name: String,
     pub params_summary: Option<String>,
@@ -37,18 +37,32 @@ pub async fn audit(
     body: Json<McpAuditRequest>,
 ) -> ApiResult<Json<McpAuditResponse>> {
     let payload = body.into_inner();
+    if payload.tool_name.len() > 100
+        || payload
+            .params_summary
+            .as_ref()
+            .is_some_and(|v| v.len() > 2_000)
+        || payload
+            .result_summary
+            .as_ref()
+            .is_some_and(|v| v.len() > 2_000)
+    {
+        return Err(ApiError::BadRequest("audit payload is too large".into()));
+    }
     if matches!(
         user.source(),
         AuthenticationSource::ApiToken {
             project_scope: Some(scope)
-        } if *scope != payload.project_id
+        } if payload.project_id.is_some_and(|project_id| *scope != project_id)
     ) {
         return Err(ApiError::Forbidden("project access denied".into()));
     }
-    if !session_user_has_project_access(state, user.user(), payload.project_id)
-        .map_err(|_| ApiError::Internal("repository unavailable".into()))?
-    {
-        return Err(ApiError::Forbidden("project access denied".into()));
+    if let Some(project_id) = payload.project_id {
+        if !session_user_has_project_access(state, user.user(), project_id)
+            .map_err(|_| ApiError::Internal("repository unavailable".into()))?
+        {
+            return Err(ApiError::Forbidden("project access denied".into()));
+        }
     }
     let user_id = user.user().id;
     let description = serde_json::json!({
@@ -65,7 +79,7 @@ pub async fn audit(
         action_type: "MCP_TOOL".to_string(),
         entity_type: "MCP".to_string(),
         entity_id: None,
-        project_id: Some(payload.project_id),
+        project_id: payload.project_id,
         old_values: None,
         new_values: None,
         description: Some(description),
@@ -179,7 +193,7 @@ mod tests {
     fn mcp_audit_request_deserialize() {
         let json = r#"{"project_id":1,"tool_name":"x","is_write":true}"#;
         let req: McpAuditRequest = serde_json::from_str(json).unwrap();
-        assert_eq!(req.project_id, 1);
+        assert_eq!(req.project_id, Some(1));
         assert_eq!(req.tool_name, "x");
         assert!(req.is_write);
         assert!(req.session_id.is_none());

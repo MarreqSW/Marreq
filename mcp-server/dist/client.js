@@ -1,3 +1,10 @@
+export class MarreqAuthenticationError extends Error {
+    status;
+    constructor(status) {
+        super("Marreq authorization is required");
+        this.status = status;
+    }
+}
 export class MarreqClient {
     ctx;
     constructor(ctx) {
@@ -21,6 +28,9 @@ export class MarreqClient {
         });
         if (!res.ok) {
             const text = await res.text();
+            if (res.status === 401 || res.status === 403) {
+                throw new MarreqAuthenticationError(res.status);
+            }
             throw new Error(`Marreq API ${res.status}: ${text}`);
         }
         if (res.status === 204 || res.headers.get("content-length") === "0") {
@@ -73,23 +83,18 @@ export class MarreqClient {
         return this.request(`/api/projects/${this.ctx.projectId}/baselines/diff?baseline_a=${baselineA}&baseline_b=${baselineB}`);
     }
     /** Phase 2 draft_write: create requirement (project from context). */
-    async createRequirement(payload) {
-        try {
-            return await this.request(`/api/projects/${this.ctx.projectId}/requirements`, { method: "POST", body: JSON.stringify(payload) });
-        }
-        catch (error) {
-            // reference_code is database-unique within a project. On an ambiguous
-            // retry, return the already-created row only when its stable identity
-            // and authored content match; never treat a conflicting requirement as
-            // a successful retry.
-            if (!(error instanceof Error) || !error.message.startsWith("Marreq API 409:"))
-                throw error;
-            const rows = await this.listRequirements();
-            const existing = rows.find((row) => row.reference_code === payload.reference_code && row.title === payload.title && row.description === payload.description);
-            if (!existing)
-                throw error;
-            return { status: "existing", id: existing.id, idempotent_replay: true };
-        }
+    async createRequirement(payload, idempotencyKey) {
+        return this.request(`/api/projects/${this.ctx.projectId}/requirements`, { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify(payload) });
+    }
+    async createVerification(payload, idempotencyKey) {
+        return this.request(`/api/projects/${this.ctx.projectId}/verifications`, {
+            method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify(payload),
+        });
+    }
+    async updateVerification(id, payload) {
+        return this.request(`/api/projects/${this.ctx.projectId}/verifications/${id}`, {
+            method: "PUT", body: JSON.stringify(payload),
+        });
     }
     /** Phase 2 draft_write: patch requirement (project from context). */
     async patchRequirement(requirementId, patch) {
@@ -100,8 +105,8 @@ export class MarreqClient {
         return this.request(`/api/projects/${this.ctx.projectId}/requirements/${requirementId}/versions/${versionId}/approval`, { method: "PUT", body: JSON.stringify({ state }) });
     }
     /** Phase 2 draft_write: create baseline (project from context). */
-    async createBaseline(payload) {
-        return this.request(`/api/projects/${this.ctx.projectId}/baselines`, { method: "POST", body: JSON.stringify(payload) });
+    async createBaseline(payload, idempotencyKey) {
+        return this.request(`/api/projects/${this.ctx.projectId}/baselines`, { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify(payload) });
     }
     async postAudit(payload) {
         return this.request("/api/mcp/audit", {
@@ -158,9 +163,10 @@ export class MarreqClient {
     async listProjectCatalog() {
         return this.request(`/api/projects/${this.ctx.projectId}/catalog`);
     }
-    async createRequirementComment(requirementId, body, requirementVersionId) {
+    async createRequirementComment(requirementId, body, requirementVersionId, idempotencyKey) {
         return this.request(`/api/projects/${this.ctx.projectId}/requirements/${requirementId}/comments`, {
             method: "POST",
+            headers: { "Idempotency-Key": idempotencyKey },
             body: JSON.stringify({
                 body,
                 requirement_version_id: requirementVersionId != null && requirementVersionId > 0

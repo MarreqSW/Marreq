@@ -7,6 +7,7 @@ import { createMarreqServer } from "./index.js";
 import { loadTransportConfig, startRemoteServer } from "./remote.js";
 
 const servers: Server[] = [];
+let rejectApiCredential = false;
 
 async function listen(server: Server): Promise<number> {
   server.listen(0, "127.0.0.1");
@@ -20,7 +21,7 @@ async function listen(server: Server): Promise<number> {
 async function startApi(): Promise<number> {
   return listen(
     createServer((req, res) => {
-      if (req.headers.authorization !== "Bearer valid-token") {
+      if (rejectApiCredential || req.headers.authorization !== "Bearer valid-token") {
         res.writeHead(401).end('{"error":"unauthorized"}');
         return;
       }
@@ -38,10 +39,11 @@ async function startApi(): Promise<number> {
 
 async function startMcp(apiPort: number): Promise<{ port: number; url: URL }> {
   process.env.MARREQ_BASE_URL = `http://127.0.0.1:${apiPort}`;
+  process.env.MARREQ_MCP_PUBLIC_URL = `http://127.0.0.1:${apiPort}/mcp`;
   delete process.env.MARREQ_PROJECT_ID;
   delete process.env.MARREQ_API_TOKEN;
   const server = await startRemoteServer(
-    { kind: "http", host: "127.0.0.1", port: 0, path: "/mcp" },
+    { kind: "http", host: "127.0.0.1", port: 0, path: "/mcp", publicUrl: process.env.MARREQ_MCP_PUBLIC_URL },
     createMarreqServer
   );
   servers.push(server);
@@ -63,6 +65,7 @@ function client(url: URL, token = "valid-token") {
 describe("remote Streamable HTTP transport", () => {
   beforeEach(() => {
     process.env.MARREQ_MODE = "read_only";
+    rejectApiCredential = false;
   });
 
   afterEach(async () => {
@@ -89,6 +92,14 @@ describe("remote Streamable HTTP transport", () => {
     expect(tools.tools.map((tool) => tool.name)).toContain("get_requirement");
     expect(tools.tools.map((tool) => tool.name)).toContain("create_requirement");
     expect(tools.tools.map((tool) => tool.name)).toContain("put_verification_matrix");
+    const requirement = tools.tools.find((tool) => tool.name === "get_requirement");
+    expect(requirement?._meta?.securitySchemes).toEqual([
+      { type: "oauth2", scopes: ["requirements:read"] },
+    ]);
+    const composite = tools.tools.find((tool) => tool.name === "diff_baseline_vs_current");
+    expect(composite?._meta?.securitySchemes).toEqual([
+      { type: "oauth2", scopes: ["requirements:read", "baselines:read"] },
+    ]);
     const result = await remote.client.callTool({
       name: "get_requirement",
       arguments: { project_id: 7, requirement_id: "42" },
@@ -170,5 +181,22 @@ describe("remote Streamable HTTP transport", () => {
     });
     expect(response.status).toBe(403);
     await owner.transport.terminateSession();
+  });
+
+  it("returns an MCP reauthorization challenge when a credential expires", async () => {
+    const apiPort = await startApi();
+    const { url } = await startMcp(apiPort);
+    const remote = client(url);
+    await remote.client.connect(remote.transport);
+    rejectApiCredential = true;
+    const result = await remote.client.callTool({
+      name: "get_requirement",
+      arguments: { project_id: 7, requirement_id: "42" },
+    });
+    expect(result.isError).toBe(true);
+    expect(result._meta?.["mcp/www_authenticate"]).toBe(
+      `Bearer resource_metadata="http://127.0.0.1:${apiPort}/.well-known/oauth-protected-resource/mcp"`
+    );
+    await remote.transport.terminateSession();
   });
 });

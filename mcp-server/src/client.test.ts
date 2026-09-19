@@ -105,7 +105,7 @@ describe("MarreqClient", () => {
         project_id: 1,
         verification_method_ids: [1],
       };
-      await client.createRequirement(payload);
+      await client.createRequirement(payload, "operation-key-0001");
 
       expect(fetchSpy).toHaveBeenCalledWith(
         "http://localhost:8000/api/projects/1/requirements",
@@ -115,18 +115,20 @@ describe("MarreqClient", () => {
           headers: expect.objectContaining({
             Authorization: "Bearer test-token",
             "Content-Type": "application/json",
+            "Idempotency-Key": "operation-key-0001",
           }),
         })
       );
     });
 
-    it("treats an exact reference-code conflict as an idempotent replay", async () => {
-      const fetchSpy = vi.spyOn(globalThis, "fetch")
-        .mockResolvedValueOnce(new Response('{"message":"duplicate"}', { status: 409 }))
-        .mockResolvedValueOnce(new Response(JSON.stringify([{ id: 10, reference_code: "REQ-001", title: "New Req", description: "Desc" }]), { status: 200, headers: { "Content-Type": "application/json" } }));
-      const result = await makeClient().createRequirement({ title: "New Req", description: "Desc", reference_code: "REQ-001", author_id: 1, reviewer_id: 1, category_id: 1, status_id: 1, applicability_id: 1, project_id: 1, verification_method_ids: [1] });
-      expect(result).toEqual({ status: "existing", id: 10, idempotent_replay: true });
-      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    it("relies on the persistent backend idempotency result", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ status: "ok", id: 10 }), { status: 200, headers: { "Content-Type": "application/json" } })
+      );
+      const payload = { title: "New Req", description: "Desc", reference_code: "REQ-001", author_id: 1, reviewer_id: 1, category_id: 1, status_id: 1, applicability_id: 1, project_id: 1, verification_method_ids: [1] };
+      await makeClient().createRequirement(payload, "stable-operation-key");
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(fetchSpy.mock.calls[0]?.[1]?.headers).toMatchObject({ "Idempotency-Key": "stable-operation-key" });
     });
 
     it("patchRequirement calls PATCH with project-scoped URL and body", async () => {
@@ -253,7 +255,7 @@ describe("MarreqClient", () => {
 
       const client = makeClient();
       await expect(client.getRequirement(1)).rejects.toThrow(
-        /Marreq API 401/
+        /Marreq authorization is required/
       );
     });
   });

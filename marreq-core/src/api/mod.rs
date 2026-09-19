@@ -13,6 +13,7 @@ pub mod dashboard;
 pub mod error;
 pub mod groups;
 pub mod guards;
+pub mod imports;
 pub mod matrix;
 pub mod mcp;
 pub mod members;
@@ -183,6 +184,8 @@ pub fn routes() -> Vec<Route> {
         groups::list_members,
         groups::set_member_role,
         groups::remove_member,
+        imports::preview_excel,
+        imports::commit_excel,
     ];
     r
 }

@@ -2,6 +2,11 @@
 url = "postgres://rust:rust@127.0.0.1:5433/marreq"
 pool_size = 2
 
+[default.limits]
+file = "20 MiB"
+data-form = "21 MiB"
+form = "21 MiB"
+
 [release]
 # Set ROCKET_SECRET_KEY in your environment (or .env) for production.
 # Generate a new key with: openssl rand -base64 32

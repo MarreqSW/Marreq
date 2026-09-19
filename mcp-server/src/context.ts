@@ -41,12 +41,12 @@ export function contextAllowsReadExtended(ctx: SessionContext): boolean {
   return ctx.mode === "read_extended" || ctx.mode === "draft_write";
 }
 
-export function loadContext(): SessionContext {
+export function loadContext(options: { apiTokenRequired?: boolean } = {}): SessionContext {
   const baseUrl = process.env.MARREQ_BASE_URL;
   const apiToken = process.env.MARREQ_API_TOKEN;
   const projectId = process.env.MARREQ_PROJECT_ID;
 
-  if (!baseUrl || !apiToken || !projectId) {
+  if (!baseUrl || (!apiToken && options.apiTokenRequired !== false) || !projectId) {
     throw new Error(
       "MARREQ_BASE_URL, MARREQ_API_TOKEN, and MARREQ_PROJECT_ID must be set"
     );
@@ -57,7 +57,7 @@ export function loadContext(): SessionContext {
 
   return {
     baseUrl: baseUrl.replace(/\/$/, ""),
-    apiToken,
+    apiToken: apiToken ?? "",
     projectId: parseInt(projectId, 10),
     userId: process.env.MARREQ_USER_ID
       ? parseInt(process.env.MARREQ_USER_ID, 10)

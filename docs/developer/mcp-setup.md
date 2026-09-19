@@ -4,8 +4,40 @@ Marreq can be used from AI assistants (Cursor, Claude, etc.) via an optional **M
 
 ## Architecture
 
-- **AI client** (Cursor / Claude) ↔ **Marreq MCP server** (stdio) ↔ **Marreq REST API** (HTTP + Bearer token) ↔ **Database**
+- **Local AI client** ↔ **Marreq MCP server** (`stdio`) ↔ **Marreq REST API** (HTTP + Bearer token) ↔ **Database**
+- **Remote AI client** ↔ **Marreq MCP server** (Streamable HTTP) ↔ **Marreq REST API** (HTTP + the request Bearer token) ↔ **Database**
 - All access is project-scoped and permission-checked. Every tool call is audited (see `postAudit` → `POST /api/mcp/audit`).
+
+`stdio` remains the default and keeps the existing environment contract. Remote
+mode creates an independent MCP server/transport for every initialized session;
+request identity is never stored in a process-global variable. Until delegated
+OAuth is configured, remote mode accepts an existing Marreq API token as its
+Bearer credential. The credential is bound to the MCP session using a one-way
+SHA-256 fingerprint so a session ID cannot be reused with another credential.
+
+## Remote Streamable HTTP
+
+```dotenv
+MARREQ_MCP_TRANSPORT=http
+MARREQ_MCP_HOST=127.0.0.1
+MARREQ_MCP_PORT=3000
+MARREQ_MCP_PATH=/mcp
+MARREQ_BASE_URL=http://127.0.0.1:8000
+MARREQ_PROJECT_ID=1
+MARREQ_MODE=read_only
+```
+
+Connect to `http://127.0.0.1:3000/mcp` and send `Authorization: Bearer
+<Marreq API token>`. `MARREQ_API_TOKEN` is not required in HTTP mode because
+the credential is request-scoped. `MARREQ_MCP_ALLOWED_HOSTS` is an optional
+comma-separated Host allowlist and should be set when listening on a non-loopback
+interface.
+
+Production deployments must terminate HTTPS at a trusted reverse proxy and
+forward `/mcp` without logging `Authorization`, cookies, MCP bodies, or query
+strings containing credentials. Preserve the `Mcp-Session-Id` and
+`Last-Event-ID` headers and disable proxy buffering for event streams. Bind the
+Node process to a private interface; do not expose plaintext HTTP publicly.
 
 The MCP server implements a **subset** of the HTTP API on purpose (smaller attack surface). A full route-by-route matrix is in [API parity (MCP vs REST)](#api-parity-mcp-vs-rest) below.
 

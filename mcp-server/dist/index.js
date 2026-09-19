@@ -1,9 +1,11 @@
 #!/usr/bin/env node
+import { pathToFileURL } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { contextAllowsReadExtended, loadContext } from "./context.js";
 import { MarreqClient } from "./client.js";
+import { loadTransportConfig, startRemoteServer } from "./remote.js";
 function jsonContent(data) {
     const text = typeof data === "string" ? data : JSON.stringify(data, null, 2);
     return { type: "text", text };
@@ -39,8 +41,7 @@ async function withAudit(client, toolName, paramsSummary, isWrite, fn) {
         throw err;
     }
 }
-async function main() {
-    const ctx = loadContext();
+export function createMarreqServer(ctx) {
     const client = new MarreqClient(ctx);
     const server = new McpServer({
         name: "marreq-mcp-server",
@@ -330,10 +331,20 @@ async function main() {
             return { content: [jsonContent(out)] };
         });
     }
-    const transport = new StdioServerTransport();
-    await server.connect(transport);
+    return server;
 }
-main().catch((err) => {
-    console.error(err);
-    process.exit(1);
-});
+async function main() {
+    const transportConfig = loadTransportConfig();
+    if (transportConfig.kind === "http") {
+        await startRemoteServer(transportConfig, createMarreqServer);
+        return;
+    }
+    const server = createMarreqServer(loadContext());
+    await server.connect(new StdioServerTransport());
+}
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+    main().catch((err) => {
+        console.error(err instanceof Error ? err.message : "MCP server failed");
+        process.exitCode = 1;
+    });
+}

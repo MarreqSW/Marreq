@@ -569,6 +569,14 @@ impl<R: Repository> super::DelegatedOAuthRepository for CacheRepository<R> {
     ) -> Result<(), RepoError> {
         self.inner.revoke_oauth_refresh_family(family, now)
     }
+    fn touch_oauth_access(
+        &mut self,
+        hash: &str,
+        grant_id: i32,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        self.inner.touch_oauth_access(hash, grant_id, now)
+    }
 }
 
 impl<R: Repository> super::WorkspacesRepository for CacheRepository<R> {

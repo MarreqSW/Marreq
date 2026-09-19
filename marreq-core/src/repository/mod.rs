@@ -130,6 +130,12 @@ pub trait DelegatedOAuthRepository {
         family_id: &str,
         now: chrono::NaiveDateTime,
     ) -> Result<(), RepoError>;
+    fn touch_oauth_access(
+        &mut self,
+        token_hash: &str,
+        grant_id: i32,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError>;
 }
 
 /// Server-side authenticated sessions backed by `sessions(token_hash, user_id, ...)`.

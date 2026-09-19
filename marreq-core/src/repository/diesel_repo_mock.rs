@@ -364,6 +364,20 @@ impl DelegatedOAuthRepository for DieselRepoMock {
         }
         Ok(())
     }
+    fn touch_oauth_access(
+        &mut self,
+        hash: &str,
+        grant_id: i32,
+        now: NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        if let Some(token) = self.oauth_access_tokens.get_mut(hash) {
+            token.last_used_at = Some(now);
+        }
+        if let Some(grant) = self.oauth_grants.get_mut(&grant_id) {
+            grant.last_used_at = Some(now);
+        }
+        Ok(())
+    }
 }
 
 impl DieselRepoMock {

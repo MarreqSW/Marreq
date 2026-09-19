@@ -1,243 +1,258 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-// Copyright (C) 2026 Marreq
-
-use std::ops::Deref;
-
-use rocket::http::Status;
-use rocket::request::{FromRequest, Outcome};
-use rocket::{async_trait, Request};
-use sha2::{Digest, Sha256};
-
 use crate::app::AppState;
 use crate::auth::guards::{ApiUser, SessionUser};
 use crate::logger::LogCtx;
 use crate::models::User;
 use crate::repository::errors::RepoError;
-use crate::repository::ApiTokensRepository;
+use crate::repository::{ApiTokensRepository, DelegatedOAuthRepository};
+use rocket::http::Status;
+use rocket::request::{FromRequest, Outcome};
+use rocket::{async_trait, Request};
+use sha2::{Digest, Sha256};
+use std::ops::Deref;
 
-fn hash_api_token(token: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(token.as_bytes());
-    let digest = hasher.finalize();
-    digest
+fn hash_token(token: &str) -> String {
+    Sha256::digest(token.as_bytes())
         .iter()
-        .map(|b| format!("{:02x}", b))
-        .collect::<String>()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
-/// Authenticated user from either session cookie or Bearer API token.
-/// Use for API routes that support both browser (session) and headless (Bearer) auth.
-/// When auth was via Bearer token with a project scope, `token_project_scope()` returns that project id.
+#[derive(Debug, Clone)]
+pub enum AuthenticationSource {
+    Session,
+    ApiToken {
+        project_scope: Option<i32>,
+    },
+    DelegatedOAuth {
+        client_id: String,
+        grant_id: i32,
+        scopes: Vec<String>,
+    },
+}
+
 pub struct ApiUserOrBearer {
     api_user: ApiUser,
-    /// When Some(p), auth was via Bearer token scoped to project p. When None, session or unscoped token.
-    token_project_scope: Option<i32>,
-    delegated_scopes: Option<Vec<String>>,
-    oauth_client_id: Option<String>,
-    oauth_grant_id: Option<i32>,
+    source: AuthenticationSource,
 }
-
 impl ApiUserOrBearer {
     pub fn user(&self) -> &User {
         self.api_user.user()
     }
-
     pub fn log_ctx(&self) -> &LogCtx {
         self.api_user.log_ctx()
     }
-
+    pub fn source(&self) -> &AuthenticationSource {
+        &self.source
+    }
     pub fn into_api_user(self) -> ApiUser {
         self.api_user
     }
-
-    /// When auth was via Bearer token with a project scope, returns that project id.
-    /// Callers must ensure route's project_id matches this scope when Some.
     pub fn token_project_scope(&self) -> Option<i32> {
-        self.token_project_scope
+        match self.source {
+            AuthenticationSource::ApiToken { project_scope } => project_scope,
+            _ => None,
+        }
     }
-
     pub fn delegated_scopes(&self) -> Option<&[String]> {
-        self.delegated_scopes.as_deref()
+        match &self.source {
+            AuthenticationSource::DelegatedOAuth { scopes, .. } => Some(scopes),
+            _ => None,
+        }
     }
     pub fn oauth_client_id(&self) -> Option<&str> {
-        self.oauth_client_id.as_deref()
+        match &self.source {
+            AuthenticationSource::DelegatedOAuth { client_id, .. } => Some(client_id),
+            _ => None,
+        }
     }
     pub fn oauth_grant_id(&self) -> Option<i32> {
-        self.oauth_grant_id
+        match self.source {
+            AuthenticationSource::DelegatedOAuth { grant_id, .. } => Some(grant_id),
+            _ => None,
+        }
     }
 }
-
-fn required_delegated_scope(request: &Request<'_>) -> Option<&'static str> {
-    let path = request.uri().path().as_str();
-    let write = matches!(
-        request.method(),
-        rocket::http::Method::Post
-            | rocket::http::Method::Put
-            | rocket::http::Method::Patch
-            | rocket::http::Method::Delete
-    );
-    if path.contains("/approval") {
-        return Some("requirements:approve");
-    }
-    if path.contains("baseline") {
-        return Some(if write {
-            "baselines:write"
-        } else {
-            "baselines:read"
-        });
-    }
-    if path.contains("verification") && !path.contains("verification-method") {
-        return Some(if write {
-            "verifications:write"
-        } else {
-            "verifications:read"
-        });
-    }
-    if path.contains("trace") || path.contains("matrix") || path.contains("coverage") {
-        return Some(if write {
-            "traceability:write"
-        } else {
-            "traceability:read"
-        });
-    }
-    if path.contains("requirement")
-        || path.contains("categories")
-        || path.contains("applicability")
-        || path.contains("status")
-        || path.contains("custom_fields")
-        || path.contains("verification-method")
-        || path == "/api/mcp/audit"
-    {
-        return Some(if write && path != "/api/mcp/audit" {
-            "requirements:write"
-        } else {
-            "requirements:read"
-        });
-    }
-    if path == "/api/projects" || path.starts_with("/api/project-from-path") {
-        return Some("projects:read");
-    }
-    None
-}
-
 impl Deref for ApiUserOrBearer {
     type Target = User;
-
     fn deref(&self) -> &Self::Target {
         self.api_user.user()
     }
 }
 
+enum DelegatedPolicy {
+    Deny,
+    Scope(&'static str),
+    McpAudit,
+}
+
+async fn authenticate(
+    request: &Request<'_>,
+    policy: DelegatedPolicy,
+) -> Outcome<ApiUserOrBearer, ()> {
+    match request.guard::<SessionUser>().await {
+        Outcome::Success(session) => {
+            let user = session.into_inner();
+            let log = LogCtx::from_request(user.id, request);
+            return Outcome::Success(ApiUserOrBearer {
+                api_user: ApiUser::new(user, log),
+                source: AuthenticationSource::Session,
+            });
+        }
+        Outcome::Error((status, ())) if status != Status::Unauthorized => {
+            return Outcome::Error((status, ()))
+        }
+        _ => {}
+    }
+    let token = match request
+        .headers()
+        .get_one("Authorization")
+        .and_then(|h| h.strip_prefix("Bearer "))
+        .map(str::trim)
+        .filter(|v| !v.is_empty())
+    {
+        Some(v) => v,
+        None => return Outcome::Error((Status::Unauthorized, ())),
+    };
+    let state = match request.rocket().state::<AppState>() {
+        Some(v) => v.clone(),
+        None => return Outcome::Error((Status::InternalServerError, ())),
+    };
+    let token_hash = hash_token(token);
+    let lookup = token_hash.clone();
+    let result = rocket::tokio::task::spawn_blocking({
+        let state = state.clone();
+        move || state.try_repo_read()?.get_user_by_token_hash(&lookup)
+    })
+    .await;
+    let (user, source) = match result {
+        Ok(Ok((user, project_scope))) => {
+            let update_state = state.clone();
+            let update_hash = token_hash;
+            let _ = rocket::tokio::task::spawn_blocking(move || {
+                update_state
+                    .try_repo_write()?
+                    .update_api_token_last_used_at(&update_hash)
+            })
+            .await;
+            (user, AuthenticationSource::ApiToken { project_scope })
+        }
+        Ok(Err(RepoError::NotFound)) => {
+            let required = match policy {
+                DelegatedPolicy::Deny => return Outcome::Error((Status::Forbidden, ())),
+                DelegatedPolicy::Scope(s) => Some(s),
+                DelegatedPolicy::McpAudit => None,
+            };
+            let resource = format!(
+                "{}/mcp",
+                crate::config::AppConfig::current()
+                    .public_base_url
+                    .trim_end_matches('/')
+            );
+            let principal = match state.try_repo_read().and_then(|repo| {
+                crate::auth::delegated::validate_access(
+                    &*repo,
+                    token,
+                    &resource,
+                    required,
+                    chrono::Utc::now().naive_utc(),
+                )
+                .map_err(|_| RepoError::Unauthorized)
+            }) {
+                Ok(v) => v,
+                Err(RepoError::Unauthorized) => return Outcome::Error((Status::Forbidden, ())),
+                Err(_) => return Outcome::Error((Status::InternalServerError, ())),
+            };
+            let grant_id = principal.grant_id;
+            let access_hash = hash_token(token);
+            let update_state = state.clone();
+            let _ = rocket::tokio::task::spawn_blocking(move || {
+                update_state.try_repo_write()?.touch_oauth_access(
+                    &access_hash,
+                    grant_id,
+                    chrono::Utc::now().naive_utc(),
+                )
+            })
+            .await;
+            (
+                principal.user,
+                AuthenticationSource::DelegatedOAuth {
+                    client_id: principal.client_id,
+                    grant_id,
+                    scopes: principal.scopes,
+                },
+            )
+        }
+        _ => return Outcome::Error((Status::InternalServerError, ())),
+    };
+    let log = LogCtx::from_optional_request(user.id, Some(request));
+    Outcome::Success(ApiUserOrBearer {
+        api_user: ApiUser::new(user, log),
+        source,
+    })
+}
+
 #[async_trait]
 impl<'r> FromRequest<'r> for ApiUserOrBearer {
     type Error = ();
-
     async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        // Try session first
-        match request.guard::<SessionUser>().await {
-            Outcome::Success(session_user) => {
-                let user = session_user.into_inner();
-                let log_ctx = LogCtx::from_request(user.id, request);
-                return Outcome::Success(ApiUserOrBearer {
-                    api_user: ApiUser::new(user, log_ctx),
-                    token_project_scope: None,
-                    delegated_scopes: None,
-                    oauth_client_id: None,
-                    oauth_grant_id: None,
-                });
+        authenticate(request, DelegatedPolicy::Deny).await
+    }
+}
+
+macro_rules! scoped_guard {
+    ($name:ident, $scope:literal) => {
+        pub struct $name(pub ApiUserOrBearer);
+        impl Deref for $name {
+            type Target = ApiUserOrBearer;
+            fn deref(&self) -> &Self::Target {
+                &self.0
             }
-            Outcome::Forward(_) => {}
-            Outcome::Error((s, ())) => {
-                if s != Status::Unauthorized {
-                    return Outcome::Error((s, ()));
+        }
+        impl $name {
+            pub fn into_inner(self) -> ApiUserOrBearer {
+                self.0
+            }
+        }
+        #[async_trait]
+        impl<'r> FromRequest<'r> for $name {
+            type Error = ();
+            async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+                match authenticate(request, DelegatedPolicy::Scope($scope)).await {
+                    Outcome::Success(v) => Outcome::Success(Self(v)),
+                    Outcome::Error(e) => Outcome::Error(e),
+                    Outcome::Forward(f) => Outcome::Forward(f),
                 }
             }
         }
+    };
+}
+scoped_guard!(ProjectsRead, "projects:read");
+scoped_guard!(RequirementsRead, "requirements:read");
+scoped_guard!(RequirementsWrite, "requirements:write");
+scoped_guard!(RequirementsApprove, "requirements:approve");
+scoped_guard!(VerificationsRead, "verifications:read");
+scoped_guard!(VerificationsWrite, "verifications:write");
+scoped_guard!(TraceabilityRead, "traceability:read");
+scoped_guard!(TraceabilityWrite, "traceability:write");
+scoped_guard!(BaselinesRead, "baselines:read");
+scoped_guard!(BaselinesWrite, "baselines:write");
 
-        // Try Authorization: Bearer <token>
-        let auth_header = match request.headers().get_one("Authorization") {
-            Some(h) => h,
-            None => return Outcome::Error((Status::Unauthorized, ())),
-        };
-        let token = match auth_header.strip_prefix("Bearer ") {
-            Some(t) => t.trim(),
-            None => return Outcome::Error((Status::Unauthorized, ())),
-        };
-        if token.is_empty() {
-            return Outcome::Error((Status::Unauthorized, ()));
+pub struct McpAuditAuth(pub ApiUserOrBearer);
+impl Deref for McpAuditAuth {
+    type Target = ApiUserOrBearer;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+#[async_trait]
+impl<'r> FromRequest<'r> for McpAuditAuth {
+    type Error = ();
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        match authenticate(request, DelegatedPolicy::McpAudit).await {
+            Outcome::Success(v) => Outcome::Success(Self(v)),
+            Outcome::Error(e) => Outcome::Error(e),
+            Outcome::Forward(f) => Outcome::Forward(f),
         }
-
-        let state = match request.rocket().state::<AppState>() {
-            Some(s) => s.clone(),
-            None => return Outcome::Error((Status::InternalServerError, ())),
-        };
-
-        let token_hash = hash_api_token(token);
-        let token_hash_for_lookup = token_hash.clone();
-
-        let result = rocket::tokio::task::spawn_blocking({
-            let state = state.clone();
-            move || {
-                let guard = state.try_repo_read()?;
-                guard.get_user_by_token_hash(&token_hash_for_lookup)
-            }
-        })
-        .await;
-
-        let (user, project_scope, delegated_scopes, oauth_client_id, oauth_grant_id) = match result
-        {
-            Ok(Ok((user, scope))) => (user, scope, None, None, None),
-            Ok(Err(RepoError::NotFound)) => {
-                let required = required_delegated_scope(request);
-                let expected_resource = format!(
-                    "{}/mcp",
-                    crate::config::AppConfig::current()
-                        .public_base_url
-                        .trim_end_matches('/')
-                );
-                let oauth = match state.try_repo_read().and_then(|repo| {
-                    crate::auth::delegated::validate_access(
-                        &*repo,
-                        token,
-                        &expected_resource,
-                        required,
-                        chrono::Utc::now().naive_utc(),
-                    )
-                    .map_err(|_| RepoError::Unauthorized)
-                }) {
-                    Ok(principal) => principal,
-                    Err(_) => return Outcome::Error((Status::Unauthorized, ())),
-                };
-                (
-                    oauth.user,
-                    None,
-                    Some(oauth.scopes),
-                    Some(oauth.client_id),
-                    Some(oauth.grant_id),
-                )
-            }
-            Ok(Err(_)) => return Outcome::Error((Status::InternalServerError, ())),
-            Err(_) => return Outcome::Error((Status::InternalServerError, ())),
-        };
-
-        // Update last_used_at (best-effort, don't fail request)
-        let hash = token_hash;
-        let state_update = state.clone();
-        rocket::tokio::task::spawn_blocking(move || {
-            if let Ok(mut guard) = state_update.try_repo_write() {
-                let _ = guard.update_api_token_last_used_at(&hash);
-            }
-        })
-        .await
-        .ok();
-
-        let log_ctx = LogCtx::from_optional_request(user.id, Some(request));
-        Outcome::Success(ApiUserOrBearer {
-            api_user: ApiUser::new(user, log_ctx),
-            token_project_scope: project_scope,
-            delegated_scopes,
-            oauth_client_id,
-            oauth_grant_id,
-        })
     }
 }

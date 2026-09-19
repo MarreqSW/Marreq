@@ -221,4 +221,24 @@ impl DelegatedOAuthRepository for DieselRepo {
         .map(|_| ())
         .map_err(Into::into)
     }
+    fn touch_oauth_access(
+        &mut self,
+        hash: &str,
+        grant: i32,
+        now: NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        let mut conn = self.get_conn()?;
+        conn.transaction(|conn| {
+            diesel::update(
+                oauth_access_tokens::table.filter(oauth_access_tokens::token_hash.eq(hash)),
+            )
+            .set(oauth_access_tokens::last_used_at.eq(now))
+            .execute(conn)?;
+            diesel::update(oauth_grants::table.filter(oauth_grants::id.eq(grant)))
+                .set(oauth_grants::last_used_at.eq(now))
+                .execute(conn)?;
+            Ok(())
+        })
+        .map_err(map_db_error)
+    }
 }

@@ -6,6 +6,7 @@
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
+use crate::auth::guards::{ProjectRequirementsRead, ProjectRequirementsWrite};
 use crate::config;
 use crate::models::{EntityType, NewLog, RequirementComment};
 use crate::repository::{LogRepository, ProjectMembersRepository};
@@ -24,6 +25,34 @@ pub struct CommentResponse {
     pub created_at: chrono::NaiveDateTime,
 }
 
+#[get("/projects/<project_id>/requirements/<requirement_id>/comments?<version_id>")]
+pub async fn list_by_project(
+    access: ProjectRequirementsRead,
+    project_id: i32,
+    requirement_id: i32,
+    version_id: Option<i32>,
+    state: &State<AppState>,
+) -> ApiResult<Json<Vec<CommentResponse>>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let requirement = RequirementService::new(state.inner()).get_by_id(requirement_id)?;
+    if requirement.project_id != project_id {
+        return Err(ApiError::NotFound("requirement not in project".into()));
+    }
+    let comments = CommentService::new(state.inner()).list_comments(requirement_id, version_id)?;
+    let users = UserService::new(state.inner());
+    Ok(Json(
+        comments
+            .iter()
+            .map(|c| comment_to_response(c, users.get_by_id(c.author_id).ok().map(|u| u.name)))
+            .collect(),
+    ))
+}
+
 fn comment_to_response(c: &RequirementComment, author_name: Option<String>) -> CommentResponse {
     CommentResponse {
         id: c.id,
@@ -34,6 +63,55 @@ fn comment_to_response(c: &RequirementComment, author_name: Option<String>) -> C
         body: c.body.clone(),
         created_at: c.created_at,
     }
+}
+
+#[post(
+    "/projects/<project_id>/requirements/<requirement_id>/comments",
+    data = "<payload>"
+)]
+pub async fn create_by_project(
+    access: ProjectRequirementsWrite,
+    project_id: i32,
+    requirement_id: i32,
+    state: &State<AppState>,
+    payload: Json<CreateCommentRequest>,
+) -> ApiResult<(Status, Json<CommentResponse>)> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::EditRequirements,
+    )?;
+    let requirement = RequirementService::new(state.inner()).get_by_id(requirement_id)?;
+    if requirement.project_id != project_id {
+        return Err(ApiError::NotFound("requirement not in project".into()));
+    }
+    if let Some(version_id) = payload.requirement_version_id {
+        let version = RequirementService::new(state.inner()).get_version_by_id(version_id)?;
+        if version.requirement_id != requirement_id {
+            return Err(ApiError::NotFound(
+                "version does not belong to requirement".into(),
+            ));
+        }
+        if config::lock_approved_version_comments()
+            && version.approval_state.eq_ignore_ascii_case("approved")
+        {
+            return Err(ApiError::Forbidden(
+                "approved versions cannot receive new comments when locked".into(),
+            ));
+        }
+    }
+    let comment = CommentService::new(state.inner()).create_comment(
+        access.user(),
+        requirement_id,
+        payload.requirement_version_id,
+        payload.body.clone(),
+    )?;
+    let author = UserService::new(state.inner())
+        .get_by_id(comment.author_id)
+        .ok()
+        .map(|u| u.name);
+    Ok((Status::Created, Json(comment_to_response(&comment, author))))
 }
 
 #[derive(Debug, rocket::serde::Deserialize)]

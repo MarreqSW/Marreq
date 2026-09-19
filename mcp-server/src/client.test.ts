@@ -317,7 +317,7 @@ describe("MarreqClient", () => {
       const client = makeClient();
       await client.clearSuspectLink(5, 7);
       expect(fetchSpy).toHaveBeenCalledWith(
-        "http://localhost:8000/api/traceability/clear_suspect",
+        "http://localhost:8000/api/projects/1/traceability/clear_suspect",
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({ req_id: 5, verification_id: 7 }),

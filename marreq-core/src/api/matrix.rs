@@ -4,7 +4,7 @@
 use rocket::serde::Deserialize;
 
 use crate::api::prelude::*;
-use crate::auth::guards::ProjectAccessOrBearer;
+use crate::auth::guards::{ProjectTraceabilityRead, ProjectTraceabilityWrite};
 use crate::models::MatrixLink;
 use crate::repository::MatrixRepository;
 use crate::repository::RequirementsRepository;
@@ -29,7 +29,7 @@ pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<MatrixLink>>> {
 /// Project-scoped matrix (traceability links). Accepts session or Bearer token.
 #[get("/projects/<project_id>/matrix")]
 pub async fn list_by_project(
-    access: ProjectAccessOrBearer,
+    access: ProjectTraceabilityRead,
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<MatrixLink>>> {
@@ -47,7 +47,7 @@ pub async fn list_by_project(
 /// Requirement ids currently linked to this verification (project-scoped). Session or Bearer.
 #[get("/projects/<project_id>/verifications/<verification_id>/matrix")]
 pub async fn get_verification_matrix(
-    access: ProjectAccessOrBearer,
+    access: ProjectTraceabilityRead,
     project_id: i32,
     verification_id: i32,
     state: &State<AppState>,
@@ -85,7 +85,7 @@ pub async fn get_verification_matrix(
     data = "<body>"
 )]
 pub async fn put_verification_matrix(
-    access: ProjectAccessOrBearer,
+    access: ProjectTraceabilityWrite,
     project_id: i32,
     verification_id: i32,
     body: Json<VerificationMatrixPutBody>,

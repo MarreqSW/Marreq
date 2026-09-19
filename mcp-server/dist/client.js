@@ -115,7 +115,7 @@ export class MarreqClient {
     }
     /** GET /api/verifications/:id — caller should ensure the row belongs to MARREQ_PROJECT_ID. */
     async getVerificationById(verificationId) {
-        return this.request(`/api/verifications/${verificationId}`);
+        return this.request(`/api/projects/${this.ctx.projectId}/verifications/${verificationId}`);
     }
     /** GET /api/projects/:pid/baselines */
     async listBaselinesByProject() {
@@ -131,7 +131,7 @@ export class MarreqClient {
         const q = versionId != null && versionId > 0
             ? `?version_id=${encodeURIComponent(String(versionId))}`
             : "";
-        return this.request(`/api/requirements/${requirementId}/comments${q}`);
+        return this.request(`/api/projects/${this.ctx.projectId}/requirements/${requirementId}/comments${q}`);
     }
     async getVerificationMatrix(verificationId) {
         return this.request(`/api/projects/${this.ctx.projectId}/verifications/${verificationId}/matrix`);
@@ -143,7 +143,7 @@ export class MarreqClient {
         });
     }
     async clearSuspectLink(reqId, verificationId) {
-        return this.request("/api/traceability/clear_suspect", {
+        return this.request(`/api/projects/${this.ctx.projectId}/traceability/clear_suspect`, {
             method: "POST",
             body: JSON.stringify({
                 req_id: reqId,
@@ -156,32 +156,10 @@ export class MarreqClient {
     }
     /** Aggregated catalog rows for MARREQ_PROJECT_ID (parallel GETs, filtered client-side where needed). */
     async listProjectCatalog() {
-        const pid = this.ctx.projectId;
-        const [categories, applicability, reqStatuses, verifStatuses, methods, fields] = await Promise.all([
-            this.request("/api/categories"),
-            this.request("/api/applicability"),
-            this.request("/api/status"),
-            this.request("/api/verification-status"),
-            this.request(`/api/projects/${pid}/verification-methods`),
-            this.request(`/api/projects/${pid}/custom_fields`),
-        ]);
-        const byProject = (rows) => Array.isArray(rows)
-            ? rows.filter((r) => r &&
-                typeof r === "object" &&
-                "project_id" in r &&
-                r.project_id === pid)
-            : [];
-        return {
-            categories: byProject(categories),
-            applicability: byProject(applicability),
-            requirement_statuses: byProject(reqStatuses),
-            verification_statuses: byProject(verifStatuses),
-            verification_methods: Array.isArray(methods) ? methods : [],
-            custom_fields: Array.isArray(fields) ? fields : [],
-        };
+        return this.request(`/api/projects/${this.ctx.projectId}/catalog`);
     }
     async createRequirementComment(requirementId, body, requirementVersionId) {
-        return this.request(`/api/requirements/${requirementId}/comments`, {
+        return this.request(`/api/projects/${this.ctx.projectId}/requirements/${requirementId}/comments`, {
             method: "POST",
             body: JSON.stringify({
                 body,

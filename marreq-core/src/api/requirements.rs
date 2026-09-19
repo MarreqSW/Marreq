@@ -6,7 +6,9 @@ use diesel::{ExpressionMethods, JoinOnDsl, NullableExpressionMethods, QueryDsl, 
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::auth::guards::ProjectAccessOrBearer;
+use crate::auth::guards::{
+    ProjectRequirementsApprove, ProjectRequirementsRead, ProjectRequirementsWrite,
+};
 use crate::models::{
     CustomFieldValueInput, NewRequirement, Requirement, RequirementVersion, RequirementVersionLink,
     Verification,
@@ -541,7 +543,7 @@ pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec
 /// Query: approval_state, has_tests, status_id, category_id, q, sort_column, sort_dir, view_id.
 #[get("/projects/<project_id>/requirements?<query..>")]
 pub async fn list_by_project(
-    access: ProjectAccessOrBearer,
+    access: ProjectRequirementsRead,
     project_id: i32,
     query: RequirementListQuery,
     state: &State<AppState>,
@@ -568,7 +570,7 @@ pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<
 /// Project-scoped get with trace summary (parent_id, child_ids, linked_test_ids). Accepts session or Bearer.
 #[get("/projects/<project_id>/requirements/<id>", rank = 2)]
 pub async fn get_by_project(
-    access: ProjectAccessOrBearer,
+    access: ProjectRequirementsRead,
     project_id: i32,
     id: i32,
     state: &State<AppState>,
@@ -620,7 +622,7 @@ pub async fn list_versions(
 /// Project-scoped list versions (session or Bearer). Enforces requirement belongs to project.
 #[get("/projects/<project_id>/requirements/<id>/versions")]
 pub async fn list_versions_by_project(
-    access: ProjectAccessOrBearer,
+    access: ProjectRequirementsRead,
     project_id: i32,
     id: i32,
     state: &State<AppState>,
@@ -661,7 +663,7 @@ pub async fn get_version(
 /// Project-scoped get version (session or Bearer). Enforces requirement belongs to project.
 #[get("/projects/<project_id>/requirements/<req_id>/versions/<version_id>")]
 pub async fn get_version_by_project(
-    access: ProjectAccessOrBearer,
+    access: ProjectRequirementsRead,
     project_id: i32,
     req_id: i32,
     version_id: i32,
@@ -849,7 +851,7 @@ pub async fn patch_requirement(
 /// Project-scoped create (session or Bearer). For MCP Phase 2 draft_write.
 #[post("/projects/<project_id>/requirements", data = "<payload>")]
 pub async fn create_by_project(
-    access: ProjectAccessOrBearer,
+    access: ProjectRequirementsWrite,
     project_id: i32,
     state: &State<AppState>,
     payload: Json<RequirementCreateRequest>,
@@ -898,7 +900,7 @@ pub async fn create_by_project(
 /// Project-scoped patch (session or Bearer). For MCP Phase 2 draft_write.
 #[patch("/projects/<project_id>/requirements/<id>", data = "<patch>")]
 pub async fn patch_by_project(
-    access: ProjectAccessOrBearer,
+    access: ProjectRequirementsWrite,
     project_id: i32,
     id: i32,
     patch: Json<RequirementPatch>,
@@ -953,7 +955,7 @@ pub async fn patch_by_project(
     data = "<payload>"
 )]
 pub async fn set_version_approval_by_project(
-    access: ProjectAccessOrBearer,
+    access: ProjectRequirementsApprove,
     project_id: i32,
     req_id: i32,
     version_id: i32,

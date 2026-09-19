@@ -4,7 +4,7 @@
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::auth::guards::{ApiUser, ProjectAccessOrBearer};
+use crate::auth::guards::{ApiUser, ProjectVerificationsRead, ProjectVerificationsWrite};
 use crate::models::{NewVerification, Verification};
 use crate::repository::errors::RepoError;
 use crate::repository::VerificationsRepository;
@@ -27,7 +27,7 @@ pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec
 /// Project-scoped verifications (tests). Session or Bearer; requires `ViewRequirements`.
 #[get("/projects/<project_id>/verifications")]
 pub async fn list_by_project(
-    access: ProjectAccessOrBearer,
+    access: ProjectVerificationsRead,
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<Verification>>> {
@@ -39,6 +39,26 @@ pub async fn list_by_project(
     )?;
     let service = VerificationService::new(state.inner());
     Ok(Json(service.list_by_project(project_id)?))
+}
+
+#[get("/projects/<project_id>/verifications/<id>")]
+pub async fn get_by_project(
+    access: ProjectVerificationsRead,
+    project_id: i32,
+    id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<Verification>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let verification = VerificationService::new(state.inner()).get_by_id(id)?;
+    if verification.project_id != project_id {
+        return Err(ApiError::NotFound("verification not in project".into()));
+    }
+    Ok(Json(verification))
 }
 
 #[get("/verifications/<id>")]
@@ -203,7 +223,7 @@ pub async fn update_field(
 /// Project-scoped verification field update (session or Bearer).
 #[post("/projects/<project_id>/verifications/<id>/field", data = "<update>")]
 pub async fn update_field_by_project(
-    access: ProjectAccessOrBearer,
+    access: ProjectVerificationsWrite,
     project_id: i32,
     id: i32,
     state: &State<AppState>,

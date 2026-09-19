@@ -6,7 +6,7 @@
 use rocket::serde::Serialize;
 
 use crate::api::prelude::*;
-use crate::auth::guards::ProjectAccessOrBearer;
+use crate::auth::guards::{ProjectRequirementsRead, ProjectVerificationsRead};
 use crate::models::EntityType;
 use crate::permissions::Permission;
 use crate::services::log_service::{change_summary, log_change_details, ChangeDetail, LogService};
@@ -47,7 +47,7 @@ fn map_logs(logs: Vec<crate::services::log_service::LogWithUser>) -> Vec<EntityA
 
 #[get("/projects/<project_id>/requirements/<id>/activity")]
 pub async fn requirement_activity_by_project(
-    access: ProjectAccessOrBearer,
+    access: ProjectRequirementsRead,
     project_id: i32,
     id: i32,
     state: &State<AppState>,
@@ -73,7 +73,7 @@ pub async fn requirement_activity_by_project(
 
 #[get("/projects/<project_id>/verifications/<id>/activity")]
 pub async fn verification_activity_by_project(
-    access: ProjectAccessOrBearer,
+    access: ProjectVerificationsRead,
     project_id: i32,
     id: i32,
     state: &State<AppState>,

@@ -7,7 +7,7 @@
 //! for authorization.
 
 use crate::api::prelude::*;
-use crate::auth::guards::{AdminOnly, ProjectAccess, ProjectAccessOrBearer};
+use crate::auth::guards::{AdminOnly, ProjectAccess, ProjectRequirementsRead};
 use crate::services::semantic_search::{
     IndexingService, SearchError, SearchFilters, SemanticSearchConfig, SemanticSearchService,
 };
@@ -55,7 +55,7 @@ pub struct AskRequest {
 /// GET /api/projects/<project_id>/requirements/semantic_search?q=...&k=...
 #[get("/projects/<project_id>/requirements/semantic_search?<query..>")]
 pub async fn semantic_search(
-    project_access: ProjectAccessOrBearer,
+    project_access: ProjectRequirementsRead,
     project_id: i32,
     query: SemanticSearchQuery,
     state: &State<AppState>,

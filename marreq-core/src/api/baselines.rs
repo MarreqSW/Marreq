@@ -6,7 +6,7 @@
 use rocket::serde::Deserialize;
 
 use crate::api::prelude::*;
-use crate::auth::guards::ProjectAccessOrBearer;
+use crate::auth::guards::{ProjectBaselinesRead, ProjectBaselinesWrite};
 use crate::models::{
     Baseline, BaselineTraceability, BaselineVerification, NewBaseline, Requirement,
 };
@@ -25,7 +25,7 @@ pub struct CreateBaselineRequest {
 /// List baselines (session or Bearer). Project-scoped.
 #[get("/projects/<project_id>/baselines")]
 pub async fn list(
-    access: ProjectAccessOrBearer,
+    access: ProjectBaselinesRead,
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<Baseline>>> {
@@ -43,7 +43,7 @@ pub async fn list(
 /// Get baseline by id (session or Bearer). Project-scoped.
 #[get("/projects/<project_id>/baselines/<baseline_id>")]
 pub async fn get(
-    access: ProjectAccessOrBearer,
+    access: ProjectBaselinesRead,
     project_id: i32,
     baseline_id: i32,
     state: &State<AppState>,
@@ -67,7 +67,7 @@ pub async fn get(
 /// Create baseline (session or Bearer). Project-scoped; supports MCP Phase 2 draft_write.
 #[post("/projects/<project_id>/baselines", data = "<payload>")]
 pub async fn create(
-    access: ProjectAccessOrBearer,
+    access: ProjectBaselinesWrite,
     project_id: i32,
     state: &State<AppState>,
     payload: Json<CreateBaselineRequest>,
@@ -108,7 +108,7 @@ pub async fn create(
 /// Retrieve baseline contents: requirements as at baseline time (from snapshot). Session or Bearer.
 #[get("/projects/<project_id>/baselines/<baseline_id>/requirements")]
 pub async fn get_requirements(
-    access: ProjectAccessOrBearer,
+    access: ProjectBaselinesRead,
     project_id: i32,
     baseline_id: i32,
     state: &State<AppState>,
@@ -133,7 +133,7 @@ pub async fn get_requirements(
 /// Retrieve baseline traceability snapshot (requirement–test links). Session or Bearer.
 #[get("/projects/<project_id>/baselines/<baseline_id>/traceability")]
 pub async fn get_traceability(
-    access: ProjectAccessOrBearer,
+    access: ProjectBaselinesRead,
     project_id: i32,
     baseline_id: i32,
     state: &State<AppState>,
@@ -158,7 +158,7 @@ pub async fn get_traceability(
 /// Retrieve baseline verifications snapshot. Session or Bearer.
 #[get("/projects/<project_id>/baselines/<baseline_id>/verifications")]
 pub async fn get_verifications(
-    access: ProjectAccessOrBearer,
+    access: ProjectBaselinesRead,
     project_id: i32,
     baseline_id: i32,
     state: &State<AppState>,
@@ -183,7 +183,7 @@ pub async fn get_verifications(
 /// Compare two baselines. Query: baseline_a, baseline_b. Accepts session or Bearer token.
 #[get("/projects/<project_id>/baselines/diff?<baseline_a>&<baseline_b>")]
 pub async fn diff_baselines(
-    access: ProjectAccessOrBearer,
+    access: ProjectBaselinesRead,
     project_id: i32,
     baseline_a: i32,
     baseline_b: i32,

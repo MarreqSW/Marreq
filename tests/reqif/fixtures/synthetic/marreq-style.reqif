@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<REQ-IF xmlns="http://www.omg.org/spec/ReqIF/20110401/reqif.xsd">
+  <THE-HEADER>
+    <REQ-IF-TOOL-ID>Marreq</REQ-IF-TOOL-ID>
+    <REQ-IF-VERSION>1.2</REQ-IF-VERSION>
+  </THE-HEADER>
+  <CORE-CONTENT>
+    <REQ-IF-CONTENT>
+      <DATATYPES>
+        <DATATYPE-DEFINITION-STRING IDENTIFIER="dt-string" LONG-NAME="String"/>
+      </DATATYPES>
+      <SPEC-TYPES>
+        <SPEC-OBJECT-TYPE IDENTIFIER="sot-req" LONG-NAME="Requirement">
+          <SPEC-ATTRIBUTES>
+            <ATTRIBUTE-DEFINITION-STRING IDENTIFIER="ad-identifier" LONG-NAME="Identifier" TYPE="dt-string"/>
+            <ATTRIBUTE-DEFINITION-STRING IDENTIFIER="ad-title" LONG-NAME="Title" TYPE="dt-string"/>
+            <ATTRIBUTE-DEFINITION-STRING IDENTIFIER="ad-statement" LONG-NAME="Statement" TYPE="dt-string"/>
+          </SPEC-ATTRIBUTES>
+        </SPEC-OBJECT-TYPE>
+      </SPEC-TYPES>
+      <SPEC-OBJECTS>
+        <SPEC-OBJECT IDENTIFIER="so-1" TYPE="sot-req">
+          <VALUES>
+            <ATTRIBUTE-VALUE-STRING THE-VALUE="P-1" DEFINITION="ad-identifier"/>
+            <ATTRIBUTE-VALUE-STRING THE-VALUE="Parent" DEFINITION="ad-title"/>
+            <ATTRIBUTE-VALUE-STRING THE-VALUE="Parent body" DEFINITION="ad-statement"/>
+          </VALUES>
+        </SPEC-OBJECT>
+        <SPEC-OBJECT IDENTIFIER="so-2" TYPE="sot-req">
+          <VALUES>
+            <ATTRIBUTE-VALUE-STRING THE-VALUE="C-1" DEFINITION="ad-identifier"/>
+            <ATTRIBUTE-VALUE-STRING THE-VALUE="Child" DEFINITION="ad-title"/>
+            <ATTRIBUTE-VALUE-STRING THE-VALUE="Child body" DEFINITION="ad-statement"/>
+          </VALUES>
+        </SPEC-OBJECT>
+      </SPEC-OBJECTS>
+      <SPEC-RELATIONS>
+        <SPEC-RELATION IDENTIFIER="sr-2-1" SOURCE="so-2" TARGET="so-1"/>
+      </SPEC-RELATIONS>
+    </REQ-IF-CONTENT>
+  </CORE-CONTENT>
+</REQ-IF>

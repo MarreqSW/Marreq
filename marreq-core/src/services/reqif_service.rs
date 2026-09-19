@@ -8,9 +8,92 @@ use crate::models::{NewRequirement, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{RequirementCommentsRepository, UserRepository};
 use crate::reqif::import::{object_to_fields, parse_reqif, ImportConfig, ImportResult};
+use crate::reqif::mapping;
 use crate::reqif::to_reqif;
 use crate::services::{BaselineService, ProjectService, RequirementService, StatusService};
 use std::collections::HashMap;
+
+fn is_valid_marreq_reference(reference: &str) -> bool {
+    let mut parts = reference.split('-');
+    let Some(prefix) = parts.next() else {
+        return false;
+    };
+    if !(2..=4).contains(&prefix.len()) || !prefix.chars().all(|c| c.is_ascii_uppercase()) {
+        return false;
+    }
+    let mut has_suffix = false;
+    for part in parts {
+        has_suffix = true;
+        if part.is_empty()
+            || part.len() > 6
+            || !part
+                .chars()
+                .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit())
+        {
+            return false;
+        }
+    }
+    has_suffix
+}
+
+fn reqif_relation_link_type(type_ref: &str) -> &'static str {
+    let normalized = type_ref.to_ascii_lowercase();
+    if normalized.contains("derive") {
+        "DERIVES_FROM"
+    } else if normalized.contains("refine") {
+        "REFINES"
+    } else if normalized.contains("depend") {
+        "DEPENDS_ON"
+    } else if normalized.contains("satisf")
+        || normalized.contains("fulfill")
+        || normalized.contains("implement")
+    {
+        "SATISFIES"
+    } else {
+        "RELATES_TO"
+    }
+}
+
+fn create_import_link(
+    req_service: &RequirementService<'_>,
+    imported: &HashMap<String, i32>,
+    source_reqif_id: &str,
+    target_reqif_id: &str,
+    link_type: &str,
+    project_id: i32,
+) -> Result<(), String> {
+    let source_id = imported
+        .get(source_reqif_id)
+        .copied()
+        .ok_or_else(|| format!("source SpecObject '{source_reqif_id}' was not imported"))?;
+    let target_id = imported
+        .get(target_reqif_id)
+        .copied()
+        .ok_or_else(|| format!("target SpecObject '{target_reqif_id}' was not imported"))?;
+    let source = req_service
+        .get_by_id(source_id)
+        .map_err(|e| format!("could not load imported source {source_reqif_id}: {e}"))?;
+    let target = req_service
+        .get_by_id(target_id)
+        .map_err(|e| format!("could not load imported target {target_reqif_id}: {e}"))?;
+    let source_version = source
+        .current_version_id
+        .ok_or_else(|| format!("imported source {source_reqif_id} has no current version"))?;
+    let target_version = target
+        .current_version_id
+        .ok_or_else(|| format!("imported target {target_reqif_id} has no current version"))?;
+    req_service
+        .create_requirement_version_link(
+            source_version,
+            target_version,
+            link_type,
+            project_id,
+            None,
+            None,
+        )
+        .map(|_| ())
+        .map_err(|e| format!("{source_reqif_id} -> {target_reqif_id} ({link_type}): {e}"))
+}
 
 pub struct ReqIFService<'a> {
     state: &'a AppState<DieselCachedRepo>,
@@ -125,6 +208,89 @@ impl<'a> ReqIFService<'a> {
         actor: &User,
     ) -> Result<ImportResult, String> {
         let doc = parse_reqif(xml)?;
+        let mut preflight_errors = Vec::new();
+        let mut preflight_warnings = doc.warnings.clone();
+        let mut object_ids = std::collections::HashSet::new();
+        let mut valid_references = std::collections::HashSet::new();
+        for obj in &doc.objects {
+            if obj.id.is_empty() {
+                preflight_errors.push("SPEC-OBJECT without IDENTIFIER".into());
+            } else if !object_ids.insert(obj.id.clone()) {
+                preflight_errors.push(format!("duplicate SPEC-OBJECT IDENTIFIER '{}'", obj.id));
+            }
+            if let Some(reference) = object_to_fields(obj).1 {
+                if is_valid_marreq_reference(&reference)
+                    && !valid_references.insert(reference.clone())
+                {
+                    preflight_errors.push(format!(
+                        "duplicate requirement reference '{}' in ReqIF document",
+                        reference
+                    ));
+                }
+            }
+        }
+        let mut planned_references = HashMap::new();
+        let mut fallback_number = 1usize;
+        for obj in &doc.objects {
+            let mapped = object_to_fields(obj).1;
+            let reference = if let Some(reference) =
+                mapped.filter(|reference| is_valid_marreq_reference(reference))
+            {
+                reference
+            } else {
+                loop {
+                    let candidate = format!("REQ-{fallback_number:04}");
+                    fallback_number += 1;
+                    if valid_references.insert(candidate.clone()) {
+                        break candidate;
+                    }
+                }
+            };
+            planned_references.insert(obj.id.clone(), reference);
+        }
+        for edge in &doc.hierarchy_edges {
+            if !object_ids.contains(&edge.child_id) {
+                preflight_errors.push(format!(
+                    "SPEC-HIERARCHY references missing child SpecObject '{}'",
+                    edge.child_id
+                ));
+            }
+            if !object_ids.contains(&edge.parent_id) {
+                preflight_errors.push(format!(
+                    "SPEC-HIERARCHY references missing parent SpecObject '{}'",
+                    edge.parent_id
+                ));
+            }
+        }
+        for relation in &doc.relations {
+            if !object_ids.contains(&relation.source) {
+                preflight_warnings.push(format!(
+                    "SPEC-RELATION '{}' references missing source SpecObject '{}'",
+                    relation.id, relation.source
+                ));
+            }
+            if !object_ids.contains(&relation.target) {
+                preflight_warnings.push(format!(
+                    "SPEC-RELATION '{}' references missing target SpecObject '{}'",
+                    relation.id, relation.target
+                ));
+            }
+        }
+        if !preflight_errors.is_empty() {
+            return Ok(ImportResult {
+                success: false,
+                message: format!(
+                    "ReqIF preflight failed with {} error(s); nothing was imported",
+                    preflight_errors.len()
+                ),
+                imported_count: 0,
+                created_link_count: 0,
+                errors: preflight_errors,
+                warnings: preflight_warnings,
+                imported_requirement_ids: Vec::new(),
+            });
+        }
+
         let req_service = RequirementService::new(self.state);
         let status_service = StatusService::new(self.state);
         let statuses = status_service
@@ -139,25 +305,112 @@ impl<'a> ReqIFService<'a> {
                 .unwrap_or(config.default_status_id)
         };
 
-        // child (source) -> parent (target)
-        let mut parent_of: HashMap<String, String> = HashMap::new();
-        for rel in &doc.relations {
-            parent_of.insert(rel.source.clone(), rel.target.clone());
+        let mut hierarchy_pairs = std::collections::BTreeSet::new();
+        for edge in &doc.hierarchy_edges {
+            if edge.child_id != edge.parent_id {
+                hierarchy_pairs.insert((edge.child_id.clone(), edge.parent_id.clone()));
+            }
         }
 
         let mut reqif_id_to_marreq_id: HashMap<String, i32> = HashMap::new();
         let mut imported_count = 0usize;
+        let mut created_link_count = 0usize;
         let mut errors = Vec::new();
+        let mut warnings = preflight_warnings;
         let mut imported_requirement_ids = Vec::new();
+        if doc.object_type_count > 0 {
+            warnings.push(format!(
+                "{} SPEC-OBJECT-TYPE definition(s) were collapsed into Marreq requirements",
+                doc.object_type_count
+            ));
+        }
+        if doc.datatype_definition_count > 0 {
+            warnings.push(format!(
+                "{} datatype definition(s) were used for parsing but were not persisted",
+                doc.datatype_definition_count
+            ));
+        }
+        if doc.specification_count > 1 {
+            warnings.push(format!(
+                "{} specifications were merged into one Marreq project",
+                doc.specification_count
+            ));
+        }
+        if doc.xhtml_value_count > 0 {
+            warnings.push(format!(
+                "{} XHTML value(s) were converted to plain text; formatting may be lost",
+                doc.xhtml_value_count
+            ));
+        }
+        if doc.enumeration_value_count > 0 {
+            warnings.push(format!(
+                "{} enumeration value(s) were parsed as text but not persisted as enum custom fields",
+                doc.enumeration_value_count
+            ));
+        }
+        if doc.scalar_value_count > 0 {
+            warnings.push(format!(
+                "{} integer/real/boolean/date value(s) were parsed as text but not persisted as typed custom fields",
+                doc.scalar_value_count
+            ));
+        }
+        if doc.objects.iter().any(|obj| obj.last_change.is_some()) {
+            warnings.push("ReqIF LAST-CHANGE timestamps were not persisted".into());
+        }
+        let extra: Vec<String> = doc
+            .objects
+            .iter()
+            .flat_map(|obj| obj.attributes.keys())
+            .filter(|name| !mapping::is_core_field(name))
+            .cloned()
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect();
+        if !extra.is_empty() {
+            warnings.push(format!(
+                "{} ReqIF attribute(s) were parsed but not stored as Marreq fields: {}",
+                extra.len(),
+                extra.join(", ")
+            ));
+        }
 
         // Pass 1: create all requirements (no parent links yet)
         for obj in &doc.objects {
-            let (title_opt, ref_opt, desc_opt, status_opt, justification_opt) =
+            let (title_opt, _ref_opt, desc_opt, status_opt, justification_opt) =
                 object_to_fields(obj);
 
-            let title = title_opt.unwrap_or_else(|| "Imported Requirement".to_string());
-            let reference_code = ref_opt.unwrap_or_else(|| format!("REQ-{}", obj.id));
-            let description = desc_opt.unwrap_or_default();
+            let missing_title = title_opt.is_none();
+            let mut title = title_opt.unwrap_or_else(|| "Imported Requirement".to_string());
+            if missing_title {
+                warnings.push(format!(
+                    "{}: no Title/ReqIF.Name/LONG-NAME; using fallback title",
+                    obj.id
+                ));
+            }
+            if title.trim().len() < 3 {
+                title = format!("Imported {}", obj.id);
+                if title.len() < 3 {
+                    title = "Imported Requirement".into();
+                }
+            }
+            if title.len() > 255 {
+                title.truncate(255);
+            }
+            let reference_code = planned_references
+                .get(&obj.id)
+                .cloned()
+                .unwrap_or_else(|| format!("REQ-{:04}", imported_count + 1));
+            let mut description = desc_opt.unwrap_or_default();
+            if description.trim().is_empty() {
+                description = title.clone();
+            }
+            if description.len() > 2000 {
+                description.truncate(2000);
+                warnings.push(format!(
+                    "{}: description truncated to 2000 characters",
+                    obj.id
+                ));
+            }
             let status_id = status_opt
                 .and_then(|s| {
                     statuses
@@ -195,43 +448,66 @@ impl<'a> ReqIFService<'a> {
             }
         }
 
-        // Pass 2: create requirement_version_links for parent relationships
-        for obj in &doc.objects {
-            let Some(child_marreq_id) = reqif_id_to_marreq_id.get(&obj.id).copied() else {
+        // Pass 2a: hierarchy is structural and must be preserved.
+        for (child_reqif_id, parent_reqif_id) in &hierarchy_pairs {
+            match create_import_link(
+                &req_service,
+                &reqif_id_to_marreq_id,
+                child_reqif_id,
+                parent_reqif_id,
+                "DERIVES_FROM",
+                config.project_id,
+            ) {
+                Ok(()) => created_link_count += 1,
+                Err(e) => errors.push(format!("hierarchy link failed: {e}")),
+            }
+        }
+
+        // Pass 2b: ReqIF trace relations are typed independently from hierarchy.
+        // Marreq stores both in one acyclic graph, so a relation that would form
+        // a cycle cannot be represented; report it rather than silently dropping it.
+        for rel in &doc.relations {
+            if rel.source.is_empty() || rel.target.is_empty() || rel.source == rel.target {
+                warnings.push(format!(
+                    "SPEC-RELATION '{}' has an empty or self reference and was skipped",
+                    rel.id
+                ));
                 continue;
-            };
-            let Some(parent_reqif_id) = parent_of.get(&obj.id) else {
+            }
+            if !object_ids.contains(&rel.source) || !object_ids.contains(&rel.target) {
                 continue;
-            };
-            let Some(parent_marreq_id) = reqif_id_to_marreq_id.get(parent_reqif_id).copied() else {
+            }
+            if hierarchy_pairs.contains(&(rel.source.clone(), rel.target.clone())) {
+                warnings.push(format!(
+                    "SPEC-RELATION '{}' duplicates a hierarchy edge; its distinct type '{}' was not preserved",
+                    rel.id, rel.type_ref
+                ));
                 continue;
-            };
-            let child_req = match req_service.get_by_id(child_marreq_id) {
-                Ok(r) => r,
-                Err(_) => continue,
-            };
-            let parent_req = match req_service.get_by_id(parent_marreq_id) {
-                Ok(r) => r,
-                Err(_) => continue,
-            };
-            if let (Some(child_vid), Some(parent_vid)) =
-                (child_req.current_version_id, parent_req.current_version_id)
-            {
-                let _ = req_service.create_requirement_version_link(
-                    child_vid,
-                    parent_vid,
-                    "DERIVES_FROM",
-                    config.project_id,
-                    None,
-                    None,
-                );
+            }
+            let link_type = reqif_relation_link_type(&rel.type_ref);
+            match create_import_link(
+                &req_service,
+                &reqif_id_to_marreq_id,
+                &rel.source,
+                &rel.target,
+                link_type,
+                config.project_id,
+            ) {
+                Ok(()) => created_link_count += 1,
+                Err(e) => warnings.push(format!(
+                    "SPEC-RELATION '{}' could not be represented and was skipped: {e}",
+                    rel.id
+                )),
             }
         }
 
         Ok(ImportResult {
             success: errors.is_empty(),
             message: if errors.is_empty() {
-                format!("Successfully imported {} requirements", imported_count)
+                format!(
+                    "Successfully imported {} requirements ({} links)",
+                    imported_count, created_link_count
+                )
             } else {
                 format!(
                     "Imported {} requirements with {} errors",
@@ -240,7 +516,9 @@ impl<'a> ReqIFService<'a> {
                 )
             },
             imported_count,
+            created_link_count,
             errors,
+            warnings,
             imported_requirement_ids,
         })
     }

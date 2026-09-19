@@ -67,6 +67,8 @@ Errors from API handlers use JSON (see below). Failed login typically returns **
 | `GET` | `/api/projects/{project_id}/verifications` | Verifications (tests) in the project. Session or Bearer; requires `ViewRequirements`. |
 | `POST` | `/api/projects/{project_id}/imports/excel/preview` | Multipart field `file` (`.xlsx` or `.csv`). Requires `EditRequirements`. Returns guessed `import_type`, `columns`, `sample_rows`, `row_count`, `available_fields`, and unique values per source column. |
 | `POST` | `/api/projects/{project_id}/imports/excel` | Multipart `file`, `import_type` (`requirements` or `tests`), `column_mappings` JSON, and optional `value_mappings` JSON (`target_field`, `source_value`, `target_id`). Unknown catalog/user names fall back to project defaults; supplied target IDs are validated against the project. Creates records; row errors are returned without failing the whole request. Send `X-CSRF-Token` and do not set `Content-Type` (browser sets the multipart boundary). |
+| `GET` | `/api/projects/{project_id}/exports/requirements.xlsx` | Whole-project requirements workbook (custom field columns plus a `Comments` sheet). Requires `ViewRequirements`. Responds with the xlsx media type and `Content-Disposition: attachment`. |
+| `GET` | `/api/projects/{project_id}/exports/verifications.xlsx` | Whole-project verifications workbook. Requires `ViewRequirements`. Responds with the xlsx media type and `Content-Disposition: attachment`. |
 
 Project-scoped CRUD and resources under `/api/projects/{project_id}/...` follow existing routes (Bearer token or session, per handler).
 

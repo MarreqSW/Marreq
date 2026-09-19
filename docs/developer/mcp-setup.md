@@ -42,6 +42,28 @@ strings containing credentials. Preserve the `Mcp-Session-Id` and
 `Last-Event-ID` headers and disable proxy buffering for event streams. Bind the
 Node process to a private interface; do not expose plaintext HTTP publicly.
 
+### Hosted clients and ChatGPT
+
+Expose the HTTPS resource URL `https://your-marreq-origin.example/mcp`. A modern
+MCP client discovers authorization from the protected-resource and
+authorization-server metadata on that same origin, dynamically registers its
+exact callback URI, and opens Marreq's consent page. The user signs in through
+the normal Marreq password/federated flow before approving scopes. No API token
+or upstream identity-provider credential is embedded in client configuration.
+
+In ChatGPT or another hosted MCP client, add a custom remote MCP connection and
+enter the `/mcp` URL. The client should perform OAuth discovery automatically.
+If it asks for a client ID, register the client with `POST /oauth/register`
+using the exact HTTPS callback URI supplied by the client. Self-hosted instances
+must set `MARREQ_PUBLIC_BASE_URL` to the externally reachable HTTPS origin so
+issuer and resource validation agree at every hop.
+
+Reusable requirements-engineering guidance is provided in
+[`mcp-server/MARREQ_SKILL.md`](../../mcp-server/MARREQ_SKILL.md). It is plain
+behavioral guidance and is not an authorization mechanism. No client-specific
+manifest is committed: the integration uses standard remote MCP and OAuth
+discovery rather than a fabricated or vendor-locked packaging format.
+
 The MCP server implements a **subset** of the HTTP API on purpose (smaller attack surface). A full route-by-route matrix is in [API parity (MCP vs REST)](#api-parity-mcp-vs-rest) below.
 
 ## Prerequisites

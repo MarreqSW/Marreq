@@ -6,7 +6,8 @@
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::auth::guards::ApiUserOrBearer;
+use crate::auth::guards::session::session_user_has_project_access;
+use crate::auth::guards::{AuthenticationSource, McpAuditAuth};
 use crate::models::forms::NewLog;
 use crate::repository::LogRepository;
 
@@ -31,11 +32,24 @@ pub struct McpAuditResponse {
 /// Logged to the same logs table with entity_type "MCP", action_type "MCP_TOOL".
 #[post("/mcp/audit", data = "<body>")]
 pub async fn audit(
-    user: ApiUserOrBearer,
+    user: McpAuditAuth,
     state: &State<AppState>,
     body: Json<McpAuditRequest>,
 ) -> ApiResult<Json<McpAuditResponse>> {
     let payload = body.into_inner();
+    if matches!(
+        user.source(),
+        AuthenticationSource::ApiToken {
+            project_scope: Some(scope)
+        } if *scope != payload.project_id
+    ) {
+        return Err(ApiError::Forbidden("project access denied".into()));
+    }
+    if !session_user_has_project_access(state, user.user(), payload.project_id)
+        .map_err(|_| ApiError::Internal("repository unavailable".into()))?
+    {
+        return Err(ApiError::Forbidden("project access denied".into()));
+    }
     let user_id = user.user().id;
     let description = serde_json::json!({
         "tool": payload.tool_name,
@@ -145,6 +159,20 @@ mod tests {
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Unauthorized);
+    }
+
+    #[rocket::async_test]
+    async fn audit_rejects_cross_project_spoofing() {
+        let user = DieselRepoMock::make_user(2, "member", "hash");
+        let client = client_with_repo(DieselRepoMock::with_users([user])).await;
+        let response = client
+            .post("/api/mcp/audit")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie_for(&client, 2))
+            .body(r#"{"project_id":999,"tool_name":"list_projects","is_write":false}"#)
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Forbidden);
     }
 
     #[test]

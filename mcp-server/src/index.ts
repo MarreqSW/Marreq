@@ -35,7 +35,7 @@ async function withAudit(
       params_summary: paramsSummary,
       result_summary: resultSummary,
       is_write: isWrite,
-    }).catch(() => {});
+    });
     return out;
   } catch (err) {
     resultSummary = err instanceof Error ? err.message : String(err);

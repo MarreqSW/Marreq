@@ -25,7 +25,7 @@ async function withAudit(client, toolName, paramsSummary, isWrite, fn) {
             params_summary: paramsSummary,
             result_summary: resultSummary,
             is_write: isWrite,
-        }).catch(() => { });
+        });
         return out;
     }
     catch (err) {

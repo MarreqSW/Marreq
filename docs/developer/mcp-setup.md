@@ -14,6 +14,9 @@ request identity is never stored in a process-global variable. Until delegated
 OAuth is configured, remote mode accepts an existing Marreq API token as its
 Bearer credential. The credential is bound to the MCP session using a one-way
 SHA-256 fingerprint so a session ID cannot be reused with another credential.
+Sessions expire after 30 minutes idle or eight hours absolute and the process
+admits at most 1,000 concurrent sessions. Closing the transport removes its
+state; credentials are still sent and checked on every downstream REST call.
 
 ## Remote Streamable HTTP
 
@@ -57,6 +60,8 @@ If it asks for a client ID, register the client with `POST /oauth/register`
 using the exact HTTPS callback URI supplied by the client. Self-hosted instances
 must set `MARREQ_PUBLIC_BASE_URL` to the externally reachable HTTPS origin so
 issuer and resource validation agree at every hop.
+An unauthenticated request receives a `WWW-Authenticate: Bearer` challenge with
+the `resource_metadata` URL for `/.well-known/oauth-protected-resource/mcp`.
 
 Reusable requirements-engineering guidance is provided in
 [`mcp-server/MARREQ_SKILL.md`](../../mcp-server/MARREQ_SKILL.md). It is plain

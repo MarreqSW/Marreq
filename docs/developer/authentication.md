@@ -31,6 +31,7 @@ OAuth endpoints:
 |---|---|---|
 | `GET` | `/.well-known/oauth-authorization-server` | Authorization-server metadata. |
 | `GET` | `/.well-known/oauth-protected-resource` | MCP protected-resource metadata. |
+| `GET` | `/.well-known/oauth-protected-resource/mcp` | Path-specific MCP protected-resource metadata. |
 | `POST` | `/oauth/register` | Register a public client and exact redirect URIs. |
 | `GET` | `/oauth/authorize` | Validate the request and show consent. |
 | `POST` | `/oauth/authorize` | Allow or deny using the authenticated browser session. |
@@ -40,6 +41,15 @@ OAuth endpoints:
 
 The MCP resource indicator is `<MARREQ_PUBLIC_BASE_URL>/mcp`. Redirect URIs use
 exact matching; HTTPS is mandatory except for loopback localhost development.
+Token responses are explicitly non-cacheable. Authorization responses include
+the authorization-server issuer (`iss`), which is advertised in metadata.
+
+Dynamic registration remains available for standards-compatible MCP clients.
+It is rate-limited per source address and accepts at most ten unique redirect
+URIs, with bounded client-name and URI lengths. A registered client name is
+self-asserted metadata, not proof of a vendor identity; the consent page states
+that distinction. Deployments that need a stronger client trust policy should
+pre-register approved clients at their ingress/provisioning layer.
 
 Supported scopes are `projects:read`, `requirements:read`,
 `requirements:write`, `requirements:approve`, `verifications:read`,

@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  downloadBaselineReqif,
   downloadMatrixXlsx,
   downloadProjectReportPdf,
   downloadRequirementsPdf,
+  downloadRequirementsReqif,
   downloadRequirementsXlsx,
   downloadVerificationsXlsx,
 } from '../exports';
@@ -78,6 +80,12 @@ describe('workbook downloads', () => {
       path: '/api/projects/7/exports/report.pdf',
       filename: 'report-project-7.pdf',
     },
+    {
+      name: 'the project ReqIF file',
+      download: downloadRequirementsReqif,
+      path: '/api/projects/7/exports/requirements.reqif',
+      filename: 'requirements-project-7.reqif',
+    },
   ])('downloads $name for a project', async ({ download, path, filename }) => {
     const anchor = stubDownloadEnvironment();
     const fetchMock = stubFetchOk(new Blob(['document']));
@@ -89,6 +97,20 @@ describe('workbook downloads', () => {
       expect.objectContaining({ credentials: 'same-origin' }),
     );
     expect(anchor.download).toBe(filename);
+    expect(anchor.click).toHaveBeenCalled();
+  });
+
+  it('downloads a baseline ReqIF file for a project', async () => {
+    const anchor = stubDownloadEnvironment();
+    const fetchMock = stubFetchOk(new Blob(['reqif']));
+
+    await downloadBaselineReqif(7, 10);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects/7/exports/baselines/10.reqif',
+      expect.objectContaining({ credentials: 'same-origin' }),
+    );
+    expect(anchor.download).toBe('baseline-10-project-7.reqif');
     expect(anchor.click).toHaveBeenCalled();
   });
 

@@ -200,6 +200,17 @@ mod test_support {
             triggering_user_id: None,
         });
 
+        repo.baselines.push(Baseline {
+            id: 10,
+            project_id: 1,
+            name: "BL-1".into(),
+            description: Some("First snapshot".into()),
+            created_at: timestamp(),
+            created_by: 1,
+            source_saved_view_id: None,
+            source_view_definition: None,
+        });
+
         repo
     }
 }
@@ -393,4 +404,78 @@ async fn export_requirements_pdf_requires_auth() {
         .dispatch()
         .await;
     assert_eq!(response.status(), Status::Unauthorized);
+}
+
+#[rocket::async_test]
+async fn export_requirements_reqif_returns_xml() {
+    let client = test_client(export_repo()).await;
+    let response = client
+        .get("/api/projects/1/exports/requirements.reqif")
+        .private_cookie(session_cookie(&client, 1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(
+        response.headers().get_one("Content-Type"),
+        Some("application/xml")
+    );
+    assert_eq!(
+        response.headers().get_one("Content-Disposition"),
+        Some("attachment; filename=\"requirements-project-1.reqif\"")
+    );
+    let body = response.into_string().await.expect("xml");
+    assert!(body.contains("<REQ-IF"));
+    assert!(body.contains("SPEC-OBJECT"));
+}
+
+#[rocket::async_test]
+async fn export_requirements_reqif_allows_viewer() {
+    let client = test_client(export_repo()).await;
+    let response = client
+        .get("/api/projects/1/exports/requirements.reqif")
+        .private_cookie(session_cookie(&client, 2))
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Ok);
+}
+
+#[rocket::async_test]
+async fn export_requirements_reqif_forbids_non_member() {
+    let client = test_client(export_repo()).await;
+    let response = client
+        .get("/api/projects/1/exports/requirements.reqif")
+        .private_cookie(session_cookie(&client, 3))
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn export_baseline_reqif_returns_xml() {
+    let client = test_client(export_repo()).await;
+    let response = client
+        .get("/api/projects/1/exports/baselines/10.reqif")
+        .private_cookie(session_cookie(&client, 1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(
+        response.headers().get_one("Content-Disposition"),
+        Some("attachment; filename=\"baseline-10-project-1.reqif\"")
+    );
+    let body = response.into_string().await.expect("xml");
+    assert!(body.contains("<REQ-IF"));
+}
+
+#[rocket::async_test]
+async fn export_baseline_reqif_not_found_for_unknown_baseline() {
+    let client = test_client(export_repo()).await;
+    let response = client
+        .get("/api/projects/1/exports/baselines/999.reqif")
+        .private_cookie(session_cookie(&client, 1))
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::NotFound);
 }

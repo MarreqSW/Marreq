@@ -4,6 +4,7 @@ import {
   downloadMatrixXlsx,
   downloadProjectReportPdf,
   downloadRequirementsPdf,
+  downloadRequirementsReqif,
   downloadRequirementsXlsx,
   downloadVerificationsXlsx,
   getBaselineTraceability,
@@ -51,6 +52,7 @@ const PROJECT_EXPORTS = [
   { key: 'matrix-xlsx', label: 'Matrix (.xlsx)', run: downloadMatrixXlsx },
   { key: 'requirements-pdf', label: 'Requirements PDF', run: downloadRequirementsPdf },
   { key: 'report-pdf', label: 'Report PDF', run: downloadProjectReportPdf },
+  { key: 'requirements-reqif', label: 'Requirements (.reqif)', run: downloadRequirementsReqif },
 ] as const;
 
 export default function ReportsPage() {
@@ -581,7 +583,7 @@ export default function ReportsPage() {
 
         <ReportSection
           title="Exports"
-          subtitle="Excel and PDF downloads covering the whole project"
+          subtitle="Excel, PDF, and ReqIF downloads covering the whole project"
         >
           <div className="p-4 space-y-3">
             <div className="flex flex-wrap gap-3 text-sm">

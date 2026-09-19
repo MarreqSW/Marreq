@@ -33,6 +33,15 @@ original identifiers, XHTML formatting and attachments are not currently
 persisted. The import result reports these losses as warnings. ReqIFZ is not
 supported.
 
+The Rocket API exposes the same service:
+
+- `GET /api/projects/{project_id}/exports/requirements.reqif`
+- `GET /api/projects/{project_id}/exports/baselines/{baseline_id}.reqif`
+- `POST /api/projects/{project_id}/imports/reqif`
+
+The SPA downloads live requirements ReqIF from **Reports**, baseline ReqIF from
+the baseline detail page, and imports `.reqif`/`.xml` from **Import**.
+
 ## Import defaults
 
 ReqIF does not always contain every Marreq-specific catalog value. Import requires project-local defaults for author, reviewer, category, applicability, verification method, and fallback status.
@@ -54,5 +63,7 @@ ReqIF does not always contain every Marreq-specific catalog value. Import requir
 - `marreq-core/src/reqif/mapping.rs`
 - `marreq-core/src/reqif/export.rs`
 - `marreq-core/src/reqif/mod.rs`
+- `marreq-core/src/api/exports.rs`
+- `marreq-core/src/api/imports.rs`
 
 Related issue: #71

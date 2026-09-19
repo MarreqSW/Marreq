@@ -93,7 +93,7 @@ describe('ImportPage', () => {
       </ThemeProvider>,
     );
 
-    expect(screen.getByRole('heading', { name: /import from excel/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^import$/i })).toBeInTheDocument();
     const file = new File(['Title\nHello world\n'], 'reqs.csv', { type: 'text/csv' });
     await user.upload(screen.getByTestId('import-file'), file);
     await user.click(screen.getByRole('button', { name: /upload and map columns/i }));
@@ -225,5 +225,41 @@ describe('ImportPage', () => {
     finishImport();
     await waitFor(() => expect(screen.queryByTestId('import-progress')).not.toBeInTheDocument());
     expect(await screen.findByTestId('import-result')).toHaveTextContent('Imported 2 record(s).');
+  });
+
+  it('imports a ReqIF file and shows counts and warnings', async () => {
+    vi.mocked(apiClient.commitReqifImport).mockResolvedValue({
+      success: true,
+      message: 'Imported 2 requirements from ReqIF',
+      imported_count: 2,
+      created_link_count: 1,
+      errors: [],
+      warnings: ['Dropped custom attribute Foo'],
+      imported_requirement_ids: [21, 22],
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/space-project/import']}>
+          <Routes>
+            <Route path="/:projectSlug/import" element={<ImportPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+
+    const file = new File(['<REQ-IF />'], 'sample.reqif', { type: 'application/xml' });
+    await user.upload(screen.getByTestId('reqif-import-file'), file);
+    await user.click(screen.getByRole('button', { name: /import reqif/i }));
+
+    await waitFor(() => expect(apiClient.commitReqifImport).toHaveBeenCalledWith(5, file, 'csrf-test'));
+    const result = await screen.findByTestId('reqif-import-result');
+    expect(result).toHaveTextContent('Imported 2 requirement(s), created 1 link(s).');
+    expect(screen.getByTestId('reqif-import-warnings')).toHaveTextContent('Dropped custom attribute Foo');
+    expect(screen.getByRole('link', { name: /open requirements/i })).toHaveAttribute(
+      'href',
+      '/space-project/requirements',
+    );
   });
 });

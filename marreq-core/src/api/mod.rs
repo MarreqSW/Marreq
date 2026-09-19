@@ -187,11 +187,14 @@ pub fn routes() -> Vec<Route> {
         groups::remove_member,
         imports::preview_excel,
         imports::commit_excel,
+        imports::commit_reqif,
         exports::export_requirements_xlsx,
         exports::export_verifications_xlsx,
         exports::export_matrix_xlsx,
         exports::export_requirements_pdf,
         exports::export_report_pdf,
+        exports::export_requirements_reqif,
+        exports::export_baseline_reqif,
     ];
     r
 }

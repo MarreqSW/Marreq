@@ -127,8 +127,8 @@ Having these in place before bulk-adding requirements keeps data consistent and 
 - **Verifications** (test management): From **Verifications** list or **Reports**, **Export Excel** (verifications) to get all verifications in `.xls` (name, description, source, status, reference code, etc.).
 - **Traceability matrix**: From **Matrix**, **Export Excel** (or CSV) for the requirement–verification mapping; optionally filter by verification status before export.
 - **ReqIF**:
-  - **Current project**: **Export → ReqIF (current)** for the latest state.
-  - **From a baseline**: Open the baseline and use **Export ReqIF**, or **Export → ReqIF (from baseline…)** and select the baseline — use this for audits or release packages.
+  - **Current project**: **Reports → Requirements (.reqif)** for the latest state.
+  - **From a baseline**: Open the baseline and use **Export ReqIF** — use this for audits or release packages.
 - **Reports**: From **Reports**, use **Generate PDF Report** or **Download requirements (PDF)** for human-readable summaries, coverage, and test-related metrics.
 
 ---

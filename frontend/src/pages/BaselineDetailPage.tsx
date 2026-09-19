@@ -6,6 +6,7 @@ import {
   getBaselineTraceability,
   getBaselineVerifications,
 } from '@/api/client';
+import { downloadBaselineReqif } from '@/api/exports';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import type {
@@ -29,6 +30,8 @@ export default function BaselineDetailPage() {
   const [trace, setTrace] = useState<BaselineTraceabilityRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [reqifBusy, setReqifBusy] = useState(false);
+  const [reqifErr, setReqifErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid) || !Number.isFinite(bid)) return;
@@ -98,6 +101,22 @@ export default function BaselineDetailPage() {
         title={meta.name}
         subtitle={meta.description ?? 'Snapshot contents from the API.'}
       >
+        <button
+          type="button"
+          disabled={reqifBusy}
+          onClick={() => {
+            setReqifErr(null);
+            setReqifBusy(true);
+            void downloadBaselineReqif(pid, bid)
+              .catch((e) =>
+                setReqifErr(e instanceof Error ? e.message : 'ReqIF export failed'),
+              )
+              .finally(() => setReqifBusy(false));
+          }}
+          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher disabled:opacity-50"
+        >
+          {reqifBusy ? 'Exporting…' : 'Export ReqIF'}
+        </button>
         <a
           href={`${basePath}/baselines/${bid}`}
           className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
@@ -105,6 +124,11 @@ export default function BaselineDetailPage() {
           Classic view
         </a>
       </StitchPageHeader>
+      {reqifErr ? (
+        <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-200 text-sm p-4">
+          {reqifErr}
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
         <div className="rounded-xl border border-stitch-border bg-stitch-surface p-4 text-center">

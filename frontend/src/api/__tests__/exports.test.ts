@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { downloadRequirementsXlsx, downloadVerificationsXlsx } from '../exports';
+import {
+  downloadMatrixXlsx,
+  downloadProjectReportPdf,
+  downloadRequirementsPdf,
+  downloadRequirementsXlsx,
+  downloadVerificationsXlsx,
+} from '../exports';
 
 function stubDownloadEnvironment() {
   const anchor = { href: '', download: '', click: vi.fn() };
@@ -51,6 +57,39 @@ describe('workbook downloads', () => {
       expect.objectContaining({ credentials: 'same-origin' }),
     );
     expect(anchor.download).toBe('verifications-project-7.xlsx');
+  });
+
+  it.each([
+    {
+      name: 'the traceability matrix workbook',
+      download: downloadMatrixXlsx,
+      path: '/api/projects/7/exports/matrix.xlsx',
+      filename: 'matrix-project-7.xlsx',
+    },
+    {
+      name: 'the requirements PDF',
+      download: downloadRequirementsPdf,
+      path: '/api/projects/7/exports/requirements.pdf',
+      filename: 'requirements-project-7.pdf',
+    },
+    {
+      name: 'the project report PDF',
+      download: downloadProjectReportPdf,
+      path: '/api/projects/7/exports/report.pdf',
+      filename: 'report-project-7.pdf',
+    },
+  ])('downloads $name for a project', async ({ download, path, filename }) => {
+    const anchor = stubDownloadEnvironment();
+    const fetchMock = stubFetchOk(new Blob(['document']));
+
+    await download(7);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      path,
+      expect.objectContaining({ credentials: 'same-origin' }),
+    );
+    expect(anchor.download).toBe(filename);
+    expect(anchor.click).toHaveBeenCalled();
   });
 
   it('surfaces the server error message and downloads nothing', async () => {

@@ -127,6 +127,18 @@ mod test_support {
                 project_id: 1,
             },
         );
+        repo.verification_statuses.insert(
+            1,
+            VerificationStatus {
+                id: 1,
+                title: "Planned".into(),
+                description: "Planned".into(),
+                tag: "plan".into(),
+                project_id: 1,
+                is_system: true,
+                tag_color: None,
+            },
+        );
 
         repo.requirements.insert(
             1,
@@ -174,6 +186,20 @@ mod test_support {
             },
         );
 
+        repo.matrices.push(MatrixLink {
+            req_id: 1,
+            verification_id: 1,
+            creation_date: timestamp(),
+            project_id: 1,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
+        });
+
         repo
     }
 }
@@ -184,6 +210,8 @@ const XLSX_CONTENT_TYPE: &str = "application/vnd.openxmlformats-officedocument.s
 
 /// xlsx files are zip archives, so a valid workbook starts with the local file header magic.
 const ZIP_MAGIC: &[u8] = b"PK\x03\x04";
+
+const PDF_MAGIC: &[u8] = b"%PDF-";
 
 #[rocket::async_test]
 async fn export_requirements_requires_auth() {
@@ -268,4 +296,101 @@ async fn export_verifications_forbids_non_member() {
         .dispatch()
         .await;
     assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn export_matrix_returns_workbook() {
+    let client = test_client(export_repo()).await;
+    let response = client
+        .get("/api/projects/1/exports/matrix.xlsx")
+        .private_cookie(session_cookie(&client, 1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(
+        response.headers().get_one("Content-Type"),
+        Some(XLSX_CONTENT_TYPE)
+    );
+    assert_eq!(
+        response.headers().get_one("Content-Disposition"),
+        Some("attachment; filename=\"matrix-project-1.xlsx\"")
+    );
+
+    let bytes = response.into_bytes().await.expect("body");
+    assert!(bytes.starts_with(ZIP_MAGIC), "expected an xlsx archive");
+}
+
+#[rocket::async_test]
+async fn export_matrix_forbids_non_member() {
+    let client = test_client(export_repo()).await;
+    let response = client
+        .get("/api/projects/1/exports/matrix.xlsx")
+        .private_cookie(session_cookie(&client, 3))
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn export_requirements_pdf_returns_document() {
+    let client = test_client(export_repo()).await;
+    let response = client
+        .get("/api/projects/1/exports/requirements.pdf")
+        .private_cookie(session_cookie(&client, 1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(
+        response.headers().get_one("Content-Type"),
+        Some("application/pdf")
+    );
+    assert_eq!(
+        response.headers().get_one("Content-Disposition"),
+        Some("attachment; filename=\"requirements-project-1.pdf\"")
+    );
+
+    let bytes = response.into_bytes().await.expect("body");
+    assert!(bytes.starts_with(PDF_MAGIC), "expected a pdf document");
+}
+
+#[rocket::async_test]
+async fn export_report_pdf_returns_document() {
+    let client = test_client(export_repo()).await;
+    let response = client
+        .get("/api/projects/1/exports/report.pdf")
+        .private_cookie(session_cookie(&client, 1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(
+        response.headers().get_one("Content-Disposition"),
+        Some("attachment; filename=\"report-project-1.pdf\"")
+    );
+
+    let bytes = response.into_bytes().await.expect("body");
+    assert!(bytes.starts_with(PDF_MAGIC), "expected a pdf document");
+}
+
+#[rocket::async_test]
+async fn export_report_pdf_allows_viewer() {
+    let client = test_client(export_repo()).await;
+    let response = client
+        .get("/api/projects/1/exports/report.pdf")
+        .private_cookie(session_cookie(&client, 2))
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Ok);
+}
+
+#[rocket::async_test]
+async fn export_requirements_pdf_requires_auth() {
+    let client = test_client(export_repo()).await;
+    let response = client
+        .get("/api/projects/1/exports/requirements.pdf")
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Unauthorized);
 }

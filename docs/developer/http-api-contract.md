@@ -69,6 +69,9 @@ Errors from API handlers use JSON (see below). Failed login typically returns **
 | `POST` | `/api/projects/{project_id}/imports/excel` | Multipart `file`, `import_type` (`requirements` or `tests`), `column_mappings` JSON, and optional `value_mappings` JSON (`target_field`, `source_value`, `target_id`). Unknown catalog/user names fall back to project defaults; supplied target IDs are validated against the project. Creates records; row errors are returned without failing the whole request. Send `X-CSRF-Token` and do not set `Content-Type` (browser sets the multipart boundary). |
 | `GET` | `/api/projects/{project_id}/exports/requirements.xlsx` | Whole-project requirements workbook (custom field columns plus a `Comments` sheet). Requires `ViewRequirements`. Responds with the xlsx media type and `Content-Disposition: attachment`. |
 | `GET` | `/api/projects/{project_id}/exports/verifications.xlsx` | Whole-project verifications workbook. Requires `ViewRequirements`. Responds with the xlsx media type and `Content-Disposition: attachment`. |
+| `GET` | `/api/projects/{project_id}/exports/matrix.xlsx` | Traceability matrix workbook: one row per requirement, one column per verification, `Yes` where a link exists. Requires `ViewRequirements`. |
+| `GET` | `/api/projects/{project_id}/exports/requirements.pdf` | Requirements table as PDF (id, title, reference, status plus one column per custom field). Requires `ViewRequirements`. Responds with `application/pdf` and `Content-Disposition: attachment`. |
+| `GET` | `/api/projects/{project_id}/exports/report.pdf` | Project summary report as PDF (totals, coverage, requirement and verification status breakdowns). Requires `ViewRequirements`. |
 
 Project-scoped CRUD and resources under `/api/projects/{project_id}/...` follow existing routes (Bearer token or session, per handler).
 

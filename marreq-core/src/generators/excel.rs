@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+use crate::generators::GeneratorError as WorkbookError;
 use crate::helper_functions::decorators;
-use crate::repository::{DieselRepo, Repository, RequirementsRepository, VerificationsRepository};
-use diesel::prelude::*;
+use crate::repository::{DieselRepo, Repository};
+use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
-
-type WorkbookError = Box<dyn std::error::Error + Send + Sync>;
 
 /// Scratch file for xlsxwriter, which can only write to a path. The name is unique per
 /// process and call so concurrent exports of the same project cannot clobber each other,
@@ -52,35 +51,34 @@ impl Drop for TempWorkbook {
 pub fn create_matrix_workbook(
     project_id: i32,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-    eprintln!("Creating matrix workbook for project {}", project_id);
+    let repo = DieselRepo::new().map_err(|e| format!("Database connection error: {}", e))?;
+    matrix_workbook_with_repo(&repo, project_id)
+}
 
-    use crate::schema::matrix::dsl::{matrix, req_id};
-
-    let mut connection = DieselRepo::new()
-        .map_err(|e| format!("Database connection error: {}", e))?
-        .get_conn()
-        .map_err(|e| format!("Database connection error: {}", e))?;
-
-    // Get requirements for the project (via repository for versioned schema)
-    let repo = DieselRepo::new().map_err(|e| format!("Database: {}", e))?;
+/// Build the traceability matrix workbook using an explicitly provided repository.
+pub fn matrix_workbook_with_repo<R: Repository>(
+    repo: &R,
+    project_id: i32,
+) -> Result<Vec<u8>, WorkbookError> {
     let all_reqs = repo
         .get_requirements_by_project(project_id)
         .map_err(|e| format!("Error querying requirements by project: {:?}", e))?;
 
-    // Get tests for the project
     let all_tests = repo
         .get_verifications_by_project(project_id)
         .map_err(|e| format!("Error querying tests by project: {:?}", e))?;
 
-    eprintln!(
-        "Found {} requirements and {} tests",
-        all_reqs.len(),
-        all_tests.len()
-    );
+    let links = repo
+        .get_matrix_by_project(project_id)
+        .map_err(|e| format!("Error querying matrix links: {:?}", e))?;
+    let linked: HashSet<(i32, i32)> = links
+        .iter()
+        .map(|link| (link.req_id, link.verification_id))
+        .collect();
 
     // Decorate requirements and tests to get real names
-    let mut decorated_reqs = decorators::decorate_requirements(all_reqs);
-    let mut decorated_tests = decorators::decorate_verifications(all_tests);
+    let mut decorated_reqs = decorators::decorate_requirements_with_repo(repo, all_reqs);
+    let mut decorated_tests = decorators::decorate_verifications_with_repo(repo, all_tests);
 
     // Sort requirements by ID
     decorated_reqs.sort_by_key(|req| req.id);
@@ -88,7 +86,8 @@ pub fn create_matrix_workbook(
     // Sort tests by ID
     decorated_tests.sort_by_key(|test| test.id);
 
-    let workbook = xlsxwriter::Workbook::new("target/matrix.xls")?;
+    let temp = TempWorkbook::new("matrix", project_id);
+    let workbook = xlsxwriter::Workbook::new(temp.path_str()?)?;
     let mut sheet1 = workbook.add_worksheet(None)?;
 
     // Write headers
@@ -115,40 +114,18 @@ pub fn create_matrix_workbook(
         sheet1.write_string(row, 2, &req.category_id, None)?;
         sheet1.write_string(row, 3, &req.status_id, None)?;
 
-        // Check matrix links for each test
+        // Mark the cell when this requirement is linked to this test
         for (col_idx, test) in decorated_tests.iter().enumerate() {
             let col = (col_idx + 4) as u16;
-
-            // Check if this requirement is linked to this test
-            let test_present: i64 = matrix
-                .filter(req_id.eq(req.id))
-                .filter(crate::schema::matrix::dsl::verification_id.eq(test.id))
-                .count()
-                .get_result(connection.as_mut())
-                .map_err(|e| format!("Error checking matrix link: {:?}", e))?;
-
-            if test_present > 0 {
+            if linked.contains(&(req.id, test.id)) {
                 sheet1.write_string(row, col, "Yes", None)?;
             }
             // Leave cell empty if no link exists
         }
     }
 
-    eprintln!("Matrix data written successfully");
-
-    workbook
-        .close()
-        .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-            format!("Error closing workbook: {:?}", e).into()
-        })?;
-
-    let result =
-        fs::read("target/matrix.xls").map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-            format!("Error reading generated file: {:?}", e).into()
-        })?;
-
-    eprintln!("Matrix workbook created successfully");
-    Ok(result)
+    workbook.close()?;
+    temp.read()
 }
 
 pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Error>> {

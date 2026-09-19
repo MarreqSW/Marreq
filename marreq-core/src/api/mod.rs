@@ -189,6 +189,9 @@ pub fn routes() -> Vec<Route> {
         imports::commit_excel,
         exports::export_requirements_xlsx,
         exports::export_verifications_xlsx,
+        exports::export_matrix_xlsx,
+        exports::export_requirements_pdf,
+        exports::export_report_pdf,
     ];
     r
 }

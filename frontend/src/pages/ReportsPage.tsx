@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useOutletContext } from 'react-router-dom';
 import {
+  downloadMatrixXlsx,
+  downloadProjectReportPdf,
+  downloadRequirementsPdf,
+  downloadRequirementsXlsx,
+  downloadVerificationsXlsx,
   getBaselineTraceability,
   getCoverageReport,
   listBaselines,
@@ -40,6 +45,14 @@ function pairKey(reqId: number, verId: number) {
   return `${reqId}-${verId}`;
 }
 
+const PROJECT_EXPORTS = [
+  { key: 'requirements-xlsx', label: 'Requirements (.xlsx)', run: downloadRequirementsXlsx },
+  { key: 'verifications-xlsx', label: 'Verifications (.xlsx)', run: downloadVerificationsXlsx },
+  { key: 'matrix-xlsx', label: 'Matrix (.xlsx)', run: downloadMatrixXlsx },
+  { key: 'requirements-pdf', label: 'Requirements PDF', run: downloadRequirementsPdf },
+  { key: 'report-pdf', label: 'Report PDF', run: downloadProjectReportPdf },
+] as const;
+
 export default function ReportsPage() {
   const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();
   const location = useLocation();
@@ -54,6 +67,9 @@ export default function ReportsPage() {
   const [baselines, setBaselines] = useState<Baseline[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+
+  const [exportBusy, setExportBusy] = useState<string | null>(null);
+  const [exportErr, setExportErr] = useState<string | null>(null);
 
   const [baselineId, setBaselineId] = useState<number | ''>('');
   const [baselineRows, setBaselineRows] = useState<BaselineTraceabilityRow[] | null>(null);
@@ -99,6 +115,21 @@ export default function ReportsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const runExport = useCallback(
+    async (key: string, download: (projectId: number) => Promise<void>) => {
+      setExportErr(null);
+      setExportBusy(key);
+      try {
+        await download(pid);
+      } catch (e) {
+        setExportErr(e instanceof Error ? e.message : 'Export failed');
+      } finally {
+        setExportBusy(null);
+      }
+    },
+    [pid],
+  );
 
   useEffect(() => {
     if (loading) return;
@@ -549,28 +580,28 @@ export default function ReportsPage() {
         </ReportSection>
 
         <ReportSection
-          title="Classic exports (same session)"
-          subtitle="Excel / PDF downloads served by the legacy HTML routes"
+          title="Exports"
+          subtitle="Excel and PDF downloads covering the whole project"
         >
-          <div className="p-4 flex flex-wrap gap-3 text-sm">
-            <a href={`${basePath}/requirements.xls`} className="text-stitch-accent font-bold hover:underline">
-              Requirements (.xls)
-            </a>
-            <a href={`${basePath}/verifications.xls`} className="text-stitch-accent font-bold hover:underline">
-              Verifications (.xls)
-            </a>
-            <a href={`${basePath}/matrix.xls`} className="text-stitch-accent font-bold hover:underline">
-              Matrix (.xls)
-            </a>
-            <a
-              href={`${basePath}/reports/requirements-pdf`}
-              className="text-stitch-accent font-bold hover:underline"
-            >
-              Requirements PDF
-            </a>
-            <a href={`${basePath}/reports/pdf`} className="text-stitch-accent font-bold hover:underline">
-              Report PDF
-            </a>
+          <div className="p-4 space-y-3">
+            <div className="flex flex-wrap gap-3 text-sm">
+              {PROJECT_EXPORTS.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => void runExport(item.key, item.run)}
+                  disabled={exportBusy !== null}
+                  className="text-stitch-accent font-bold hover:underline disabled:opacity-50"
+                >
+                  {exportBusy === item.key ? `${item.label}…` : item.label}
+                </button>
+              ))}
+            </div>
+            {exportErr ? (
+              <p className="text-xs text-red-300" role="alert">
+                {exportErr}
+              </p>
+            ) : null}
           </div>
         </ReportSection>
       </div>

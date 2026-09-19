@@ -9,6 +9,7 @@ use std::net::IpAddr;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
+use crate::api::guards::OptionalSessionUser;
 use crate::api::prelude::*;
 use crate::auth::delegated::{self, AuthorizeRequest, DelegatedOAuthError, SCOPES};
 use crate::auth::guards::SessionUser;
@@ -22,7 +23,10 @@ fn issuer() -> String {
         .to_owned()
 }
 fn resource() -> String {
-    format!("{}/mcp", issuer())
+    crate::config::AppConfig::current()
+        .mcp_public_url
+        .trim_end_matches('/')
+        .to_owned()
 }
 fn oauth_error(error: DelegatedOAuthError) -> ApiError {
     match error {
@@ -81,6 +85,11 @@ impl OAuthRegistrationRateLimiter {
         }
         attempts.push(now);
         true
+    }
+}
+impl Default for OAuthRegistrationRateLimiter {
+    fn default() -> Self {
+        Self::new()
     }
 }
 fn escape(value: &str) -> String {
@@ -186,17 +195,82 @@ fn checked_request<R: DelegatedOAuthRepository>(
     Ok((client, scopes))
 }
 
+fn authorization_return_path(query: &AuthorizeQuery) -> String {
+    let mut url =
+        url::Url::parse("http://localhost/oauth/authorize").expect("fixed continuation URL");
+    url.query_pairs_mut()
+        .append_pair("response_type", &query.response_type)
+        .append_pair("client_id", &query.client_id)
+        .append_pair("redirect_uri", &query.redirect_uri)
+        .append_pair("scope", &query.scope)
+        .append_pair("state", &query.state)
+        .append_pair("code_challenge", &query.code_challenge)
+        .append_pair("code_challenge_method", &query.code_challenge_method)
+        .append_pair("resource", &query.resource);
+    format!("{}?{}", url.path(), url.query().unwrap_or_default())
+}
+
 #[get("/oauth/authorize?<query..>")]
 pub fn authorize_page(
     query: AuthorizeQuery,
-    user: SessionUser,
+    user: OptionalSessionUser,
     state: &State<AppState>,
     cookies: &rocket::http::CookieJar<'_>,
-) -> ApiResult<RawHtml<String>> {
+) -> ApiResult<AuthorizePageResponse> {
     let repo = state
         .try_repo_read()
         .map_err(|_| ApiError::Internal("repository unavailable".into()))?;
-    let (client, scopes) = checked_request(&*repo, &query)?;
+    let (client, scopes) = match checked_request(&*repo, &query) {
+        Ok(value) => value,
+        Err(error) => {
+            let trusted_redirect = repo
+                .get_oauth_client(&query.client_id)
+                .ok()
+                .and_then(|client| client.redirect_uris.as_array().cloned())
+                .is_some_and(|redirects| {
+                    redirects
+                        .iter()
+                        .any(|value| value.as_str() == Some(query.redirect_uri.as_str()))
+                });
+            if !trusted_redirect {
+                return Err(error);
+            }
+            let mut url = url::Url::parse(&query.redirect_uri)
+                .map_err(|_| ApiError::BadRequest("invalid redirect_uri".into()))?;
+            let code = match error.message() {
+                "invalid_scope" => "invalid_scope",
+                _ => "invalid_request",
+            };
+            url.query_pairs_mut()
+                .append_pair("error", code)
+                .append_pair("state", &query.state)
+                .append_pair("iss", &issuer());
+            return Ok(AuthorizePageResponse::Login(Box::new(Redirect::to(
+                url.to_string(),
+            ))));
+        }
+    };
+    let return_to = authorization_return_path(&query);
+    let Some(user) = user.0 else {
+        cookies.add_private(
+            rocket::http::Cookie::build(("oauth_authorize_pending", return_to.clone()))
+                .http_only(true)
+                .same_site(rocket::http::SameSite::Lax)
+                .max_age(rocket::time::Duration::minutes(10))
+                .build(),
+        );
+        return Ok(AuthorizePageResponse::Login(Box::new(Redirect::to(
+            format!("/login?return_to={}", urlencoding::encode(&return_to)),
+        ))));
+    };
+    if let Some(pending) = cookies.get_private("oauth_authorize_pending") {
+        if pending.value() != return_to {
+            return Err(ApiError::BadRequest(
+                "authorization transaction changed during login".into(),
+            ));
+        }
+        cookies.remove_private(rocket::http::Cookie::from("oauth_authorize_pending"));
+    }
     let csrf = crate::auth::csrf::get_or_create_csrf_token(cookies);
     let hidden = [
         ("client_id", query.client_id.as_str()),
@@ -219,14 +293,20 @@ pub fn authorize_page(
         .iter()
         .map(|s| format!("<li>{}</li>", escape(s)))
         .collect::<String>();
-    Ok(RawHtml(format!(
+    Ok(AuthorizePageResponse::Consent(RawHtml(format!(
         r#"<!doctype html><html><head><meta charset="utf-8"><title>Authorize {name}</title></head><body><main><h1>Authorize {name}</h1><p>This name is registered metadata; the application's identity has not been independently verified.</p><p>Signed in as <strong>{user}</strong></p><p>This application requests:</p><ul>{capabilities}</ul><form method="post" action="/oauth/authorize">{hidden}<input type="hidden" name="csrf" value="{csrf}"><button name="decision" value="allow">Allow</button><button name="decision" value="deny">Deny</button></form></main></body></html>"#,
         name = escape(&client.name),
         user = escape(&user.username),
         capabilities = capabilities,
         hidden = hidden,
         csrf = escape(&csrf)
-    )))
+    ))))
+}
+
+#[derive(rocket::response::Responder)]
+pub enum AuthorizePageResponse {
+    Consent(RawHtml<String>),
+    Login(Box<Redirect>),
 }
 
 #[derive(FromForm)]
@@ -415,4 +495,45 @@ pub fn routes() -> Vec<rocket::Route> {
         grants,
         revoke_grant
     ]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn login_continuation_preserves_the_complete_authorization_request() {
+        let query = AuthorizeQuery {
+            response_type: "code".into(),
+            client_id: "client".into(),
+            redirect_uri: "https://client.example/callback".into(),
+            scope: "projects:read requirements:read".into(),
+            state: "opaque-state".into(),
+            code_challenge: "a".repeat(43),
+            code_challenge_method: "S256".into(),
+            resource: "https://marreq.example/mcp".into(),
+        };
+        let url = url::Url::parse(&format!(
+            "http://localhost{}",
+            authorization_return_path(&query)
+        ))
+        .unwrap();
+        let values = url
+            .query_pairs()
+            .collect::<std::collections::HashMap<_, _>>();
+        assert_eq!(values.get("client_id").map(|v| v.as_ref()), Some("client"));
+        assert_eq!(
+            values.get("state").map(|v| v.as_ref()),
+            Some("opaque-state")
+        );
+        assert_eq!(
+            values.get("redirect_uri").map(|v| v.as_ref()),
+            Some("https://client.example/callback")
+        );
+        assert_eq!(
+            values.get("resource").map(|v| v.as_ref()),
+            Some("https://marreq.example/mcp")
+        );
+        assert_eq!(values.get("code_challenge").map(|v| v.len()), Some(43));
+    }
 }

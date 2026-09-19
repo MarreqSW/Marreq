@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getAuthProviders, getCsrfToken, getDeploymentInfo, loginJson } from '@/api/client';
 import type { AuthProviderDiscovery, DeploymentInfo } from '@/api/types';
 import AuthLayout from '@/components/AuthLayout';
@@ -8,6 +8,11 @@ import { getFrontendBuildConstants } from '@/utils/semverRange';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const requestedReturnTo = new URLSearchParams(location.search).get('return_to');
+  const returnTo = requestedReturnTo?.startsWith('/oauth/authorize?') && !requestedReturnTo.includes('\\')
+    ? requestedReturnTo
+    : '/';
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [deployment, setDeployment] = useState<DeploymentInfo | null>(null);
@@ -17,7 +22,8 @@ export default function LoginPage() {
   const { error, submitting, onSubmit } = useFormSubmit(async () => {
     const csrf = await getCsrfToken();
     await loginJson(username, password, csrf);
-    navigate('/', { replace: true });
+    if (returnTo === '/') navigate('/', { replace: true });
+    else window.location.assign(returnTo);
   });
 
   useEffect(() => {
@@ -67,7 +73,7 @@ export default function LoginPage() {
           {providers.external.map((provider) => (
             <a
               key={provider.id}
-              href={`/api/auth/external/${encodeURIComponent(provider.id)}/start`}
+              href={`/api/auth/external/${encodeURIComponent(provider.id)}/start${returnTo === '/' ? '' : `?return_to=${encodeURIComponent(returnTo)}`}`}
               className="block w-full rounded-lg border border-stitch-border bg-stitch-elevated px-3 py-2.5 text-center text-sm font-semibold text-stitch-fg hover:bg-stitch-muted/10"
             >
               Continue with {provider.display_name}

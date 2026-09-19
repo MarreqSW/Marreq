@@ -10,6 +10,8 @@ use crate::api::prelude::*;
 use crate::auth::guards::ProjectAccessOrBearer;
 use crate::importers::{ColumnMapping, ExcelImporter, ImportConfig, ValueMapping};
 use crate::repository::{LookupRepository, ProjectMembersRepository};
+use crate::reqif::import::ImportConfig as ReqifImportConfig;
+use crate::services::ReqIFService;
 
 const MAX_UPLOAD_BYTES: u64 = 20 * 1024 * 1024;
 
@@ -149,6 +151,107 @@ pub async fn commit_excel(
         "errors": result.errors,
         "imported_requirement_ids": result.imported_requirement_ids,
     }))
+}
+
+#[derive(FromForm)]
+pub struct ReqifImportForm<'r> {
+    file: TempFile<'r>,
+}
+
+#[post("/projects/<project_id>/imports/reqif", data = "<form>")]
+pub async fn commit_reqif(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    state: &State<AppState>,
+    mut form: Form<ReqifImportForm<'_>>,
+) -> ApiResult<Value> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::EditRequirements,
+    )?;
+    let (filename, bytes) = read_upload(&mut form.file).await?;
+    reject_reqifz(&filename, &bytes)?;
+    let config = reqif_import_config(state, project_id, access.user().id)?;
+    let result = ReqIFService::new(state.inner())
+        .import_into_project(&bytes, &config, access.user())
+        .map_err(ApiError::BadRequest)?;
+    Ok(json!({
+        "success": result.success,
+        "message": result.message,
+        "imported_count": result.imported_count,
+        "created_link_count": result.created_link_count,
+        "errors": result.errors,
+        "warnings": result.warnings,
+        "imported_requirement_ids": result.imported_requirement_ids,
+    }))
+}
+
+fn reject_reqifz(filename: &str, bytes: &[u8]) -> ApiResult<()> {
+    let lower = filename.to_ascii_lowercase();
+    let zip_magic = bytes.starts_with(b"PK\x03\x04") || bytes.starts_with(b"PK\x05\x06");
+    if lower.ends_with(".reqifz") || zip_magic {
+        return Err(ApiError::BadRequest(
+            "ReqIFZ archives are not supported; upload a .reqif or .xml file".into(),
+        ));
+    }
+    Ok(())
+}
+
+fn reqif_import_config(
+    state: &State<AppState>,
+    project_id: i32,
+    user_id: i32,
+) -> ApiResult<ReqifImportConfig> {
+    let repo = state.repo_read();
+    let default_status_id = repo
+        .get_requirement_status_by_project(project_id)?
+        .into_iter()
+        .next()
+        .map(|item| item.id)
+        .ok_or_else(|| {
+            ApiError::BadRequest(
+                "project has no requirement statuses to use as import default".into(),
+            )
+        })?;
+    let default_category_id = repo
+        .get_categories_by_project(project_id)?
+        .into_iter()
+        .next()
+        .map(|item| item.id)
+        .ok_or_else(|| {
+            ApiError::BadRequest("project has no categories to use as import default".into())
+        })?;
+    let default_applicability_id = repo
+        .get_applicability_by_project(project_id)?
+        .into_iter()
+        .next()
+        .map(|item| item.id)
+        .ok_or_else(|| {
+            ApiError::BadRequest(
+                "project has no applicability values to use as import default".into(),
+            )
+        })?;
+    let default_verification_method_id = repo
+        .get_verification_methods_by_project(project_id)?
+        .into_iter()
+        .next()
+        .map(|item| item.id)
+        .ok_or_else(|| {
+            ApiError::BadRequest(
+                "project has no verification methods to use as import default".into(),
+            )
+        })?;
+    Ok(ReqifImportConfig {
+        project_id,
+        default_status_id,
+        default_category_id,
+        default_applicability_id,
+        default_verification_method_id,
+        author_id: user_id,
+        reviewer_id: user_id,
+    })
 }
 
 fn validate_value_mappings(

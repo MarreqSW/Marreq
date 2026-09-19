@@ -29,12 +29,12 @@ const blocks: { title: string; body: string }[] = [
   {
     title: 'Creating records',
     body:
-      'Use Create Requirement or New verification from the header or list pages. New requirements need at least one verification method configured for the project. Import Excel or CSV from Import in the sidebar (or the create menu) to map columns and create many records at once.',
+      'Use Create Requirement or New verification from the header or list pages. New requirements need at least one verification method configured for the project. Import Excel/CSV or ReqIF from Import in the sidebar (or the create menu).',
   },
   {
     title: 'Classic (legacy) UI',
     body:
-      'ReqIF import/export and some admin tools (server logs, database backup) are not in this workspace yet. Reports includes Excel/PDF download links served by the API.',
+      'Some admin tools (server logs, database backup) are not in this workspace yet. Reports includes Excel, PDF, and ReqIF downloads served by the API. Import ReqIF from the Import page.',
   },
 ];
 

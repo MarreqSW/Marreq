@@ -82,7 +82,7 @@ The top navigation bar includes:
 | **Requirements**          | Project requirements (active when a project is selected)                                                             |
 | **Verifications**         | Project verifications (test cases and their status)                                                                  |
 | **Reports**               | Project reports & analytics                                                                                          |
-| **Import**                | Excel/CSV import with column mapping                                                                                 |
+| **Import**                | Excel/CSV column mapping and ReqIF 1.2 XML import                                                                    |
 | **Members**               | Project members                                                                                                      |
 | **Baselines**             | Project baselines                                                                                                    |
 | **Quick Actions** (admin) | Shortcuts: New Project, New Requirement/Verification/Category/Applicability/Verification Method/Verification Status, New User, Import File/ReqIF |
@@ -356,7 +356,7 @@ You see:
 ### 7.4 Exporting a Baseline as ReqIF
 
 - On the baseline detail page: **Export ReqIF**.
-- Or from the project’s export menu: **Export → ReqIF (from baseline…)** and choose the baseline. The downloaded file is the ReqIF snapshot of that baseline.
+- The downloaded file is the ReqIF 1.2 snapshot of that baseline. Project-wide current-state ReqIF is available from **Reports → Requirements (.reqif)**.
 
 ---
 
@@ -436,8 +436,8 @@ You see:
 
 ### 9.4 Exporting ReqIF
 
-- **Current project**: **Export → ReqIF (current)** (or equivalent) to download ReqIF 1.2 XML for the current requirement set (and comments as Remarks when present).
-- **From a baseline**: **Export → ReqIF (from baseline…)** or open the baseline and use **Export ReqIF** to get an immutable ReqIF snapshot.
+- **Current project**: open **Reports** and download **Requirements (.reqif)** for the live requirement set (comments are included as Remarks when present).
+- **From a baseline**: open the baseline and use **Export ReqIF** for an immutable ReqIF 1.2 snapshot.
 
 ---
 
@@ -445,7 +445,7 @@ You see:
 
 ### 10.1 Importing from Excel or CSV
 
-1. Open a project and go to **Import** in the sidebar, **Create → Import Excel / CSV**, or `/{project-slug}/import`.
+1. Open a project and go to **Import** in the sidebar, **Create → Import**, or `/{project-slug}/import`.
 2. You need **Edit requirements** permission.
 3. Upload a **`.xlsx`** or **`.csv`** file (first sheet only).
 4. Click **Upload and map columns**.
@@ -456,7 +456,12 @@ Unmapped catalog fields (status, category, applicability, verification method) u
 
 ### 10.2 Importing ReqIF
 
-ReqIF 1.2 import is not available in this web workspace yet. Use Excel/CSV import for spreadsheet data.
+1. Open a project and go to **Import** (`/{project-slug}/import`). You need **Edit requirements** permission.
+2. In the **ReqIF 1.2** section, choose a **`.reqif`** or **`.xml`** file (ReqIFZ/ZIP is not supported).
+3. Click **Import ReqIF**. Marreq uses the first project status, category, applicability, and verification method, and the current user as author and reviewer.
+4. Review the imported count, created links, and any warnings or errors, then open the requirements list.
+
+Import creates new requirements; it does not update existing ones. Custom attributes, attachments, and original ReqIF identifiers are not persisted. Empty catalogs (especially verification methods) cause the import to fail until they exist.
 
 ---
 

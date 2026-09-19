@@ -173,13 +173,13 @@ Use the SPA (**Docker** `http://localhost:8080` or **`npm run dev`** in `fronten
 
 - **Requirements Export**: Click "Export Excel" on the requirements page or homepage
 - **Matrix Export**: Click "Export Excel" on the matrix page
-- **ReqIF Export**: Use "Export → ReqIF (current)" for live project, or "ReqIF (from baseline…)" to pick a baseline and download its snapshot as ReqIF 1.2 XML
-- **File Format**: Excel downloads as `.xls`; ReqIF as XML
+- **ReqIF Export**: On **Reports**, download **Requirements (.reqif)** for the live project, or open a baseline and use **Export ReqIF** for that snapshot.
+- **File Format**: Excel downloads as `.xlsx`; ReqIF as XML (`.reqif`)
 
 ### Import Features
 
 - **Excel Import (Web UI)**: Open **Import** in a project (`/{slug}/import`), upload `.xlsx`/`.csv`, map columns, then create requirements or verifications
-- **ReqIF 1.2 Import**: Backend support exists; a ReqIF wizard is not in the SPA yet
+- **ReqIF 1.2 Import (Web UI)**: Same Import page; upload `.reqif`/`.xml`. Catalog defaults are applied on the server; warnings are shown after import. ReqIFZ is not supported.
 - **Indexing integration**: Imported requirements are queued for semantic index refresh when embeddings are enabled
 
 ## 🔌 API Reference

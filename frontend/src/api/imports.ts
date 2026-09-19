@@ -51,6 +51,30 @@ export async function previewExcelImport(
   });
 }
 
+export interface ReqifImportResult {
+  success: boolean;
+  message: string;
+  imported_count: number;
+  created_link_count: number;
+  errors: string[];
+  warnings: string[];
+  imported_requirement_ids: number[];
+}
+
+export async function commitReqifImport(
+  projectId: number,
+  file: File,
+  csrfToken: string,
+): Promise<ReqifImportResult> {
+  const body = new FormData();
+  body.append('file', file);
+  return fetchJson<ReqifImportResult>(`/api/projects/${projectId}/imports/reqif`, {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrfToken },
+    body,
+  });
+}
+
 export async function commitExcelImport(
   projectId: number,
   file: File,

@@ -9,8 +9,10 @@ This audit exercised the real Rust entry point
 `ReqIFService::import_into_project`, including `RequirementService` validation
 and requirement-version-link creation. Each fixture gets a fresh
 `DieselRepoMock` project with controlled defaults. This validates the production
-service path but not PostgreSQL transaction behavior or an HTTP endpoint; no
-ReqIF endpoint currently exists.
+service path but not PostgreSQL transaction behavior. HTTP routes
+`GET /api/projects/{id}/exports/requirements.reqif`,
+`GET /api/projects/{id}/exports/baselines/{baseline_id}.reqif`, and
+`POST /api/projects/{id}/imports/reqif` now wrap the same service for the SPA.
 
 | Result | Count |
 | --- | ---: |
@@ -295,11 +297,12 @@ XHTML formatting, attachments, users and arbitrary relation metadata do not.
 
 ### REQIF-OPS-001 — OPEN
 
-Severity: MEDIUM  
+Severity: LOW  
 Feature: accessibility
 
-`ReqIFService` is not exposed through the current Rocket API or SPA. Automated
-tests call the internal production service directly.
+HTTP and SPA now wrap `ReqIFService` for ReqIF XML only. ReqIFZ, mapping UI,
+and preview-without-write remain out of scope. Automated vendor-fixture tests
+still call the internal production service directly.
 
 ## StrictDoc implementation observations
 

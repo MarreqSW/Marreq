@@ -30,3 +30,20 @@ export async function downloadProjectReportPdf(projectId: number): Promise<void>
   const blob = await fetchBlob(`/api/projects/${projectId}/exports/report.pdf`);
   triggerDownload(blob, `report-project-${projectId}.pdf`);
 }
+
+/** Downloads the current project requirements as ReqIF 1.2 XML. */
+export async function downloadRequirementsReqif(projectId: number): Promise<void> {
+  const blob = await fetchBlob(`/api/projects/${projectId}/exports/requirements.reqif`);
+  triggerDownload(blob, `requirements-project-${projectId}.reqif`);
+}
+
+/** Downloads an immutable baseline snapshot as ReqIF 1.2 XML. */
+export async function downloadBaselineReqif(
+  projectId: number,
+  baselineId: number,
+): Promise<void> {
+  const blob = await fetchBlob(
+    `/api/projects/${projectId}/exports/baselines/${baselineId}.reqif`,
+  );
+  triggerDownload(blob, `baseline-${baselineId}-project-${projectId}.reqif`);
+}

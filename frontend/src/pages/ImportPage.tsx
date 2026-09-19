@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import {
   commitExcelImport,
+  commitReqifImport,
   getMyPermissions,
   listApplicability,
   listCategories,
@@ -16,6 +17,7 @@ import type {
   ExcelImportPreview,
   ExcelImportResult,
   ExcelValueMapping,
+  ReqifImportResult,
 } from '@/api/imports';
 import type {
   Applicability,
@@ -140,6 +142,9 @@ export default function ImportPage() {
   const [phase, setPhase] = useState<'idle' | 'preview' | 'import'>('idle');
   const [err, setErr] = useState<string | null>(null);
   const [result, setResult] = useState<ExcelImportResult | null>(null);
+  const [reqifFile, setReqifFile] = useState<File | null>(null);
+  const [reqifBusy, setReqifBusy] = useState(false);
+  const [reqifResult, setReqifResult] = useState<ReqifImportResult | null>(null);
   const [denied, setDenied] = useState(false);
 
   const token = csrfToken ?? '';
@@ -303,6 +308,28 @@ export default function ImportPage() {
     }
   }
 
+  async function onReqifUpload(e: FormEvent) {
+    e.preventDefault();
+    if (!reqifFile || !token) return;
+    setReqifBusy(true);
+    setErr(null);
+    setDenied(false);
+    setReqifResult(null);
+    try {
+      const perms = await getMyPermissions(pid).catch(() => null);
+      if (!perms?.edit_requirements) {
+        setDenied(true);
+        return;
+      }
+      const r = await commitReqifImport(pid, reqifFile, token);
+      setReqifResult(r);
+    } catch (ex) {
+      setErr(ex instanceof Error ? ex.message : 'ReqIF import failed');
+    } finally {
+      setReqifBusy(false);
+    }
+  }
+
   const listHref =
     importType === 'tests' ? `${basePath}/verifications` : `${basePath}/requirements`;
 
@@ -311,8 +338,8 @@ export default function ImportPage() {
       <StitchPageHeader
         projectName={projectName}
         section="Import"
-        title="Import from Excel / CSV"
-        subtitle="Upload a spreadsheet, map columns to Marreq fields, then create requirements or verifications."
+        title="Import"
+        subtitle="Upload Excel/CSV with column mapping, or ReqIF 1.2 XML using project catalog defaults."
       />
 
       {denied ? (
@@ -364,10 +391,14 @@ export default function ImportPage() {
         </div>
       ) : null}
 
+      {denied ? null : (
       <form
         onSubmit={onUpload}
         className="rounded-xl border border-stitch-border bg-stitch-surface p-5 shadow-stitch space-y-4 mb-6"
       >
+        <h2 className="text-sm font-bold text-stitch-fg uppercase tracking-widest">
+          Excel / CSV
+        </h2>
         <label className="block text-xs font-bold uppercase tracking-wider text-stitch-muted">
           File
           <input
@@ -393,6 +424,7 @@ export default function ImportPage() {
           {phase === 'preview' ? 'Reading…' : 'Upload and map columns'}
         </button>
       </form>
+      )}
 
       {preview ? (
         <form
@@ -543,6 +575,79 @@ export default function ImportPage() {
           ) : null}
           <Link to={listHref} className="text-stitch-accent font-semibold hover:underline text-sm">
             Open {importType === 'tests' ? 'verifications' : 'requirements'}
+          </Link>
+        </div>
+      ) : null}
+
+      {denied ? null : (
+      <form
+        onSubmit={onReqifUpload}
+        className="rounded-xl border border-stitch-border bg-stitch-surface p-5 shadow-stitch space-y-4 mb-6"
+      >
+        <h2 className="text-sm font-bold text-stitch-fg uppercase tracking-widest">
+          ReqIF 1.2
+        </h2>
+        <label className="block text-xs font-bold uppercase tracking-wider text-stitch-muted">
+          File
+          <input
+            type="file"
+            accept=".reqif,.xml,application/xml,text/xml"
+            className={`${inp} mt-2`}
+            data-testid="reqif-import-file"
+            disabled={reqifBusy || busy}
+            onChange={(e) => {
+              setReqifFile(e.target.files?.[0] ?? null);
+              setReqifResult(null);
+            }}
+          />
+        </label>
+        <p className="text-xs text-stitch-muted">
+          Upload a <code className="font-mono">.reqif</code> or <code className="font-mono">.xml</code>{' '}
+          file. Catalog fields use the first project status, category, applicability, and
+          verification method; you are set as author and reviewer. ReqIFZ archives are not
+          supported.
+        </p>
+        <button type="submit" disabled={!reqifFile || !token || reqifBusy || busy} className={btnPrimary}>
+          {reqifBusy ? 'Importing…' : 'Import ReqIF'}
+        </button>
+      </form>
+      )}
+
+      {reqifResult ? (
+        <div
+          className="rounded-xl border border-stitch-border bg-stitch-surface p-5 shadow-stitch space-y-3"
+          data-testid="reqif-import-result"
+        >
+          <p className="text-stitch-fg font-semibold">{reqifResult.message}</p>
+          <p className="text-sm text-stitch-muted">
+            Imported {reqifResult.imported_count} requirement(s)
+            {reqifResult.created_link_count
+              ? `, created ${reqifResult.created_link_count} link(s)`
+              : ''}
+            .
+          </p>
+          {reqifResult.warnings.length > 0 ? (
+            <ul
+              className="text-sm text-amber-200 list-disc pl-5 space-y-1"
+              data-testid="reqif-import-warnings"
+            >
+              {reqifResult.warnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          ) : null}
+          {reqifResult.errors.length > 0 ? (
+            <ul className="text-sm text-red-300 list-disc pl-5 space-y-1">
+              {reqifResult.errors.map((rowErr) => (
+                <li key={rowErr}>{rowErr}</li>
+              ))}
+            </ul>
+          ) : null}
+          <Link
+            to={`${basePath}/requirements`}
+            className="text-stitch-accent font-semibold hover:underline text-sm"
+          >
+            Open requirements
           </Link>
         </div>
       ) : null}

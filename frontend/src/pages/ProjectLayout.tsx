@@ -74,7 +74,7 @@ export default function ProjectLayout() {
             },
             {
               to: `${basePath}/import`,
-              label: 'Import Excel / CSV',
+              label: 'Import',
               compact: 'Import',
               icon: 'upload_file' as const,
             },
@@ -94,7 +94,7 @@ export default function ProjectLayout() {
             },
             {
               to: `${basePath}/import`,
-              label: 'Import Excel / CSV',
+              label: 'Import',
               compact: 'Import',
               icon: 'upload_file' as const,
             },

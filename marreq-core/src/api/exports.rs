@@ -7,9 +7,11 @@ use rocket::Responder;
 use crate::api::prelude::*;
 use crate::auth::guards::ProjectAccessOrBearer;
 use crate::generators::{excel, reports, GeneratorError};
+use crate::services::ReqIFService;
 
 const XLSX_CONTENT_TYPE: &str = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 const PDF_CONTENT_TYPE: &str = "application/pdf";
+const XML_CONTENT_TYPE: &str = "application/xml";
 
 #[derive(Responder)]
 #[response(status = 200)]
@@ -37,6 +39,10 @@ impl FileDownload {
 
     fn pdf(bytes: Vec<u8>, filename: String) -> Self {
         Self::new(bytes, PDF_CONTENT_TYPE, filename)
+    }
+
+    fn xml(bytes: Vec<u8>, filename: String) -> Self {
+        Self::new(bytes, XML_CONTENT_TYPE, filename)
     }
 }
 
@@ -141,5 +147,52 @@ pub async fn export_report_pdf(
     Ok(FileDownload::pdf(
         bytes,
         format!("report-project-{project_id}.pdf"),
+    ))
+}
+
+#[get("/projects/<project_id>/exports/requirements.reqif")]
+pub async fn export_requirements_reqif(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    state: &State<AppState>,
+) -> ApiResult<FileDownload> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let xml = ReqIFService::new(state.inner())
+        .export_project(project_id)
+        .map_err(ApiError::from)?;
+    Ok(FileDownload::xml(
+        xml.into_bytes(),
+        format!("requirements-project-{project_id}.reqif"),
+    ))
+}
+
+#[get("/projects/<project_id>/exports/baselines/<filename>")]
+pub async fn export_baseline_reqif(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    filename: &str,
+    state: &State<AppState>,
+) -> ApiResult<FileDownload> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let baseline_id = filename
+        .strip_suffix(".reqif")
+        .and_then(|id| id.parse::<i32>().ok())
+        .ok_or_else(|| ApiError::NotFound("baseline ReqIF export not found".into()))?;
+    let xml = ReqIFService::new(state.inner())
+        .export_baseline(project_id, baseline_id)
+        .map_err(ApiError::from)?;
+    Ok(FileDownload::xml(
+        xml.into_bytes(),
+        format!("baseline-{baseline_id}-project-{project_id}.reqif"),
     ))
 }

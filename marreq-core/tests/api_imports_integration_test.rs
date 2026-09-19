@@ -153,6 +153,15 @@ mod test_support {
         );
         (ct, body)
     }
+
+    pub fn reqif_import_body(filename: &str, xml: &str) -> (ContentType, String) {
+        let boundary = "----MarreqImportBoundary";
+        let ct = ContentType::new("multipart", "form-data").with_params(("boundary", boundary));
+        let body = format!(
+            "--{boundary}\r\nContent-Disposition: form-data; name=\"file\"; filename=\"{filename}\"\r\nContent-Type: application/xml\r\n\r\n{xml}\r\n--{boundary}--\r\n"
+        );
+        (ct, body)
+    }
 }
 
 use test_support::*;
@@ -296,6 +305,79 @@ async fn commit_excel_rejects_cross_project_value_mapping() {
     let (ct, body) = csv_commit_body(SAMPLE_CSV, "requirements", mappings, value_mappings);
     let response = client
         .post("/api/projects/1/imports/excel")
+        .private_cookie(session_cookie(&client, 1))
+        .header(ct)
+        .body(body)
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::BadRequest);
+}
+
+const SAMPLE_REQIF: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+<REQ-IF xmlns="http://www.omg.org/spec/ReqIF/20110401/reqif.xsd">
+  <CORE-CONTENT>
+    <REQ-IF-CONTENT>
+      <SPEC-TYPES>
+        <SPEC-OBJECT-TYPE IDENTIFIER="sot-req" LONG-NAME="Requirement">
+          <SPEC-ATTRIBUTES>
+            <ATTRIBUTE-DEFINITION-STRING IDENTIFIER="ad-title" LONG-NAME="Title"/>
+          </SPEC-ATTRIBUTES>
+        </SPEC-OBJECT-TYPE>
+      </SPEC-TYPES>
+      <SPEC-OBJECTS>
+        <SPEC-OBJECT IDENTIFIER="so-1" LONG-NAME="Imported">
+          <VALUES>
+            <ATTRIBUTE-VALUE-STRING THE-VALUE="Imported from ReqIF">
+              <DEFINITION>
+                <ATTRIBUTE-DEFINITION-STRING-REF>ad-title</ATTRIBUTE-DEFINITION-STRING-REF>
+              </DEFINITION>
+            </ATTRIBUTE-VALUE-STRING>
+          </VALUES>
+        </SPEC-OBJECT>
+      </SPEC-OBJECTS>
+    </REQ-IF-CONTENT>
+  </CORE-CONTENT>
+</REQ-IF>
+"#;
+
+#[rocket::async_test]
+async fn commit_reqif_creates_requirement() {
+    let client = test_client(catalog_repo()).await;
+    let (ct, body) = reqif_import_body("sample.reqif", SAMPLE_REQIF);
+    let response = client
+        .post("/api/projects/1/imports/reqif")
+        .private_cookie(session_cookie(&client, 1))
+        .header(ct)
+        .body(body)
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Ok);
+    let json: Value = response.into_json().await.expect("json");
+    assert_eq!(json["imported_count"], 1);
+    assert_eq!(json["success"], true);
+}
+
+#[rocket::async_test]
+async fn commit_reqif_forbids_viewer() {
+    let client = test_client(catalog_repo()).await;
+    let (ct, body) = reqif_import_body("sample.reqif", SAMPLE_REQIF);
+    let response = client
+        .post("/api/projects/1/imports/reqif")
+        .private_cookie(session_cookie(&client, 2))
+        .header(ct)
+        .body(body)
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn commit_reqif_rejects_reqifz() {
+    let client = test_client(catalog_repo()).await;
+    let zip = "PK\u{3}\u{4}not-xml";
+    let (ct, body) = reqif_import_body("bundle.reqifz", zip);
+    let response = client
+        .post("/api/projects/1/imports/reqif")
         .private_cookie(session_cookie(&client, 1))
         .header(ct)
         .body(body)

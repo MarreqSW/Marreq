@@ -15,6 +15,7 @@ pub mod error;
 pub mod exports;
 pub mod groups;
 pub mod guards;
+pub mod idempotency;
 pub mod imports;
 pub mod matrix;
 pub mod mcp;
@@ -100,6 +101,8 @@ pub fn routes() -> Vec<Route> {
         verification_methods::update_by_project,
         verification_methods::delete_by_project,
         verifications::create,
+        verifications::create_by_project,
+        verifications::update_by_project,
         verifications::delete,
         verifications::update_field,
         verifications::update_field_by_project,

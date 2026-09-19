@@ -3,7 +3,7 @@
 
 //! API routes for immutable project baselines.
 
-use rocket::serde::Deserialize;
+use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
 use crate::auth::guards::{ProjectBaselinesRead, ProjectBaselinesWrite};
@@ -13,7 +13,7 @@ use crate::models::{
 use crate::services::baseline_service::BaselineDiff;
 use crate::services::BaselineService;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct CreateBaselineRequest {
     pub name: String,
@@ -71,7 +71,8 @@ pub async fn create(
     project_id: i32,
     state: &State<AppState>,
     payload: Json<CreateBaselineRequest>,
-) -> ApiResult<Json<Baseline>> {
+    idempotency_key: crate::api::idempotency::OptionalIdempotencyKey,
+) -> ApiResult<Json<serde_json::Value>> {
     require_project_permission(
         state,
         access.user(),
@@ -79,6 +80,15 @@ pub async fn create(
         Permission::EditRequirements,
     )?;
     let payload = payload.into_inner();
+    if let Some(response) = crate::api::idempotency::claim(
+        state,
+        access.user().id,
+        "create_baseline",
+        &idempotency_key,
+        &payload,
+    )? {
+        return Ok(Json(response));
+    }
     if let Some(view_id) = payload.saved_view_id {
         use crate::repository::SavedViewRepository;
         let view = state
@@ -102,7 +112,16 @@ pub async fn create(
     };
     let service = BaselineService::new(state.inner());
     let baseline = service.create_baseline(project_id, access.user().id, &new_baseline)?;
-    Ok(Json(baseline))
+    let response = serde_json::to_value(baseline)
+        .map_err(|_| ApiError::Internal("failed to serialize baseline".into()))?;
+    crate::api::idempotency::complete(
+        state,
+        access.user().id,
+        "create_baseline",
+        &idempotency_key,
+        &response,
+    )?;
+    Ok(Json(response))
 }
 
 /// Retrieve baseline contents: requirements as at baseline time (from snapshot). Session or Bearer.

@@ -139,6 +139,40 @@ pub trait DelegatedOAuthRepository {
     ) -> Result<(), RepoError>;
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum IdempotencyClaim {
+    Acquired,
+    Replay(serde_json::Value),
+    Pending,
+    PayloadConflict,
+}
+
+pub trait IdempotencyRepository {
+    fn claim_idempotency(
+        &mut self,
+        _user_id: i32,
+        _operation: &str,
+        _key: &str,
+        _request_hash: &str,
+        _now: chrono::NaiveDateTime,
+    ) -> Result<IdempotencyClaim, RepoError> {
+        Err(RepoError::BadInput(
+            "idempotency storage unavailable".into(),
+        ))
+    }
+    fn complete_idempotency(
+        &mut self,
+        _user_id: i32,
+        _operation: &str,
+        _key: &str,
+        _response: &serde_json::Value,
+    ) -> Result<(), RepoError> {
+        Err(RepoError::BadInput(
+            "idempotency storage unavailable".into(),
+        ))
+    }
+}
+
 /// Server-side authenticated sessions backed by `sessions(token_hash, user_id, ...)`.
 ///
 /// The cookie carries a 256-bit base64url **raw** token; the SHA-256 of that
@@ -643,6 +677,7 @@ pub trait NotificationRepository {
 pub trait Repository:
     ApiTokensRepository
     + DelegatedOAuthRepository
+    + IdempotencyRepository
     + UserRepository
     + ExternalIdentityRepository
     + LookupRepository
@@ -670,6 +705,7 @@ pub trait Repository:
 impl<T> Repository for T where
     T: ApiTokensRepository
         + DelegatedOAuthRepository
+        + IdempotencyRepository
         + UserRepository
         + ExternalIdentityRepository
         + LookupRepository

@@ -97,6 +97,87 @@ pub async fn create(
     Ok(json!({ "status": "ok", "id": id }))
 }
 
+#[post("/projects/<project_id>/verifications", data = "<payload>")]
+pub async fn create_by_project(
+    access: ProjectVerificationsWrite,
+    project_id: i32,
+    state: &State<AppState>,
+    payload: Json<NewVerification>,
+    idempotency_key: crate::api::idempotency::OptionalIdempotencyKey,
+) -> ApiResult<Value> {
+    let payload = payload.into_inner();
+    if payload.project_id != project_id {
+        return Err(ApiError::UnprocessableEntity(
+            "verification project mismatch".into(),
+        ));
+    }
+    if let Some(response) = crate::api::idempotency::claim(
+        state,
+        access.user().id,
+        "create_verification",
+        &idempotency_key,
+        &payload,
+    )? {
+        return Ok(response);
+    }
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::EditRequirements,
+    )?;
+    require_project_reviewer_unless_verification_create_status_is_initial(
+        state,
+        access.user(),
+        project_id,
+        payload.status_id,
+    )?;
+    let id = VerificationService::new(state.inner()).create(access.user(), payload)?;
+    let response = json!({ "status": "ok", "id": id });
+    crate::api::idempotency::complete(
+        state,
+        access.user().id,
+        "create_verification",
+        &idempotency_key,
+        &response,
+    )?;
+    Ok(response)
+}
+
+#[put("/projects/<project_id>/verifications/<id>", data = "<payload>")]
+pub async fn update_by_project(
+    access: ProjectVerificationsWrite,
+    project_id: i32,
+    id: i32,
+    state: &State<AppState>,
+    payload: Json<NewVerification>,
+) -> ApiResult<Json<Verification>> {
+    let payload = payload.into_inner();
+    if payload.project_id != project_id || payload.id.is_some_and(|payload_id| payload_id != id) {
+        return Err(ApiError::UnprocessableEntity(
+            "verification identity mismatch".into(),
+        ));
+    }
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::EditRequirements,
+    )?;
+    let current = VerificationService::new(state.inner()).get_by_id(id)?;
+    if current.project_id != project_id {
+        return Err(ApiError::NotFound("verification not in project".into()));
+    }
+    if current.status_id != payload.status_id {
+        require_project_reviewer(state, access.user(), project_id)?;
+    }
+    Ok(Json(VerificationService::new(state.inner()).update(
+        access.user(),
+        id,
+        payload,
+    )?))
+}
+
 #[delete("/verifications/<id>")]
 pub async fn delete(user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Status> {
     let service = VerificationService::new(state.inner());

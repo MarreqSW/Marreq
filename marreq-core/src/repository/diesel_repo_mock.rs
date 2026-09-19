@@ -72,6 +72,7 @@ pub struct DieselRepoMock {
     pub oauth_access_tokens: HashMap<String, OAuthAccessToken>,
     pub oauth_refresh_tokens: HashMap<String, OAuthRefreshToken>,
     pub next_oauth_grant_id: i32,
+    pub idempotency: HashMap<String, (String, Option<serde_json::Value>)>,
 }
 
 fn epoch() -> NaiveDateTime {
@@ -130,6 +131,7 @@ impl Default for DieselRepoMock {
             oauth_access_tokens: HashMap::new(),
             oauth_refresh_tokens: HashMap::new(),
             next_oauth_grant_id: 1,
+            idempotency: HashMap::new(),
             workspaces: Vec::new(),
             next_workspace_id: 1,
             email_tokens: Vec::new(),
@@ -140,6 +142,46 @@ impl Default for DieselRepoMock {
             saved_views: Vec::new(),
             next_saved_view_id: 1,
         }
+    }
+}
+
+impl IdempotencyRepository for DieselRepoMock {
+    fn claim_idempotency(
+        &mut self,
+        user_id: i32,
+        operation: &str,
+        key: &str,
+        request_hash: &str,
+        _now: NaiveDateTime,
+    ) -> Result<IdempotencyClaim, RepoError> {
+        let storage_key = format!("{user_id}:{operation}:{key}");
+        match self.idempotency.get(&storage_key) {
+            None => {
+                self.idempotency
+                    .insert(storage_key, (request_hash.into(), None));
+                Ok(IdempotencyClaim::Acquired)
+            }
+            Some((stored_hash, _)) if stored_hash != request_hash => {
+                Ok(IdempotencyClaim::PayloadConflict)
+            }
+            Some((_, Some(response))) => Ok(IdempotencyClaim::Replay(response.clone())),
+            Some((_, None)) => Ok(IdempotencyClaim::Pending),
+        }
+    }
+    fn complete_idempotency(
+        &mut self,
+        user_id: i32,
+        operation: &str,
+        key: &str,
+        response: &serde_json::Value,
+    ) -> Result<(), RepoError> {
+        let storage_key = format!("{user_id}:{operation}:{key}");
+        let stored = self
+            .idempotency
+            .get_mut(&storage_key)
+            .ok_or(RepoError::NotFound)?;
+        stored.1 = Some(response.clone());
+        Ok(())
     }
 }
 
@@ -466,6 +508,7 @@ impl DieselRepoMock {
             oauth_access_tokens: HashMap::new(),
             oauth_refresh_tokens: HashMap::new(),
             next_oauth_grant_id: 1,
+            idempotency: HashMap::new(),
         }
     }
     pub fn with_error() -> Self {
@@ -521,6 +564,7 @@ impl DieselRepoMock {
             oauth_access_tokens: HashMap::new(),
             oauth_refresh_tokens: HashMap::new(),
             next_oauth_grant_id: 1,
+            idempotency: HashMap::new(),
         }
     }
 

@@ -11,6 +11,7 @@ use diesel::RunQueryDsl;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
+mod idempotency;
 mod oauth;
 
 define_sql_function!(fn lower(x: Text) -> Text);

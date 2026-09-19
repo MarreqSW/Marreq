@@ -41,7 +41,7 @@ pub struct RequirementWithTraceSummary {
 }
 
 /// One parent link when creating a requirement (target version + link type).
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct ParentLinkInput {
     pub target_version_id: i32,
@@ -50,7 +50,7 @@ pub struct ParentLinkInput {
     pub rationale: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct RequirementCreateRequest {
     pub title: String,
@@ -855,6 +855,7 @@ pub async fn create_by_project(
     project_id: i32,
     state: &State<AppState>,
     payload: Json<RequirementCreateRequest>,
+    idempotency_key: crate::api::idempotency::OptionalIdempotencyKey,
 ) -> ApiResult<Value> {
     require_project_permission(
         state,
@@ -867,6 +868,15 @@ pub async fn create_by_project(
         return Err(ApiError::BadRequest(
             "payload.project_id must match route project_id".into(),
         ));
+    }
+    if let Some(response) = crate::api::idempotency::claim(
+        state,
+        access.user().id,
+        "create_requirement",
+        &idempotency_key,
+        &payload,
+    )? {
+        return Ok(response);
     }
     require_project_reviewer_unless_requirement_create_status_is_draft_like(
         state,
@@ -894,7 +904,15 @@ pub async fn create_by_project(
         custom_fields,
         Some(parent_links),
     )?;
-    Ok(json!({ "status": "ok", "id": id }))
+    let response = json!({ "status": "ok", "id": id });
+    crate::api::idempotency::complete(
+        state,
+        access.user().id,
+        "create_requirement",
+        &idempotency_key,
+        &response,
+    )?;
+    Ok(response)
 }
 
 /// Project-scoped patch (session or Bearer). For MCP Phase 2 draft_write.

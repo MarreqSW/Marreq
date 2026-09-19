@@ -582,6 +582,30 @@ impl<R: Repository> super::DelegatedOAuthRepository for CacheRepository<R> {
     }
 }
 
+impl<R: Repository> super::IdempotencyRepository for CacheRepository<R> {
+    fn claim_idempotency(
+        &mut self,
+        user_id: i32,
+        operation: &str,
+        key: &str,
+        request_hash: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<super::IdempotencyClaim, RepoError> {
+        self.inner
+            .claim_idempotency(user_id, operation, key, request_hash, now)
+    }
+    fn complete_idempotency(
+        &mut self,
+        user_id: i32,
+        operation: &str,
+        key: &str,
+        response: &serde_json::Value,
+    ) -> Result<(), RepoError> {
+        self.inner
+            .complete_idempotency(user_id, operation, key, response)
+    }
+}
+
 impl<R: Repository> super::WorkspacesRepository for CacheRepository<R> {
     fn insert_workspace(&mut self, new: &crate::models::NewWorkspace) -> Result<i32, RepoError> {
         self.inner.insert_workspace(new)
@@ -1794,6 +1818,7 @@ mod tests {
             oauth_access_tokens: HashMap::new(),
             oauth_refresh_tokens: HashMap::new(),
             next_oauth_grant_id: 1,
+            idempotency: HashMap::new(),
         }
     }
 

@@ -13,6 +13,9 @@ export interface RemoteTransportConfig {
   port: number;
   path: string;
   allowedHosts?: string[];
+  sessionIdleMs?: number;
+  sessionAbsoluteMs?: number;
+  maxSessions?: number;
 }
 
 export type TransportConfig = RemoteTransportConfig | { kind: "stdio" };
@@ -21,6 +24,8 @@ interface RemoteSession {
   transport: StreamableHTTPServerTransport;
   server: McpServer;
   tokenBinding: Buffer;
+  createdAt: number;
+  lastSeenAt: number;
 }
 
 function parsePort(raw: string | undefined): number {
@@ -84,17 +89,34 @@ export async function startRemoteServer(
   config: RemoteTransportConfig,
   createServer: (context: SessionContext) => McpServer
 ): Promise<Server> {
-  const baseContext = loadContext({ apiTokenRequired: false, projectRequired: false });
+  const baseContext = loadContext({ apiTokenRequired: false, projectRequired: false, remote: true });
   const app = createMcpExpressApp({
     host: config.host,
     allowedHosts: config.allowedHosts,
   });
   const sessions = new Map<string, RemoteSession>();
+  const idleMs = config.sessionIdleMs ?? 30 * 60_000;
+  const absoluteMs = config.sessionAbsoluteMs ?? 8 * 60 * 60_000;
+  const maxSessions = config.maxSessions ?? 1_000;
+  const expired = (session: RemoteSession, now = Date.now()) =>
+    now - session.lastSeenAt > idleMs || now - session.createdAt > absoluteMs;
+  const removeSession = async (id: string, session: RemoteSession) => {
+    sessions.delete(id);
+    await session.transport.close().catch(() => undefined);
+  };
+  const cleanup = setInterval(() => {
+    const now = Date.now();
+    for (const [id, session] of sessions) {
+      if (expired(session, now)) void removeSession(id, session);
+    }
+  }, Math.max(1_000, Math.min(idleMs, 60_000)));
+  cleanup.unref();
 
   const authenticate = (req: Request, res: Response): { token: string; binding: Buffer } | undefined => {
     const token = bearerToken(req.headers.authorization);
     if (!token) {
-      res.setHeader("WWW-Authenticate", "Bearer");
+      const metadata = `${baseContext.baseUrl}/.well-known/oauth-protected-resource/mcp`;
+      res.setHeader("WWW-Authenticate", `Bearer resource_metadata="${metadata}"`);
       jsonError(res, 401, "Bearer authentication required");
       return undefined;
     }
@@ -107,6 +129,11 @@ export async function startRemoteServer(
     const sessionId = req.headers["mcp-session-id"] as string | undefined;
     let session = sessionId ? sessions.get(sessionId) : undefined;
 
+    if (sessionId && session && expired(session)) {
+      await removeSession(sessionId, session);
+      session = undefined;
+    }
+
     if (sessionId && !session) {
       jsonError(res, 404, "Unknown or expired MCP session");
       return;
@@ -118,6 +145,10 @@ export async function startRemoteServer(
     if (!session) {
       if (!isInitializeRequest(req.body)) {
         jsonError(res, 400, "A valid MCP session is required");
+        return;
+      }
+      if (sessions.size >= maxSessions) {
+        jsonError(res, 503, "MCP session capacity reached");
         return;
       }
       const transport = new StreamableHTTPServerTransport({
@@ -147,13 +178,16 @@ export async function startRemoteServer(
         projectId: 0,
         remote: true,
       });
-      session = { transport, server, tokenBinding: auth.binding };
+      const now = Date.now();
+      session = { transport, server, tokenBinding: auth.binding, createdAt: now, lastSeenAt: now };
       transport.onclose = () => {
         const id = transport.sessionId;
         if (id) sessions.delete(id);
       };
       await server.connect(transport);
     }
+
+    session.lastSeenAt = Date.now();
 
     try {
       await session.transport.handleRequest(req, res, req.body);
@@ -166,7 +200,11 @@ export async function startRemoteServer(
     const auth = authenticate(req, res);
     if (!auth) return undefined;
     const id = req.headers["mcp-session-id"] as string | undefined;
-    const session = id ? sessions.get(id) : undefined;
+    let session = id ? sessions.get(id) : undefined;
+    if (id && session && expired(session)) {
+      void removeSession(id, session);
+      session = undefined;
+    }
     if (!session) {
       jsonError(res, 404, "Unknown or expired MCP session");
       return undefined;
@@ -175,6 +213,7 @@ export async function startRemoteServer(
       jsonError(res, 403, "MCP session does not belong to this credential");
       return undefined;
     }
+    session.lastSeenAt = Date.now();
     return session;
   };
 
@@ -189,6 +228,7 @@ export async function startRemoteServer(
 
   return await new Promise<Server>((resolve, reject) => {
     const listener = app.listen(config.port, config.host, () => resolve(listener));
+    listener.on("close", () => clearInterval(cleanup));
     listener.on("error", reject);
   });
 }

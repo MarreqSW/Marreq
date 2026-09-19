@@ -87,6 +87,8 @@ describe("remote Streamable HTTP transport", () => {
     const tools = await remote.client.listTools();
     expect(tools.tools.map((tool) => tool.name)).toContain("list_projects");
     expect(tools.tools.map((tool) => tool.name)).toContain("get_requirement");
+    expect(tools.tools.map((tool) => tool.name)).toContain("create_requirement");
+    expect(tools.tools.map((tool) => tool.name)).toContain("put_verification_matrix");
     const result = await remote.client.callTool({
       name: "get_requirement",
       arguments: { project_id: 7, requirement_id: "42" },
@@ -100,6 +102,9 @@ describe("remote Streamable HTTP transport", () => {
     const { url } = await startMcp(apiPort);
     const unauthenticated = await fetch(url, { method: "POST", body: "{}" });
     expect(unauthenticated.status).toBe(401);
+    expect(unauthenticated.headers.get("www-authenticate")).toBe(
+      `Bearer resource_metadata="http://127.0.0.1:${apiPort}/.well-known/oauth-protected-resource/mcp"`
+    );
     const malformed = await fetch(url, {
       method: "POST",
       headers: { Authorization: "Basic not-bearer" },
@@ -116,6 +121,19 @@ describe("remote Streamable HTTP transport", () => {
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
     });
     expect(unknown.status).toBe(404);
+  });
+
+  it("does not read local mode flags for the remote tool surface", async () => {
+    process.env.MARREQ_MODE = "not-a-mode";
+    process.env.MARREQ_TRACE_WRITE = "false";
+    const apiPort = await startApi();
+    const { url } = await startMcp(apiPort);
+    const remote = client(url);
+    await remote.client.connect(remote.transport);
+    const names = (await remote.client.listTools()).tools.map((tool) => tool.name);
+    expect(names).toContain("create_requirement");
+    expect(names).toContain("put_verification_matrix");
+    await remote.transport.terminateSession();
   });
 
   it("keeps concurrent sessions independent", async () => {

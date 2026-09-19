@@ -23,8 +23,8 @@ export function loadContext(options = {}) {
     if (!baseUrl || (!apiToken && options.apiTokenRequired !== false) || (!projectId && options.projectRequired !== false)) {
         throw new Error("MARREQ_BASE_URL, MARREQ_API_TOKEN, and MARREQ_PROJECT_ID must be set");
     }
-    const mode = parseMarreqMode(process.env.MARREQ_MODE);
-    const traceWrite = parseTraceWriteFlag();
+    const mode = options.remote ? "draft_write" : parseMarreqMode(process.env.MARREQ_MODE);
+    const traceWrite = options.remote ? true : parseTraceWriteFlag();
     return {
         baseUrl: baseUrl.replace(/\/$/, ""),
         apiToken: apiToken ?? "",
@@ -38,5 +38,6 @@ export function loadContext(options = {}) {
         sessionId: process.env.MARREQ_SESSION_ID,
         mode,
         traceWrite,
+        remote: options.remote,
     };
 }

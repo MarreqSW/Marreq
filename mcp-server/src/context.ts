@@ -42,7 +42,7 @@ export function contextAllowsReadExtended(ctx: SessionContext): boolean {
   return ctx.mode === "read_extended" || ctx.mode === "draft_write";
 }
 
-export function loadContext(options: { apiTokenRequired?: boolean; projectRequired?: boolean } = {}): SessionContext {
+export function loadContext(options: { apiTokenRequired?: boolean; projectRequired?: boolean; remote?: boolean } = {}): SessionContext {
   const baseUrl = process.env.MARREQ_BASE_URL;
   const apiToken = process.env.MARREQ_API_TOKEN;
   const projectId = process.env.MARREQ_PROJECT_ID;
@@ -53,8 +53,8 @@ export function loadContext(options: { apiTokenRequired?: boolean; projectRequir
     );
   }
 
-  const mode = parseMarreqMode(process.env.MARREQ_MODE);
-  const traceWrite = parseTraceWriteFlag();
+  const mode = options.remote ? "draft_write" : parseMarreqMode(process.env.MARREQ_MODE);
+  const traceWrite = options.remote ? true : parseTraceWriteFlag();
 
   return {
     baseUrl: baseUrl.replace(/\/$/, ""),
@@ -69,5 +69,6 @@ export function loadContext(options: { apiTokenRequired?: boolean; projectRequir
     sessionId: process.env.MARREQ_SESSION_ID,
     mode,
     traceWrite,
+    remote: options.remote,
   };
 }

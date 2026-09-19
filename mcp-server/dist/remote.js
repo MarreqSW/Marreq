@@ -56,16 +56,33 @@ function jsonError(res, status, message) {
     });
 }
 export async function startRemoteServer(config, createServer) {
-    const baseContext = loadContext({ apiTokenRequired: false, projectRequired: false });
+    const baseContext = loadContext({ apiTokenRequired: false, projectRequired: false, remote: true });
     const app = createMcpExpressApp({
         host: config.host,
         allowedHosts: config.allowedHosts,
     });
     const sessions = new Map();
+    const idleMs = config.sessionIdleMs ?? 30 * 60_000;
+    const absoluteMs = config.sessionAbsoluteMs ?? 8 * 60 * 60_000;
+    const maxSessions = config.maxSessions ?? 1_000;
+    const expired = (session, now = Date.now()) => now - session.lastSeenAt > idleMs || now - session.createdAt > absoluteMs;
+    const removeSession = async (id, session) => {
+        sessions.delete(id);
+        await session.transport.close().catch(() => undefined);
+    };
+    const cleanup = setInterval(() => {
+        const now = Date.now();
+        for (const [id, session] of sessions) {
+            if (expired(session, now))
+                void removeSession(id, session);
+        }
+    }, Math.max(1_000, Math.min(idleMs, 60_000)));
+    cleanup.unref();
     const authenticate = (req, res) => {
         const token = bearerToken(req.headers.authorization);
         if (!token) {
-            res.setHeader("WWW-Authenticate", "Bearer");
+            const metadata = `${baseContext.baseUrl}/.well-known/oauth-protected-resource/mcp`;
+            res.setHeader("WWW-Authenticate", `Bearer resource_metadata="${metadata}"`);
             jsonError(res, 401, "Bearer authentication required");
             return undefined;
         }
@@ -77,6 +94,10 @@ export async function startRemoteServer(config, createServer) {
             return;
         const sessionId = req.headers["mcp-session-id"];
         let session = sessionId ? sessions.get(sessionId) : undefined;
+        if (sessionId && session && expired(session)) {
+            await removeSession(sessionId, session);
+            session = undefined;
+        }
         if (sessionId && !session) {
             jsonError(res, 404, "Unknown or expired MCP session");
             return;
@@ -88,6 +109,10 @@ export async function startRemoteServer(config, createServer) {
         if (!session) {
             if (!isInitializeRequest(req.body)) {
                 jsonError(res, 400, "A valid MCP session is required");
+                return;
+            }
+            if (sessions.size >= maxSessions) {
+                jsonError(res, 503, "MCP session capacity reached");
                 return;
             }
             const transport = new StreamableHTTPServerTransport({
@@ -119,7 +144,8 @@ export async function startRemoteServer(config, createServer) {
                 projectId: 0,
                 remote: true,
             });
-            session = { transport, server, tokenBinding: auth.binding };
+            const now = Date.now();
+            session = { transport, server, tokenBinding: auth.binding, createdAt: now, lastSeenAt: now };
             transport.onclose = () => {
                 const id = transport.sessionId;
                 if (id)
@@ -127,6 +153,7 @@ export async function startRemoteServer(config, createServer) {
             };
             await server.connect(transport);
         }
+        session.lastSeenAt = Date.now();
         try {
             await session.transport.handleRequest(req, res, req.body);
         }
@@ -140,7 +167,11 @@ export async function startRemoteServer(config, createServer) {
         if (!auth)
             return undefined;
         const id = req.headers["mcp-session-id"];
-        const session = id ? sessions.get(id) : undefined;
+        let session = id ? sessions.get(id) : undefined;
+        if (id && session && expired(session)) {
+            void removeSession(id, session);
+            session = undefined;
+        }
         if (!session) {
             jsonError(res, 404, "Unknown or expired MCP session");
             return undefined;
@@ -149,6 +180,7 @@ export async function startRemoteServer(config, createServer) {
             jsonError(res, 403, "MCP session does not belong to this credential");
             return undefined;
         }
+        session.lastSeenAt = Date.now();
         return session;
     };
     app.get(config.path, async (req, res) => {
@@ -163,6 +195,7 @@ export async function startRemoteServer(config, createServer) {
     });
     return await new Promise((resolve, reject) => {
         const listener = app.listen(config.port, config.host, () => resolve(listener));
+        listener.on("close", () => clearInterval(cleanup));
         listener.on("error", reject);
     });
 }

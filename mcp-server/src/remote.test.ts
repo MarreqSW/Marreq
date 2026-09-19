@@ -38,7 +38,7 @@ async function startApi(): Promise<number> {
 
 async function startMcp(apiPort: number): Promise<{ port: number; url: URL }> {
   process.env.MARREQ_BASE_URL = `http://127.0.0.1:${apiPort}`;
-  process.env.MARREQ_PROJECT_ID = "7";
+  delete process.env.MARREQ_PROJECT_ID;
   delete process.env.MARREQ_API_TOKEN;
   const server = await startRemoteServer(
     { kind: "http", host: "127.0.0.1", port: 0, path: "/mcp" },
@@ -85,10 +85,11 @@ describe("remote Streamable HTTP transport", () => {
     await remote.client.connect(remote.transport);
 
     const tools = await remote.client.listTools();
+    expect(tools.tools.map((tool) => tool.name)).toContain("list_projects");
     expect(tools.tools.map((tool) => tool.name)).toContain("get_requirement");
     const result = await remote.client.callTool({
       name: "get_requirement",
-      arguments: { requirement_id: "42" },
+      arguments: { project_id: 7, requirement_id: "42" },
     });
     expect(JSON.stringify(result.content)).toContain("Remote requirement");
     await remote.transport.terminateSession();

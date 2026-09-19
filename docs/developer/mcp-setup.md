@@ -23,13 +23,16 @@ MARREQ_MCP_HOST=127.0.0.1
 MARREQ_MCP_PORT=3000
 MARREQ_MCP_PATH=/mcp
 MARREQ_BASE_URL=http://127.0.0.1:8000
-MARREQ_PROJECT_ID=1
-MARREQ_MODE=read_only
 ```
 
 Connect to `http://127.0.0.1:3000/mcp` and send `Authorization: Bearer
-<Marreq API token>`. `MARREQ_API_TOKEN` is not required in HTTP mode because
-the credential is request-scoped. `MARREQ_MCP_ALLOWED_HOSTS` is an optional
+<Marreq API token or delegated OAuth access token>`. `MARREQ_API_TOKEN` and
+`MARREQ_PROJECT_ID` are not used in HTTP mode because identity and project are
+request/tool scoped. Remote mode registers the complete bounded tool surface;
+OAuth scopes and normal Marreq permissions authorize each REST call rather than
+server-wide `MARREQ_MODE` or `MARREQ_TRACE_WRITE` flags. Start with
+`list_projects`, then pass the selected `project_id` to every project-scoped
+tool. `MARREQ_MCP_ALLOWED_HOSTS` is an optional
 comma-separated Host allowlist and should be set when listening on a non-loopback
 interface.
 

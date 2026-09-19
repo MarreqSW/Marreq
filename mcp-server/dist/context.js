@@ -20,7 +20,7 @@ export function loadContext(options = {}) {
     const baseUrl = process.env.MARREQ_BASE_URL;
     const apiToken = process.env.MARREQ_API_TOKEN;
     const projectId = process.env.MARREQ_PROJECT_ID;
-    if (!baseUrl || (!apiToken && options.apiTokenRequired !== false) || !projectId) {
+    if (!baseUrl || (!apiToken && options.apiTokenRequired !== false) || (!projectId && options.projectRequired !== false)) {
         throw new Error("MARREQ_BASE_URL, MARREQ_API_TOKEN, and MARREQ_PROJECT_ID must be set");
     }
     const mode = parseMarreqMode(process.env.MARREQ_MODE);
@@ -28,7 +28,7 @@ export function loadContext(options = {}) {
     return {
         baseUrl: baseUrl.replace(/\/$/, ""),
         apiToken: apiToken ?? "",
-        projectId: parseInt(projectId, 10),
+        projectId: projectId ? parseInt(projectId, 10) : 0,
         userId: process.env.MARREQ_USER_ID
             ? parseInt(process.env.MARREQ_USER_ID, 10)
             : undefined,

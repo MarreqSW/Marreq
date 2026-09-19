@@ -84,7 +84,7 @@ export async function startRemoteServer(
   config: RemoteTransportConfig,
   createServer: (context: SessionContext) => McpServer
 ): Promise<Server> {
-  const baseContext = loadContext({ apiTokenRequired: false });
+  const baseContext = loadContext({ apiTokenRequired: false, projectRequired: false });
   const app = createMcpExpressApp({
     host: config.host,
     allowedHosts: config.allowedHosts,
@@ -126,10 +126,26 @@ export async function startRemoteServer(
           if (session) sessions.set(id, session);
         },
       });
+      const authenticatedClient = new (await import("./client.js")).MarreqClient({
+        ...baseContext,
+        apiToken: auth.token,
+        projectId: 0,
+        remote: true,
+        mode: "draft_write",
+        traceWrite: true,
+      });
+      try {
+        await authenticatedClient.listProjects();
+      } catch {
+        jsonError(res, 401, "Bearer credential was rejected");
+        return;
+      }
       const server = createServer({
         ...baseContext,
         apiToken: auth.token,
         sessionId: undefined,
+        projectId: 0,
+        remote: true,
       });
       session = { transport, server, tokenBinding: auth.binding };
       transport.onclose = () => {

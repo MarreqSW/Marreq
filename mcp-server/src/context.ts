@@ -19,6 +19,7 @@ export interface SessionContext {
   mode: MarreqMode;
   /** When true, register `put_verification_matrix` and `clear_suspect` (requires API permissions). */
   traceWrite: boolean;
+  remote?: boolean;
 }
 
 function parseMarreqMode(raw: string | undefined): MarreqMode {
@@ -41,12 +42,12 @@ export function contextAllowsReadExtended(ctx: SessionContext): boolean {
   return ctx.mode === "read_extended" || ctx.mode === "draft_write";
 }
 
-export function loadContext(options: { apiTokenRequired?: boolean } = {}): SessionContext {
+export function loadContext(options: { apiTokenRequired?: boolean; projectRequired?: boolean } = {}): SessionContext {
   const baseUrl = process.env.MARREQ_BASE_URL;
   const apiToken = process.env.MARREQ_API_TOKEN;
   const projectId = process.env.MARREQ_PROJECT_ID;
 
-  if (!baseUrl || (!apiToken && options.apiTokenRequired !== false) || !projectId) {
+  if (!baseUrl || (!apiToken && options.apiTokenRequired !== false) || (!projectId && options.projectRequired !== false)) {
     throw new Error(
       "MARREQ_BASE_URL, MARREQ_API_TOKEN, and MARREQ_PROJECT_ID must be set"
     );
@@ -58,7 +59,7 @@ export function loadContext(options: { apiTokenRequired?: boolean } = {}): Sessi
   return {
     baseUrl: baseUrl.replace(/\/$/, ""),
     apiToken: apiToken ?? "",
-    projectId: parseInt(projectId, 10),
+    projectId: projectId ? parseInt(projectId, 10) : 0,
     userId: process.env.MARREQ_USER_ID
       ? parseInt(process.env.MARREQ_USER_ID, 10)
       : undefined,

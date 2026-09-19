@@ -43,21 +43,36 @@ async function withAudit(client, toolName, paramsSummary, isWrite, fn) {
 }
 export function createMarreqServer(ctx) {
     const client = new MarreqClient(ctx);
+    const projectField = { project_id: z.number().int().positive().optional() };
+    const forProject = (projectId) => {
+        if (!ctx.remote)
+            return client;
+        if (!projectId)
+            throw new Error("project_id is required in remote mode");
+        return client.withProject(projectId);
+    };
     const server = new McpServer({
         name: "marreq-mcp-server",
         version: "0.1.0",
     });
+    server.registerTool("list_projects", {
+        description: "List only projects accessible to the authenticated Marreq user.",
+        inputSchema: z.object({}),
+        annotations: { readOnlyHint: true },
+    }, async () => ({ content: [jsonContent(await client.listProjects())] }));
     server.registerTool("get_requirement", {
         description: "Get a requirement by id (project-scoped, with trace summary)",
-        inputSchema: z.object({ requirement_id: z.string() }),
-    }, async ({ requirement_id }) => {
+        inputSchema: z.object({ ...projectField, requirement_id: z.string() }),
+    }, async ({ project_id, requirement_id }) => {
         const id = parseInt(requirement_id, 10);
-        const out = await withAudit(client, "get_requirement", JSON.stringify({ requirement_id }), false, () => client.getRequirement(id));
+        const toolClient = forProject(project_id);
+        const out = await withAudit(toolClient, "get_requirement", JSON.stringify({ requirement_id }), false, () => toolClient.getRequirement(id));
         return { content: [jsonContent(out)] };
     });
     server.registerTool("list_requirements", {
         description: "List requirements in the project with optional filters (approval_state, has_tests)",
         inputSchema: z.object({
+            ...projectField,
             filter: z
                 .object({
                 approval_state: z.enum(["draft", "reviewed", "approved"]).optional(),
@@ -67,87 +82,100 @@ export function createMarreqServer(ctx) {
         }),
     }, async (args) => {
         const f = args?.filter;
-        const out = await withAudit(client, "list_requirements", JSON.stringify(args ?? {}), false, () => client.listRequirements(f?.approval_state, f?.has_tests));
+        const toolClient = forProject(args?.project_id);
+        const out = await withAudit(toolClient, "list_requirements", JSON.stringify(args ?? {}), false, () => toolClient.listRequirements(f?.approval_state, f?.has_tests));
         return { content: [jsonContent(out)] };
     });
     server.registerTool("get_versions", {
         description: "Get version history for a requirement",
-        inputSchema: z.object({ requirement_id: z.string() }),
-    }, async ({ requirement_id }) => {
+        inputSchema: z.object({ ...projectField, requirement_id: z.string() }),
+    }, async ({ project_id, requirement_id }) => {
         const id = parseInt(requirement_id, 10);
-        const out = await withAudit(client, "get_versions", JSON.stringify({ requirement_id }), false, () => client.getVersions(id));
+        const toolClient = forProject(project_id);
+        const out = await withAudit(toolClient, "get_versions", JSON.stringify({ requirement_id }), false, () => toolClient.getVersions(id));
         return { content: [jsonContent(out)] };
     });
     server.registerTool("compare_versions", {
         description: "Structured diff between two requirement versions",
         inputSchema: z.object({
+            ...projectField,
             requirement_id: z.string(),
             v1: z.number(),
             v2: z.number(),
         }),
-    }, async ({ requirement_id, v1, v2 }) => {
+    }, async ({ project_id, requirement_id, v1, v2 }) => {
         const id = parseInt(requirement_id, 10);
-        const out = await withAudit(client, "compare_versions", JSON.stringify({ requirement_id, v1, v2 }), false, () => client.compareVersions(id, v1, v2));
+        const toolClient = forProject(project_id);
+        const out = await withAudit(toolClient, "compare_versions", JSON.stringify({ requirement_id, v1, v2 }), false, () => toolClient.compareVersions(id, v1, v2));
         return { content: [jsonContent(out)] };
     });
     server.registerTool("trace_up", {
         description: "Get parent requirement(s) for a requirement",
-        inputSchema: z.object({ requirement_id: z.string() }),
-    }, async ({ requirement_id }) => {
+        inputSchema: z.object({ ...projectField, requirement_id: z.string() }),
+    }, async ({ project_id, requirement_id }) => {
         const id = parseInt(requirement_id, 10);
-        const out = await withAudit(client, "trace_up", JSON.stringify({ requirement_id }), false, () => client.traceUp(id));
+        const toolClient = forProject(project_id);
+        const out = await withAudit(toolClient, "trace_up", JSON.stringify({ requirement_id }), false, () => toolClient.traceUp(id));
         return { content: [jsonContent(out)] };
     });
     server.registerTool("trace_down", {
         description: "Get child requirements and linked tests",
-        inputSchema: z.object({ requirement_id: z.string() }),
-    }, async ({ requirement_id }) => {
+        inputSchema: z.object({ ...projectField, requirement_id: z.string() }),
+    }, async ({ project_id, requirement_id }) => {
         const id = parseInt(requirement_id, 10);
-        const out = await withAudit(client, "trace_down", JSON.stringify({ requirement_id }), false, () => client.traceDown(id));
+        const toolClient = forProject(project_id);
+        const out = await withAudit(toolClient, "trace_down", JSON.stringify({ requirement_id }), false, () => toolClient.traceDown(id));
         return { content: [jsonContent(out)] };
     });
     server.registerTool("coverage_report", {
         description: "Requirements without tests, tests without requirements, suspect links (scope: project)",
-        inputSchema: z.object({ scope: z.literal("project").optional() }),
-    }, async () => {
-        const out = await withAudit(client, "coverage_report", '{"scope":"project"}', false, () => client.coverageReport());
+        inputSchema: z.object({ ...projectField, scope: z.literal("project").optional() }),
+    }, async ({ project_id }) => {
+        const toolClient = forProject(project_id);
+        const out = await withAudit(toolClient, "coverage_report", '{"scope":"project"}', false, () => toolClient.coverageReport());
         return { content: [jsonContent(out)] };
     });
     server.registerTool("get_baseline", {
         description: "Get baseline metadata, requirements snapshot, and traceability",
-        inputSchema: z.object({ baseline_id: z.number() }),
-    }, async ({ baseline_id }) => {
-        const out = await withAudit(client, "get_baseline", JSON.stringify({ baseline_id }), false, () => client.getBaseline(baseline_id));
+        inputSchema: z.object({ ...projectField, baseline_id: z.number() }),
+    }, async ({ project_id, baseline_id }) => {
+        const toolClient = forProject(project_id);
+        const out = await withAudit(toolClient, "get_baseline", JSON.stringify({ baseline_id }), false, () => toolClient.getBaseline(baseline_id));
         return { content: [jsonContent(out)] };
     });
     server.registerTool("diff_baselines", {
         description: "Compare two baselines (requirements and traceability diff)",
         inputSchema: z.object({
+            ...projectField,
             baseline_a: z.number(),
             baseline_b: z.number(),
         }),
-    }, async ({ baseline_a, baseline_b }) => {
-        const out = await withAudit(client, "diff_baselines", JSON.stringify({ baseline_a, baseline_b }), false, () => client.diffBaselines(baseline_a, baseline_b));
+    }, async ({ project_id, baseline_a, baseline_b }) => {
+        const toolClient = forProject(project_id);
+        const out = await withAudit(toolClient, "diff_baselines", JSON.stringify({ baseline_a, baseline_b }), false, () => toolClient.diffBaselines(baseline_a, baseline_b));
         return { content: [jsonContent(out)] };
     });
     // read_extended / draft_write: extra read tools (catalog, verifications, audit, matrix read, …)
     if (contextAllowsReadExtended(ctx)) {
         server.registerTool("list_verifications", {
             description: "List verifications (tests) in the project. Requires MARREQ_MODE=read_extended or draft_write.",
-            inputSchema: z.object({}),
-        }, async () => {
-            const out = await withAudit(client, "list_verifications", "{}", false, () => client.listVerificationsByProject());
+            inputSchema: z.object({ ...projectField }),
+        }, async ({ project_id }) => {
+            const toolClient = forProject(project_id);
+            const out = await withAudit(toolClient, "list_verifications", "{}", false, () => toolClient.listVerificationsByProject());
             return { content: [jsonContent(out)] };
         });
         server.registerTool("get_verification", {
             description: "Get one verification by id. The record must belong to MARREQ_PROJECT_ID. Requires read_extended or draft_write mode.",
-            inputSchema: z.object({ verification_id: z.string() }),
-        }, async ({ verification_id }) => {
+            inputSchema: z.object({ ...projectField, verification_id: z.string() }),
+        }, async ({ project_id, verification_id }) => {
             const id = parseInt(verification_id, 10);
-            const out = await withAudit(client, "get_verification", JSON.stringify({ verification_id }), false, async () => {
-                const row = (await client.getVerificationById(id));
-                if (row?.project_id != null && row.project_id !== ctx.projectId) {
-                    throw new Error(`Verification ${id} is not in project ${ctx.projectId}`);
+            const toolClient = forProject(project_id);
+            const out = await withAudit(toolClient, "get_verification", JSON.stringify({ verification_id }), false, async () => {
+                const row = (await toolClient.getVerificationById(id));
+                const expectedProject = project_id ?? ctx.projectId;
+                if (row?.project_id != null && row.project_id !== expectedProject) {
+                    throw new Error(`Verification ${id} is not in project ${expectedProject}`);
                 }
                 return row;
             });
@@ -155,62 +183,72 @@ export function createMarreqServer(ctx) {
         });
         server.registerTool("list_baselines", {
             description: "List baselines for the project (metadata only). Use get_baseline for full snapshot.",
-            inputSchema: z.object({}),
-        }, async () => {
-            const out = await withAudit(client, "list_baselines", "{}", false, () => client.listBaselinesByProject());
+            inputSchema: z.object({ ...projectField }),
+        }, async ({ project_id }) => {
+            const toolClient = forProject(project_id);
+            const out = await withAudit(toolClient, "list_baselines", "{}", false, () => toolClient.listBaselinesByProject());
             return { content: [jsonContent(out)] };
         });
         server.registerTool("get_requirement_activity", {
             description: "Audit log entries for a requirement (create/update history with field summaries).",
-            inputSchema: z.object({ requirement_id: z.string() }),
-        }, async ({ requirement_id }) => {
+            inputSchema: z.object({ ...projectField, requirement_id: z.string() }),
+        }, async ({ project_id, requirement_id }) => {
             const id = parseInt(requirement_id, 10);
-            const out = await withAudit(client, "get_requirement_activity", JSON.stringify({ requirement_id }), false, () => client.getRequirementActivity(id));
+            const toolClient = forProject(project_id);
+            const out = await withAudit(toolClient, "get_requirement_activity", JSON.stringify({ requirement_id }), false, () => toolClient.getRequirementActivity(id));
             return { content: [jsonContent(out)] };
         });
         server.registerTool("get_verification_activity", {
             description: "Audit log entries for a verification (test).",
-            inputSchema: z.object({ verification_id: z.string() }),
-        }, async ({ verification_id }) => {
+            inputSchema: z.object({ ...projectField, verification_id: z.string() }),
+        }, async ({ project_id, verification_id }) => {
             const id = parseInt(verification_id, 10);
-            const out = await withAudit(client, "get_verification_activity", JSON.stringify({ verification_id }), false, () => client.getVerificationActivity(id));
+            const toolClient = forProject(project_id);
+            const out = await withAudit(toolClient, "get_verification_activity", JSON.stringify({ verification_id }), false, () => toolClient.getVerificationActivity(id));
             return { content: [jsonContent(out)] };
         });
         server.registerTool("list_requirement_comments", {
             description: "List comments for a requirement. Optional requirement_version_id filters by version.",
             inputSchema: z.object({
+                ...projectField,
+                ...projectField,
                 requirement_id: z.string(),
                 requirement_version_id: z.number().optional(),
             }),
-        }, async ({ requirement_id, requirement_version_id }) => {
+        }, async ({ project_id, requirement_id, requirement_version_id }) => {
             const id = parseInt(requirement_id, 10);
-            const out = await withAudit(client, "list_requirement_comments", JSON.stringify({ requirement_id, requirement_version_id }), false, () => client.listRequirementComments(id, requirement_version_id ?? null));
+            const toolClient = forProject(project_id);
+            const out = await withAudit(toolClient, "list_requirement_comments", JSON.stringify({ requirement_id, requirement_version_id }), false, () => toolClient.listRequirementComments(id, requirement_version_id ?? null));
             return { content: [jsonContent(out)] };
         });
         server.registerTool("get_verification_matrix", {
             description: "Requirement ids linked to a verification in the traceability matrix (read).",
-            inputSchema: z.object({ verification_id: z.string() }),
-        }, async ({ verification_id }) => {
+            inputSchema: z.object({ ...projectField, verification_id: z.string() }),
+        }, async ({ project_id, verification_id }) => {
             const id = parseInt(verification_id, 10);
-            const out = await withAudit(client, "get_verification_matrix", JSON.stringify({ verification_id }), false, () => client.getVerificationMatrix(id));
+            const toolClient = forProject(project_id);
+            const out = await withAudit(toolClient, "get_verification_matrix", JSON.stringify({ verification_id }), false, () => toolClient.getVerificationMatrix(id));
             return { content: [jsonContent(out)] };
         });
         server.registerTool("list_project_catalog", {
             description: "Project-scoped catalog: categories, applicability, requirement/verification statuses, verification methods, custom field definitions.",
-            inputSchema: z.object({}),
-        }, async () => {
-            const out = await withAudit(client, "list_project_catalog", "{}", false, () => client.listProjectCatalog());
+            inputSchema: z.object({ ...projectField }),
+        }, async ({ project_id }) => {
+            const toolClient = forProject(project_id);
+            const out = await withAudit(toolClient, "list_project_catalog", "{}", false, () => toolClient.listProjectCatalog());
             return { content: [jsonContent(out)] };
         });
         server.registerTool("diff_baseline_vs_current", {
             description: "Structured diff between a requirement as captured in a baseline and its current version.",
             inputSchema: z.object({
+                ...projectField,
                 baseline_id: z.number(),
                 requirement_id: z.string(),
             }),
-        }, async ({ baseline_id, requirement_id }) => {
+        }, async ({ project_id, baseline_id, requirement_id }) => {
             const rid = parseInt(requirement_id, 10);
-            const out = await withAudit(client, "diff_baseline_vs_current", JSON.stringify({ baseline_id, requirement_id }), false, () => client.diffBaselineVsCurrent(baseline_id, rid));
+            const toolClient = forProject(project_id);
+            const out = await withAudit(toolClient, "diff_baseline_vs_current", JSON.stringify({ baseline_id, requirement_id }), false, () => toolClient.diffBaselineVsCurrent(baseline_id, rid));
             return { content: [jsonContent(out)] };
         });
     }
@@ -219,6 +257,7 @@ export function createMarreqServer(ctx) {
         server.registerTool("create_requirement", {
             description: "Create a new requirement in the project (draft). Requires draft_write mode.",
             inputSchema: z.object({
+                ...projectField,
                 title: z.string(),
                 description: z.string(),
                 reference_code: z.string(),
@@ -234,17 +273,21 @@ export function createMarreqServer(ctx) {
                     .optional(),
             }),
         }, async (args) => {
-            const projectId = ctx.projectId;
+            const projectId = ctx.remote ? args.project_id : ctx.projectId;
+            if (!projectId)
+                throw new Error("project_id is required in remote mode");
+            const toolClient = forProject(projectId);
             const payload = {
                 ...args,
                 project_id: projectId,
             };
-            const out = await withAudit(client, "create_requirement", JSON.stringify({ ...args, project_id: projectId }), true, () => client.createRequirement(payload));
+            const out = await withAudit(toolClient, "create_requirement", JSON.stringify({ ...args, project_id: projectId }), true, () => toolClient.createRequirement(payload));
             return { content: [jsonContent(out)] };
         });
         server.registerTool("patch_requirement", {
             description: "Update a requirement (creates new version). Requires draft_write mode. Changing status_id requires the token user to be in the project's reviewer list (or admin).",
             inputSchema: z.object({
+                ...projectField,
                 requirement_id: z.string(),
                 patch: z.object({
                     title: z.string().optional(),
@@ -260,51 +303,58 @@ export function createMarreqServer(ctx) {
                         .optional(),
                 }),
             }),
-        }, async ({ requirement_id, patch }) => {
+        }, async ({ project_id, requirement_id, patch }) => {
             const id = parseInt(requirement_id, 10);
-            const out = await withAudit(client, "patch_requirement", JSON.stringify({ requirement_id, patch }), true, () => client.patchRequirement(id, patch));
+            const toolClient = forProject(project_id);
+            const out = await withAudit(toolClient, "patch_requirement", JSON.stringify({ requirement_id, patch }), true, () => toolClient.patchRequirement(id, patch));
             return { content: [jsonContent(out)] };
         });
         server.registerTool("set_approval", {
             description: "Set requirement version approval state (reviewed or approved). Requires draft_write mode; the token user must be a designated project reviewer (or admin).",
             inputSchema: z.object({
+                ...projectField,
                 requirement_id: z.string(),
                 version_id: z.number(),
                 state: z.enum(["reviewed", "approved"]),
             }),
-        }, async ({ requirement_id, version_id, state }) => {
+        }, async ({ project_id, requirement_id, version_id, state }) => {
             const reqId = parseInt(requirement_id, 10);
-            const out = await withAudit(client, "set_approval", JSON.stringify({ requirement_id, version_id, state }), true, () => client.setApproval(reqId, version_id, state));
+            const toolClient = forProject(project_id);
+            const out = await withAudit(toolClient, "set_approval", JSON.stringify({ requirement_id, version_id, state }), true, () => toolClient.setApproval(reqId, version_id, state));
             return { content: [jsonContent(out)] };
         });
         server.registerTool("create_baseline", {
             description: "Create a new baseline snapshot for the project. Requires draft_write mode.",
             inputSchema: z.object({
+                ...projectField,
                 name: z.string(),
                 description: z.string().nullable().optional(),
             }),
         }, async (args) => {
+            const toolClient = forProject(args.project_id);
             const payload = {
                 name: args.name,
                 description: args.description ?? null,
             };
-            const out = await withAudit(client, "create_baseline", JSON.stringify(args), true, () => client.createBaseline(payload));
+            const out = await withAudit(toolClient, "create_baseline", JSON.stringify(args), true, () => toolClient.createBaseline(payload));
             return { content: [jsonContent(out)] };
         });
         server.registerTool("create_requirement_comment", {
             description: "Add a comment on a requirement. Optional requirement_version_id ties the comment to a version.",
             inputSchema: z.object({
+                ...projectField,
                 requirement_id: z.string(),
                 body: z.string(),
                 requirement_version_id: z.number().optional(),
             }),
-        }, async ({ requirement_id, body, requirement_version_id }) => {
+        }, async ({ project_id, requirement_id, body, requirement_version_id }) => {
             const id = parseInt(requirement_id, 10);
-            const out = await withAudit(client, "create_requirement_comment", JSON.stringify({
+            const toolClient = forProject(project_id);
+            const out = await withAudit(toolClient, "create_requirement_comment", JSON.stringify({
                 requirement_id,
                 body_len: body.length,
                 requirement_version_id,
-            }), true, () => client.createRequirementComment(id, body, requirement_version_id ?? null));
+            }), true, () => toolClient.createRequirementComment(id, body, requirement_version_id ?? null));
             return { content: [jsonContent(out)] };
         });
     }
@@ -312,22 +362,26 @@ export function createMarreqServer(ctx) {
         server.registerTool("put_verification_matrix", {
             description: "Replace traceability links for a verification with the given requirement ids (full replace). Requires MARREQ_TRACE_WRITE=true and EditRequirements on the API.",
             inputSchema: z.object({
+                ...projectField,
                 verification_id: z.string(),
                 requirement_ids: z.array(z.number()),
             }),
-        }, async ({ verification_id, requirement_ids }) => {
+        }, async ({ project_id, verification_id, requirement_ids }) => {
             const vid = parseInt(verification_id, 10);
-            const out = await withAudit(client, "put_verification_matrix", JSON.stringify({ verification_id, requirement_ids }), true, () => client.putVerificationMatrix(vid, requirement_ids));
+            const toolClient = forProject(project_id);
+            const out = await withAudit(toolClient, "put_verification_matrix", JSON.stringify({ verification_id, requirement_ids }), true, () => toolClient.putVerificationMatrix(vid, requirement_ids));
             return { content: [jsonContent(out)] };
         });
         server.registerTool("clear_suspect", {
             description: "Clear the suspect flag on a requirement↔verification matrix link. Requires MARREQ_TRACE_WRITE=true.",
             inputSchema: z.object({
+                ...projectField,
                 req_id: z.number(),
                 verification_id: z.number(),
             }),
-        }, async ({ req_id, verification_id }) => {
-            const out = await withAudit(client, "clear_suspect", JSON.stringify({ req_id, verification_id }), true, () => client.clearSuspectLink(req_id, verification_id));
+        }, async ({ project_id, req_id, verification_id }) => {
+            const toolClient = forProject(project_id);
+            const out = await withAudit(toolClient, "clear_suspect", JSON.stringify({ req_id, verification_id }), true, () => toolClient.clearSuspectLink(req_id, verification_id));
             return { content: [jsonContent(out)] };
         });
     }

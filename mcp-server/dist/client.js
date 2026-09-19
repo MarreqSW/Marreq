@@ -3,6 +3,12 @@ export class MarreqClient {
     constructor(ctx) {
         this.ctx = ctx;
     }
+    withProject(projectId) {
+        return new MarreqClient({ ...this.ctx, projectId });
+    }
+    async listProjects() {
+        return this.request("/api/projects");
+    }
     async request(path, options = {}) {
         const url = `${this.ctx.baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
         const res = await fetch(url, {

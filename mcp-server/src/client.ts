@@ -3,6 +3,14 @@ import type { SessionContext } from "./context.js";
 export class MarreqClient {
   constructor(private ctx: SessionContext) {}
 
+  withProject(projectId: number): MarreqClient {
+    return new MarreqClient({ ...this.ctx, projectId });
+  }
+
+  async listProjects() {
+    return this.request("/api/projects");
+  }
+
   private async request<T>(
     path: string,
     options: RequestInit = {}

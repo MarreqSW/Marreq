@@ -95,6 +95,15 @@ export function createMarreqServer(ctx) {
         const out = await withAudit(toolClient, "get_versions", JSON.stringify({ requirement_id }), false, () => toolClient.getVersions(id));
         return { content: [jsonContent(out)] };
     });
+    server.registerTool("semantic_search_requirements", {
+        description: "Semantic requirement search when embeddings are enabled; returns an explicit disabled response otherwise.",
+        inputSchema: z.object({ ...projectField, query: z.string().min(1), limit: z.number().int().min(1).max(50).optional() }),
+        annotations: { readOnlyHint: true },
+    }, async ({ project_id, query, limit }) => {
+        const toolClient = forProject(project_id);
+        const out = await withAudit(toolClient, "semantic_search_requirements", JSON.stringify({ query_length: query.length, limit }), false, () => toolClient.semanticSearchRequirements(query, limit));
+        return { content: [jsonContent(out)] };
+    });
     server.registerTool("compare_versions", {
         description: "Structured diff between two requirement versions",
         inputSchema: z.object({
@@ -255,7 +264,7 @@ export function createMarreqServer(ctx) {
     // Phase 2: draft_write tools (only when MARREQ_MODE=draft_write)
     if (ctx.mode === "draft_write") {
         server.registerTool("create_requirement", {
-            description: "Create a new requirement in the project (draft). Requires draft_write mode.",
+            description: "Create a new draft requirement. reference_code is the persistent idempotency identity: retry with the same reference, title, and description returns the existing requirement; conflicting content is rejected.",
             inputSchema: z.object({
                 ...projectField,
                 title: z.string(),

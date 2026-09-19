@@ -120,6 +120,15 @@ describe("MarreqClient", () => {
       );
     });
 
+    it("treats an exact reference-code conflict as an idempotent replay", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(new Response('{"message":"duplicate"}', { status: 409 }))
+        .mockResolvedValueOnce(new Response(JSON.stringify([{ id: 10, reference_code: "REQ-001", title: "New Req", description: "Desc" }]), { status: 200, headers: { "Content-Type": "application/json" } }));
+      const result = await makeClient().createRequirement({ title: "New Req", description: "Desc", reference_code: "REQ-001", author_id: 1, reviewer_id: 1, category_id: 1, status_id: 1, applicability_id: 1, project_id: 1, verification_method_ids: [1] });
+      expect(result).toEqual({ status: "existing", id: 10, idempotent_replay: true });
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+    });
+
     it("patchRequirement calls PATCH with project-scoped URL and body", async () => {
       const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
         new Response(JSON.stringify({ success: true }), {

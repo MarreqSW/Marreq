@@ -50,6 +50,12 @@ export class MarreqClient {
     );
   }
 
+  async semanticSearchRequirements(query: string, limit?: number) {
+    const params = new URLSearchParams({ q: query });
+    if (limit != null) params.set("k", String(limit));
+    return this.request(`/api/projects/${this.ctx.projectId}/requirements/semantic_search?${params}`);
+  }
+
   async getVersions(requirementId: number) {
     return this.request(
       `/api/projects/${this.ctx.projectId}/requirements/${requirementId}/versions`
@@ -114,10 +120,22 @@ export class MarreqClient {
     verification_method_ids: number[];
     custom_fields?: Array<{ field_id: number; value: string }>;
   }) {
-    return this.request(
-      `/api/projects/${this.ctx.projectId}/requirements`,
-      { method: "POST", body: JSON.stringify(payload) }
-    );
+    try {
+      return await this.request(
+        `/api/projects/${this.ctx.projectId}/requirements`,
+        { method: "POST", body: JSON.stringify(payload) }
+      );
+    } catch (error) {
+      // reference_code is database-unique within a project. On an ambiguous
+      // retry, return the already-created row only when its stable identity
+      // and authored content match; never treat a conflicting requirement as
+      // a successful retry.
+      if (!(error instanceof Error) || !error.message.startsWith("Marreq API 409:")) throw error;
+      const rows = await this.listRequirements() as Array<{ id: number; reference_code: string; title: string; description: string }>;
+      const existing = rows.find((row) => row.reference_code === payload.reference_code && row.title === payload.title && row.description === payload.description);
+      if (!existing) throw error;
+      return { status: "existing", id: existing.id, idempotent_replay: true };
+    }
   }
 
   /** Phase 2 draft_write: patch requirement (project from context). */

@@ -28,6 +28,38 @@ pub struct McpAuditResponse {
     pub status: &'static str,
 }
 
+const MCP_TOOL_NAMES: &[&str] = &[
+    "list_projects",
+    "get_requirement",
+    "list_requirements",
+    "get_versions",
+    "semantic_search_requirements",
+    "compare_versions",
+    "trace_up",
+    "trace_down",
+    "coverage_report",
+    "get_baseline",
+    "diff_baselines",
+    "list_verifications",
+    "get_verification",
+    "list_baselines",
+    "get_requirement_activity",
+    "get_verification_activity",
+    "list_requirement_comments",
+    "get_verification_matrix",
+    "list_project_catalog",
+    "diff_baseline_vs_current",
+    "create_requirement",
+    "patch_requirement",
+    "set_approval",
+    "create_baseline",
+    "create_requirement_comment",
+    "create_verification",
+    "update_verification",
+    "put_verification_matrix",
+    "clear_suspect",
+];
+
 /// Record an MCP tool call for audit. Requires auth (session or Bearer).
 /// Logged to the same logs table with entity_type "MCP", action_type "MCP_TOOL".
 #[post("/mcp/audit", data = "<body>")]
@@ -37,7 +69,8 @@ pub async fn audit(
     body: Json<McpAuditRequest>,
 ) -> ApiResult<Json<McpAuditResponse>> {
     let payload = body.into_inner();
-    if payload.tool_name.len() > 100
+    if !MCP_TOOL_NAMES.contains(&payload.tool_name.as_str())
+        || payload.tool_name.len() > 100
         || payload
             .params_summary
             .as_ref()
@@ -144,7 +177,7 @@ mod tests {
                 r#"{
                 "project_id": 1,
                 "session_id": "sess-1",
-                "tool_name": "test_tool",
+                "tool_name": "list_projects",
                 "params_summary": "a=1",
                 "result_summary": "ok",
                 "is_write": false

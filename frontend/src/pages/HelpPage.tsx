@@ -14,7 +14,7 @@ const blocks: { title: string; body: string }[] = [
   {
     title: 'Navigation',
     body:
-      'Use the sidebar for Dashboard, Requirements, Verifications, Traceability, Matrix, Baselines, Reports, Settings, and Admin (administrators only). Project scope follows the project selected in the header.',
+      'Use the sidebar for Dashboard, Requirements, Verifications, Traceability, Matrix, Baselines, Reports, Import, Settings, and Admin (administrators only). Project scope follows the project selected in the header.',
   },
   {
     title: 'Search',
@@ -29,12 +29,12 @@ const blocks: { title: string; body: string }[] = [
   {
     title: 'Creating records',
     body:
-      'Use Create Requirement or New verification from the header or list pages. New requirements need at least one verification method configured for the project.',
+      'Use Create Requirement or New verification from the header or list pages. New requirements need at least one verification method configured for the project. Import Excel or CSV from Import in the sidebar (or the create menu) to map columns and create many records at once.',
   },
   {
     title: 'Classic (legacy) UI',
     body:
-      'Matrix and baselines have SPA pages with links to the classic HTML views for full parity. ReqIF import/export, bulk Excel import, server logs, and some admin tools remain classic-only; Reports includes links to legacy Excel/PDF exports.',
+      'ReqIF import/export and some admin tools (server logs, database backup) are not in this workspace yet. Reports includes Excel/PDF download links served by the API.',
   },
 ];
 
@@ -147,6 +147,12 @@ export default function HelpPage() {
                 Dashboard
               </Link>{' '}
               — project KPIs
+            </li>
+            <li>
+              <Link to={`${basePath}/import`} className="text-stitch-accent font-semibold hover:underline">
+                Import
+              </Link>{' '}
+              — Excel / CSV
             </li>
             <li>
               <Link to={`${basePath}/reports`} className="text-stitch-accent font-semibold hover:underline">

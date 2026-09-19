@@ -72,8 +72,7 @@ Having these in place before bulk-adding requirements keeps data consistent and 
 
 - **Create requirements** one by one: **Requirements → New Requirement**. Fill in title, statement, rationale, category, status, applicability, verification method(s), and optionally parent requirement (for hierarchy) and reviewer.
 - **Or import** existing data:
-  - **Import File**: upload Excel/CSV, map columns to Marreq fields, then run the import (see [User Manual – Import](user-manual.md#10-import)).
-  - **Import ReqIF**: upload ReqIF 1.2 XML to bring in requirements (and optionally comments) from another tool.
+  - **Import File**: **Import** in the project sidebar; upload Excel/CSV, map columns to Marreq fields, then run the import (see [User Manual – Import](user-manual.md#10-import)).
 - **Refine**: use the **Requirements** list in card/table/tree view, filter by status/category/applicability, and **Edit** requirements to adjust content or set parent/child relationships.
 - **Optional**: use **Semantic Search (AI)** (if enabled) to find related requirements or answer questions over the requirement set.
 

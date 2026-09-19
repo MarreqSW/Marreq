@@ -144,3 +144,16 @@ html.dark .marreq-catalog-field:-webkit-autofill:active {
 .stitch-flow .react-flow__attribution a {
   @apply text-stitch-accent;
 }
+
+@keyframes marreq-import-indeterminate {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+.marreq-import-bar {
+  animation: marreq-import-indeterminate 1.15s ease-in-out infinite;
+}

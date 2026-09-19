@@ -156,6 +156,7 @@ mod import_config_tests {
         let config = ImportConfig {
             import_type: "requirements".to_string(),
             column_mappings: vec![],
+            value_mappings: vec![],
             project_id: 1,
         };
         assert_eq!(config.import_type, "requirements");
@@ -178,6 +179,7 @@ mod import_config_tests {
         let config = ImportConfig {
             import_type: "requirements".to_string(),
             column_mappings: mappings.clone(),
+            value_mappings: vec![],
             project_id: 1,
         };
         assert_eq!(config.column_mappings.len(), 2);
@@ -188,6 +190,7 @@ mod import_config_tests {
         let config = ImportConfig {
             import_type: "tests".to_string(),
             column_mappings: vec![],
+            value_mappings: vec![],
             project_id: 2,
         };
         assert_eq!(config.import_type, "tests");
@@ -198,6 +201,7 @@ mod import_config_tests {
         let config = ImportConfig {
             import_type: "requirements".to_string(),
             column_mappings: vec![],
+            value_mappings: vec![],
             project_id: 1,
         };
         let debug = format!("{:?}", config);
@@ -212,6 +216,7 @@ mod import_config_tests {
                 excel_column: "Title".to_string(),
                 target_field: "title".to_string(),
             }],
+            value_mappings: vec![],
             project_id: 1,
         };
         let json = serde_json::to_string(&config).unwrap();
@@ -1449,6 +1454,7 @@ mod data_structure_combination_tests {
         let config = ImportConfig {
             import_type: "requirements".to_string(),
             column_mappings: mappings,
+            value_mappings: vec![],
             project_id: 1,
         };
         assert_eq!(config.column_mappings.len(), 3);
@@ -2438,6 +2444,7 @@ mod data_structure_combination_tests {
             let config = ImportConfig {
                 import_type: "requirements".to_string(),
                 column_mappings: mappings,
+                value_mappings: vec![],
                 project_id: 1,
             };
             assert_eq!(config.column_mappings.len(), 3);
@@ -2536,6 +2543,7 @@ mod data_structure_combination_tests {
             let config = ImportConfig {
                 import_type: "requirements".to_string(),
                 column_mappings: vec![],
+                value_mappings: vec![],
                 project_id: -1,
             };
             assert_eq!(config.project_id, -1);
@@ -2546,6 +2554,7 @@ mod data_structure_combination_tests {
             let config = ImportConfig {
                 import_type: "requirements".to_string(),
                 column_mappings: vec![],
+                value_mappings: vec![],
                 project_id: 0,
             };
             assert_eq!(config.project_id, 0);
@@ -2556,6 +2565,7 @@ mod data_structure_combination_tests {
             let config = ImportConfig {
                 import_type: "requirements".to_string(),
                 column_mappings: vec![],
+                value_mappings: vec![],
                 project_id: i32::MAX,
             };
             assert_eq!(config.project_id, i32::MAX);
@@ -2594,5 +2604,23 @@ mod data_structure_combination_tests {
         assert!(!result.success);
         assert_eq!(result.imported_count, 8);
         assert_eq!(result.errors.len(), 2);
+    }
+
+    #[test]
+    fn from_bytes_parses_csv_and_guesses_requirements() {
+        let csv = b"Title,Description,Req ID\nAlpha requirement,Imported row,REQ-001\n";
+        let importer = ExcelImporter::from_bytes("reqs.csv", csv).unwrap();
+        assert_eq!(importer.import_type, "requirements");
+        assert_eq!(importer.columns.len(), 3);
+        assert_eq!(importer.columns[0].name, "Title");
+        assert_eq!(importer.columns[0].sample_value, "Alpha requirement");
+        assert_eq!(importer.data.len(), 1);
+        assert_eq!(importer.data[0][0], "Alpha requirement");
+    }
+
+    #[test]
+    fn from_bytes_rejects_empty_upload() {
+        let err = ExcelImporter::from_bytes("empty.csv", b"").unwrap_err();
+        assert!(err.to_string().contains("empty"));
     }
 }

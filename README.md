@@ -178,9 +178,8 @@ Use the SPA (**Docker** `http://localhost:8080` or **`npm run dev`** in `fronten
 
 ### Import Features
 
-- **Excel Import (Web UI)**: Upload `.xlsx`/`.csv` files in the project import flow with column mapping
-- **ReqIF 1.2 Import**: Import requirements from ReqIF XML into a project (project ReqIF/Import page)
-- **Data Import**: Import requirements and related metadata from Excel or ReqIF
+- **Excel Import (Web UI)**: Open **Import** in a project (`/{slug}/import`), upload `.xlsx`/`.csv`, map columns, then create requirements or verifications
+- **ReqIF 1.2 Import**: Backend support exists; a ReqIF wizard is not in the SPA yet
 - **Indexing integration**: Imported requirements are queued for semantic index refresh when embeddings are enabled
 
 ## 🔌 API Reference
@@ -215,6 +214,8 @@ Behind the Docker frontend (or Vite dev), use the **same origin** as the SPA (e.
 - `GET /requirements/{id}/comments` - List comments for a requirement (query: optional `version_id`; chronological order)
 - `POST /requirements/{id}/comments` - Add a comment (body: `body`, optional `requirement_version_id`; approved versions rejected when `LOCK_APPROVED_VERSION_COMMENTS=true`)
 - `POST /requirements` - Create new requirement
+- `POST /projects/{project_id}/imports/excel/preview` - Parse Excel/CSV and return columns for mapping (`EditRequirements`)
+- `POST /projects/{project_id}/imports/excel` - Import mapped Excel/CSV as requirements or verifications
 - `PATCH /requirements/{id}` - Partially update supported requirement fields
 - `DELETE /requirements/{id}` - Delete requirement
 

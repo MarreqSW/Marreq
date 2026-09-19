@@ -42,7 +42,7 @@ describe('Project Selector', () => {
     selector.dispatchEvent(new Event('change'));
 
     expect(window.location.assign).toHaveBeenCalledWith(
-      '/beta/project-2/requirements?filter=active#top',
+      '/project-2/requirements?filter=active#top',
     );
   });
 
@@ -197,7 +197,7 @@ describe('Project Selector', () => {
     selector.dispatchEvent(new Event('change'));
 
     expect(window.location.assign).toHaveBeenCalledWith(
-      '/team/project-7/requirements/edit/123?filter=active#top',
+      '/project-7/requirements/edit/123?filter=active#top',
     );
   });
 
@@ -219,7 +219,7 @@ describe('Project Selector', () => {
     selector.dispatchEvent(new Event('change'));
 
     expect(window.location.assign).toHaveBeenCalledWith(
-      '/beta/project-2/requirements?status=active&sort=name#section',
+      '/project-2/requirements?status=active&sort=name#section',
     );
   });
 

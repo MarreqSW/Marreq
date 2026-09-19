@@ -2,14 +2,52 @@
 // Copyright (C) 2026 Marreq
 
 use crate::helper_functions::decorators;
-use crate::models::*;
-use crate::repository::{
-    CustomFieldRepository, DieselRepo, RequirementCommentsRepository, RequirementsRepository,
-    UserRepository, VerificationsRepository,
-};
+use crate::repository::{DieselRepo, Repository, RequirementsRepository, VerificationsRepository};
 use diesel::prelude::*;
 use std::fs;
 use std::path::PathBuf;
+
+type WorkbookError = Box<dyn std::error::Error + Send + Sync>;
+
+/// Scratch file for xlsxwriter, which can only write to a path. The name is unique per
+/// process and call so concurrent exports of the same project cannot clobber each other,
+/// and the file is removed even when workbook generation fails part way through.
+struct TempWorkbook {
+    path: PathBuf,
+}
+
+impl TempWorkbook {
+    fn new(kind: &str, project_id: i32) -> Self {
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_nanos())
+            .unwrap_or(0);
+        let path = std::env::temp_dir().join(format!(
+            "marreq-{kind}-{project_id}-{}-{unique}.xlsx",
+            std::process::id()
+        ));
+        Self { path }
+    }
+
+    fn path_str(&self) -> Result<&str, WorkbookError> {
+        self.path.to_str().ok_or_else(|| {
+            Box::new(std::io::Error::new(
+                std::io::ErrorKind::InvalidData,
+                "invalid temp path",
+            )) as WorkbookError
+        })
+    }
+
+    fn read(&self) -> Result<Vec<u8>, WorkbookError> {
+        Ok(fs::read(&self.path)?)
+    }
+}
+
+impl Drop for TempWorkbook {
+    fn drop(&mut self) {
+        let _ = fs::remove_file(&self.path);
+    }
+}
 
 pub fn create_matrix_workbook(
     project_id: i32,
@@ -115,22 +153,28 @@ pub fn create_matrix_workbook(
 
 pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let repo = DieselRepo::new()?;
+    requirements_workbook_with_repo(&repo, pid).map_err(|e| -> Box<dyn std::error::Error> { e })
+}
+
+/// Build the requirements workbook using an explicitly provided repository.
+pub fn requirements_workbook_with_repo<R: Repository>(
+    repo: &R,
+    pid: i32,
+) -> Result<Vec<u8>, WorkbookError> {
     let all_requirements = repo
         .get_requirements_by_project(pid)
-        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+        .map_err(|e| format!("Error querying requirements by project: {:?}", e))?;
 
     let custom_defs = repo
         .list_custom_field_definitions_by_project(pid)
-        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+        .map_err(|e| format!("Error querying custom field definitions: {:?}", e))?;
 
     // Decorate requirements to get real names instead of IDs
-    let decorated_requirements = decorators::decorate_requirements(all_requirements.clone());
+    let decorated_requirements =
+        decorators::decorate_requirements_with_repo(repo, all_requirements.clone());
 
-    let temp_path: PathBuf = std::env::temp_dir().join(format!("marreq_requirements_{}.xls", pid));
-    let path_str = temp_path
-        .to_str()
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid temp path"))?;
-    let workbook = xlsxwriter::Workbook::new(path_str)?;
+    let temp = TempWorkbook::new("requirements", pid);
+    let workbook = xlsxwriter::Workbook::new(temp.path_str()?)?;
     let mut worksheet = workbook.add_worksheet(Some("Requirements"))?;
 
     let base_cols = 14u16;
@@ -231,29 +275,28 @@ pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::er
     }
 
     workbook.close()?;
-    let result = fs::read(&temp_path)?;
-    Ok(result)
+    temp.read()
 }
 
 pub fn create_tests_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    use crate::schema::verifications::dsl::*;
+    let repo = DieselRepo::new()?;
+    verifications_workbook_with_repo(&repo, pid).map_err(|e| -> Box<dyn std::error::Error> { e })
+}
 
-    let mut connection = DieselRepo::new()?.get_conn()?;
-
-    let all_tests = verifications
-        .filter(crate::schema::verifications::project_id.eq(pid))
-        .load::<Verification>(connection.as_mut())
-        .map_err(|e| Box::new(e) as Box<dyn std::error::Error>)?;
+/// Build the verifications workbook using an explicitly provided repository.
+pub fn verifications_workbook_with_repo<R: Repository>(
+    repo: &R,
+    pid: i32,
+) -> Result<Vec<u8>, WorkbookError> {
+    let all_tests = repo
+        .get_verifications_by_project(pid)
+        .map_err(|e| format!("Error querying verifications by project: {:?}", e))?;
 
     // Decorate tests to get real names instead of IDs
-    let decorated_tests = decorators::decorate_verifications(all_tests);
+    let decorated_tests = decorators::decorate_verifications_with_repo(repo, all_tests);
 
-    // Write to a temp file to avoid fixed path and propagate read errors
-    let temp_path: PathBuf = std::env::temp_dir().join(format!("marreq_tests_{}.xls", pid));
-    let path_str = temp_path
-        .to_str()
-        .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidData, "invalid temp path"))?;
-    let workbook = xlsxwriter::Workbook::new(path_str)?;
+    let temp = TempWorkbook::new("verifications", pid);
+    let workbook = xlsxwriter::Workbook::new(temp.path_str()?)?;
     let mut worksheet = workbook.add_worksheet(Some("Tests"))?;
 
     // Write headers
@@ -278,6 +321,5 @@ pub fn create_tests_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Er
     }
 
     workbook.close()?;
-    let result = fs::read(&temp_path)?;
-    Ok(result)
+    temp.read()
 }

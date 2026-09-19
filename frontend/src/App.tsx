@@ -27,6 +27,7 @@ import EditVerificationPage from '@/pages/EditVerificationPage';
 import ViewRequirementPage from '@/pages/ViewRequirementPage';
 import ViewVerificationPage from '@/pages/ViewVerificationPage';
 import HelpPage from '@/pages/HelpPage';
+import ImportPage from '@/pages/ImportPage';
 import ProjectSettingsPage from '@/pages/ProjectSettingsPage';
 import ReportsPage from '@/pages/ReportsPage';
 import RequirementsPage from '@/pages/RequirementsPage';
@@ -128,6 +129,7 @@ export default function App() {
           <Route path="baselines/:baselineId" element={<BaselineDetailPage />} />
           <Route path="baselines" element={<BaselinesPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="import" element={<ImportPage />} />
           <Route path="settings" element={<ProjectSettingsPage />} />
           {/* Old / classic URL; avoid full-page navigation to Rocket (404 on :8000). */}
           <Route path="members" element={<Navigate to="settings" replace />} />

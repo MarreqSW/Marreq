@@ -72,6 +72,12 @@ export default function ProjectLayout() {
               compact: 'Requirement',
               icon: 'list_alt' as const,
             },
+            {
+              to: `${basePath}/import`,
+              label: 'Import Excel / CSV',
+              compact: 'Import',
+              icon: 'upload_file' as const,
+            },
           ]
         : [
             {
@@ -85,6 +91,12 @@ export default function ProjectLayout() {
               label: 'Create verification',
               compact: 'Verification',
               icon: 'verified' as const,
+            },
+            {
+              to: `${basePath}/import`,
+              label: 'Import Excel / CSV',
+              compact: 'Import',
+              icon: 'upload_file' as const,
             },
           ],
     [onVerificationsSection, basePath],
@@ -216,6 +228,11 @@ export default function ProjectLayout() {
               to: `${basePath}/reports`,
               icon: 'description',
               label: 'Reports',
+            })}
+            {sideLink({
+              to: `${basePath}/import`,
+              icon: 'upload_file',
+              label: 'Import',
             })}
             {sideLink({
               to: `${basePath}/catalog`,

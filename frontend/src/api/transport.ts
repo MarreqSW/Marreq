@@ -43,3 +43,26 @@ export async function fetchJson<T>(
   });
   return parseJson<T>(res);
 }
+
+/** Fetches a binary response (file download). Errors use the same messages as fetchJson. */
+export async function fetchBlob(path: string, init: RequestInit = {}): Promise<Blob> {
+  const res = await fetch(path, {
+    credentials: 'same-origin',
+    ...init,
+    headers: {
+      ...init.headers,
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    let msg = res.statusText;
+    try {
+      const j = JSON.parse(text) as { message?: string; error?: string };
+      msg = (j.message ?? j.error ?? text) || msg;
+    } catch {
+      msg = friendlyNonJsonError(res.status, text);
+    }
+    throw new Error(msg);
+  }
+  return res.blob();
+}

@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import { escapeCsv, downloadCsv } from '@/utils/tableUtils';
 import { Pagination } from '@/components/table/Pagination';
-import { CsvDownloadButton } from '@/components/table/CsvDownloadButton';
+import { CsvDownloadButton, ExcelDownloadButton } from '@/components/table/CsvDownloadButton';
 import SavedViewsToolbar from '@/components/SavedViewsToolbar';
 import {
   getMyPermissions,
@@ -15,6 +15,7 @@ import {
   listUsersOptional,
   listVerificationMethodsByProject,
   patchRequirementByProject,
+  downloadRequirementsXlsx,
 } from '@/api/client';
 import type {
   Category,
@@ -141,6 +142,8 @@ export default function RequirementsTable({
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [saveErr, setSaveErr] = useState<string | null>(null);
+  const [exportingXlsx, setExportingXlsx] = useState(false);
+  const [exportErr, setExportErr] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   /** Last server-aligned row per id — avoid PATCH on blur when unchanged (reduces suspect churn). */
   const baselineRef = useRef<Map<number, Requirement>>(new Map());
@@ -557,6 +560,18 @@ export default function RequirementsTable({
     downloadCsv(`requirements-project-${projectId}.csv`, headers, rows);
   }, [filtered, statusById, categoryById, userLabel, projectId]);
 
+  const exportXlsx = useCallback(async () => {
+    setExportErr(null);
+    setExportingXlsx(true);
+    try {
+      await downloadRequirementsXlsx(projectId);
+    } catch (e) {
+      setExportErr(e instanceof Error ? e.message : 'Excel export failed');
+    } finally {
+      setExportingXlsx(false);
+    }
+  }, [projectId]);
+
   if (loading) {
     return (
       <div className="p-8 text-center text-stitch-muted font-mono italic border border-stitch-border rounded-xl bg-stitch-surface">
@@ -729,15 +744,15 @@ export default function RequirementsTable({
             {filtered.length.toLocaleString()} Requirements found
           </p>
           <CsvDownloadButton onClick={exportCsv} />
-          <a
-            href={`${basePath}/requirements.xls`}
-            title="Download Excel (classic)"
-            className="p-2 text-stitch-muted hover:text-stitch-accent transition-colors"
-          >
-            <span className="material-symbols-outlined">table_chart</span>
-          </a>
+          <ExcelDownloadButton onClick={exportXlsx} busy={exportingXlsx} />
         </div>
       </div>
+
+      {exportErr ? (
+        <p className="mb-4 text-xs text-red-300" role="alert">
+          {exportErr}
+        </p>
+      ) : null}
 
       {viewMode === 'list' ? (
         <ul className="space-y-3">

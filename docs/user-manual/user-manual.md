@@ -82,6 +82,7 @@ The top navigation bar includes:
 | **Requirements**          | Project requirements (active when a project is selected)                                                             |
 | **Verifications**         | Project verifications (test cases and their status)                                                                  |
 | **Reports**               | Project reports & analytics                                                                                          |
+| **Import**                | Excel/CSV import with column mapping                                                                                 |
 | **Members**               | Project members                                                                                                      |
 | **Baselines**             | Project baselines                                                                                                    |
 | **Quick Actions** (admin) | Shortcuts: New Project, New Requirement/Verification/Category/Applicability/Verification Method/Verification Status, New User, Import File/ReqIF |
@@ -442,19 +443,20 @@ You see:
 
 ## 10. Import
 
-### 10.1 Importing from Excel
+### 10.1 Importing from Excel or CSV
 
-1. Open **Import File** for the project: **Quick Actions → Import File** or **Admin → Import File**, or go to `/<project-slug>/import_excel`.
-2. Upload a file (**.xlsx**, **.xls**, or **.csv**).
-3. Click **Upload and Map Columns**.
-4. On the mapping page, map your columns to Marreq fields (requirements, tests, traceability).
-5. Complete the import; data is created/updated via the API.
+1. Open a project and go to **Import** in the sidebar, **Create → Import Excel / CSV**, or `/{project-slug}/import`.
+2. You need **Edit requirements** permission.
+3. Upload a **`.xlsx`** or **`.csv`** file (first sheet only).
+4. Click **Upload and map columns**.
+5. Choose **Requirements** or **Verifications**, map each column to a Marreq field (or skip it), then **Import**.
+6. Review the count and any per-row errors, then open the requirements or verifications list.
+
+Unmapped catalog fields (status, category, applicability, verification method) use project defaults. When a mapped file value does not exist in the project (for example, a category from another instance), the mapping page preselects a safe project default and asks you to confirm or change it. Parent references remain strict and must identify an existing requirement or an earlier successfully imported row. Import creates new records; it does not update existing ones.
 
 ### 10.2 Importing ReqIF
 
-1. Open **Import ReqIF**: **Quick Actions → Import ReqIF** or **Admin → Import ReqIF**, or `/<project-slug>/import_reqif`.
-2. Upload a **ReqIF 1.2** XML file.
-3. Follow the process flow; requirements (and optionally comments) are imported into the project.
+ReqIF 1.2 import is not available in this web workspace yet. Use Excel/CSV import for spreadsheet data.
 
 ---
 

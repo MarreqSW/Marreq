@@ -1,0 +1,72 @@
+import { fetchJson } from './transport';
+
+export interface ExcelColumnPreview {
+  index: number;
+  name: string;
+  sample_value: string;
+}
+
+export interface ExcelImportPreview {
+  import_type: 'requirements' | 'tests' | string;
+  columns: ExcelColumnPreview[];
+  sample_rows: string[][];
+  row_count: number;
+  available_fields: {
+    requirements: string[];
+    tests: string[];
+  };
+  unique_values: Record<string, string[]>;
+}
+
+export interface ExcelColumnMapping {
+  excel_column: string;
+  target_field: string;
+}
+
+export interface ExcelValueMapping {
+  target_field: string;
+  source_value: string;
+  target_id: number;
+}
+
+export interface ExcelImportResult {
+  success: boolean;
+  message: string;
+  imported_count: number;
+  errors: string[];
+  imported_requirement_ids: number[];
+}
+
+export async function previewExcelImport(
+  projectId: number,
+  file: File,
+  csrfToken: string,
+): Promise<ExcelImportPreview> {
+  const body = new FormData();
+  body.append('file', file);
+  return fetchJson<ExcelImportPreview>(`/api/projects/${projectId}/imports/excel/preview`, {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrfToken },
+    body,
+  });
+}
+
+export async function commitExcelImport(
+  projectId: number,
+  file: File,
+  importType: 'requirements' | 'tests',
+  columnMappings: ExcelColumnMapping[],
+  valueMappings: ExcelValueMapping[],
+  csrfToken: string,
+): Promise<ExcelImportResult> {
+  const body = new FormData();
+  body.append('file', file);
+  body.append('import_type', importType);
+  body.append('column_mappings', JSON.stringify(columnMappings));
+  body.append('value_mappings', JSON.stringify(valueMappings));
+  return fetchJson<ExcelImportResult>(`/api/projects/${projectId}/imports/excel`, {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrfToken },
+    body,
+  });
+}

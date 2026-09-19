@@ -91,6 +91,7 @@ pub trait DelegatedOAuthRepository {
     fn insert_oauth_client(&mut self, client: &NewOAuthClient) -> Result<(), RepoError>;
     fn get_oauth_client(&self, client_id: &str) -> Result<OAuthClient, RepoError>;
     fn upsert_oauth_grant(&mut self, grant: &NewOAuthGrant) -> Result<OAuthGrant, RepoError>;
+    fn get_oauth_grant(&self, grant_id: i32) -> Result<OAuthGrant, RepoError>;
     fn list_oauth_grants(&self, user_id: i32) -> Result<Vec<(OAuthGrant, OAuthClient)>, RepoError>;
     fn revoke_oauth_grant(
         &mut self,

@@ -27,22 +27,57 @@ impl DelegatedOAuthRepository for DieselRepo {
     }
 
     fn upsert_oauth_grant(&mut self, value: &NewOAuthGrant) -> Result<OAuthGrant, RepoError> {
-        diesel::insert_into(oauth_grants::table)
-            .values(value)
-            .on_conflict((
-                oauth_grants::user_id,
-                oauth_grants::client_id,
-                oauth_grants::resource,
-            ))
-            .do_update()
-            .set((
-                oauth_grants::scopes.eq(&value.scopes),
-                oauth_grants::updated_at.eq(diesel::dsl::now),
-                oauth_grants::revoked_at.eq::<Option<NaiveDateTime>>(None),
-            ))
-            .returning(OAuthGrant::as_returning())
-            .get_result(&mut *self.get_conn()?)
-            .map_err(map_db_error)
+        let mut conn = self.get_conn()?;
+        conn.transaction(|conn| {
+            let previous = oauth_grants::table
+                .filter(oauth_grants::user_id.eq(value.user_id))
+                .filter(oauth_grants::client_id.eq(&value.client_id))
+                .filter(oauth_grants::resource.eq(&value.resource))
+                .select(OAuthGrant::as_select())
+                .first::<OAuthGrant>(conn)
+                .optional()?;
+            let grant = diesel::insert_into(oauth_grants::table)
+                .values(value)
+                .on_conflict((
+                    oauth_grants::user_id,
+                    oauth_grants::client_id,
+                    oauth_grants::resource,
+                ))
+                .do_update()
+                .set((
+                    oauth_grants::scopes.eq(&value.scopes),
+                    oauth_grants::updated_at.eq(diesel::dsl::now),
+                    oauth_grants::revoked_at.eq::<Option<NaiveDateTime>>(None),
+                ))
+                .returning(OAuthGrant::as_returning())
+                .get_result::<OAuthGrant>(conn)?;
+            if previous.is_some_and(|old| old.scopes != value.scopes || old.revoked_at.is_some()) {
+                let now = chrono::Utc::now().naive_utc();
+                diesel::delete(
+                    oauth_access_tokens::table.filter(oauth_access_tokens::grant_id.eq(grant.id)),
+                )
+                .execute(conn)?;
+                diesel::update(
+                    oauth_refresh_tokens::table.filter(
+                        oauth_refresh_tokens::grant_id
+                            .eq(grant.id)
+                            .and(oauth_refresh_tokens::revoked_at.is_null()),
+                    ),
+                )
+                .set(oauth_refresh_tokens::revoked_at.eq(now))
+                .execute(conn)?;
+            }
+            Ok(grant)
+        })
+        .map_err(map_db_error)
+    }
+
+    fn get_oauth_grant(&self, id: i32) -> Result<OAuthGrant, RepoError> {
+        oauth_grants::table
+            .find(id)
+            .select(OAuthGrant::as_select())
+            .first(&mut *self.get_conn()?)
+            .map_err(Into::into)
     }
 
     fn list_oauth_grants(&self, owner: i32) -> Result<Vec<(OAuthGrant, OAuthClient)>, RepoError> {

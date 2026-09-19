@@ -166,12 +166,34 @@ impl DelegatedOAuthRepository for DieselRepoMock {
             .ok_or(RepoError::NotFound)
     }
     fn upsert_oauth_grant(&mut self, v: &NewOAuthGrant) -> Result<OAuthGrant, RepoError> {
-        if let Some(grant) = self.oauth_grants.values_mut().find(|g| {
-            g.user_id == v.user_id && g.client_id == v.client_id && g.resource == v.resource
-        }) {
+        if let Some(id) = self
+            .oauth_grants
+            .values()
+            .find(|g| {
+                g.user_id == v.user_id && g.client_id == v.client_id && g.resource == v.resource
+            })
+            .map(|g| g.id)
+        {
+            let changed = self
+                .oauth_grants
+                .get(&id)
+                .is_some_and(|grant| grant.scopes != v.scopes || grant.revoked_at.is_some());
+            let grant = self.oauth_grants.get_mut(&id).expect("grant exists");
             grant.scopes = v.scopes.clone();
             grant.revoked_at = None;
-            return Ok(grant.clone());
+            let result = grant.clone();
+            if changed {
+                self.oauth_access_tokens
+                    .retain(|_, token| token.grant_id != id);
+                for token in self
+                    .oauth_refresh_tokens
+                    .values_mut()
+                    .filter(|t| t.grant_id == id)
+                {
+                    token.revoked_at = Some(epoch());
+                }
+            }
+            return Ok(result);
         }
         let id = self.next_oauth_grant_id;
         self.next_oauth_grant_id += 1;
@@ -188,6 +210,12 @@ impl DelegatedOAuthRepository for DieselRepoMock {
         };
         self.oauth_grants.insert(id, grant.clone());
         Ok(grant)
+    }
+    fn get_oauth_grant(&self, id: i32) -> Result<OAuthGrant, RepoError> {
+        self.oauth_grants
+            .get(&id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
     }
     fn list_oauth_grants(&self, owner: i32) -> Result<Vec<(OAuthGrant, OAuthClient)>, RepoError> {
         Ok(self

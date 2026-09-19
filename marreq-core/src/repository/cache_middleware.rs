@@ -494,6 +494,9 @@ impl<R: Repository> super::DelegatedOAuthRepository for CacheRepository<R> {
     ) -> Result<crate::models::OAuthGrant, RepoError> {
         self.inner.upsert_oauth_grant(v)
     }
+    fn get_oauth_grant(&self, id: i32) -> Result<crate::models::OAuthGrant, RepoError> {
+        self.inner.get_oauth_grant(id)
+    }
     fn list_oauth_grants(
         &self,
         user_id: i32,

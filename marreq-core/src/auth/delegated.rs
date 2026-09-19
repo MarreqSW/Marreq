@@ -116,7 +116,20 @@ pub fn register_client<R: DelegatedOAuthRepository>(
     name: &str,
     redirects: Vec<String>,
 ) -> Result<OAuthClient, DelegatedOAuthError> {
-    if name.trim().is_empty() || redirects.is_empty() {
+    let name = name.trim();
+    if name.is_empty()
+        || name.len() > 100
+        || name.chars().any(char::is_control)
+        || redirects.is_empty()
+        || redirects.len() > 10
+        || redirects.iter().any(|redirect| redirect.len() > 2048)
+    {
+        return Err(DelegatedOAuthError::InvalidRequest);
+    }
+    let mut unique_redirects = redirects.clone();
+    unique_redirects.sort();
+    unique_redirects.dedup();
+    if unique_redirects.len() != redirects.len() {
         return Err(DelegatedOAuthError::InvalidRequest);
     }
     for redirect in &redirects {
@@ -125,7 +138,7 @@ pub fn register_client<R: DelegatedOAuthRepository>(
     let id = format!("mcp_{}", random_secret());
     repo.insert_oauth_client(&NewOAuthClient {
         client_id: id.clone(),
-        name: name.trim().to_owned(),
+        name: name.to_owned(),
         redirect_uris: serde_json::json!(redirects),
     })?;
     repo.get_oauth_client(&id).map_err(Into::into)
@@ -220,8 +233,16 @@ pub fn exchange_code<R: DelegatedOAuthRepository>(
     resource: &str,
     now: NaiveDateTime,
 ) -> Result<TokenResponse, DelegatedOAuthError> {
+    if verifier.len() < 43
+        || verifier.len() > 128
+        || !verifier
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.' | b'~'))
+    {
+        return Err(DelegatedOAuthError::InvalidGrant);
+    }
     let hash = hash_secret(raw_code);
-    let code = repo
+    let mut code = repo
         .get_oauth_code(&hash)
         .map_err(|_| DelegatedOAuthError::InvalidGrant)?;
     let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
@@ -232,6 +253,16 @@ pub fn exchange_code<R: DelegatedOAuthRepository>(
         || code.resource != resource
         || code.code_challenge != challenge
     {
+        return Err(DelegatedOAuthError::InvalidGrant);
+    }
+    let grant = repo
+        .get_oauth_grant(code.grant_id)
+        .map_err(|_| DelegatedOAuthError::InvalidGrant)?;
+    if grant.revoked_at.is_some() || grant.resource != resource || grant.client_id != client_id {
+        return Err(DelegatedOAuthError::InvalidGrant);
+    }
+    code.scopes.retain(|scope| grant.scopes.contains(scope));
+    if code.scopes.is_empty() {
         return Err(DelegatedOAuthError::InvalidGrant);
     }
     if !repo.consume_oauth_code(&hash, now)? {
@@ -264,13 +295,22 @@ pub fn refresh<R: DelegatedOAuthRepository>(
     {
         return Err(DelegatedOAuthError::InvalidGrant);
     }
+    let effective_scopes = old
+        .scopes
+        .iter()
+        .filter(|scope| grant.scopes.contains(scope))
+        .cloned()
+        .collect::<Vec<_>>();
+    if effective_scopes.is_empty() {
+        return Err(DelegatedOAuthError::InvalidGrant);
+    }
     let code = OAuthAuthorizationCode {
         code_hash: String::new(),
         grant_id: old.grant_id,
         client_id: old.client_id.clone(),
         redirect_uri: String::new(),
         code_challenge: String::new(),
-        scopes: old.scopes.clone(),
+        scopes: effective_scopes,
         resource: old.resource.clone(),
         expires_at: now,
         used_at: None,
@@ -302,14 +342,19 @@ pub fn validate_access<R: DelegatedOAuthRepository>(
     {
         return Err(DelegatedOAuthError::AccessDenied);
     }
-    if required_scope.is_some_and(|scope| !token.scopes.iter().any(|held| held == scope)) {
+    let effective_scopes = token
+        .scopes
+        .into_iter()
+        .filter(|scope| grant.scopes.contains(scope))
+        .collect::<Vec<_>>();
+    if required_scope.is_some_and(|scope| !effective_scopes.iter().any(|held| held == scope)) {
         return Err(DelegatedOAuthError::InvalidScope);
     }
     Ok(DelegatedPrincipal {
         user,
         client_id: token.client_id,
         grant_id: token.grant_id,
-        scopes: token.scopes,
+        scopes: effective_scopes,
         resource: token.resource,
     })
 }
@@ -372,6 +417,121 @@ mod tests {
             "http://localhost:9000/callback",
             "https://marreq.test/mcp",
             now
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn rejects_invalid_pkce_verifier_shapes() {
+        let now = chrono::Utc::now().naive_utc();
+        for verifier in [
+            String::new(),
+            "a".repeat(42),
+            "a".repeat(129),
+            format!("{}!", "a".repeat(42)),
+        ] {
+            let mut repo = DieselRepoMock::default();
+            let client = register_client(
+                &mut repo,
+                "Test",
+                vec!["http://localhost:9000/callback".into()],
+            )
+            .unwrap();
+            let challenge = URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes()));
+            let code = authorize(
+                &mut repo,
+                1,
+                AuthorizeRequest {
+                    client_id: client.client_id.clone(),
+                    redirect_uri: "http://localhost:9000/callback".into(),
+                    scopes: vec!["requirements:read".into()],
+                    resource: "https://marreq.test/mcp".into(),
+                    code_challenge: challenge,
+                },
+                "https://marreq.test/mcp",
+                now,
+            )
+            .unwrap();
+            assert!(matches!(
+                exchange_code(
+                    &mut repo,
+                    &code,
+                    &verifier,
+                    &client.client_id,
+                    "http://localhost:9000/callback",
+                    "https://marreq.test/mcp",
+                    now,
+                ),
+                Err(DelegatedOAuthError::InvalidGrant)
+            ));
+        }
+    }
+
+    #[test]
+    fn scope_downgrade_invalidates_issued_credentials() {
+        let now = chrono::Utc::now().naive_utc();
+        let resource = "https://marreq.test/mcp";
+        let redirect = "http://localhost:9000/callback";
+        let verifier = "v".repeat(64);
+        let mut repo = DieselRepoMock::default();
+        repo.users
+            .insert(1, DieselRepoMock::make_user(1, "user", "hash"));
+        let client = register_client(&mut repo, "Test", vec![redirect.into()]).unwrap();
+        let authorize_with = |repo: &mut DieselRepoMock, scopes: Vec<String>| {
+            authorize(
+                repo,
+                1,
+                AuthorizeRequest {
+                    client_id: client.client_id.clone(),
+                    redirect_uri: redirect.into(),
+                    scopes,
+                    resource: resource.into(),
+                    code_challenge: URL_SAFE_NO_PAD.encode(Sha256::digest(verifier.as_bytes())),
+                },
+                resource,
+                now,
+            )
+            .unwrap()
+        };
+        let code = authorize_with(
+            &mut repo,
+            vec!["requirements:read".into(), "requirements:write".into()],
+        );
+        let tokens = exchange_code(
+            &mut repo,
+            &code,
+            &verifier,
+            &client.client_id,
+            redirect,
+            resource,
+            now,
+        )
+        .unwrap();
+        assert!(validate_access(
+            &repo,
+            &tokens.access_token,
+            resource,
+            Some("requirements:write"),
+            now,
+        )
+        .is_ok());
+
+        authorize_with(&mut repo, vec!["requirements:read".into()]);
+
+        assert!(validate_access(
+            &repo,
+            &tokens.access_token,
+            resource,
+            Some("requirements:write"),
+            now,
+        )
+        .is_err());
+        assert!(refresh(
+            &mut repo,
+            &tokens.refresh_token,
+            &client.client_id,
+            resource,
+            now,
         )
         .is_err());
     }

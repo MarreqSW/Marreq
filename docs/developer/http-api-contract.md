@@ -65,6 +65,8 @@ Errors from API handlers use JSON (see below). Failed login typically returns **
 | `GET` | `/api/projects` | Projects visible to the logged-in user (admins: all projects; others: memberships). **401** if not authenticated. |
 | `GET` | `/api/project-from-path/<slug>` | Resolve a browser path `/{slug}` to project metadata (`id`, `name`, `slug`, `route_slug`). **401** if not authenticated; **403** if not a member (non-admin); **404** if unknown. (Not under `/api/projects/…` to avoid Rocket route collisions.) |
 | `GET` | `/api/projects/{project_id}/verifications` | Verifications (tests) in the project. Session or Bearer; requires `ViewRequirements`. |
+| `POST` | `/api/projects/{project_id}/imports/excel/preview` | Multipart field `file` (`.xlsx` or `.csv`). Requires `EditRequirements`. Returns guessed `import_type`, `columns`, `sample_rows`, `row_count`, `available_fields`, and unique values per source column. |
+| `POST` | `/api/projects/{project_id}/imports/excel` | Multipart `file`, `import_type` (`requirements` or `tests`), `column_mappings` JSON, and optional `value_mappings` JSON (`target_field`, `source_value`, `target_id`). Unknown catalog/user names fall back to project defaults; supplied target IDs are validated against the project. Creates records; row errors are returned without failing the whole request. Send `X-CSRF-Token` and do not set `Content-Type` (browser sets the multipart boundary). |
 
 Project-scoped CRUD and resources under `/api/projects/{project_id}/...` follow existing routes (Bearer token or session, per handler).
 

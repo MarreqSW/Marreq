@@ -39,7 +39,8 @@ OAuth endpoints:
 | `GET` | `/api/oauth/grants` | List the user's connected applications. |
 | `DELETE` | `/api/oauth/grants/{id}` | Revoke an owned grant (CSRF protected). |
 
-The MCP resource indicator is `<MARREQ_PUBLIC_BASE_URL>/mcp`. Redirect URIs use
+The MCP resource indicator is `MARREQ_MCP_PUBLIC_URL` (defaulting to
+`<MARREQ_PUBLIC_BASE_URL>/mcp`). Redirect URIs use
 exact matching; HTTPS is mandatory except for loopback localhost development.
 Token responses are explicitly non-cacheable. Authorization responses include
 the authorization-server issuer (`iss`), which is advertised in metadata.

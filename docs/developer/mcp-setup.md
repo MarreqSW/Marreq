@@ -26,6 +26,7 @@ MARREQ_MCP_HOST=127.0.0.1
 MARREQ_MCP_PORT=3000
 MARREQ_MCP_PATH=/mcp
 MARREQ_BASE_URL=http://127.0.0.1:8000
+MARREQ_MCP_PUBLIC_URL=http://127.0.0.1:3000/mcp
 ```
 
 Connect to `http://127.0.0.1:3000/mcp` and send `Authorization: Bearer
@@ -38,6 +39,12 @@ server-wide `MARREQ_MODE` or `MARREQ_TRACE_WRITE` flags. Start with
 tool. `MARREQ_MCP_ALLOWED_HOSTS` is an optional
 comma-separated Host allowlist and should be set when listening on a non-loopback
 interface.
+
+`MARREQ_BASE_URL` is the private REST origin used by the Node process.
+`MARREQ_MCP_PUBLIC_URL` is the canonical externally reachable OAuth resource
+and is used in authentication challenges. In production it must be HTTPS and
+must exactly match the same setting on Marreq Core; never expose an internal
+container hostname in `MARREQ_MCP_PUBLIC_URL`.
 
 Production deployments must terminate HTTPS at a trusted reverse proxy and
 forward `/mcp` without logging `Authorization`, cookies, MCP bodies, or query
@@ -188,6 +195,7 @@ For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For trac
 | `list_requirements` | List requirements; optional filter by `approval_state` (draft/reviewed/approved) and `has_tests` (true/false) |
 | `get_versions` | Version history for a requirement |
 | `compare_versions` | Structured diff between two requirement versions |
+| `semantic_search_requirements` | Semantic requirement search (when embeddings are configured) |
 | `trace_up` | Parent requirement(s) for a requirement |
 | `trace_down` | Child requirements and linked tests |
 | `coverage_report` | Requirements without tests, tests without requirements, suspect links |
@@ -212,7 +220,9 @@ For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For trac
 
 | Tool | Description |
 |------|-------------|
-| `create_requirement` | Create a new requirement in the project |
+| `create_requirement` | Create a requirement, including structured parent links; requires a persistent idempotency key in remote mode |
+| `create_verification` | Create a project-scoped verification with persistent idempotency |
+| `update_verification` | Update a project-scoped verification (status changes retain reviewer rules) |
 | `patch_requirement` | Update a requirement (creates new version). Changing `status_id` requires project reviewer rules on the API |
 | `set_approval` | Set requirement version approval to `reviewed` or `approved` |
 | `create_baseline` | Create a new baseline snapshot |
@@ -239,8 +249,8 @@ Reference: shared route list in `marreq-core/src/api/mod.rs` (plus deployment-sp
 | Requirements: impacted tests | **No** |
 | Activity (`.../requirements/:id/activity`, `.../verifications/:id/activity`) | **Yes** (extended read) |
 | Comments list/create | **Yes** (extended / draft_write) |
-| Version parent links CRUD | **No** |
-| Verifications: list/get | **Yes** (extended); create/update/delete | **No** |
+| Requirement hierarchy | **Create with parent links**; standalone link/unlink is not exposed |
+| Verifications | **List/get/create/update**; deletion is intentionally not exposed |
 | Matrix get/put | **Yes** (extended read; put with `MARREQ_TRACE_WRITE`) |
 | Trace up/down, coverage | **Yes** (core read) |
 | `clear_suspect` | **Yes** (`MARREQ_TRACE_WRITE`) |
@@ -248,7 +258,8 @@ Reference: shared route list in `marreq-core/src/api/mod.rs` (plus deployment-sp
 | Categories, applicability, statuses, methods, custom fields | **Read** via `list_project_catalog`; **CRUD** | **No** |
 | Members, reviewers, permissions | **No** |
 | Users, groups, projects (admin) | **No** |
-| Semantic search / reindex | **No** |
+| Semantic search | **Yes** |
+| RAG ask / semantic reindex | **No** |
 | Cache admin | **No** |
 | MCP audit endpoint | **Internal** (called after each tool) |
 

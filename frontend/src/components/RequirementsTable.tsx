@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import { escapeCsv, downloadCsv } from '@/utils/tableUtils';
+import { formatUserLabel } from '@/utils/userLabel';
 import { Pagination } from '@/components/table/Pagination';
 import { CsvDownloadButton, ExcelDownloadButton } from '@/components/table/CsvDownloadButton';
 import SavedViewsToolbar from '@/components/SavedViewsToolbar';
@@ -323,21 +324,9 @@ export default function RequirementsTable({
     return m;
   }, [statuses]);
 
-  const userById = useMemo(() => {
-    const m = new Map<number, { name: string; username: string }>();
-    // members are always available; users (admin-only) can override with the same data
-    for (const mb of members) m.set(mb.user_id, { name: mb.name, username: mb.username });
-    if (users) for (const u of users) m.set(u.id, u);
-    return m;
-  }, [users, members]);
-
   const userLabel = useCallback(
-    (id: number) => {
-      const u = userById.get(id);
-      if (u) return `${u.name} (${u.username})`;
-      return `User #${id}`;
-    },
-    [userById],
+    (id: number) => formatUserLabel(id, { members, users }),
+    [members, users],
   );
 
   const categoryById = useMemo(() => {

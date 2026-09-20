@@ -5,6 +5,7 @@ import {
   getVerification,
   getVerificationMatrix,
   listRequirements,
+  listProjectMembers,
   listVerificationActivityByProject,
   listVerificationMethodsByProject,
   listVerificationStatuses,
@@ -13,12 +14,14 @@ import {
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import { StatusBadge } from '@/components/StatusBadge';
+import { formatUserLabel } from '@/utils/userLabel';
 import type {
   EffectivePermissions,
   EntityActivityItem,
   Requirement,
   Verification,
   VerificationMethod,
+  ProjectMember,
   User,
   VerificationStatus,
 } from '@/api/types';
@@ -94,13 +97,14 @@ export default function ViewVerificationPage() {
   const [linkedReqIds, setLinkedReqIds] = useState<number[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [users, setUsers] = useState<User[] | null>(null);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
   const [activityLog, setActivityLog] = useState<EntityActivityItem[]>([]);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid) || !Number.isFinite(vid)) return;
     setLoadError(null);
     try {
-      const [v, st, m, all, p, reqs, mx, u, act] = await Promise.all([
+      const [v, st, m, all, p, reqs, mx, u, mem, act] = await Promise.all([
         getVerification(vid),
         listVerificationStatuses(),
         listVerificationMethodsByProject(pid),
@@ -109,9 +113,11 @@ export default function ViewVerificationPage() {
         listRequirements(pid),
         getVerificationMatrix(pid, vid),
         listUsersOptional(),
+        listProjectMembers(pid),
         listVerificationActivityByProject(pid, vid).catch(() => [] as EntityActivityItem[]),
       ]);
       setUsers(u);
+      setMembers(mem);
       if (v.project_id !== pid) {
         setLoadError('This verification belongs to another project.');
         return;
@@ -159,12 +165,8 @@ export default function ViewVerificationPage() {
   const canEdit = Boolean(perms?.edit_requirements);
 
   const userLabel = useCallback(
-    (id: number) => {
-      const u = users?.find((x) => x.id === id);
-      if (u) return `${u.name} (${u.username})`;
-      return `User #${id}`;
-    },
-    [users],
+    (id: number) => formatUserLabel(id, { users, members }),
+    [users, members],
   );
 
   if (loadError) {

@@ -13,6 +13,7 @@ import {
   listCategories,
   listMatrix,
   listRequirements,
+  listProjectMembers,
   listUsersOptional,
   listVerifications,
 } from '@/api/client';
@@ -22,12 +23,14 @@ import type {
   Category,
   MatrixLink,
   Requirement,
+  ProjectMember,
   User,
   Verification,
 } from '@/api/types';
 import { ReportSection } from '@/components/reports/ReportSection';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
+import { formatUserLabel } from '@/utils/userLabel';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 const NAV_SECTIONS = [
@@ -66,6 +69,7 @@ export default function ReportsPage() {
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [users, setUsers] = useState<User[] | null>(null);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
   const [baselines, setBaselines] = useState<Baseline[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -91,13 +95,14 @@ export default function ReportsPage() {
     setLoading(true);
     setErr(null);
     try {
-      const [rep, mx, reqs, vers, cats, u, bl] = await Promise.all([
+      const [rep, mx, reqs, vers, cats, u, mem, bl] = await Promise.all([
         getCoverageReport(pid),
         listMatrix(pid),
         listRequirements(pid, viewIdParam != null ? { view_id: viewIdParam } : {}),
         listVerifications(),
         listCategories(),
         listUsersOptional(),
+        listProjectMembers(pid),
         listBaselines(pid),
       ]);
       setReport(rep);
@@ -106,6 +111,7 @@ export default function ReportsPage() {
       setVerifications(vers.filter((v) => v.project_id === pid));
       setCategories(cats.filter((c) => c.project_id === pid));
       setUsers(u);
+      setMembers(mem);
       setBaselines(bl);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load report');
@@ -189,19 +195,9 @@ export default function ReportsPage() {
     return m;
   }, [categories]);
 
-  const userById = useMemo(() => {
-    const m = new Map<number, User>();
-    if (users) for (const u of users) m.set(u.id, u);
-    return m;
-  }, [users]);
-
   const userLabel = useCallback(
-    (id: number) => {
-      const u = userById.get(id);
-      if (u) return `${u.name} (${u.username})`;
-      return `User #${id}`;
-    },
-    [userById],
+    (id: number) => formatUserLabel(id, { users, members }),
+    [users, members],
   );
 
   const summary = useMemo(() => {

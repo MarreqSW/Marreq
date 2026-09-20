@@ -17,6 +17,7 @@ import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import type { CustomFieldDefinition, EffectivePermissions, User } from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
+import { formatUserLabel } from '@/utils/userLabel';
 
 function PermPill({ label, on }: { label: string; on: boolean }) {
   return (
@@ -98,11 +99,7 @@ export default function ProjectSettingsPage() {
   const projectName =
     dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
 
-  const userLabel = (uid: number) => {
-    const u = users?.find((x) => x.id === uid);
-    if (u) return `${u.name} (${u.username})`;
-    return `User #${uid}`;
-  };
+  const userLabel = (uid: number) => formatUserLabel(uid, { users, members });
 
   const memberIds = useMemo(() => new Set(members.map((m) => m.user_id)), [members]);
 

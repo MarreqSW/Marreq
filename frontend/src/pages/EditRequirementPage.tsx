@@ -40,6 +40,7 @@ import type {
 } from '@/api/types';
 import { StatusBadge, statusTagColorSwatchStyle } from '@/components/StatusBadge';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
+import { formatUserLabel } from '@/utils/userLabel';
 
 function approvalLabel(state: string): string {
   return state.replace(/_/g, ' ').toUpperCase();
@@ -189,15 +190,7 @@ export default function EditRequirementPage() {
   }, [load]);
 
   const userLabel = useCallback(
-    (id: number) => {
-      if (users?.length) {
-        const u = users.find((x) => x.id === id);
-        if (u) return `${u.name} (${u.username})`;
-      }
-      const mb = members.find((m) => m.user_id === id);
-      if (mb) return `${mb.name} (${mb.username})`;
-      return `User #${id}`;
-    },
+    (id: number) => formatUserLabel(id, { users, members }),
     [users, members],
   );
 

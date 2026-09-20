@@ -26,6 +26,7 @@ import { RequirementMatrixPicker } from '@/components/RequirementMatrixPicker';
 import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { initialVerificationStatusIdForAuthor } from '@/statusAuthorDefaults';
+import { formatUserLabel } from '@/utils/userLabel';
 
 const selectClass =
   'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
@@ -134,13 +135,7 @@ export default function CreateVerificationPage() {
   const statusMeta = useMemo(() => statuses.find((s) => s.id === statusId), [statuses, statusId]);
 
   const userLabel = useCallback(
-    (id: number) => {
-      const u = users?.find((x) => x.id === id);
-      if (u) return `${u.name} (${u.username})`;
-      const mb = members.find((m) => m.user_id === id);
-      if (mb) return `${mb.name} (${mb.username})`;
-      return `User #${id}`;
-    },
+    (id: number) => formatUserLabel(id, { users, members }),
     [users, members],
   );
 

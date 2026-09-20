@@ -6,7 +6,15 @@ Marreq can be used from AI assistants (Cursor, Claude, etc.) via an optional **M
 
 - **Local AI client** ↔ **Marreq MCP server** (`stdio`) ↔ **Marreq REST API** (HTTP + Bearer token) ↔ **Database**
 - **Remote AI client** ↔ **Marreq MCP server** (Streamable HTTP) ↔ **Marreq REST API** (HTTP + the request Bearer token) ↔ **Database**
-- All access is project-scoped and permission-checked. Tool calls emit trusted, best-effort audit events through the internal-only `POST /api/mcp/audit` path.
+- All access is project-scoped and permission-checked. Tool calls emit trusted,
+  best-effort audit events.
+
+Audit trust modes:
+
+| Mode | Auth | Audit endpoint | Secret |
+|------|------|----------------|--------|
+| Local `stdio` | Personal `MARREQ_API_TOKEN` | `POST /api/mcp/audit` | Not required |
+| Remote HTTP | Request Bearer + shared service secret | `POST /api/mcp/internal/audit` | `MARREQ_MCP_AUDIT_SECRET` (≥32 chars) |
 
 `stdio` remains the default and keeps the existing environment contract. Remote
 mode creates an independent MCP server/transport for every initialized session;
@@ -20,11 +28,12 @@ Sessions expire after 30 minutes idle or eight hours absolute and the process
 admits at most 1,000 concurrent sessions. Closing the transport removes its
 state; credentials are still sent and checked on every downstream REST call.
 
-Remote deployments require `MARREQ_MCP_AUDIT_SECRET` (at least 32 random
-characters) in both Rocket and MCP. It authenticates the internal audit call;
-an end-user session, API token, or OAuth token alone cannot manufacture an MCP
-audit event. Generate it with `openssl rand -hex 32` and never expose it to a
-browser or external client.
+Remote deployments require `MARREQ_MCP_AUDIT_SECRET` in both Rocket and the MCP
+process. An end-user session, API token, or OAuth token alone cannot manufacture
+an internal MCP audit event. Local stdio attributes audit rows to the authenticated
+personal API token (with project-scope and tool-name limits) and does not need the
+server-internal secret. Generate the remote secret with `openssl rand -hex 32`
+and never expose it to a browser or external client.
 
 ## Remote Streamable HTTP
 
@@ -248,7 +257,10 @@ For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For trac
 | `put_verification_matrix` | Replace all requirement links for a verification |
 | `clear_suspect` | Clear suspect flag on a matrix link (`req_id`, `verification_id`) |
 
-All tools are scoped to `MARREQ_PROJECT_ID` where the API provides a project path. Audit entries are written to Marreq (`POST /api/mcp/audit`).
+All tools are scoped to `MARREQ_PROJECT_ID` where the API provides a project path.
+Local stdio audit entries are written via `POST /api/mcp/audit` using the personal
+API token. Remote MCP writes audit entries via `POST /api/mcp/internal/audit` with
+the shared service secret.
 
 ## 6. API parity (MCP vs REST)
 
@@ -274,13 +286,14 @@ Reference: shared route list in `marreq-core/src/api/mod.rs` (plus deployment-sp
 | Semantic search | **Yes** |
 | RAG ask / semantic reindex | **No** |
 | Cache admin | **No** |
-| MCP audit endpoint | **Internal** (called after each tool) |
+| MCP audit endpoint | **Internal** remote path + **legacy** stdio path (called after each tool) |
 
 ## 7. Security notes
 
 - **Token**: Store `MARREQ_API_TOKEN` securely; never commit it. Use env or a secrets manager.
 - **Base URL**: For production, use HTTPS and a URL the MCP server can reach.
 - **Project scope**: Prefer creating tokens with `project_id` set so a compromised token only exposes one project.
+- **Audit**: Remote MCP requires `MARREQ_MCP_AUDIT_SECRET`. Local stdio does not; audit identity comes from the personal API token. Delegated OAuth clients cannot forge audit events through either path without the internal secret.
 - **Modes**: Default `read_only` limits tools. Use `read_extended` only when assistants need verifications, audit trails, or catalog. Use `draft_write` and `MARREQ_TRACE_WRITE` only for trusted automation.
 
 ## 8. Troubleshooting

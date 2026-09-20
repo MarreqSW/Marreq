@@ -36,7 +36,7 @@ async function startApi(): Promise<number> {
     createServer((req, res) => {
       const token = req.headers.authorization?.replace(/^Bearer /, "");
       const known = ["valid-token", "refreshed-token", "different-token"].includes(token ?? "");
-      if (req.url === "/api/mcp/audit" && auditFailure) {
+      if ((req.url === "/api/mcp/audit" || req.url === "/api/mcp/internal/audit") && auditFailure) {
         res.writeHead(503).end('{"error":"audit unavailable"}');
         return;
       }
@@ -65,7 +65,10 @@ async function startApi(): Promise<number> {
         }));
       } else if (req.url === "/api/projects/7/requirements/42") {
         res.end('{"id":42,"title":"Remote requirement"}');
-      } else if (req.url === "/api/mcp/audit" && req.method === "POST") {
+      } else if (
+        (req.url === "/api/mcp/audit" || req.url === "/api/mcp/internal/audit") &&
+        req.method === "POST"
+      ) {
         res.end('{"status":"ok"}');
       } else {
         res.end("[]");

@@ -1862,6 +1862,7 @@ mod tests {
             oauth_refresh_tokens: HashMap::new(),
             next_oauth_grant_id: 1,
             idempotency: HashMap::new(),
+            api_tokens: HashMap::new(),
         }
     }
 

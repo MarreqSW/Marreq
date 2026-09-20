@@ -327,4 +327,55 @@ describe("MarreqClient", () => {
       );
     });
   });
+
+  describe("postAudit trust modes", () => {
+    it("stdio uses legacy audit path without secret header", async () => {
+      delete process.env.MARREQ_MCP_AUDIT_SECRET;
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ status: "ok" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+      const client = makeClient();
+      await client.postAudit({
+        tool_name: "list_projects",
+        is_write: false,
+      });
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "http://localhost:8000/api/mcp/audit",
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.not.objectContaining({
+            "X-Marreq-MCP-Audit-Secret": expect.anything(),
+          }),
+        })
+      );
+    });
+
+    it("remote uses internal audit path with shared secret", async () => {
+      process.env.MARREQ_MCP_AUDIT_SECRET = "test-only-mcp-audit-secret-32-bytes-long";
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ status: "ok" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+      const client = makeClient();
+      await client.postAudit({
+        tool_name: "create_requirement",
+        is_write: true,
+      });
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "http://localhost:8000/api/mcp/internal/audit",
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.objectContaining({
+            "X-Marreq-MCP-Audit-Secret": "test-only-mcp-audit-secret-32-bytes-long",
+          }),
+        })
+      );
+      delete process.env.MARREQ_MCP_AUDIT_SECRET;
+    });
+  });
 });

@@ -73,6 +73,8 @@ pub struct DieselRepoMock {
     pub oauth_refresh_tokens: HashMap<String, OAuthRefreshToken>,
     pub next_oauth_grant_id: i32,
     pub idempotency: HashMap<String, (String, Option<serde_json::Value>)>,
+    /// token_hash -> (user_id, project_scope)
+    pub api_tokens: HashMap<String, (i32, Option<i32>)>,
 }
 
 fn epoch() -> NaiveDateTime {
@@ -132,6 +134,7 @@ impl Default for DieselRepoMock {
             oauth_refresh_tokens: HashMap::new(),
             next_oauth_grant_id: 1,
             idempotency: HashMap::new(),
+            api_tokens: HashMap::new(),
             workspaces: Vec::new(),
             next_workspace_id: 1,
             email_tokens: Vec::new(),
@@ -526,6 +529,7 @@ impl DieselRepoMock {
             oauth_refresh_tokens: HashMap::new(),
             next_oauth_grant_id: 1,
             idempotency: HashMap::new(),
+            api_tokens: HashMap::new(),
         }
     }
     pub fn with_error() -> Self {
@@ -582,6 +586,7 @@ impl DieselRepoMock {
             oauth_refresh_tokens: HashMap::new(),
             next_oauth_grant_id: 1,
             idempotency: HashMap::new(),
+            api_tokens: HashMap::new(),
         }
     }
 
@@ -589,6 +594,17 @@ impl DieselRepoMock {
         let mut admin = Self::make_user(1, "admin", "");
         admin.is_admin = true;
         self.users.entry(admin.id).or_insert(admin);
+        self
+    }
+
+    pub fn with_api_token(
+        mut self,
+        token_hash: &str,
+        user_id: i32,
+        project_scope: Option<i32>,
+    ) -> Self {
+        self.api_tokens
+            .insert(token_hash.to_owned(), (user_id, project_scope));
         self
     }
 
@@ -614,8 +630,18 @@ impl DieselRepoMock {
 }
 
 impl ApiTokensRepository for DieselRepoMock {
-    fn get_user_by_token_hash(&self, _token_hash: &str) -> Result<(User, Option<i32>), RepoError> {
-        Err(RepoError::NotFound)
+    fn get_user_by_token_hash(&self, token_hash: &str) -> Result<(User, Option<i32>), RepoError> {
+        let (user_id, project_scope) = self
+            .api_tokens
+            .get(token_hash)
+            .copied()
+            .ok_or(RepoError::NotFound)?;
+        let user = self
+            .users
+            .get(&user_id)
+            .cloned()
+            .ok_or(RepoError::NotFound)?;
+        Ok((user, project_scope))
     }
 
     fn update_api_token_last_used_at(&mut self, _token_hash: &str) -> Result<(), RepoError> {

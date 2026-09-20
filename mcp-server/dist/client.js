@@ -115,10 +115,15 @@ export class MarreqClient {
         return this.request(`/api/projects/${this.ctx.projectId}/baselines`, { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify(payload) });
     }
     async postAudit(payload) {
-        return this.request("/api/mcp/audit", {
+        // Remote MCP shares MARREQ_MCP_AUDIT_SECRET with Rocket and posts to the
+        // internal path. Local stdio uses a personal API token on the legacy path
+        // so operators do not need the server-internal secret.
+        const auditSecret = process.env.MARREQ_MCP_AUDIT_SECRET;
+        const path = auditSecret ? "/api/mcp/internal/audit" : "/api/mcp/audit";
+        return this.request(path, {
             method: "POST",
-            headers: process.env.MARREQ_MCP_AUDIT_SECRET
-                ? { "X-Marreq-MCP-Audit-Secret": process.env.MARREQ_MCP_AUDIT_SECRET }
+            headers: auditSecret
+                ? { "X-Marreq-MCP-Audit-Secret": auditSecret }
                 : {},
             body: JSON.stringify(payload),
         });

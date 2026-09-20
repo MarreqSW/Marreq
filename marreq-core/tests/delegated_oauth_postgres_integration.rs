@@ -85,10 +85,20 @@ fn challenge(response: &LocalResponse<'_>) -> Option<String> {
 #[rocket::async_test]
 async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
     let Ok(database_url) = std::env::var("MARREQ_TEST_DATABASE_URL") else {
-        eprintln!("skipping PostgreSQL OAuth integration test: MARREQ_TEST_DATABASE_URL is unset");
+        eprintln!(
+            "skipping PostgreSQL OAuth integration test: set MARREQ_TEST_DATABASE_URL to a disposable migrated database to run it"
+        );
         return;
     };
+    eprintln!(
+        "running delegated_scope_rbac_revocation_and_downgrade_matrix against {database_url}"
+    );
     std::env::set_var("DATABASE_URL", &database_url);
+    // Rocket's sync pool fairing reads ROCKET_DATABASES / Rocket.toml, not DATABASE_URL alone.
+    std::env::set_var(
+        "ROCKET_DATABASES",
+        format!(r#"{{my_db={{url="{database_url}",pool_size=2}}}}"#),
+    );
     std::env::set_var("MARREQ_PUBLIC_BASE_URL", "http://localhost:8080");
     std::env::set_var("MARREQ_MCP_PUBLIC_URL", "http://localhost:8080/mcp/");
     std::env::set_var(
@@ -107,7 +117,7 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
          INSERT INTO projects (id,name,description,status,owner_id,slug) VALUES
            (1,'Project A','A','active',1,'project-a'),
            (2,'Project B','B','active',NULL,'project-b');
-         INSERT INTO project_members (project_id,user_id,role) VALUES (1,1,2),(1,2,4),(1,3,3);
+         INSERT INTO project_members (project_id,user_id,role) VALUES (1,1,2),(1,2,4),(1,3,3),(2,3,3);
          INSERT INTO project_reviewers (project_id,user_id) VALUES (1,1);
          INSERT INTO requirement_status (id,title,description,tag,project_id,is_system) VALUES (1,'Draft','','DRAFT',1,true);
          INSERT INTO categories (id,title,description,tag,project_id) VALUES (1,'General','','GEN',1);
@@ -119,7 +129,17 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
            VALUES (1,1,'Requirement','Description',1,3,1,1,1,'draft');
          UPDATE requirements SET current_version_id=1 WHERE id=1;
          INSERT INTO verifications (id,name,reference_code,description,source,status_id,project_id,verification_method_id,author_id,reviewer_id)
-           VALUES (1,'Verification','VER-1','Description','manual',1,1,1,3,1);",
+           VALUES (1,'Verification','VER-1','Description','manual',1,1,1,3,1);
+         SELECT setval(pg_get_serial_sequence('users','id'), (SELECT MAX(id) FROM users));
+         SELECT setval(pg_get_serial_sequence('projects','id'), (SELECT MAX(id) FROM projects));
+         SELECT setval(pg_get_serial_sequence('requirements','id'), (SELECT MAX(id) FROM requirements));
+         SELECT setval(pg_get_serial_sequence('requirement_versions','id'), (SELECT MAX(id) FROM requirement_versions));
+         SELECT setval(pg_get_serial_sequence('verifications','id'), (SELECT MAX(id) FROM verifications));
+         SELECT setval(pg_get_serial_sequence('requirement_status','id'), (SELECT MAX(id) FROM requirement_status));
+         SELECT setval(pg_get_serial_sequence('categories','id'), (SELECT MAX(id) FROM categories));
+         SELECT setval(pg_get_serial_sequence('applicability','id'), (SELECT MAX(id) FROM applicability));
+         SELECT setval(pg_get_serial_sequence('verification_methods','id'), (SELECT MAX(id) FROM verification_methods));
+         SELECT setval(pg_get_serial_sequence('verification_status','id'), (SELECT MAX(id) FROM verification_status));",
     ).expect("seed OAuth integration fixtures");
 
     let projects = insert_token(&mut conn, "projects", 1, &["projects:read"], false, false);
@@ -526,21 +546,48 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
     // and concurrent single ownership.
     let mut repo = DieselRepo::new().expect("production repository");
     let now = Utc::now().naive_utc();
+    // mcp_idempotency.request_hash is CHAR(64); short values are space-padded in PostgreSQL.
+    let hash_a = format!("{:<64}", "a");
+    let hash_b = format!("{:<64}", "b");
     assert_eq!(
-        repo.claim_idempotency(1, "oauth_grant:1", "project:1", "test-op", "same", "a", now)
-            .unwrap(),
+        repo.claim_idempotency(
+            1,
+            "oauth_grant:1",
+            "project:1",
+            "test-op",
+            "same",
+            &hash_a,
+            now
+        )
+        .unwrap(),
         IdempotencyClaim::Acquired
     );
     assert_eq!(
-        repo.claim_idempotency(1, "oauth_grant:1", "project:1", "test-op", "same", "b", now)
-            .unwrap(),
+        repo.claim_idempotency(
+            1,
+            "oauth_grant:1",
+            "project:1",
+            "test-op",
+            "same",
+            &hash_b,
+            now
+        )
+        .unwrap(),
         IdempotencyClaim::PayloadConflict
     );
     repo.release_idempotency(1, "oauth_grant:1", "project:1", "test-op", "same")
         .unwrap();
     assert_eq!(
-        repo.claim_idempotency(1, "oauth_grant:1", "project:1", "test-op", "same", "b", now)
-            .unwrap(),
+        repo.claim_idempotency(
+            1,
+            "oauth_grant:1",
+            "project:1",
+            "test-op",
+            "same",
+            &hash_b,
+            now
+        )
+        .unwrap(),
         IdempotencyClaim::Acquired,
         "known failure releases the key for reuse"
     );
@@ -551,7 +598,7 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
             "project:1",
             "stale-op",
             "stale",
-            "a",
+            &hash_a,
             now - Duration::minutes(3),
         )
         .unwrap(),
@@ -564,7 +611,7 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
             "project:1",
             "stale-op",
             "stale",
-            "a",
+            &hash_a,
             now,
         )
         .unwrap(),
@@ -580,6 +627,7 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
         );
         format!("{:x}", Sha256::digest(value.as_bytes()))
     }
+    let payload_hash = format!("{:<64}", "payload");
     for (operation, target, key, insert_sql) in [
         (
             "create_requirement",
@@ -607,7 +655,7 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
         ),
     ] {
         assert_eq!(
-            repo.claim_idempotency(1, "oauth_grant:1", target, operation, key, "payload", now)
+            repo.claim_idempotency(1, "oauth_grant:1", target, operation, key, &payload_hash, now)
                 .unwrap(),
             IdempotencyClaim::Acquired
         );
@@ -616,7 +664,7 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
             .execute(&mut conn)
             .unwrap();
         assert!(matches!(
-            repo.claim_idempotency(1, "oauth_grant:1", target, operation, key, "payload", now),
+            repo.claim_idempotency(1, "oauth_grant:1", target, operation, key, &payload_hash, now),
             Ok(IdempotencyClaim::Replay(_))
         ));
     }
@@ -625,6 +673,7 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
     let mut handles = Vec::new();
     for _ in 0..2 {
         let barrier = barrier.clone();
+        let payload_hash = payload_hash.clone();
         handles.push(std::thread::spawn(move || {
             let mut repo = DieselRepo::new().unwrap();
             barrier.wait();
@@ -634,7 +683,7 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
                 "project:1",
                 "concurrent-op",
                 "concurrent",
-                "payload",
+                &payload_hash,
                 Utc::now().naive_utc(),
             )
             .unwrap()
@@ -653,6 +702,187 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
         1,
         "two concurrent claims have exactly one owner"
     );
+
+    // Concurrent real create: same principal + Idempotency-Key => exactly one domain row.
+    let create_body = serde_json::json!({
+        "title": "Concurrent Req",
+        "description": "Created once under concurrent retries",
+        "reference_code": "REQ-CONC-001",
+        "author_id": 1,
+        "reviewer_id": 1,
+        "category_id": 1,
+        "status_id": 1,
+        "applicability_id": 1,
+        "project_id": 1,
+        "justification": null,
+        "verification_method_ids": [1],
+        "custom_fields": []
+    })
+    .to_string();
+    let idem_key = "concurrent-create-key-16";
+    let (first, second) = tokio::join!(
+        client
+            .post("/api/projects/1/requirements")
+            .header(ContentType::JSON)
+            .header(bearer("req-write"))
+            .header(Header::new("Idempotency-Key", idem_key))
+            .body(&create_body)
+            .dispatch(),
+        client
+            .post("/api/projects/1/requirements")
+            .header(ContentType::JSON)
+            .header(bearer("req-write"))
+            .header(Header::new("Idempotency-Key", idem_key))
+            .body(&create_body)
+            .dispatch()
+    );
+    let statuses = [first.status(), second.status()];
+    assert!(
+        statuses
+            .iter()
+            .all(|status| *status == Status::Ok || *status == Status::Conflict),
+        "concurrent creates must succeed or report pending/conflict, got {statuses:?}"
+    );
+    assert!(
+        statuses.contains(&Status::Ok),
+        "at least one concurrent create must complete successfully"
+    );
+    let _ = first.into_string().await;
+    let _ = second.into_string().await;
+    let replay = client
+        .post("/api/projects/1/requirements")
+        .header(ContentType::JSON)
+        .header(bearer("req-write"))
+        .header(Header::new("Idempotency-Key", idem_key))
+        .body(&create_body)
+        .dispatch()
+        .await;
+    assert_eq!(replay.status(), Status::Ok);
+    let replay_body: serde_json::Value = replay.into_json().await.unwrap();
+    assert_eq!(
+        replay_body.get("status").and_then(|v| v.as_str()),
+        Some("ok")
+    );
+    #[derive(QueryableByName)]
+    struct CountRow {
+        #[diesel(sql_type = Integer)]
+        count: i32,
+    }
+    let by_code: CountRow = diesel::sql_query(
+        "SELECT COUNT(*)::int AS count FROM requirements WHERE stable_code = 'REQ-CONC-001'",
+    )
+    .get_result(&mut conn)
+    .unwrap();
+    assert_eq!(
+        by_code.count, 1,
+        "exactly one requirement must exist for the concurrent idempotent create"
+    );
+
+    // Personal API-token regression: unscoped and project-scoped tokens keep
+    // pre-OAuth behavior (no delegated scopes required). User 3 is a member of
+    // both projects so project-scoped tokens can prove they still cannot escape.
+    let unscoped_raw = "personal-api-token-unscoped";
+    let scoped_raw = "personal-api-token-project-1";
+    diesel::sql_query(
+        "INSERT INTO user_api_tokens (user_id, token_hash, name, project_id) VALUES
+           (3, $1, 'unscoped', NULL),
+           (3, $2, 'project-1', 1)",
+    )
+    .bind::<Text, _>(hash_secret(unscoped_raw))
+    .bind::<Text, _>(hash_secret(scoped_raw))
+    .execute(&mut conn)
+    .unwrap();
+    assert_eq!(
+        client
+            .get("/api/projects/1/requirements")
+            .header(bearer(unscoped_raw))
+            .dispatch()
+            .await
+            .status(),
+        Status::Ok,
+        "unscoped personal API tokens must not require OAuth scopes"
+    );
+    assert_eq!(
+        client
+            .get("/api/projects/2/requirements")
+            .header(bearer(unscoped_raw))
+            .dispatch()
+            .await
+            .status(),
+        Status::Ok,
+        "unscoped personal API tokens follow ordinary project membership"
+    );
+    assert_eq!(
+        client
+            .get("/api/projects/1/requirements")
+            .header(bearer(scoped_raw))
+            .dispatch()
+            .await
+            .status(),
+        Status::Ok
+    );
+    assert_eq!(
+        client
+            .get("/api/projects/2/requirements")
+            .header(bearer(scoped_raw))
+            .dispatch()
+            .await
+            .status(),
+        Status::Forbidden,
+        "project-scoped personal API tokens must not escape their project"
+    );
+    // Stdio legacy audit path accepts personal API tokens without the internal secret header.
+    assert_eq!(
+        client
+            .post("/api/mcp/audit")
+            .header(ContentType::JSON)
+            .header(bearer(unscoped_raw))
+            .body(r#"{"tool_name":"list_projects","is_write":false}"#)
+            .dispatch()
+            .await
+            .status(),
+        Status::Ok
+    );
+    // OAuth bearer alone cannot forge either audit path.
+    assert_eq!(
+        client
+            .post("/api/mcp/audit")
+            .header(ContentType::JSON)
+            .header(bearer("req-read"))
+            .body(r#"{"tool_name":"create_requirement","is_write":true}"#)
+            .dispatch()
+            .await
+            .status(),
+        Status::Forbidden
+    );
+    assert_eq!(
+        client
+            .post("/api/mcp/internal/audit")
+            .header(ContentType::JSON)
+            .header(bearer("req-read"))
+            .body(r#"{"tool_name":"create_requirement","is_write":true}"#)
+            .dispatch()
+            .await
+            .status(),
+        Status::Forbidden
+    );
+    assert_eq!(
+        client
+            .post("/api/mcp/internal/audit")
+            .header(ContentType::JSON)
+            .header(Header::new(
+                "X-Marreq-MCP-Audit-Secret",
+                "integration-test-audit-secret-32-bytes",
+            ))
+            .header(bearer("req-read"))
+            .body(r#"{"tool_name":"list_projects","is_write":false}"#)
+            .dispatch()
+            .await
+            .status(),
+        Status::Ok
+    );
+
+    eprintln!("delegated_scope_rbac_revocation_and_downgrade_matrix executed against PostgreSQL");
 
     // Keep otherwise-unused fixture ids asserted so accidental fixture creation failures are visible.
     assert!(projects > 0 && req_read > 0);

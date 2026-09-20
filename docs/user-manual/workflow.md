@@ -83,7 +83,7 @@ Having these in place before bulk-adding requirements keeps data consistent and 
 ### 3.1 Define and Organize Verifications
 
 - **Create verifications**: **Verifications → New Verification**. Enter name, description, **Source** (e.g. test file or document), **Status** (e.g. Pending, Not Run), and **Reference code** (e.g. TEST-PWR-001). Use **Parent verification** to build a hierarchy (suites, feature areas) if needed.
-- **Manage verifications** from the **Verifications** list: filter by verification status, verification method, category, search; switch between card and table view; view metrics (total verifications, by status). Edit verifications to change name, description, source, or parent.
+- **Manage verifications** from the **Verifications** list: filter by verification status, verification method, category, search; switch between card and table view; view metrics (total verifications, by status). Edit verifications to change name, description, source, verification method, or parent.
 - **Export verifications**: From the Verifications list or Reports, **Export Excel** (verifications) to get all verifications in `.xls` for external reporting or test management.
 
 ### 3.2 Link Verifications to Requirements (Traceability)

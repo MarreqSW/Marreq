@@ -10,6 +10,7 @@ import {
   listRequirements,
   listUsersOptional,
   listVerificationSnapshotsByProject,
+  listVerificationMethodsByProject,
   listVerificationStatuses,
   listVerifications,
   putVerificationMatrix,
@@ -22,6 +23,7 @@ import type {
   Requirement,
   User,
   Verification,
+  VerificationMethod,
   VerificationSnapshot,
   VerificationStatus,
 } from '@/api/types';
@@ -46,6 +48,7 @@ export default function EditVerificationPage() {
 
   const [base, setBase] = useState<Verification | null>(null);
   const [statuses, setStatuses] = useState<VerificationStatus[]>([]);
+  const [methods, setMethods] = useState<VerificationMethod[]>([]);
   const [siblings, setSiblings] = useState<Verification[]>([]);
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [linkedReqIds, setLinkedReqIds] = useState<number[]>([]);
@@ -61,6 +64,7 @@ export default function EditVerificationPage() {
   const [source, setSource] = useState('');
   const [statusId, setStatusId] = useState(0);
   const [parentId, setParentId] = useState<string>('');
+  const [methodId, setMethodId] = useState<string>('');
   const [authorId, setAuthorId] = useState(0);
   const [reviewerId, setReviewerId] = useState(0);
   const [members, setMembers] = useState<ProjectMember[]>([]);
@@ -74,7 +78,7 @@ export default function EditVerificationPage() {
     if (!Number.isFinite(pid) || !Number.isFinite(vid)) return;
     setLoadError(null);
     try {
-      const [v, st, all, reqs, mx, mem, u, permRes, revPool, snaps] = await Promise.all([
+      const [v, st, all, reqs, mx, mem, u, permRes, revPool, snaps, meth] = await Promise.all([
         getVerification(vid),
         listVerificationStatuses(),
         listVerifications(),
@@ -85,6 +89,7 @@ export default function EditVerificationPage() {
         getMyPermissions(pid).catch(() => null),
         getProjectReviewers(pid).catch(() => ({ user_ids: [] as number[] })),
         listVerificationSnapshotsByProject(pid, vid).catch(() => [] as VerificationSnapshot[]),
+        listVerificationMethodsByProject(pid).catch(() => [] as VerificationMethod[]),
       ]);
       setProjectReviewerIds(revPool.user_ids);
       setMembers(mem);
@@ -103,7 +108,9 @@ export default function EditVerificationPage() {
       setAuthorId(v.author_id);
       setReviewerId(v.reviewer_id);
       setParentId(v.parent_id != null ? String(v.parent_id) : '');
+      setMethodId(v.verification_method_id != null ? String(v.verification_method_id) : '');
       setStatuses(st);
+      setMethods(meth);
       setSiblings(all.filter((x) => x.project_id === pid && x.id !== vid));
       setRequirements(reqs);
       const ids = [...mx.requirement_ids].sort((a, b) => a - b);
@@ -169,9 +176,10 @@ export default function EditVerificationPage() {
       authorId !== base.author_id ||
       reviewerId !== base.reviewer_id ||
       (parentId === '' ? null : Number(parentId)) !== base.parent_id ||
+      (methodId === '' ? null : Number(methodId)) !== base.verification_method_id ||
       matrixDirty
     );
-  }, [base, name, referenceCode, description, source, statusId, authorId, reviewerId, parentId, matrixDirty]);
+  }, [base, name, referenceCode, description, source, statusId, authorId, reviewerId, parentId, methodId, matrixDirty]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -206,6 +214,13 @@ export default function EditVerificationPage() {
         updates.push({
           field: 'parent_id',
           value: newParent == null ? '' : String(newParent),
+        });
+      }
+      const newMethod = methodId === '' ? null : Number(methodId);
+      if (newMethod !== base.verification_method_id) {
+        updates.push({
+          field: 'verification_method_id',
+          value: newMethod == null ? '' : String(newMethod),
         });
       }
       for (const u of updates) {
@@ -454,14 +469,39 @@ export default function EditVerificationPage() {
                 </div>
               ) : null}
             </div>
+            <div>
+              <label
+                htmlFor="verification-method-id"
+                className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1"
+              >
+                Verification method (optional)
+              </label>
+              <select
+                id="verification-method-id"
+                className={selectClass}
+                value={methodId}
+                onChange={(e) => setMethodId(e.target.value)}
+              >
+                <option value="" className="bg-stitch-surface text-stitch-fg">
+                  None
+                </option>
+                {methods.map((m) => (
+                  <option key={m.id} value={m.id} className="bg-stitch-surface text-stitch-fg">
+                    {m.title}
+                  </option>
+                ))}
+                {base.verification_method_id != null &&
+                !methods.some((m) => m.id === base.verification_method_id) ? (
+                  <option
+                    value={base.verification_method_id}
+                    className="bg-stitch-surface text-stitch-fg"
+                  >
+                    Method #{base.verification_method_id} (not in catalog)
+                  </option>
+                ) : null}
+              </select>
+            </div>
           </div>
-          {base.verification_method_id != null && (
-            <p className="text-xs text-stitch-muted">
-              Verification method ID{' '}
-              <span className="font-mono text-stitch-accent">{base.verification_method_id}</span>{' '}
-              is set on this record. Changing it is not exposed in this UI yet.
-            </p>
-          )}
         </section>
 
         <section className="bg-stitch-surface rounded-xl border border-stitch-border shadow-stitch p-6 md:p-8 space-y-4">

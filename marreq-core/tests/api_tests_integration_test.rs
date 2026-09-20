@@ -168,6 +168,30 @@ mod test_support {
             "reviewer_id": 1
         })
     }
+
+    pub fn with_verification_methods(mut repo: DieselRepoMock) -> DieselRepoMock {
+        repo.verification_methods.insert(
+            10,
+            VerificationMethod {
+                id: 10,
+                title: "Test".into(),
+                description: String::new(),
+                tag: "T".into(),
+                project_id: 1,
+            },
+        );
+        repo.verification_methods.insert(
+            20,
+            VerificationMethod {
+                id: 20,
+                title: "Analysis".into(),
+                description: String::new(),
+                tag: "A".into(),
+                project_id: 99,
+            },
+        );
+        repo
+    }
 }
 
 use test_support::*;
@@ -442,6 +466,106 @@ async fn update_field_with_invalid_status_value_returns_error() {
         .dispatch()
         .await;
 
+    assert_eq!(response.status(), Status::BadRequest);
+}
+
+#[rocket::async_test]
+async fn update_field_changes_verification_method() {
+    let mut repo = with_verification_methods(base_repo());
+    repo.verifications.insert(1, sample_test(1, 1, "Test"));
+
+    let client = test_client(repo).await;
+    let response = client
+        .post("/api/verifications/1/field")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 1))
+        .body(
+            json!({
+                "field": "verification_method_id",
+                "value": "10"
+            })
+            .to_string(),
+        )
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Ok);
+
+    let get_response = client
+        .get("/api/verifications/1")
+        .private_cookie(session_cookie(&client, 1))
+        .dispatch()
+        .await;
+    let test: Verification = get_response.into_json().await.expect("json");
+    assert_eq!(test.verification_method_id, Some(10));
+}
+
+#[rocket::async_test]
+async fn update_field_rejects_foreign_verification_method() {
+    let mut repo = with_verification_methods(base_repo());
+    repo.verifications.insert(1, sample_test(1, 1, "Test"));
+
+    let client = test_client(repo).await;
+    let response = client
+        .post("/api/verifications/1/field")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 1))
+        .body(
+            json!({
+                "field": "verification_method_id",
+                "value": "20"
+            })
+            .to_string(),
+        )
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::BadRequest);
+}
+
+#[rocket::async_test]
+async fn update_field_clears_verification_method() {
+    let mut repo = with_verification_methods(base_repo());
+    let mut row = sample_test(1, 1, "Test");
+    row.verification_method_id = Some(10);
+    repo.verifications.insert(1, row);
+
+    let client = test_client(repo).await;
+    let response = client
+        .post("/api/verifications/1/field")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 1))
+        .body(
+            json!({
+                "field": "verification_method_id",
+                "value": ""
+            })
+            .to_string(),
+        )
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Ok);
+
+    let get_response = client
+        .get("/api/verifications/1")
+        .private_cookie(session_cookie(&client, 1))
+        .dispatch()
+        .await;
+    let test: Verification = get_response.into_json().await.expect("json");
+    assert_eq!(test.verification_method_id, None);
+}
+
+#[rocket::async_test]
+async fn create_rejects_foreign_verification_method() {
+    let client = test_client(with_verification_methods(base_repo())).await;
+    let mut payload = new_test_json("Imported method", 1);
+    payload["verification_method_id"] = json!(20);
+
+    let response = client
+        .post("/api/verifications")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 1))
+        .body(payload.to_string())
+        .dispatch()
+        .await;
     assert_eq!(response.status(), Status::BadRequest);
 }
 

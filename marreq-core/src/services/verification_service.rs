@@ -50,6 +50,33 @@ impl<'a> VerificationService<'a> {
             .map(|m| m.title)
     }
 
+    /// Reject methods that are missing or belong to another project's catalog.
+    pub fn require_method_in_project(
+        &self,
+        method_id: i32,
+        project_id: i32,
+    ) -> Result<(), RepoError> {
+        let method = match self
+            .state
+            .repo_read()
+            .get_verification_method_by_id(method_id)
+        {
+            Ok(m) => m,
+            Err(RepoError::NotFound) => {
+                return Err(RepoError::BadInput(
+                    "verification_method_id is not in this project catalog".into(),
+                ))
+            }
+            Err(e) => return Err(e),
+        };
+        if method.project_id != project_id {
+            return Err(RepoError::BadInput(
+                "verification_method_id is not in this project catalog".into(),
+            ));
+        }
+        Ok(())
+    }
+
     /// Get verifications by status.
     pub fn get_by_status(&self, status_id: i32) -> Result<Vec<Verification>, RepoError> {
         Ok(self
@@ -132,6 +159,7 @@ impl AuditLog for VerificationService<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::VerificationMethod;
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use std::sync::{Arc, RwLock};
 
@@ -233,6 +261,49 @@ mod tests {
         let items = service.list_by_project(8).unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].reference_code, "VER-1");
+    }
+
+    #[test]
+    fn require_method_in_project_accepts_catalog_method() {
+        let mut repo = DieselRepoMock::default();
+        repo.verification_methods.insert(
+            10,
+            VerificationMethod {
+                id: 10,
+                title: "Test".into(),
+                description: String::new(),
+                tag: "T".into(),
+                project_id: 8,
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+        assert!(service.require_method_in_project(10, 8).is_ok());
+    }
+
+    #[test]
+    fn require_method_in_project_rejects_foreign_and_missing() {
+        let mut repo = DieselRepoMock::default();
+        repo.verification_methods.insert(
+            10,
+            VerificationMethod {
+                id: 10,
+                title: "Test".into(),
+                description: String::new(),
+                tag: "T".into(),
+                project_id: 8,
+            },
+        );
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+        assert!(matches!(
+            service.require_method_in_project(10, 1),
+            Err(RepoError::BadInput(_))
+        ));
+        assert!(matches!(
+            service.require_method_in_project(99, 8),
+            Err(RepoError::BadInput(_))
+        ));
     }
 
     #[test]

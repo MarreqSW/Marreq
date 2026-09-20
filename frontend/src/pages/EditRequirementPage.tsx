@@ -502,7 +502,7 @@ export default function EditRequirementPage() {
   const canEditParents = detail.current_version_id != null && detail.current_version_id > 0;
 
   return (
-    <div className="font-body text-stitch-fg -mx-6 md:-mx-8 -mt-6 md:-mt-8 px-6 md:px-8 pt-6 md:pt-8 pb-36 min-h-full bg-stitch-canvas">
+    <div className="font-body text-stitch-fg -mx-6 md:-mx-8 -mt-6 md:-mt-8 px-6 md:px-8 pt-6 md:pt-8 min-h-full bg-stitch-canvas">
       <nav className="flex items-center gap-2 text-xs font-semibold text-stitch-muted mb-6 uppercase tracking-widest max-w-7xl mx-auto">
         <Link to={`${basePath}/requirements`} className="hover:text-stitch-accent transition-colors">
           Requirements
@@ -992,7 +992,7 @@ export default function EditRequirementPage() {
           </div>
         )}
 
-        <footer className="fixed bottom-0 left-0 right-0 z-40 bg-stitch-surface/95 backdrop-blur-md border-t border-stitch-border px-4 md:px-8 py-4 flex flex-wrap items-center justify-between gap-3 shadow-stitch">
+        <footer className="sticky bottom-0 z-30 bg-stitch-surface/95 backdrop-blur-md border-t border-stitch-border px-4 md:px-8 py-4 flex flex-wrap items-center justify-between gap-3 shadow-stitch">
           <div className="flex items-center gap-2">
             <button
               type="button"

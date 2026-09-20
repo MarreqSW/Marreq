@@ -218,8 +218,9 @@ The editor supports rich text (bold, italic, list, code, link) and a preview tog
 
 ### 4.7 Duplicating a Requirement
 
-- From the requirements list or detail, use the **Duplicate** action (if available).
-- A modal lets you adjust title, reference, statement, rationale, category, status, verification, applicability, reviewer, and parent before creating the new requirement.
+- From the requirements list, detail, or edit page, select **Duplicate**.
+- The create page opens with a new reference code and copied title, statement, rationale, catalog values, verification methods, custom fields, reviewer, and parent links.
+- Review or change those values before selecting **Create duplicate**. The new requirement is independent: approval state, version history, comments, and traceability-matrix links are not copied.
 
 ### 4.8 Semantic Search (AI)
 

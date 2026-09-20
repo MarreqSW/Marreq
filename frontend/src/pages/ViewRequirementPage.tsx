@@ -330,13 +330,22 @@ export default function ViewRequirementPage() {
             Compare versions
           </button>
           {canEdit ? (
-            <Link
-              to={`${basePath}/requirements/${rid}/edit`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gradient-to-br from-[#000666] to-[#1a237e] text-white text-[10px] font-bold uppercase tracking-wider shadow-lg hover:opacity-95 transition-opacity"
-            >
-              <span className="material-symbols-outlined text-sm">edit</span>
-              Edit
-            </Link>
+            <>
+              <Link
+                to={`${basePath}/requirements/new?from=${rid}`}
+                className="inline-flex items-center gap-1.5 rounded-md border border-stitch-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-stitch-muted transition-colors hover:border-stitch-accent/40 hover:text-stitch-accent"
+              >
+                <span className="material-symbols-outlined text-sm">content_copy</span>
+                Duplicate
+              </Link>
+              <Link
+                to={`${basePath}/requirements/${rid}/edit`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gradient-to-br from-[#000666] to-[#1a237e] text-white text-[10px] font-bold uppercase tracking-wider shadow-lg hover:opacity-95 transition-opacity"
+              >
+                <span className="material-symbols-outlined text-sm">edit</span>
+                Edit
+              </Link>
+            </>
           ) : null}
         </div>
       </nav>

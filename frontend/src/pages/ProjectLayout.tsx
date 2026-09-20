@@ -465,7 +465,8 @@ export default function ProjectLayout() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-auto p-6 md:p-8 pb-16">
+        {/* No overflow here: it would become the containing scrollport for sticky page action bars. */}
+        <main className="flex-1 p-6 md:p-8 pb-16">
           <Outlet context={outletContext} />
         </main>
 

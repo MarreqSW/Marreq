@@ -219,7 +219,7 @@ export default function CreateVerificationPage() {
   }
 
   return (
-    <div className="pb-28 font-body text-stitch-fg text-stitch max-w-4xl">
+    <div className="font-body text-stitch-fg text-stitch max-w-4xl">
       <nav className="flex items-center gap-2 text-[10px] font-semibold text-stitch-muted mb-6 uppercase tracking-widest">
         <Link to={`${basePath}/verifications`} className="hover:text-stitch-accent transition-colors">
           Verifications
@@ -450,7 +450,7 @@ export default function CreateVerificationPage() {
           </div>
         )}
 
-        <footer className="fixed bottom-0 left-0 right-0 z-40 bg-stitch-surface/85 backdrop-blur-md border-t border-stitch-border px-4 md:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+        <footer className="sticky bottom-0 z-30 bg-stitch-surface/85 backdrop-blur-md border-t border-stitch-border px-4 md:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
           <Link
             to={`${basePath}/verifications`}
             className="text-xs font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-danger transition-colors px-2 py-2"

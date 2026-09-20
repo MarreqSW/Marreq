@@ -52,7 +52,7 @@ services:
       RAG_ENABLED: 'false'
       CSRF_ALLOWED_ORIGINS: ${CSRF_ALLOWED_ORIGINS:-http://127.0.0.1:8080,http://localhost:8080,http://127.0.0.1:8000,http://localhost:8000}
       MARREQ_MCP_PUBLIC_URL: ${MARREQ_MCP_PUBLIC_URL:-http://localhost:8080/mcp}
-      MARREQ_MCP_AUDIT_SECRET: ${MARREQ_MCP_AUDIT_SECRET:?Set MARREQ_MCP_AUDIT_SECRET to a random value of at least 32 characters}
+      MARREQ_MCP_AUDIT_SECRET: ${MARREQ_MCP_AUDIT_SECRET:-development-only-mcp-audit-secret-change-me}
     ports:
       - '127.0.0.1:8000:8000'
     healthcheck:
@@ -96,7 +96,7 @@ services:
       MARREQ_BASE_URL: http://marreq-server:8000
       MARREQ_MCP_PUBLIC_URL: ${MARREQ_MCP_PUBLIC_URL:-http://localhost:8080/mcp}
       MARREQ_MCP_ALLOWED_HOSTS: ${MARREQ_MCP_ALLOWED_HOSTS:-localhost,127.0.0.1}
-      MARREQ_MCP_AUDIT_SECRET: ${MARREQ_MCP_AUDIT_SECRET:?Set MARREQ_MCP_AUDIT_SECRET to a random value of at least 32 characters}
+      MARREQ_MCP_AUDIT_SECRET: ${MARREQ_MCP_AUDIT_SECRET:-development-only-mcp-audit-secret-change-me}
 
   adminer:
     image: adminer
@@ -129,7 +129,7 @@ services:
       RAG_ENABLED: 'false'
       MARREQ_PUBLIC_BASE_URL: ${MARREQ_CLOUD_PUBLIC_BASE_URL:-http://localhost:8082}
       MARREQ_MCP_PUBLIC_URL: ${MARREQ_CLOUD_MCP_PUBLIC_URL:-http://localhost:8082/mcp}
-      MARREQ_MCP_AUDIT_SECRET: ${MARREQ_MCP_AUDIT_SECRET:?Set MARREQ_MCP_AUDIT_SECRET to a random value of at least 32 characters}
+      MARREQ_MCP_AUDIT_SECRET: ${MARREQ_MCP_AUDIT_SECRET:-development-only-mcp-audit-secret-change-me}
       CSRF_ALLOWED_ORIGINS: ${CSRF_ALLOWED_ORIGINS:-http://127.0.0.1:8082,http://localhost:8082,http://127.0.0.1:8001,http://localhost:8001}
     ports:
       - '127.0.0.1:8001:8001'
@@ -176,7 +176,7 @@ services:
       MARREQ_BASE_URL: http://marreq-cloud:8001
       MARREQ_MCP_PUBLIC_URL: ${MARREQ_CLOUD_MCP_PUBLIC_URL:-http://localhost:8082/mcp}
       MARREQ_MCP_ALLOWED_HOSTS: ${MARREQ_CLOUD_MCP_ALLOWED_HOSTS:-localhost,127.0.0.1}
-      MARREQ_MCP_AUDIT_SECRET: ${MARREQ_MCP_AUDIT_SECRET:?Set MARREQ_MCP_AUDIT_SECRET to a random value of at least 32 characters}
+      MARREQ_MCP_AUDIT_SECRET: ${MARREQ_MCP_AUDIT_SECRET:-development-only-mcp-audit-secret-change-me}
 
 volumes:
   pgdata:

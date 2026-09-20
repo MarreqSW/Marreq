@@ -274,6 +274,8 @@ This section applies only to the full `docker-compose.yml` stack. Compose maps O
 
 The container runs a **release** binary; Rocket needs **`ROCKET_SECRET_KEY`** (256-bit, `openssl rand -base64 32`). Both base Compose files inject a **development default** when the variable is unset. The production override rejects a missing key, so set `ROCKET_SECRET_KEY` in `.env` before using `docker-compose.prod.yml`.
 
+`MARREQ_MCP_AUDIT_SECRET` follows the same pattern: base/light Compose supply a development-only fallback so `docker compose … up -d db` and CI database bring-up work without remote MCP configuration. `docker-compose.prod.yml` requires a strong secret and will not silently reuse the development fallback.
+
 ### Orphan containers
 
 If Compose warns about orphan containers (old service names), run `up -d --remove-orphans` with the same base Compose file used for the deployment.

@@ -3,12 +3,14 @@
 
 //! Deterministic diff between two requirement versions.
 //!
-//! Text fields (title, description) use line-based diff; metadata (status, category,
-//! applicability, verification) are compared for added/removed/unchanged. Read-only and audit-safe.
+//! Text fields (title, description, justification) use line-based diff; metadata (status,
+//! category, applicability, verification methods, custom fields) are compared for
+//! added/removed/unchanged values. Read-only and audit-safe.
 
-use crate::models::RequirementVersion;
+use crate::models::{CustomFieldValueDisplay, RequirementVersion};
 use serde::{Deserialize, Serialize};
 use similar::{ChangeTag, TextDiff};
+use std::collections::{BTreeMap, HashSet};
 
 /// Line-based text diff result: added, removed, and unchanged lines.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -60,6 +62,18 @@ pub struct MetadataDiff {
     pub category: SingleValueDiff,
     pub applicability: SingleValueDiff,
     pub verification: VerificationDiff,
+    #[serde(default)]
+    pub custom_fields: Vec<CustomFieldDiff>,
+}
+
+/// One version-scoped custom field comparison.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CustomFieldDiff {
+    pub field_id: i32,
+    pub label: String,
+    pub old_value: Option<String>,
+    pub new_value: Option<String>,
+    pub unchanged: bool,
 }
 
 /// Full structured diff between two requirement versions.
@@ -73,6 +87,7 @@ pub struct RequirementDiff {
 pub struct TextDiffSection {
     pub title: TextDiffResult,
     pub description: TextDiffResult,
+    pub justification: TextDiffResult,
 }
 
 /// Compute a deterministic diff between two requirement versions (v1 = old, v2 = new).
@@ -87,14 +102,60 @@ pub fn compute_requirement_diff(
         text: TextDiffSection {
             title: line_diff(&v1.title, &v2.title),
             description: line_diff(&v1.description, &v2.description),
+            justification: line_diff(
+                v1.justification.as_deref().unwrap_or_default(),
+                v2.justification.as_deref().unwrap_or_default(),
+            ),
         },
         metadata: MetadataDiff {
             status: single_value_diff(v1.status_id, v2.status_id),
             category: single_value_diff(v1.category_id, v2.category_id),
             applicability: single_value_diff(v1.applicability_id, v2.applicability_id),
             verification: verification_diff(verification_v1, verification_v2),
+            custom_fields: Vec::new(),
         },
     }
+}
+
+/// Compare custom field values from two immutable requirement versions.
+///
+/// A `BTreeMap` keeps the response stable by field id. Labels come from the
+/// newer version when possible, while fields removed from the newer snapshot
+/// retain their historical label from the older version.
+pub fn custom_field_diff(
+    old_values: &[CustomFieldValueDisplay],
+    new_values: &[CustomFieldValueDisplay],
+) -> Vec<CustomFieldDiff> {
+    let mut fields: BTreeMap<i32, (String, Option<String>, Option<String>)> = BTreeMap::new();
+
+    for field in old_values {
+        fields.insert(
+            field.field_id,
+            (field.label.clone(), field.value.clone(), None),
+        );
+    }
+    for field in new_values {
+        fields
+            .entry(field.field_id)
+            .and_modify(|entry| {
+                entry.0 = field.label.clone();
+                entry.2 = field.value.clone();
+            })
+            .or_insert_with(|| (field.label.clone(), None, field.value.clone()));
+    }
+
+    fields
+        .into_iter()
+        .map(
+            |(field_id, (label, old_value, new_value))| CustomFieldDiff {
+                field_id,
+                label,
+                unchanged: old_value == new_value,
+                old_value,
+                new_value,
+            },
+        )
+        .collect()
 }
 
 /// Line-based diff: split on newline, then classify each line as added, removed, or unchanged.
@@ -147,8 +208,8 @@ fn single_value_diff(old_id: i32, new_id: i32) -> SingleValueDiff {
 
 /// Compare two sorted slices of verification method IDs.
 fn verification_diff(v1: &[i32], v2: &[i32]) -> VerificationDiff {
-    let set1: std::collections::HashSet<i32> = v1.iter().copied().collect();
-    let set2: std::collections::HashSet<i32> = v2.iter().copied().collect();
+    let set1: HashSet<i32> = v1.iter().copied().collect();
+    let set2: HashSet<i32> = v2.iter().copied().collect();
 
     let mut added_ids: Vec<i32> = set2.difference(&set1).copied().collect();
     let mut removed_ids: Vec<i32> = set1.difference(&set2).copied().collect();
@@ -213,8 +274,10 @@ mod tests {
 
     #[test]
     fn text_diff_added_removed_unchanged() {
-        let v1 = version_with_text(1, 1, "Line A\nLine B", "Desc 1", 1, 1, 1);
-        let v2 = version_with_text(2, 1, "Line A\nLine C\nLine B", "Desc 1\nNew line", 1, 1, 1);
+        let mut v1 = version_with_text(1, 1, "Line A\nLine B", "Desc 1", 1, 1, 1);
+        v1.justification = Some("Old rationale".to_string());
+        let mut v2 = version_with_text(2, 1, "Line A\nLine C\nLine B", "Desc 1\nNew line", 1, 1, 1);
+        v2.justification = Some("New rationale".to_string());
         let diff = compute_requirement_diff(&v1, &v2, &[], &[]);
 
         assert_eq!(diff.text.title.unchanged, ["Line A", "Line B"]);
@@ -224,6 +287,8 @@ mod tests {
         assert_eq!(diff.text.description.unchanged, ["Desc 1"]);
         assert_eq!(diff.text.description.added, ["New line"]);
         assert_eq!(diff.text.description.removed.len(), 0);
+        assert_eq!(diff.text.justification.removed, ["Old rationale"]);
+        assert_eq!(diff.text.justification.added, ["New rationale"]);
     }
 
     #[test]
@@ -273,5 +338,55 @@ mod tests {
         assert_eq!(diff.metadata.verification.added_ids, [2]);
         assert_eq!(diff.metadata.verification.removed_ids, [3]);
         assert_eq!(diff.metadata.verification.unchanged_ids, [1, 5]);
+    }
+
+    #[test]
+    fn custom_fields_are_compared_in_stable_field_id_order() {
+        let old = vec![
+            CustomFieldValueDisplay {
+                field_id: 8,
+                label: "Owner".to_string(),
+                value: Some("Power".to_string()),
+            },
+            CustomFieldValueDisplay {
+                field_id: 2,
+                label: "Critical".to_string(),
+                value: Some("true".to_string()),
+            },
+        ];
+        let new = vec![
+            CustomFieldValueDisplay {
+                field_id: 8,
+                label: "Subsystem owner".to_string(),
+                value: Some("Avionics".to_string()),
+            },
+            CustomFieldValueDisplay {
+                field_id: 5,
+                label: "Margin".to_string(),
+                value: Some("20".to_string()),
+            },
+            CustomFieldValueDisplay {
+                field_id: 2,
+                label: "Critical".to_string(),
+                value: Some("true".to_string()),
+            },
+        ];
+
+        let fields = custom_field_diff(&old, &new);
+
+        assert_eq!(
+            fields
+                .iter()
+                .map(|field| field.field_id)
+                .collect::<Vec<_>>(),
+            [2, 5, 8]
+        );
+        assert!(fields[0].unchanged);
+        assert_eq!(fields[1].old_value, None);
+        assert_eq!(fields[1].new_value.as_deref(), Some("20"));
+        assert_eq!(fields[2].label, "Subsystem owner");
+        assert_eq!(fields[2].old_value.as_deref(), Some("Power"));
+        assert_eq!(fields[2].new_value.as_deref(), Some("Avionics"));
+        assert!(!fields[2].unchanged);
     }
 }

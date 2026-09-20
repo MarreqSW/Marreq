@@ -75,6 +75,7 @@ Errors from API handlers use JSON (see below). Failed login typically returns **
 | `GET` | `/api/projects/{project_id}/exports/report.pdf` | Project summary report as PDF (totals, coverage, requirement and verification status breakdowns). Requires `ViewRequirements`. |
 | `GET` | `/api/projects/{project_id}/exports/requirements.reqif` | Current project requirements as ReqIF 1.2 XML. Requires `ViewRequirements`. Responds with `application/xml` and `Content-Disposition: attachment`. |
 | `GET` | `/api/projects/{project_id}/exports/baselines/{baseline_id}.reqif` | Immutable baseline snapshot as ReqIF 1.2 XML. Requires `ViewRequirements`. **404** if the baseline is missing or belongs to another project. |
+| `GET` | `/api/projects/{project_id}/requirements/{requirement_id}/versions/{old_version_id}/diff/{new_version_id}` | Structured, read-only requirement version diff. Returns added/removed/unchanged title, statement, and justification lines plus status, category, applicability, verification-method, and custom-field comparisons. Requires `ViewRequirements`; both versions must belong to the requirement. |
 
 Project-scoped CRUD and resources under `/api/projects/{project_id}/...` follow existing routes (Bearer token or session, per handler).
 

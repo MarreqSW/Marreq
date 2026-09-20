@@ -281,6 +281,53 @@ export interface RequirementVersion {
   approved_at: string | null;
 }
 
+export interface TextDiffResult {
+  added: string[];
+  removed: string[];
+  unchanged: string[];
+}
+
+export interface SingleValueDiff {
+  old_id?: number;
+  new_id?: number;
+  unchanged?: number;
+  unchanged_label?: string;
+  old_label?: string;
+  new_label?: string;
+}
+
+export interface VerificationMethodDiff {
+  added_ids: number[];
+  removed_ids: number[];
+  unchanged_ids: number[];
+  added_labels?: string[];
+  removed_labels?: string[];
+  unchanged_labels?: string[];
+}
+
+export interface CustomFieldDiff {
+  field_id: number;
+  label: string;
+  old_value: string | null;
+  new_value: string | null;
+  unchanged: boolean;
+}
+
+export interface RequirementDiff {
+  text: {
+    title: TextDiffResult;
+    description: TextDiffResult;
+    justification: TextDiffResult;
+  };
+  metadata: {
+    status: SingleValueDiff;
+    category: SingleValueDiff;
+    applicability: SingleValueDiff;
+    verification: VerificationMethodDiff;
+    custom_fields: CustomFieldDiff[];
+  };
+}
+
 export interface Category {
   id: number;
   title: string;

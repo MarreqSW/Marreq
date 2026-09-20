@@ -16,6 +16,7 @@ import {
   listVerifications,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
+import RequirementVersionDiffDialog from '@/components/RequirementVersionDiffDialog';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatUserLabel } from '@/utils/userLabel';
 import type {
@@ -119,6 +120,11 @@ export default function ViewRequirementPage() {
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
   const [activityLog, setActivityLog] = useState<EntityActivityItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [diffInitialPair, setDiffInitialPair] = useState<{
+    oldVersionId?: number;
+    newVersionId?: number;
+  } | null>(null);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid) || !Number.isFinite(rid)) return;
@@ -262,6 +268,10 @@ export default function ViewRequirementPage() {
   }, [versionsNewestFirst]);
 
   const canEdit = Boolean(perms?.edit_requirements);
+  const openVersionDiff = (pair?: { oldVersionId: number; newVersionId: number }) => {
+    setDiffInitialPair(pair ?? null);
+    setDiffOpen(true);
+  };
 
   if (loadError) {
     return (
@@ -301,13 +311,15 @@ export default function ViewRequirementPage() {
           <span className="text-stitch-muted font-normal normal-case tracking-normal">· View</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <a
-            href={`${basePath}/requirements/show/${rid}`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-stitch-border text-stitch-muted hover:text-stitch-accent hover:border-stitch-accent/40 text-[10px] font-bold uppercase tracking-wider transition-colors"
+          <button
+            type="button"
+            disabled={versions.length < 2}
+            onClick={() => openVersionDiff()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-stitch-border text-stitch-muted hover:text-stitch-accent hover:border-stitch-accent/40 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <span className="material-symbols-outlined text-sm">open_in_new</span>
-            Classic
-          </a>
+            <span className="material-symbols-outlined text-sm">difference</span>
+            Compare versions
+          </button>
           {canEdit ? (
             <Link
               to={`${basePath}/requirements/${rid}/edit`}
@@ -616,12 +628,14 @@ export default function ViewRequirementPage() {
               </p>
             </div>
           </div>
-          <a
-            href={`${basePath}/requirements/show/${rid}`}
-            className="text-[10px] font-bold uppercase tracking-wide text-stitch-accent hover:underline shrink-0"
+          <button
+            type="button"
+            disabled={versions.length < 2}
+            onClick={() => openVersionDiff()}
+            className="text-[10px] font-bold uppercase tracking-wide text-stitch-accent hover:underline shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Full diffs in classic →
-          </a>
+            Compare versions →
+          </button>
         </div>
         <div className="p-4 md:p-6 max-h-[min(640px,70vh)] overflow-y-auto space-y-8">
           <div>
@@ -687,6 +701,21 @@ export default function ViewRequirementPage() {
                     ) : (
                       <p className="text-[10px] text-stitch-muted mt-1">No field changes vs the next newer snapshot.</p>
                     )}
+                    {older ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openVersionDiff({
+                            oldVersionId: older.id,
+                            newVersionId: ver.id,
+                          })
+                        }
+                        className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline"
+                      >
+                        <span className="material-symbols-outlined text-sm">difference</span>
+                        Compare with previous
+                      </button>
+                    ) : null}
                   </li>
                 );
               })}
@@ -762,6 +791,14 @@ export default function ViewRequirementPage() {
           </div>
         </div>
       </section>
+      <RequirementVersionDiffDialog
+        open={diffOpen}
+        onClose={() => setDiffOpen(false)}
+        projectId={pid}
+        requirementId={rid}
+        versions={versions}
+        initialPair={diffInitialPair}
+      />
     </div>
   );
 }

@@ -38,6 +38,7 @@ import type {
   Verification,
   VerificationStatus,
 } from '@/api/types';
+import RequirementVersionDiffDialog from '@/components/RequirementVersionDiffDialog';
 import { StatusBadge, statusTagColorSwatchStyle } from '@/components/StatusBadge';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { formatUserLabel } from '@/utils/userLabel';
@@ -91,6 +92,7 @@ export default function EditRequirementPage() {
   const [commentPosting, setCommentPosting] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [linkBusy, setLinkBusy] = useState(false);
+  const [diffOpen, setDiffOpen] = useState(false);
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
   const [newParentId, setNewParentId] = useState<number | ''>('');
   const [newLinkType, setNewLinkType] = useState('');
@@ -903,12 +905,14 @@ export default function EditRequirementPage() {
                         {versions.length} snapshot(s). Latest:{' '}
                         {latestVersionCreatedAt ? formatTs(latestVersionCreatedAt) : '—'}.
                       </p>
-                      <a
-                        href={`${basePath}/requirements/show/${rid}`}
-                        className="text-[10px] font-bold text-stitch-accent hover:underline mt-2 inline-block uppercase tracking-wide"
+                      <button
+                        type="button"
+                        disabled={versions.length < 2}
+                        onClick={() => setDiffOpen(true)}
+                        className="text-[10px] font-bold text-stitch-accent hover:underline mt-2 inline-block uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        Full diffs in classic UI →
-                      </a>
+                        Compare versions →
+                      </button>
                     </div>
                   </div>
                 ) : null}
@@ -1023,6 +1027,13 @@ export default function EditRequirementPage() {
           </div>
         </footer>
       </form>
+      <RequirementVersionDiffDialog
+        open={diffOpen}
+        onClose={() => setDiffOpen(false)}
+        projectId={pid}
+        requirementId={rid}
+        versions={versions}
+      />
     </div>
   );
 }

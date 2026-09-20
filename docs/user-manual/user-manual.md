@@ -204,8 +204,10 @@ The editor supports rich text (bold, italic, list, code, link) and a preview tog
 ### 4.5 Version History & Diff
 
 - On the requirement detail page, the **Version history** section lists all versions (newest first); each shows approval state.
-- Click a version to view that snapshot: `/<project-slug>/requirements/show/<requirement_id>/version/<version_id>`.
-- **Compare two versions**: Use the diff action (e.g. “Compare” or “Diff”) to open a **diff modal** that shows added/removed/unchanged text and metadata (with labels for status, category, applicability, verification where available).
+- Select **Compare versions** to compare any two saved versions. The latest version and its predecessor are selected by default.
+- Use **Compare with previous** on a version-history row to open that adjacent pair directly.
+- The comparison dialog shows removed, added, and unchanged title, statement, and justification text. It also compares status, category, applicability, verification methods, and custom fields.
+- At least two saved versions are required. Version comparison is read-only and is available to anyone who can view the project requirements.
 
 ### 4.6 Comments
 

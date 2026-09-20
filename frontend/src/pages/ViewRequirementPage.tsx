@@ -245,6 +245,15 @@ export default function ViewRequirementPage() {
     [versions],
   );
   const latestVersionLabel = versions.length > 0 ? `v${versions.length}` : '—';
+  const lastApprovedVersion = useMemo(
+    () =>
+      versionsNewestFirst.find(
+        (version) =>
+          version.approval_state.toLowerCase() === 'approved' &&
+          version.id !== detail?.current_version_id,
+      ) ?? null,
+    [detail?.current_version_id, versionsNewestFirst],
+  );
 
   const changelogEntries = useMemo(() => {
     return versionsNewestFirst.map((ver, i) => {
@@ -342,6 +351,20 @@ export default function ViewRequirementPage() {
               <span className="text-xs font-medium text-stitch-accent-dim bg-stitch-elevated px-2 py-1 rounded border border-stitch-border uppercase tracking-wide">
                 {approvalLabel(detail.approval_state)}
               </span>
+              {lastApprovedVersion && detail.current_version_id != null ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    openVersionDiff({
+                      oldVersionId: lastApprovedVersion.id,
+                      newVersionId: detail.current_version_id!,
+                    })
+                  }
+                  className="text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline"
+                >
+                  Compare with last approved
+                </button>
+              ) : null}
               {st ? <StatusBadge title={st.title} tagColor={st.tag_color} /> : null}
             </div>
             <h1 className="text-2xl md:text-3xl font-bold font-headline text-stitch-fg mb-6">

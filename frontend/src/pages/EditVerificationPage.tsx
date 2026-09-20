@@ -9,6 +9,7 @@ import {
   listProjectMembers,
   listRequirements,
   listUsersOptional,
+  listVerificationSnapshotsByProject,
   listVerificationStatuses,
   listVerifications,
   putVerificationMatrix,
@@ -21,6 +22,7 @@ import type {
   Requirement,
   User,
   Verification,
+  VerificationSnapshot,
   VerificationStatus,
 } from '@/api/types';
 import {
@@ -28,6 +30,7 @@ import {
   RequirementMatrixPicker,
 } from '@/components/RequirementMatrixPicker';
 import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
+import VerificationVersionDiffDialog from '@/components/VerificationVersionDiffDialog';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { formatUserLabel } from '@/utils/userLabel';
 
@@ -64,12 +67,14 @@ export default function EditVerificationPage() {
   const [projectReviewerIds, setProjectReviewerIds] = useState<number[]>([]);
   const [users, setUsers] = useState<User[] | null>(null);
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
+  const [snapshots, setSnapshots] = useState<VerificationSnapshot[]>([]);
+  const [diffOpen, setDiffOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid) || !Number.isFinite(vid)) return;
     setLoadError(null);
     try {
-      const [v, st, all, reqs, mx, mem, u, permRes, revPool] = await Promise.all([
+      const [v, st, all, reqs, mx, mem, u, permRes, revPool, snaps] = await Promise.all([
         getVerification(vid),
         listVerificationStatuses(),
         listVerifications(),
@@ -79,6 +84,7 @@ export default function EditVerificationPage() {
         listUsersOptional(),
         getMyPermissions(pid).catch(() => null),
         getProjectReviewers(pid).catch(() => ({ user_ids: [] as number[] })),
+        listVerificationSnapshotsByProject(pid, vid).catch(() => [] as VerificationSnapshot[]),
       ]);
       setProjectReviewerIds(revPool.user_ids);
       setMembers(mem);
@@ -103,6 +109,7 @@ export default function EditVerificationPage() {
       const ids = [...mx.requirement_ids].sort((a, b) => a - b);
       setLinkedReqIds(ids);
       setBaselineLinkedIds(ids);
+      setSnapshots(snaps);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load verification');
     }
@@ -287,15 +294,14 @@ export default function EditVerificationPage() {
         <p className="text-stitch-muted text-sm mt-2">
           Fields update via the API per changed column; traceability links save together with your changes.
         </p>
-        <p className="text-stitch-muted text-xs mt-2">
-          <a
-            href={`${basePath}/verifications/show/${vid}`}
-            className="text-stitch-accent font-semibold hover:underline"
-          >
-            Classic verification page
-          </a>{' '}
-          — attachments and extra fields when available.
-        </p>
+        <button
+          type="button"
+          disabled={snapshots.length < 2}
+          onClick={() => setDiffOpen(true)}
+          className="text-[10px] font-bold text-stitch-accent hover:underline mt-2 inline-block uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Compare versions →
+        </button>
       </div>
 
       <form onSubmit={onSubmit} className="space-y-8">
@@ -508,6 +514,13 @@ export default function EditVerificationPage() {
           </button>
         </footer>
       </form>
+      <VerificationVersionDiffDialog
+        open={diffOpen}
+        onClose={() => setDiffOpen(false)}
+        projectId={pid}
+        verificationId={vid}
+        snapshots={snapshots}
+      />
     </div>
   );
 }

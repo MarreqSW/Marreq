@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { compareRequirementVersionsByProject } from '../requirements';
+import {
+  compareBaselineRequirementWithCurrent,
+  compareRequirementVersionsByProject,
+} from '../requirements';
 
 describe('compareRequirementVersionsByProject', () => {
   afterEach(() => {
@@ -31,6 +34,22 @@ describe('compareRequirementVersionsByProject', () => {
 
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/projects/7/requirements/42/versions/101/diff/102',
+      expect.objectContaining({ credentials: 'same-origin' }),
+    );
+  });
+
+  it('uses the baseline requirement vs current endpoint', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify({ text: {}, metadata: {} }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await compareBaselineRequirementWithCurrent(7, 8, 42);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects/7/baselines/8/requirements/42/diff/current',
       expect.objectContaining({ credentials: 'same-origin' }),
     );
   });

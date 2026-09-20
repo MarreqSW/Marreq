@@ -123,6 +123,16 @@ export async function compareRequirementVersionsByProject(
   );
 }
 
+export async function compareBaselineRequirementWithCurrent(
+  projectId: number,
+  baselineId: number,
+  requirementId: number,
+): Promise<RequirementDiff> {
+  return fetchJson<RequirementDiff>(
+    `/api/projects/${projectId}/baselines/${baselineId}/requirements/${requirementId}/diff/current`,
+  );
+}
+
 export async function listRequirementActivityByProject(
   projectId: number,
   requirementId: number,

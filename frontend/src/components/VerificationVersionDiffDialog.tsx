@@ -1,117 +1,74 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { compareRequirementVersionsByProject } from '@/api/client';
-import type {
-  RequirementDiff,
-  RequirementVersion,
-  VerificationMethodDiff,
-} from '@/api/types';
-import { CustomFieldRow, SingleValueRow, TextDiffField } from '@/components/versionDiffUi';
+import { compareVerificationSnapshotsByProject } from '@/api/client';
+import type { VerificationSnapshot, VerificationVersionDiff } from '@/api/types';
+import { SingleValueRow, TextDiffField } from '@/components/versionDiffUi';
 
 type VersionPair = {
   oldVersionId?: number;
   newVersionId?: number;
 };
 
-type RequirementVersionDiffDialogProps = {
+type VerificationVersionDiffDialogProps = {
   open: boolean;
   onClose: () => void;
   projectId: number;
-  requirementId: number;
-  versions: RequirementVersion[];
+  verificationId: number;
+  snapshots: VerificationSnapshot[];
   initialPair?: VersionPair | null;
 };
 
-function versionTime(version: RequirementVersion): number {
-  const parsed = new Date(version.created_at).getTime();
+function snapshotTime(snapshot: VerificationSnapshot): number {
+  const parsed = new Date(snapshot.created_at).getTime();
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function methodLabels(diff: VerificationMethodDiff, key: 'added' | 'removed' | 'unchanged') {
-  const labels = diff[`${key}_labels`];
-  const ids = diff[`${key}_ids`];
-  return labels?.length ? labels : ids.map((id) => `ID ${id}`);
-}
-
-function VerificationMethodsRow({ diff }: { diff: VerificationMethodDiff }) {
-  const removed = methodLabels(diff, 'removed');
-  const added = methodLabels(diff, 'added');
-  const unchanged = methodLabels(diff, 'unchanged');
-  return (
-    <div className="grid gap-2 border-b border-stitch-border py-3 sm:grid-cols-[10rem_1fr]">
-      <span className="text-xs font-bold text-stitch-muted">Verification methods</span>
-      <div className="space-y-1 text-xs">
-        {removed.length ? (
-          <p className="text-red-700 dark:text-red-300">Removed: {removed.join(', ')}</p>
-        ) : null}
-        {added.length ? (
-          <p className="text-emerald-700 dark:text-emerald-300">Added: {added.join(', ')}</p>
-        ) : null}
-        {unchanged.length ? <p className="text-stitch-muted">Unchanged: {unchanged.join(', ')}</p> : null}
-        {!removed.length && !added.length && !unchanged.length ? (
-          <p className="text-stitch-muted">No methods in either version.</p>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-export function RequirementDiffContent({ diff }: { diff: RequirementDiff }) {
+export function VerificationDiffContent({ diff }: { diff: VerificationVersionDiff }) {
   return (
     <div className="space-y-5">
-      <TextDiffField label="Title" diff={diff.text.title} />
-      <TextDiffField label="Statement" diff={diff.text.description} />
-      <TextDiffField label="Justification" diff={diff.text.justification} />
+      <TextDiffField label="Name" diff={diff.text.name} />
+      <TextDiffField label="Description" diff={diff.text.description} />
+      <TextDiffField label="Source" diff={diff.text.source} />
+      <TextDiffField label="Reference" diff={diff.text.reference_code} />
       <section className="rounded-xl border border-stitch-border bg-stitch-canvas/60 px-4">
         <h3 className="pt-4 text-xs font-bold uppercase tracking-widest text-stitch-fg">Metadata</h3>
         <SingleValueRow label="Status" diff={diff.metadata.status} />
-        <SingleValueRow label="Category" diff={diff.metadata.category} />
-        <SingleValueRow label="Applicability" diff={diff.metadata.applicability} />
-        <VerificationMethodsRow diff={diff.metadata.verification} />
-        {diff.metadata.custom_fields.length > 0 ? (
-          <div className="py-3">
-            <h4 className="mb-1 text-[10px] font-bold uppercase tracking-widest text-stitch-muted">
-              Custom fields
-            </h4>
-            {diff.metadata.custom_fields.map((field) => (
-              <CustomFieldRow key={field.field_id} diff={field} />
-            ))}
-          </div>
-        ) : null}
+        <SingleValueRow label="Verification type" diff={diff.metadata.verification_method} />
+        <SingleValueRow label="Parent" diff={diff.metadata.parent} />
       </section>
     </div>
   );
 }
 
-export default function RequirementVersionDiffDialog({
+export default function VerificationVersionDiffDialog({
   open,
   onClose,
   projectId,
-  requirementId,
-  versions,
+  verificationId,
+  snapshots,
   initialPair,
-}: RequirementVersionDiffDialogProps) {
+}: VerificationVersionDiffDialogProps) {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
-  const orderedVersions = useMemo(
+  const orderedSnapshots = useMemo(
     () =>
-      [...versions].sort(
-        (a, b) => versionTime(a) - versionTime(b) || a.id - b.id,
+      [...snapshots].sort(
+        (a, b) => snapshotTime(a) - snapshotTime(b) || a.id - b.id,
       ),
-    [versions],
+    [snapshots],
   );
   const indexById = useMemo(
-    () => new Map(orderedVersions.map((version, index) => [version.id, index])),
-    [orderedVersions],
+    () => new Map(orderedSnapshots.map((snapshot, index) => [snapshot.id, index])),
+    [orderedSnapshots],
   );
   const [oldVersionId, setOldVersionId] = useState<number | null>(null);
   const [newVersionId, setNewVersionId] = useState<number | null>(null);
-  const [diff, setDiff] = useState<RequirementDiff | null>(null);
+  const [diff, setDiff] = useState<VerificationVersionDiff | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!open || orderedVersions.length < 2) return;
-    const defaultOld = orderedVersions.at(-2)?.id ?? null;
-    const defaultNew = orderedVersions.at(-1)?.id ?? null;
+    if (!open || orderedSnapshots.length < 2) return;
+    const defaultOld = orderedSnapshots.at(-2)?.id ?? null;
+    const defaultNew = orderedSnapshots.at(-1)?.id ?? null;
     const requestedOld = initialPair?.oldVersionId;
     const requestedNew = initialPair?.newVersionId;
     const oldIndex = requestedOld == null ? undefined : indexById.get(requestedOld);
@@ -128,7 +85,7 @@ export default function RequirementVersionDiffDialog({
       setOldVersionId(defaultOld);
       setNewVersionId(defaultNew);
     }
-  }, [indexById, initialPair, open, orderedVersions]);
+  }, [indexById, initialPair, open, orderedSnapshots]);
 
   useEffect(() => {
     if (!open || oldVersionId == null || newVersionId == null || oldVersionId === newVersionId) {
@@ -138,9 +95,9 @@ export default function RequirementVersionDiffDialog({
     setLoading(true);
     setError(null);
     setDiff(null);
-    compareRequirementVersionsByProject(
+    compareVerificationSnapshotsByProject(
       projectId,
-      requirementId,
+      verificationId,
       oldVersionId,
       newVersionId,
     )
@@ -158,7 +115,7 @@ export default function RequirementVersionDiffDialog({
     return () => {
       alive = false;
     };
-  }, [newVersionId, oldVersionId, open, projectId, requirementId]);
+  }, [newVersionId, oldVersionId, open, projectId, verificationId]);
 
   useEffect(() => {
     if (!open) return;
@@ -177,11 +134,12 @@ export default function RequirementVersionDiffDialog({
 
   if (!open) return null;
 
-  const versionLabel = (version: RequirementVersion) => {
-    const index = indexById.get(version.id) ?? 0;
-    const date = new Date(version.created_at);
-    const dateLabel = Number.isNaN(date.getTime()) ? version.created_at : date.toLocaleString();
-    return `v${index + 1} — ${dateLabel}`;
+  const snapshotLabel = (snapshot: VerificationSnapshot) => {
+    const index = indexById.get(snapshot.id) ?? 0;
+    const date = new Date(snapshot.created_at);
+    const dateLabel = Number.isNaN(date.getTime()) ? snapshot.created_at : date.toLocaleString();
+    const prefix = snapshot.id === 0 ? 'Before recorded history' : `v${index + 1}`;
+    return `${prefix} — ${dateLabel}`;
   };
 
   const updateOld = (id: number) => {
@@ -189,15 +147,15 @@ export default function RequirementVersionDiffDialog({
     const newIndex = newVersionId == null ? -1 : (indexById.get(newVersionId) ?? -1);
     setOldVersionId(id);
     if (selectedIndex >= newIndex) {
-      setNewVersionId(orderedVersions[Math.min(selectedIndex + 1, orderedVersions.length - 1)].id);
+      setNewVersionId(orderedSnapshots[Math.min(selectedIndex + 1, orderedSnapshots.length - 1)].id);
     }
   };
   const updateNew = (id: number) => {
     const selectedIndex = indexById.get(id) ?? 0;
-    const oldIndex = oldVersionId == null ? orderedVersions.length : (indexById.get(oldVersionId) ?? 0);
+    const oldIndex = oldVersionId == null ? orderedSnapshots.length : (indexById.get(oldVersionId) ?? 0);
     setNewVersionId(id);
     if (selectedIndex <= oldIndex) {
-      setOldVersionId(orderedVersions[Math.max(0, selectedIndex - 1)].id);
+      setOldVersionId(orderedSnapshots[Math.max(0, selectedIndex - 1)].id);
     }
   };
 
@@ -211,16 +169,16 @@ export default function RequirementVersionDiffDialog({
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="requirement-version-diff-title"
+        aria-labelledby="verification-version-diff-title"
         className="flex max-h-full w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-stitch-border bg-stitch-surface shadow-2xl"
       >
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-stitch-border px-5 py-4 md:px-6">
           <div>
-            <h2 id="requirement-version-diff-title" className="font-headline text-lg font-bold text-stitch-fg">
-              Compare requirement versions
+            <h2 id="verification-version-diff-title" className="font-headline text-lg font-bold text-stitch-fg">
+              Compare verification versions
             </h2>
             <p className="mt-1 text-xs text-stitch-muted">
-              Removed values are red; additions are green. Versions are compared oldest to newest.
+              Snapshots come from the audit log. Removed values are red; additions are green.
             </p>
           </div>
           <button
@@ -234,9 +192,10 @@ export default function RequirementVersionDiffDialog({
           </button>
         </header>
 
-        {orderedVersions.length < 2 ? (
+        {orderedSnapshots.length < 2 ? (
           <div className="p-8 text-center text-sm text-stitch-muted">
-            At least two saved versions are required for comparison.
+            At least two saved versions are required for comparison. Edit and save the verification
+            to create a second snapshot.
           </div>
         ) : (
           <>
@@ -248,9 +207,9 @@ export default function RequirementVersionDiffDialog({
                   onChange={(event) => updateOld(Number(event.target.value))}
                   className="mt-1 block w-full rounded-lg border border-stitch-border bg-stitch-surface px-3 py-2 text-sm font-normal normal-case tracking-normal text-stitch-fg"
                 >
-                  {orderedVersions.slice(0, -1).map((version) => (
-                    <option key={version.id} value={version.id}>
-                      {versionLabel(version)}
+                  {orderedSnapshots.slice(0, -1).map((snapshot) => (
+                    <option key={snapshot.id} value={snapshot.id}>
+                      {snapshotLabel(snapshot)}
                     </option>
                   ))}
                 </select>
@@ -262,9 +221,9 @@ export default function RequirementVersionDiffDialog({
                   onChange={(event) => updateNew(Number(event.target.value))}
                   className="mt-1 block w-full rounded-lg border border-stitch-border bg-stitch-surface px-3 py-2 text-sm font-normal normal-case tracking-normal text-stitch-fg"
                 >
-                  {orderedVersions.slice(1).map((version) => (
-                    <option key={version.id} value={version.id}>
-                      {versionLabel(version)}
+                  {orderedSnapshots.slice(1).map((snapshot) => (
+                    <option key={snapshot.id} value={snapshot.id}>
+                      {snapshotLabel(snapshot)}
                     </option>
                   ))}
                 </select>
@@ -278,7 +237,7 @@ export default function RequirementVersionDiffDialog({
                   {error}
                 </div>
               ) : diff ? (
-                <RequirementDiffContent diff={diff} />
+                <VerificationDiffContent diff={diff} />
               ) : null}
             </div>
           </>

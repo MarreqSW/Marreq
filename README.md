@@ -21,6 +21,7 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 ### 🏷️ Advanced Features
 - **Requirement comments**: Comment threads on requirements and optional requirement versions; author, timestamp, optional version reference; chronological list; immutable after creation. UI panel on requirement/version detail pages; approved versions can be locked from new comments (`LOCK_APPROVED_VERSION_COMMENTS`). Comments in audit logs and in Excel/ReqIF exports.
 - **Requirement version diff**: Compare two requirement versions or a baseline snapshot vs current; API returns structured diff (metadata, verification, text) with optional **labels** (e.g. Status “Draft”, verification method titles) in addition to IDs; UI diff modal shows these labels for easier reading
+- **Verification snapshot diff**: Compare two verification snapshots reconstructed from the audit log; SPA dialog on view/edit pages
 - **Categories**: User-defined categories for organizing requirements (project-specific)
 - **Applicability**: Define product lines, system types, or project scopes (project-specific)
 - **Status Tracking**: Track requirement status (Draft, Accepted, Rejected, etc.)

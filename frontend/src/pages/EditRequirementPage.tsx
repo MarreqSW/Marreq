@@ -93,6 +93,10 @@ export default function EditRequirementPage() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [linkBusy, setLinkBusy] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
+  const [diffInitialPair, setDiffInitialPair] = useState<{
+    oldVersionId?: number;
+    newVersionId?: number;
+  } | null>(null);
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
   const [newParentId, setNewParentId] = useState<number | ''>('');
   const [newLinkType, setNewLinkType] = useState('');
@@ -251,6 +255,15 @@ export default function EditRequirementPage() {
     [versions],
   );
   const latestVersionCreatedAt = versionsNewestFirst[0]?.created_at;
+  const lastApprovedVersion = useMemo(
+    () =>
+      versionsNewestFirst.find(
+        (version) =>
+          version.approval_state.toLowerCase() === 'approved' &&
+          version.id !== detail?.current_version_id,
+      ) ?? null,
+    [detail?.current_version_id, versionsNewestFirst],
+  );
 
   const parentCandidates = useMemo(
     () =>
@@ -522,6 +535,21 @@ export default function EditRequirementPage() {
                   <span className="text-xs font-medium text-stitch-accent-dim bg-stitch-higher px-2 py-1 rounded border border-stitch-border uppercase tracking-wide">
                     {approvalLabel(detail.approval_state)}
                   </span>
+                  {lastApprovedVersion && detail.current_version_id != null ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDiffInitialPair({
+                          oldVersionId: lastApprovedVersion.id,
+                          newVersionId: detail.current_version_id!,
+                        });
+                        setDiffOpen(true);
+                      }}
+                      className="text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline"
+                    >
+                      Compare with last approved
+                    </button>
+                  ) : null}
                 </div>
                 <input
                   className="text-3xl font-bold font-headline bg-transparent border-none focus:ring-0 w-full p-0 text-stitch-fg placeholder:text-stitch-muted"
@@ -908,7 +936,10 @@ export default function EditRequirementPage() {
                       <button
                         type="button"
                         disabled={versions.length < 2}
-                        onClick={() => setDiffOpen(true)}
+                        onClick={() => {
+                          setDiffInitialPair(null);
+                          setDiffOpen(true);
+                        }}
                         className="text-[10px] font-bold text-stitch-accent hover:underline mt-2 inline-block uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         Compare versions →
@@ -1033,6 +1064,7 @@ export default function EditRequirementPage() {
         projectId={pid}
         requirementId={rid}
         versions={versions}
+        initialPair={diffInitialPair}
       />
     </div>
   );

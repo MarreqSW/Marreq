@@ -8,12 +8,14 @@ import {
   listProjectMembers,
   listVerificationActivityByProject,
   listVerificationMethodsByProject,
+  listVerificationSnapshotsByProject,
   listVerificationStatuses,
   listUsersOptional,
   listVerifications,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import { StatusBadge } from '@/components/StatusBadge';
+import VerificationVersionDiffDialog from '@/components/VerificationVersionDiffDialog';
 import { formatUserLabel } from '@/utils/userLabel';
 import type {
   EffectivePermissions,
@@ -21,6 +23,7 @@ import type {
   Requirement,
   Verification,
   VerificationMethod,
+  VerificationSnapshot,
   ProjectMember,
   User,
   VerificationStatus,
@@ -99,12 +102,17 @@ export default function ViewVerificationPage() {
   const [users, setUsers] = useState<User[] | null>(null);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [activityLog, setActivityLog] = useState<EntityActivityItem[]>([]);
+  const [snapshots, setSnapshots] = useState<VerificationSnapshot[]>([]);
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [diffPair, setDiffPair] = useState<{ oldVersionId?: number; newVersionId?: number } | null>(
+    null,
+  );
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid) || !Number.isFinite(vid)) return;
     setLoadError(null);
     try {
-      const [v, st, m, all, p, reqs, mx, u, mem, act] = await Promise.all([
+      const [v, st, m, all, p, reqs, mx, u, mem, act, snaps] = await Promise.all([
         getVerification(vid),
         listVerificationStatuses(),
         listVerificationMethodsByProject(pid),
@@ -115,6 +123,7 @@ export default function ViewVerificationPage() {
         listUsersOptional(),
         listProjectMembers(pid),
         listVerificationActivityByProject(pid, vid).catch(() => [] as EntityActivityItem[]),
+        listVerificationSnapshotsByProject(pid, vid).catch(() => [] as VerificationSnapshot[]),
       ]);
       setUsers(u);
       setMembers(mem);
@@ -130,6 +139,7 @@ export default function ViewVerificationPage() {
       setRequirements(reqs);
       setLinkedReqIds([...mx.requirement_ids].sort((a, b) => a - b));
       setActivityLog(act);
+      setSnapshots(snaps);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load verification');
     }
@@ -164,10 +174,30 @@ export default function ViewVerificationPage() {
 
   const canEdit = Boolean(perms?.edit_requirements);
 
+  const orderedSnapshots = useMemo(
+    () =>
+      [...snapshots].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime() || a.id - b.id,
+      ),
+    [snapshots],
+  );
+  const previousSnapshotById = useMemo(() => {
+    const map = new Map<number, number>();
+    for (let i = 1; i < orderedSnapshots.length; i += 1) {
+      map.set(orderedSnapshots[i].id, orderedSnapshots[i - 1].id);
+    }
+    return map;
+  }, [orderedSnapshots]);
+
   const userLabel = useCallback(
     (id: number) => formatUserLabel(id, { users, members }),
     [users, members],
   );
+
+  const openVersionDiff = (pair?: { oldVersionId?: number; newVersionId?: number }) => {
+    setDiffPair(pair ?? null);
+    setDiffOpen(true);
+  };
 
   if (loadError) {
     return (
@@ -206,13 +236,15 @@ export default function ViewVerificationPage() {
           <span className="text-stitch-muted font-normal normal-case tracking-normal">· View</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <a
-            href={`${basePath}/verifications/show/${vid}`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-stitch-border text-stitch-muted hover:text-stitch-accent text-[10px] font-bold uppercase tracking-wider transition-colors"
+          <button
+            type="button"
+            disabled={snapshots.length < 2}
+            onClick={() => openVersionDiff()}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-stitch-border text-stitch-muted hover:text-stitch-accent hover:border-stitch-accent/40 text-[10px] font-bold uppercase tracking-wider transition-colors disabled:cursor-not-allowed disabled:opacity-40"
           >
-            <span className="material-symbols-outlined text-sm">open_in_new</span>
-            Classic
-          </a>
+            <span className="material-symbols-outlined text-sm">difference</span>
+            Compare versions
+          </button>
           {canEdit ? (
             <Link
               to={`${basePath}/verifications/${vid}/edit`}
@@ -402,12 +434,14 @@ export default function ViewVerificationPage() {
               </p>
             </div>
           </div>
-          <a
-            href={`${basePath}/verifications/show/${vid}`}
-            className="text-[10px] font-bold uppercase tracking-wide text-stitch-accent hover:underline shrink-0"
+          <button
+            type="button"
+            disabled={snapshots.length < 2}
+            onClick={() => openVersionDiff()}
+            className="text-[10px] font-bold uppercase tracking-wide text-stitch-accent hover:underline shrink-0 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            Activity in classic →
-          </a>
+            Compare versions →
+          </button>
         </div>
         <div className="p-4 md:p-6 max-h-[min(520px,55vh)] overflow-y-auto">
           {activityLog.length === 0 ? (
@@ -452,19 +486,35 @@ export default function ViewVerificationPage() {
                       ))}
                     </ul>
                   ) : null}
+                  {previousSnapshotById.has(entry.log_id) ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        openVersionDiff({
+                          oldVersionId: previousSnapshotById.get(entry.log_id),
+                          newVersionId: entry.log_id,
+                        })
+                      }
+                      className="mt-3 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline"
+                    >
+                      <span className="material-symbols-outlined text-sm">difference</span>
+                      Compare with previous
+                    </button>
+                  ) : null}
                 </li>
               ))}
             </ul>
           )}
-          <p className="mt-4 text-[10px] text-stitch-muted leading-relaxed">
-            Need historical snapshots, baseline comparisons, or attachments?{' '}
-            <a href={`${basePath}/verifications/show/${vid}`} className="text-stitch-accent font-semibold hover:underline">
-              Open the classic verification page
-            </a>
-            .
-          </p>
         </div>
       </section>
+      <VerificationVersionDiffDialog
+        open={diffOpen}
+        onClose={() => setDiffOpen(false)}
+        projectId={pid}
+        verificationId={vid}
+        snapshots={snapshots}
+        initialPair={diffPair}
+      />
     </div>
   );
 }

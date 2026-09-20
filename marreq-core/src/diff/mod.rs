@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
-//! Deterministic diff between two requirement versions.
+//! Deterministic diffs between requirement versions and verification snapshots.
 //!
-//! Text fields (title, description, justification) use line-based diff; metadata (status,
-//! category, applicability, verification methods, custom fields) are compared for
+//! Text fields use line-based diff; metadata fields are compared for
 //! added/removed/unchanged values. Read-only and audit-safe.
 
 use crate::models::{CustomFieldValueDisplay, RequirementVersion};
@@ -88,6 +87,69 @@ pub struct TextDiffSection {
     pub title: TextDiffResult,
     pub description: TextDiffResult,
     pub justification: TextDiffResult,
+}
+
+/// Snapshot of a verification used for diffs (from a version row or an audit log payload).
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct VerificationSnapshotState {
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default)]
+    pub source: String,
+    #[serde(default)]
+    pub reference_code: String,
+    #[serde(default)]
+    pub status_id: i32,
+    pub parent_id: Option<i32>,
+    pub verification_method_id: Option<i32>,
+}
+
+/// Metadata section of a verification snapshot diff.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationMetadataDiff {
+    pub status: SingleValueDiff,
+    pub verification_method: SingleValueDiff,
+    pub parent: SingleValueDiff,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationTextDiffSection {
+    pub name: TextDiffResult,
+    pub description: TextDiffResult,
+    pub source: TextDiffResult,
+    pub reference_code: TextDiffResult,
+}
+
+/// Full structured diff between two verification snapshots.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VerificationVersionDiff {
+    pub text: VerificationTextDiffSection,
+    pub metadata: VerificationMetadataDiff,
+}
+
+/// Compute a deterministic diff between two verification snapshots (v1 = old, v2 = new).
+pub fn compute_verification_diff(
+    v1: &VerificationSnapshotState,
+    v2: &VerificationSnapshotState,
+) -> VerificationVersionDiff {
+    VerificationVersionDiff {
+        text: VerificationTextDiffSection {
+            name: line_diff(&v1.name, &v2.name),
+            description: line_diff(&v1.description, &v2.description),
+            source: line_diff(&v1.source, &v2.source),
+            reference_code: line_diff(&v1.reference_code, &v2.reference_code),
+        },
+        metadata: VerificationMetadataDiff {
+            status: single_value_diff(v1.status_id, v2.status_id),
+            verification_method: optional_id_diff(
+                v1.verification_method_id,
+                v2.verification_method_id,
+            ),
+            parent: optional_id_diff(v1.parent_id, v2.parent_id),
+        },
+    }
 }
 
 /// Compute a deterministic diff between two requirement versions (v1 = old, v2 = new).
@@ -181,6 +243,28 @@ fn line_diff(old_str: &str, new_str: &str) -> TextDiffResult {
         added,
         removed,
         unchanged,
+    }
+}
+
+fn optional_id_diff(old_id: Option<i32>, new_id: Option<i32>) -> SingleValueDiff {
+    if old_id == new_id {
+        SingleValueDiff {
+            old_id,
+            new_id,
+            unchanged: old_id,
+            unchanged_label: None,
+            old_label: None,
+            new_label: None,
+        }
+    } else {
+        SingleValueDiff {
+            old_id,
+            new_id,
+            unchanged: None,
+            unchanged_label: None,
+            old_label: None,
+            new_label: None,
+        }
     }
 }
 
@@ -388,5 +472,74 @@ mod tests {
         assert_eq!(fields[2].old_value.as_deref(), Some("Power"));
         assert_eq!(fields[2].new_value.as_deref(), Some("Avionics"));
         assert!(!fields[2].unchanged);
+    }
+
+    fn verification_state(
+        name: &str,
+        description: &str,
+        source: &str,
+        reference: &str,
+        status_id: i32,
+        method_id: Option<i32>,
+        parent_id: Option<i32>,
+    ) -> VerificationSnapshotState {
+        VerificationSnapshotState {
+            name: name.into(),
+            description: description.into(),
+            source: source.into(),
+            reference_code: reference.into(),
+            status_id,
+            parent_id,
+            verification_method_id: method_id,
+        }
+    }
+
+    #[test]
+    fn verification_text_and_metadata_diff() {
+        let v1 = verification_state(
+            "Power test",
+            "Measure 500W",
+            "TV-001",
+            "VER-001",
+            1,
+            Some(1),
+            None,
+        );
+        let v2 = verification_state(
+            "Power test",
+            "Measure 650W\nAt SAR output",
+            "TV-001 rev B",
+            "VER-001",
+            2,
+            Some(3),
+            Some(9),
+        );
+        let diff = compute_verification_diff(&v1, &v2);
+        assert_eq!(diff.text.name.unchanged, ["Power test"]);
+        assert_eq!(diff.text.description.removed, ["Measure 500W"]);
+        assert_eq!(
+            diff.text.description.added,
+            ["Measure 650W", "At SAR output"]
+        );
+        assert_eq!(diff.text.source.removed, ["TV-001"]);
+        assert_eq!(diff.text.source.added, ["TV-001 rev B"]);
+        assert_eq!(diff.text.reference_code.unchanged, ["VER-001"]);
+        assert_eq!(diff.metadata.status.old_id, Some(1));
+        assert_eq!(diff.metadata.status.new_id, Some(2));
+        assert_eq!(diff.metadata.verification_method.old_id, Some(1));
+        assert_eq!(diff.metadata.verification_method.new_id, Some(3));
+        assert_eq!(diff.metadata.parent.old_id, None);
+        assert_eq!(diff.metadata.parent.new_id, Some(9));
+    }
+
+    #[test]
+    fn optional_ids_unchanged_when_both_absent() {
+        let v1 = verification_state("N", "D", "S", "R", 1, None, None);
+        let v2 = verification_state("N", "D", "S", "R", 1, None, None);
+        let diff = compute_verification_diff(&v1, &v2);
+        assert_eq!(diff.metadata.verification_method.unchanged, None);
+        assert_eq!(diff.metadata.verification_method.old_id, None);
+        assert_eq!(diff.metadata.verification_method.new_id, None);
+        assert_eq!(diff.metadata.parent.unchanged, None);
     }
 }

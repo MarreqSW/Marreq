@@ -328,6 +328,28 @@ export interface RequirementDiff {
   };
 }
 
+export interface VerificationSnapshot {
+  id: number;
+  created_at: string;
+  name: string;
+  reference_code: string;
+  status_id: number;
+}
+
+export interface VerificationVersionDiff {
+  text: {
+    name: TextDiffResult;
+    description: TextDiffResult;
+    source: TextDiffResult;
+    reference_code: TextDiffResult;
+  };
+  metadata: {
+    status: SingleValueDiff;
+    verification_method: SingleValueDiff;
+    parent: SingleValueDiff;
+  };
+}
+
 export interface Category {
   id: number;
   title: string;

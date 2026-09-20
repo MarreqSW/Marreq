@@ -4,12 +4,14 @@ import { Link, useOutletContext } from 'react-router-dom';
 import {
   clearTraceabilitySuspect,
   listMatrix,
+  listRequirementVersionsByProject,
   listRequirementStatuses,
   listRequirements,
   listVerificationMethodsByProject,
   listVerificationStatuses,
   listVerifications,
 } from '@/api/client';
+import RequirementVersionDiffDialog from '@/components/RequirementVersionDiffDialog';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
@@ -17,6 +19,7 @@ import type {
   MatrixLink,
   Requirement,
   RequirementStatus,
+  RequirementVersion,
   Verification,
   VerificationMethod,
   VerificationStatus,
@@ -93,6 +96,13 @@ export default function MatrixPage() {
   const [reqStatusFilter, setReqStatusFilter] = useState<Set<number>>(new Set());
   const [verStatusFilter, setVerStatusFilter] = useState<Set<number>>(new Set());
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [diffBusyKey, setDiffBusyKey] = useState<string | null>(null);
+  const [diffRequirementId, setDiffRequirementId] = useState<number | null>(null);
+  const [diffVersions, setDiffVersions] = useState<RequirementVersion[]>([]);
+  const [diffPair, setDiffPair] = useState<{
+    oldVersionId?: number;
+    newVersionId?: number;
+  } | null>(null);
   const [sortColumn, setSortColumn] = useState<MatrixSortColumn>({ kind: 'requirement' });
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [reqColWidthPx, setReqColWidthPx] = useState(REQ_COL_DEFAULT_PX);
@@ -191,6 +201,41 @@ export default function MatrixPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  const openSuspectDiff = useCallback(
+    async (link: MatrixLink) => {
+      const key = `${link.req_id}-${link.verification_id}`;
+      setDiffBusyKey(key);
+      try {
+        const versions = await listRequirementVersionsByProject(pid, link.req_id);
+        const ordered = [...versions].sort(
+          (a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime() || a.id - b.id,
+        );
+        const triggerIndex =
+          link.triggering_version_id == null
+            ? ordered.length - 1
+            : ordered.findIndex((version) => version.id === link.triggering_version_id);
+        const newerIndex = triggerIndex > 0 ? triggerIndex : ordered.length - 1;
+        const olderIndex = newerIndex - 1;
+        setDiffVersions(versions);
+        setDiffRequirementId(link.req_id);
+        setDiffPair(
+          olderIndex >= 0
+            ? {
+                oldVersionId: ordered[olderIndex].id,
+                newVersionId: ordered[newerIndex].id,
+              }
+            : null,
+        );
+      } catch (reason) {
+        setErr(reason instanceof Error ? reason.message : 'Failed to load requirement versions');
+      } finally {
+        setDiffBusyKey(null);
+      }
+    },
+    [pid],
+  );
 
   const reqById = useMemo(() => new Map(reqs.map((r) => [r.id, r])), [reqs]);
   const verById = useMemo(() => new Map(vers.map((v) => [v.id, v])), [vers]);
@@ -871,14 +916,25 @@ export default function MatrixPage() {
                                 </span>
                               </span>
                               {link.suspect ? (
-                                <button
-                                  type="button"
-                                  disabled={busyKey === bkey || !(csrfToken ?? '').length}
-                                  onClick={() => void onClearSuspect(link)}
-                                  className="text-[9px] font-bold uppercase text-stitch-accent hover:underline disabled:opacity-40 leading-none"
-                                >
-                                  {busyKey === bkey ? '…' : 'clear'}
-                                </button>
+                                <span className="flex items-center gap-1">
+                                  <button
+                                    type="button"
+                                    disabled={diffBusyKey === bkey}
+                                    onClick={() => void openSuspectDiff(link)}
+                                    className="text-[9px] font-bold uppercase text-stitch-accent hover:underline disabled:opacity-40 leading-none"
+                                  >
+                                    {diffBusyKey === bkey ? '…' : 'review'}
+                                  </button>
+                                  <span className="text-stitch-border">·</span>
+                                  <button
+                                    type="button"
+                                    disabled={busyKey === bkey || !(csrfToken ?? '').length}
+                                    onClick={() => void onClearSuspect(link)}
+                                    className="text-[9px] font-bold uppercase text-stitch-accent hover:underline disabled:opacity-40 leading-none"
+                                  >
+                                    {busyKey === bkey ? '…' : 'clear'}
+                                  </button>
+                                </span>
                               ) : null}
                             </div>
                           ) : (
@@ -922,6 +978,20 @@ export default function MatrixPage() {
           </div>
         </div>
       )}
+      {diffRequirementId != null ? (
+        <RequirementVersionDiffDialog
+          open
+          onClose={() => {
+            setDiffRequirementId(null);
+            setDiffVersions([]);
+            setDiffPair(null);
+          }}
+          projectId={pid}
+          requirementId={diffRequirementId}
+          versions={diffVersions}
+          initialPair={diffPair}
+        />
+      ) : null}
     </div>
   );
 }

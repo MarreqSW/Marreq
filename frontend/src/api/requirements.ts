@@ -4,6 +4,7 @@ import type {
   RequirementCommentItem,
   RequirementCreateBody,
   RequirementDetailPayload,
+  RequirementDiff,
   RequirementPatchBody,
   RequirementVersion,
   RequirementVersionLink,
@@ -108,6 +109,27 @@ export async function listRequirementVersionsByProject(
 ): Promise<RequirementVersion[]> {
   return fetchJson<RequirementVersion[]>(
     `/api/projects/${projectId}/requirements/${requirementId}/versions`,
+  );
+}
+
+export async function compareRequirementVersionsByProject(
+  projectId: number,
+  requirementId: number,
+  oldVersionId: number,
+  newVersionId: number,
+): Promise<RequirementDiff> {
+  return fetchJson<RequirementDiff>(
+    `/api/projects/${projectId}/requirements/${requirementId}/versions/${oldVersionId}/diff/${newVersionId}`,
+  );
+}
+
+export async function compareBaselineRequirementWithCurrent(
+  projectId: number,
+  baselineId: number,
+  requirementId: number,
+): Promise<RequirementDiff> {
+  return fetchJson<RequirementDiff>(
+    `/api/projects/${projectId}/baselines/${baselineId}/requirements/${requirementId}/diff/current`,
   );
 }
 

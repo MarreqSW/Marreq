@@ -4,10 +4,12 @@
 //! Service for computing diffs between two requirement versions (read-only, deterministic).
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::diff::{compute_requirement_diff, RequirementDiff};
+use crate::diff::{compute_requirement_diff, custom_field_diff, RequirementDiff};
 use crate::models::Requirement;
 use crate::repository::errors::RepoError;
-use crate::repository::{BaselineRepository, LookupRepository, RequirementsRepository};
+use crate::repository::{
+    BaselineRepository, CustomFieldRepository, LookupRepository, RequirementsRepository,
+};
 
 /// Service for requirement version diffs. Read-only; does not modify any data.
 pub struct RequirementDiffService<'a> {
@@ -39,7 +41,10 @@ impl<'a> RequirementDiffService<'a> {
         }
         let verification_v1 = repo.get_verification_method_ids_for_version(v1_id)?;
         let verification_v2 = repo.get_verification_method_ids_for_version(v2_id)?;
+        let custom_fields_v1 = repo.get_custom_field_values_for_version(v1_id)?;
+        let custom_fields_v2 = repo.get_custom_field_values_for_version(v2_id)?;
         let mut diff = compute_requirement_diff(&v1, &v2, &verification_v1, &verification_v2);
+        diff.metadata.custom_fields = custom_field_diff(&custom_fields_v1, &custom_fields_v2);
         drop(repo);
         self.enrich_diff_with_labels(&mut diff);
         Ok(diff)
@@ -67,7 +72,10 @@ impl<'a> RequirementDiffService<'a> {
         let v2 = repo.get_requirement_version_by_id(current_version_id)?;
         let verification_v1 = repo.get_verification_method_ids_for_version(baseline_version_id)?;
         let verification_v2 = repo.get_verification_method_ids_for_version(current_version_id)?;
+        let custom_fields_v1 = repo.get_custom_field_values_for_version(baseline_version_id)?;
+        let custom_fields_v2 = repo.get_custom_field_values_for_version(current_version_id)?;
         let mut diff = compute_requirement_diff(&v1, &v2, &verification_v1, &verification_v2);
+        diff.metadata.custom_fields = custom_field_diff(&custom_fields_v1, &custom_fields_v2);
         drop(repo);
         self.enrich_diff_with_labels(&mut diff);
         Ok(diff)
@@ -193,6 +201,20 @@ mod tests {
     #[test]
     fn diff_versions_returns_ok_when_both_versions_belong_to_requirement() {
         let mut mock = DieselRepoMock::default();
+        mock.custom_field_definitions.insert(
+            7,
+            crate::models::CustomFieldDefinition {
+                id: 7,
+                project_id: 1,
+                label: "Margin".into(),
+                field_type: "number".into(),
+                enum_values: None,
+                sort_order: 0,
+                created_at: epoch(),
+            },
+        );
+        mock.custom_field_values.push((10, 7, Some("10".into())));
+        mock.custom_field_values.push((11, 7, Some("20".into())));
         mock.requirements.insert(
             1,
             Requirement {
@@ -229,7 +251,7 @@ mod tests {
             reviewer_id: 1,
             category_id: 1,
             applicability_id: 1,
-            justification: None,
+            justification: Some("Old rationale".into()),
             deadline_date: None,
             created_at: epoch(),
             approval_state: "draft".into(),
@@ -248,7 +270,7 @@ mod tests {
             reviewer_id: 1,
             category_id: 1,
             applicability_id: 1,
-            justification: None,
+            justification: Some("New rationale".into()),
             deadline_date: None,
             created_at: epoch(),
             approval_state: "draft".into(),
@@ -264,6 +286,18 @@ mod tests {
         let diff = service.diff_versions(1, 10, 11).unwrap();
         assert_eq!(diff.text.title.removed, vec!["Old"]);
         assert_eq!(diff.text.title.added, vec!["New"]);
+        assert_eq!(diff.text.justification.removed, vec!["Old rationale"]);
+        assert_eq!(diff.text.justification.added, vec!["New rationale"]);
+        assert_eq!(diff.metadata.custom_fields.len(), 1);
+        assert_eq!(diff.metadata.custom_fields[0].label, "Margin");
+        assert_eq!(
+            diff.metadata.custom_fields[0].old_value.as_deref(),
+            Some("10")
+        );
+        assert_eq!(
+            diff.metadata.custom_fields[0].new_value.as_deref(),
+            Some("20")
+        );
     }
 
     #[test]

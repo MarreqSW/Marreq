@@ -204,8 +204,11 @@ The editor supports rich text (bold, italic, list, code, link) and a preview tog
 ### 4.5 Version History & Diff
 
 - On the requirement detail page, the **Version history** section lists all versions (newest first); each shows approval state.
-- Click a version to view that snapshot: `/<project-slug>/requirements/show/<requirement_id>/version/<version_id>`.
-- **Compare two versions**: Use the diff action (e.g. “Compare” or “Diff”) to open a **diff modal** that shows added/removed/unchanged text and metadata (with labels for status, category, applicability, verification where available).
+- Select **Compare versions** to compare any two saved versions. The latest version and its predecessor are selected by default.
+- Use **Compare with previous** on a version-history row to open that adjacent pair directly.
+- When an older approved snapshot exists, use **Compare with last approved** beside the approval state before reviewing the current draft.
+- The comparison dialog shows removed, added, and unchanged title, statement, and justification text. It also compares status, category, applicability, verification methods, and custom fields.
+- At least two saved versions are required. Version comparison is read-only and is available to anyone who can view the project requirements.
 
 ### 4.6 Comments
 
@@ -257,6 +260,14 @@ You can:
 - URL: `/<project-slug>/verifications/show/<verification_id>`.
 
 Shows: **Name**, **Description**, **Source** (e.g. test file or document reference), **Status**, **Reference code**, **Parent verification** (if part of a hierarchy), and **which requirements this verification covers** (traceability links). From here you can **Edit** the verification (name, description, source, status, reference, parent) or **update status** (e.g. after running the test). Status updates feed into the requirement **Verification** panel and into [Reports](#9-reports--export) (coverage, pass rate).
+
+### 5.2.1 Version history and diff
+
+- The verification detail **Changelog** lists audit-log activity (creates and field updates).
+- Select **Compare versions** to compare any two saved snapshots. The latest snapshot and its predecessor are selected by default.
+- Snapshots are reconstructed from the audit log: each create or update becomes a version. If the first recorded change is an update, a “before recorded history” snapshot is included.
+- The comparison dialog shows removed, added, and unchanged name, description, source, and reference text. It also compares status, verification type, and parent.
+- At least two snapshots are required (create the verification, then edit and save). Comparison is read-only and is available to anyone who can view the project.
 
 ### 5.3 Creating a Verification
 
@@ -310,6 +321,7 @@ The traceability matrix is central to **test management** and coverage: it shows
 - **Sort** and **paginate** as available.
 - **Sticky headers** and **virtual scrolling** may be used for large matrices.
 - **Clear suspect**: For links marked “suspect” (e.g. after a requirement or test change), you can clear the suspect flag from the matrix (action/button or **Clear suspect** form); the system records user and timestamp.
+- **Review suspect change**: Select **Review** on a suspect link to compare the requirement version that triggered the flag with its preceding version before clearing it.
 
 ### 6.3 Exporting the Matrix
 
@@ -351,6 +363,8 @@ You see:
 - **Requirements in this baseline**: Table with requirement ID, reference, title; links to requirement (and version) pages.
 - **Traceability**: List of requirement–verification pairs (with references like REQ-PWR-001, TEST-PWR-001). A **Verifications** snapshot is also stored so you can see which verification status (e.g. Pass/Fail) each linked verification had at baseline time.
 - **Diff vs current**: For each requirement that has changed since the baseline, a **Diff vs current** action opens a **diff modal** comparing the baseline snapshot to the current version. If the requirement is unchanged, this action is hidden.
+- **Diff between baselines**: Select another baseline and use **Diff baselines** on requirements whose frozen versions differ.
+- **Verification diff vs current**: Verification rows compare the frozen name, description, source, reference, status, type, and parent with the current verification.
 - **Export ReqIF**: Button to export **this baseline** as ReqIF 1.2 XML.
 
 ### 7.4 Exporting a Baseline as ReqIF

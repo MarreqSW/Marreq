@@ -6,6 +6,8 @@ import type {
   VerificationMatrixPayload,
   VerificationMatrixPutBody,
   VerificationMethod,
+  VerificationSnapshot,
+  VerificationVersionDiff,
 } from './types';
 import { fetchJson, JSON_HEADERS } from './transport';
 
@@ -77,6 +79,36 @@ export async function listVerificationActivityByProject(
   verificationId: number,
 ): Promise<EntityActivityItem[]> {
   return fetchJson(`/api/projects/${projectId}/verifications/${verificationId}/activity`);
+}
+
+export async function listVerificationSnapshotsByProject(
+  projectId: number,
+  verificationId: number,
+): Promise<VerificationSnapshot[]> {
+  return fetchJson(
+    `/api/projects/${projectId}/verifications/${verificationId}/snapshots`,
+  );
+}
+
+export async function compareVerificationSnapshotsByProject(
+  projectId: number,
+  verificationId: number,
+  oldSnapshotId: number,
+  newSnapshotId: number,
+): Promise<VerificationVersionDiff> {
+  return fetchJson<VerificationVersionDiff>(
+    `/api/projects/${projectId}/verifications/${verificationId}/snapshots/${oldSnapshotId}/diff/${newSnapshotId}`,
+  );
+}
+
+export async function compareBaselineVerificationWithCurrent(
+  projectId: number,
+  baselineId: number,
+  verificationId: number,
+): Promise<VerificationVersionDiff> {
+  return fetchJson<VerificationVersionDiff>(
+    `/api/projects/${projectId}/baselines/${baselineId}/verifications/${verificationId}/diff/current`,
+  );
 }
 
 export async function listMatrix(projectId: number): Promise<MatrixLink[]> {

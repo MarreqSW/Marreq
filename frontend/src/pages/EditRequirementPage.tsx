@@ -38,6 +38,7 @@ import type {
   Verification,
   VerificationStatus,
 } from '@/api/types';
+import RequirementVersionDiffDialog from '@/components/RequirementVersionDiffDialog';
 import { StatusBadge, statusTagColorSwatchStyle } from '@/components/StatusBadge';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { formatUserLabel } from '@/utils/userLabel';
@@ -91,6 +92,11 @@ export default function EditRequirementPage() {
   const [commentPosting, setCommentPosting] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [linkBusy, setLinkBusy] = useState(false);
+  const [diffOpen, setDiffOpen] = useState(false);
+  const [diffInitialPair, setDiffInitialPair] = useState<{
+    oldVersionId?: number;
+    newVersionId?: number;
+  } | null>(null);
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
   const [newParentId, setNewParentId] = useState<number | ''>('');
   const [newLinkType, setNewLinkType] = useState('');
@@ -249,6 +255,15 @@ export default function EditRequirementPage() {
     [versions],
   );
   const latestVersionCreatedAt = versionsNewestFirst[0]?.created_at;
+  const lastApprovedVersion = useMemo(
+    () =>
+      versionsNewestFirst.find(
+        (version) =>
+          version.approval_state.toLowerCase() === 'approved' &&
+          version.id !== detail?.current_version_id,
+      ) ?? null,
+    [detail?.current_version_id, versionsNewestFirst],
+  );
 
   const parentCandidates = useMemo(
     () =>
@@ -520,6 +535,21 @@ export default function EditRequirementPage() {
                   <span className="text-xs font-medium text-stitch-accent-dim bg-stitch-higher px-2 py-1 rounded border border-stitch-border uppercase tracking-wide">
                     {approvalLabel(detail.approval_state)}
                   </span>
+                  {lastApprovedVersion && detail.current_version_id != null ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDiffInitialPair({
+                          oldVersionId: lastApprovedVersion.id,
+                          newVersionId: detail.current_version_id!,
+                        });
+                        setDiffOpen(true);
+                      }}
+                      className="text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline"
+                    >
+                      Compare with last approved
+                    </button>
+                  ) : null}
                 </div>
                 <input
                   className="text-3xl font-bold font-headline bg-transparent border-none focus:ring-0 w-full p-0 text-stitch-fg placeholder:text-stitch-muted"
@@ -903,12 +933,17 @@ export default function EditRequirementPage() {
                         {versions.length} snapshot(s). Latest:{' '}
                         {latestVersionCreatedAt ? formatTs(latestVersionCreatedAt) : '—'}.
                       </p>
-                      <a
-                        href={`${basePath}/requirements/show/${rid}`}
-                        className="text-[10px] font-bold text-stitch-accent hover:underline mt-2 inline-block uppercase tracking-wide"
+                      <button
+                        type="button"
+                        disabled={versions.length < 2}
+                        onClick={() => {
+                          setDiffInitialPair(null);
+                          setDiffOpen(true);
+                        }}
+                        className="text-[10px] font-bold text-stitch-accent hover:underline mt-2 inline-block uppercase tracking-wide disabled:cursor-not-allowed disabled:opacity-40"
                       >
-                        Full diffs in classic UI →
-                      </a>
+                        Compare versions →
+                      </button>
                     </div>
                   </div>
                 ) : null}
@@ -1023,6 +1058,14 @@ export default function EditRequirementPage() {
           </div>
         </footer>
       </form>
+      <RequirementVersionDiffDialog
+        open={diffOpen}
+        onClose={() => setDiffOpen(false)}
+        projectId={pid}
+        requirementId={rid}
+        versions={versions}
+        initialPair={diffInitialPair}
+      />
     </div>
   );
 }

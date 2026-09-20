@@ -114,6 +114,7 @@ mod tests {
                     requirements::patch_requirement,
                     baselines::create,
                     diff_versions,
+                    diff_versions_by_project,
                     diff_baseline_vs_current,
                 ],
             );
@@ -136,7 +137,7 @@ mod tests {
             "reference_code": "REF-1",
             "reviewer_id": 2,
             "applicability_id": 3,
-            "justification": null,
+            "justification": "Original rationale",
             "project_id": 1
         })
     }
@@ -188,7 +189,28 @@ mod tests {
         let diff: RequirementDiff = diff_resp.into_json().await.unwrap();
         assert!(!diff.text.title.added.is_empty() || !diff.text.title.removed.is_empty());
         assert!(diff.text.description.added.is_empty() && diff.text.description.removed.is_empty());
+        assert_eq!(diff.text.justification.unchanged, ["Original rationale"]);
         assert!(diff.metadata.status.unchanged.is_some());
+
+        let scoped_resp = client
+            .get(format!(
+                "/api/projects/1/requirements/{}/versions/{}/diff/{}",
+                req_id, v1_id, v2_id
+            ))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        assert_eq!(scoped_resp.status(), Status::Ok);
+
+        let wrong_project_resp = client
+            .get(format!(
+                "/api/projects/2/requirements/{}/versions/{}/diff/{}",
+                req_id, v1_id, v2_id
+            ))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        assert_eq!(wrong_project_resp.status(), Status::NotFound);
     }
 
     #[rocket::async_test]

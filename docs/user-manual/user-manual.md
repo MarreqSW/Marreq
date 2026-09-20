@@ -260,7 +260,7 @@ You can:
 
 - URL: `/<project-slug>/verifications/show/<verification_id>`.
 
-Shows: **Name**, **Description**, **Source** (e.g. test file or document reference), **Status**, **Reference code**, **Parent verification** (if part of a hierarchy), and **which requirements this verification covers** (traceability links). From here you can **Edit** the verification (name, description, source, status, reference, parent) or **update status** (e.g. after running the test). Status updates feed into the requirement **Verification** panel and into [Reports](#9-reports--export) (coverage, pass rate).
+Shows: **Name**, **Description**, **Source** (e.g. test file or document reference), **Status**, **Reference code**, **Verification type**, **Parent verification** (if part of a hierarchy), and **which requirements this verification covers** (traceability links). From here you can **Edit** the verification (name, description, source, status, reference, method, parent) or **update status** (e.g. after running the test). Status updates feed into the requirement **Verification** panel and into [Reports](#9-reports--export) (coverage, pass rate).
 
 ### 5.2.1 Version history and diff
 
@@ -283,8 +283,8 @@ After creation, link the verification to requirements in the [Traceability Matri
 
 1. Open the verification detail page.
 2. Click **Edit**.
-3. URL: `/<project-slug>/verifications/edit/<verification_id>`.
-4. Update name, description, source, status, reference code, or parent verification; save.
+3. URL: `/<project-slug>/verifications/<verification_id>/edit`.
+4. Update name, description, source, status, reference code, parent verification, or **verification method**; save. Changing the method keeps the same verification identity and matrix links.
 
 Linking or unlinking verifications to/from requirements is done in the **Traceability Matrix** (add/remove links there).
 

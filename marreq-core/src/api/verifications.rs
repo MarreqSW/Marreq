@@ -72,6 +72,9 @@ pub async fn create(
         payload.status_id,
     )?;
     let service = VerificationService::new(state.inner());
+    if let Some(method_id) = payload.verification_method_id {
+        service.require_method_in_project(method_id, payload.project_id)?;
+    }
     let id = service.create(user.user(), payload)?;
 
     Ok(json!({ "status": "ok", "id": id }))
@@ -137,9 +140,11 @@ fn apply_verification_field_update(
                 if update.value.is_empty() || update.value == "0" {
                     None
                 } else {
-                    Some(update.value.parse().map_err(|_| {
+                    let method_id = update.value.parse().map_err(|_| {
                         RepoError::BadInput("invalid verification_method_id".into())
-                    })?)
+                    })?;
+                    service.require_method_in_project(method_id, verification.project_id)?;
+                    Some(method_id)
                 };
         }
         "author_id" => {
@@ -231,6 +236,7 @@ mod tests {
         let state = client.rocket().state::<TestState>().unwrap();
         test_session_cookie_for(state, user_id)
     }
+    use crate::models::VerificationMethod;
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use rocket::http::ContentType;
     use rocket::local::asynchronous::Client;
@@ -379,5 +385,156 @@ mod tests {
             .dispatch()
             .await;
         assert_eq!(not_found.status(), Status::NotFound);
+    }
+
+    fn catalog_method(id: i32, project_id: i32, title: &str) -> VerificationMethod {
+        VerificationMethod {
+            id,
+            title: title.into(),
+            description: String::new(),
+            tag: title.chars().next().unwrap_or('M').to_string(),
+            project_id,
+        }
+    }
+
+    fn repo_with_verification_methods() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+        repo.verification_methods
+            .insert(10, catalog_method(10, 1, "Test"));
+        repo.verification_methods
+            .insert(20, catalog_method(20, 99, "Analysis"));
+        repo
+    }
+
+    #[rocket::async_test]
+    async fn update_field_sets_project_verification_method() {
+        let client = client_with_repo(repo_with_verification_methods()).await;
+        let create_response = client
+            .post("/api/verifications")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(sample_verification("Method case").to_string())
+            .dispatch()
+            .await;
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
+
+        let response = client
+            .post(format!("/api/verifications/{id}/field"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(
+                json!({
+                    "field": "verification_method_id",
+                    "value": "10"
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Ok);
+
+        let get_response = client
+            .get(format!("/api/verifications/{id}"))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        let verification: Verification = get_response.into_json().await.unwrap();
+        assert_eq!(verification.verification_method_id, Some(10));
+    }
+
+    #[rocket::async_test]
+    async fn update_field_rejects_foreign_verification_method() {
+        let client = client_with_repo(repo_with_verification_methods()).await;
+        let create_response = client
+            .post("/api/verifications")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(sample_verification("Method case").to_string())
+            .dispatch()
+            .await;
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
+
+        let response = client
+            .post(format!("/api/verifications/{id}/field"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(
+                json!({
+                    "field": "verification_method_id",
+                    "value": "20"
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::BadRequest);
+    }
+
+    #[rocket::async_test]
+    async fn update_field_clears_verification_method() {
+        let client = client_with_repo(repo_with_verification_methods()).await;
+        let create_response = client
+            .post("/api/verifications")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(sample_verification("Method case").to_string())
+            .dispatch()
+            .await;
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
+
+        client
+            .post(format!("/api/verifications/{id}/field"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(
+                json!({
+                    "field": "verification_method_id",
+                    "value": "10"
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+
+        let response = client
+            .post(format!("/api/verifications/{id}/field"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(
+                json!({
+                    "field": "verification_method_id",
+                    "value": ""
+                })
+                .to_string(),
+            )
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Ok);
+
+        let get_response = client
+            .get(format!("/api/verifications/{id}"))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        let verification: Verification = get_response.into_json().await.unwrap();
+        assert_eq!(verification.verification_method_id, None);
+    }
+
+    #[rocket::async_test]
+    async fn create_rejects_foreign_verification_method() {
+        let client = client_with_repo(repo_with_verification_methods()).await;
+        let mut body = sample_verification("Imported method");
+        body["verification_method_id"] = json!(20);
+        let response = client
+            .post("/api/verifications")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(body.to_string())
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::BadRequest);
     }
 }

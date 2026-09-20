@@ -62,6 +62,7 @@ pub struct NewRequirementContainer {
     pub project_id: i32,
     pub stable_code: String,
     pub current_version_id: Option<i32>,
+    pub mcp_idempotency_identity: Option<String>,
 }
 
 impl NewRequirement {
@@ -226,6 +227,8 @@ pub struct NewBaseline {
     /// Optional saved view that produced this baseline (locks the view).
     #[serde(default)]
     pub saved_view_id: Option<i32>,
+    #[serde(skip)]
+    pub mcp_idempotency_identity: Option<String>,
 }
 
 /// Insertable row for baselines table (id is SERIAL).
@@ -240,6 +243,7 @@ pub struct NewBaselineRow {
     pub created_by: i32,
     pub source_saved_view_id: Option<i32>,
     pub source_view_definition: Option<serde_json::Value>,
+    pub mcp_idempotency_identity: Option<String>,
 }
 
 /// Insertable row for baseline_requirements.
@@ -385,7 +389,7 @@ pub struct UpdateUser {
 }
 
 /// Form used to create or update a [`Verification`].
-#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
+#[derive(Clone, Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = verifications)]
 #[diesel(check_for_backend(diesel::pg::Pg))]

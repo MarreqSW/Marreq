@@ -31,6 +31,23 @@ impl<'a> CommentService<'a> {
         requirement_version_id: Option<i32>,
         body: String,
     ) -> Result<RequirementComment, RepoError> {
+        self.create_comment_with_idempotency(
+            actor,
+            requirement_id,
+            requirement_version_id,
+            body,
+            None,
+        )
+    }
+
+    pub fn create_comment_with_idempotency(
+        &self,
+        actor: &User,
+        requirement_id: i32,
+        requirement_version_id: Option<i32>,
+        body: String,
+        mcp_idempotency_identity: Option<String>,
+    ) -> Result<RequirementComment, RepoError> {
         let req = self.repo_read().get_requirement_by_id(requirement_id)?;
         if let Some(version_id) = requirement_version_id {
             let version = self.repo_read().get_requirement_version_by_id(version_id)?;
@@ -49,6 +66,7 @@ impl<'a> CommentService<'a> {
             requirement_version_id,
             author_id: actor.id,
             body: body.to_string(),
+            mcp_idempotency_identity,
         };
         let comment = self.repo_write().insert_requirement_comment(&new)?;
 

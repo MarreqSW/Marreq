@@ -114,7 +114,7 @@ impl AppConfig {
         Ok(AppConfig {
             database_url,
             public_base_url,
-            mcp_public_url,
+            mcp_public_url: mcp_public_url.trim_end_matches('/').to_owned(),
             lock_approved_version_comments,
             secure_session_cookie,
             cors,

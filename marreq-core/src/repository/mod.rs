@@ -176,6 +176,18 @@ pub trait IdempotencyRepository {
             "idempotency storage unavailable".into(),
         ))
     }
+    fn release_idempotency(
+        &mut self,
+        _user_id: i32,
+        _principal_key: &str,
+        _target_key: &str,
+        _operation: &str,
+        _key: &str,
+    ) -> Result<(), RepoError> {
+        Err(RepoError::BadInput(
+            "idempotency storage unavailable".into(),
+        ))
+    }
 }
 
 /// Server-side authenticated sessions backed by `sessions(token_hash, user_id, ...)`.
@@ -256,6 +268,7 @@ pub trait RequirementsRepository {
         verification_method_ids: &[i32],
         custom_fields: Option<&[CustomFieldValueInput]>,
         parent_links: &[NewRequirementVersionLink],
+        mcp_idempotency_identity: Option<&str>,
     ) -> Result<i32, RepoError>;
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError>;
     #[allow(clippy::too_many_arguments)]
@@ -313,6 +326,11 @@ pub trait VerificationsRepository {
     ) -> Result<Vec<Verification>, RepoError>;
 
     fn insert_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError>;
+    fn insert_verification_idempotent(
+        &mut self,
+        new: &NewVerification,
+        mcp_idempotency_identity: Option<&str>,
+    ) -> Result<i32, RepoError>;
     fn edit_verification(&mut self, new: &NewVerification) -> Result<bool, RepoError>;
     fn delete_verification(&mut self, verification_id: i32) -> Result<Verification, RepoError>;
     fn update_verification_requirement_links(

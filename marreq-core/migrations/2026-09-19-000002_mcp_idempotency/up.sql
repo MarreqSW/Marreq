@@ -7,7 +7,11 @@ CREATE TABLE mcp_idempotency (
     request_hash CHAR(64) NOT NULL,
     response_json JSONB,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-    expires_at TIMESTAMP NOT NULL,
+    lease_expires_at TIMESTAMP NOT NULL,
     PRIMARY KEY (user_id, principal_key, target_key, operation, idempotency_key)
 );
-CREATE INDEX mcp_idempotency_expires_idx ON mcp_idempotency(expires_at);
+
+ALTER TABLE requirements ADD COLUMN mcp_idempotency_identity CHAR(64) UNIQUE;
+ALTER TABLE verifications ADD COLUMN mcp_idempotency_identity CHAR(64) UNIQUE;
+ALTER TABLE baselines ADD COLUMN mcp_idempotency_identity CHAR(64) UNIQUE;
+ALTER TABLE requirement_comments ADD COLUMN mcp_idempotency_identity CHAR(64) UNIQUE;

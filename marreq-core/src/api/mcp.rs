@@ -3,7 +3,9 @@
 
 //! MCP (Model Context Protocol) API: audit logging for tool calls.
 
+use rocket::request::{FromRequest, Outcome};
 use rocket::serde::{Deserialize, Serialize};
+use rocket::{async_trait, Request};
 
 use crate::api::prelude::*;
 use crate::auth::guards::session::session_user_has_project_access;
@@ -102,10 +104,44 @@ const MCP_TOOL_NAMES: &[&str] = &[
     "clear_suspect",
 ];
 
+pub struct InternalMcpAudit;
+
+fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
+    if left.len() != right.len() {
+        return false;
+    }
+    left.iter()
+        .zip(right)
+        .fold(0u8, |difference, (a, b)| difference | (a ^ b))
+        == 0
+}
+
+#[async_trait]
+impl<'r> FromRequest<'r> for InternalMcpAudit {
+    type Error = ();
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        let expected = std::env::var("MARREQ_MCP_AUDIT_SECRET").ok();
+        let supplied = request.headers().get_one("X-Marreq-MCP-Audit-Secret");
+        if expected
+            .as_deref()
+            .filter(|value| value.len() >= 32)
+            .zip(supplied)
+            .is_some_and(|(expected, supplied)| {
+                constant_time_eq(expected.as_bytes(), supplied.as_bytes())
+            })
+        {
+            Outcome::Success(Self)
+        } else {
+            Outcome::Error((Status::Forbidden, ()))
+        }
+    }
+}
+
 /// Record an MCP tool call for audit. Requires auth (session or Bearer).
 /// Logged to the same logs table with entity_type "MCP", action_type "MCP_TOOL".
 #[post("/mcp/audit", data = "<body>")]
 pub async fn audit(
+    _internal: InternalMcpAudit,
     user: McpAuditAuth,
     state: &State<AppState>,
     body: Json<McpAuditRequest>,
@@ -190,6 +226,7 @@ mod tests {
     type TestState = AppState<CacheRepository<DieselRepoMock>>;
 
     const ADMIN_ID: i32 = 1;
+    const AUDIT_SECRET: &str = "test-only-mcp-audit-secret-32-bytes-long";
 
     fn state_from_repo(repo: DieselRepoMock) -> TestState {
         AppState {
@@ -198,6 +235,7 @@ mod tests {
     }
 
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
+        std::env::set_var("MARREQ_MCP_AUDIT_SECRET", AUDIT_SECRET);
         let rocket = rocket::build()
             .manage(state_from_repo(repo))
             .mount("/api", routes![audit]);
@@ -214,6 +252,10 @@ mod tests {
         let response = client
             .post("/api/mcp/audit")
             .header(ContentType::JSON)
+            .header(rocket::http::Header::new(
+                "X-Marreq-MCP-Audit-Secret",
+                AUDIT_SECRET,
+            ))
             .private_cookie(auth_cookie(&client))
             .body(
                 r#"{
@@ -238,6 +280,10 @@ mod tests {
         let response = client
             .post("/api/mcp/audit")
             .header(ContentType::JSON)
+            .header(rocket::http::Header::new(
+                "X-Marreq-MCP-Audit-Secret",
+                AUDIT_SECRET,
+            ))
             .body(
                 r#"{
                 "project_id": 1,
@@ -257,8 +303,25 @@ mod tests {
         let response = client
             .post("/api/mcp/audit")
             .header(ContentType::JSON)
+            .header(rocket::http::Header::new(
+                "X-Marreq-MCP-Audit-Secret",
+                AUDIT_SECRET,
+            ))
             .private_cookie(auth_cookie_for(&client, 2))
             .body(r#"{"project_id":999,"tool_name":"list_projects","is_write":false}"#)
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Forbidden);
+    }
+
+    #[rocket::async_test]
+    async fn end_user_auth_alone_cannot_forge_audit() {
+        let client = client_with_repo(DieselRepoMock::default().with_admin_user()).await;
+        let response = client
+            .post("/api/mcp/audit")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(r#"{"tool_name":"create_requirement","is_write":true}"#)
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Forbidden);

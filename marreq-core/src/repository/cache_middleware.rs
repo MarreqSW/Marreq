@@ -216,12 +216,14 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
         verification_method_ids: &[i32],
         custom_fields: Option<&[CustomFieldValueInput]>,
         parent_links: &[NewRequirementVersionLink],
+        mcp_idempotency_identity: Option<&str>,
     ) -> Result<i32, RepoError> {
         let id = self.inner.create_requirement_atomic(
             new,
             verification_method_ids,
             custom_fields,
             parent_links,
+            mcp_idempotency_identity,
         )?;
         self.cache.invalidate_requirement(id);
         self.cache.invalidate_project(new.project_id);
@@ -621,6 +623,17 @@ impl<R: Repository> super::IdempotencyRepository for CacheRepository<R> {
             response,
         )
     }
+    fn release_idempotency(
+        &mut self,
+        user_id: i32,
+        principal_key: &str,
+        target_key: &str,
+        operation: &str,
+        key: &str,
+    ) -> Result<(), RepoError> {
+        self.inner
+            .release_idempotency(user_id, principal_key, target_key, operation, key)
+    }
 }
 
 impl<R: Repository> super::WorkspacesRepository for CacheRepository<R> {
@@ -823,6 +836,19 @@ impl<R: Repository> VerificationsRepository for CacheRepository<R> {
 
     fn insert_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError> {
         let id = self.inner.insert_verification(new)?;
+        self.cache.invalidate_verification(id);
+        self.cache.invalidate_project(new.project_id);
+        Ok(id)
+    }
+
+    fn insert_verification_idempotent(
+        &mut self,
+        new: &NewVerification,
+        mcp_idempotency_identity: Option<&str>,
+    ) -> Result<i32, RepoError> {
+        let id = self
+            .inner
+            .insert_verification_idempotent(new, mcp_idempotency_identity)?;
         self.cache.invalidate_verification(id);
         self.cache.invalidate_project(new.project_id);
         Ok(id)

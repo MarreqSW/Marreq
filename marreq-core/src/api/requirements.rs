@@ -41,7 +41,7 @@ pub struct RequirementWithTraceSummary {
 }
 
 /// One parent link when creating a requirement (target version + link type).
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct ParentLinkInput {
     pub target_version_id: i32,
@@ -50,7 +50,7 @@ pub struct ParentLinkInput {
     pub rationale: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct RequirementCreateRequest {
     pub title: String,
@@ -869,17 +869,6 @@ pub async fn create_by_project(
             "payload.project_id must match route project_id".into(),
         ));
     }
-    if let Some(response) = crate::api::idempotency::claim(
-        state,
-        access.user().id,
-        &access.auth().idempotency_principal(),
-        &format!("project:{project_id}"),
-        "create_requirement",
-        &idempotency_key,
-        &payload,
-    )? {
-        return Ok(response);
-    }
     require_project_reviewer_unless_requirement_create_status_is_draft_like(
         state,
         access.user(),
@@ -892,19 +881,48 @@ pub async fn create_by_project(
         verification_method_ids,
         custom_fields,
         parent_links,
-    } = build_new_requirement_command(payload)?;
+    } = build_new_requirement_command(payload.clone())?;
+    let principal = access.auth().idempotency_principal();
+    let target = format!("project:{project_id}");
+    let operation_identity = crate::api::idempotency::operation_identity(
+        access.user().id,
+        &principal,
+        &target,
+        "create_requirement",
+        &idempotency_key,
+    );
+    if let Some(response) = crate::api::idempotency::claim(
+        state,
+        access.user().id,
+        &principal,
+        &target,
+        "create_requirement",
+        &idempotency_key,
+        &payload,
+    )? {
+        return Ok(response);
+    }
     let service = RequirementService::new(state.inner());
     let custom_fields = if custom_fields.is_empty() {
         None
     } else {
         Some(custom_fields.as_slice())
     };
-    let id = service.create(
-        access.user(),
-        requirement,
-        &verification_method_ids,
-        custom_fields,
-        Some(parent_links),
+    let id = crate::api::idempotency::release_on_repo_error(
+        service.create_with_idempotency(
+            access.user(),
+            requirement,
+            &verification_method_ids,
+            custom_fields,
+            Some(parent_links),
+            operation_identity.as_deref(),
+        ),
+        state,
+        access.user().id,
+        &principal,
+        &target,
+        "create_requirement",
+        &idempotency_key,
     )?;
     let response = json!({ "status": "ok", "id": id });
     crate::api::idempotency::complete(

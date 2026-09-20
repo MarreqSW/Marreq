@@ -13,7 +13,7 @@ use crate::models::{
 use crate::services::baseline_service::BaselineDiff;
 use crate::services::BaselineService;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct CreateBaselineRequest {
     pub name: String,
@@ -80,17 +80,6 @@ pub async fn create(
         Permission::EditRequirements,
     )?;
     let payload = payload.into_inner();
-    if let Some(response) = crate::api::idempotency::claim(
-        state,
-        access.user().id,
-        &access.auth().idempotency_principal(),
-        &format!("project:{project_id}"),
-        "create_baseline",
-        &idempotency_key,
-        &payload,
-    )? {
-        return Ok(Json(response));
-    }
     if let Some(view_id) = payload.saved_view_id {
         use crate::repository::SavedViewRepository;
         let view = state
@@ -107,13 +96,42 @@ pub async fn create(
             return Err(ApiError::NotFound("saved view not found".into()));
         }
     }
+    let principal = access.auth().idempotency_principal();
+    let target = format!("project:{project_id}");
+    let operation_identity = crate::api::idempotency::operation_identity(
+        access.user().id,
+        &principal,
+        &target,
+        "create_baseline",
+        &idempotency_key,
+    );
+    if let Some(response) = crate::api::idempotency::claim(
+        state,
+        access.user().id,
+        &principal,
+        &target,
+        "create_baseline",
+        &idempotency_key,
+        &payload,
+    )? {
+        return Ok(Json(response));
+    }
     let new_baseline = NewBaseline {
         name: payload.name,
         description: payload.description,
         saved_view_id: payload.saved_view_id,
+        mcp_idempotency_identity: operation_identity,
     };
     let service = BaselineService::new(state.inner());
-    let baseline = service.create_baseline(project_id, access.user().id, &new_baseline)?;
+    let baseline = crate::api::idempotency::release_on_repo_error(
+        service.create_baseline(project_id, access.user().id, &new_baseline),
+        state,
+        access.user().id,
+        &principal,
+        &target,
+        "create_baseline",
+        &idempotency_key,
+    )?;
     let response = serde_json::to_value(baseline)
         .map_err(|_| ApiError::Internal("failed to serialize baseline".into()))?;
     crate::api::idempotency::complete(

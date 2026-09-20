@@ -145,6 +145,8 @@ diesel::table! {
         created_by -> Int4,
         source_saved_view_id -> Nullable<Int4>,
         source_view_definition -> Nullable<Jsonb>,
+        #[max_length = 64]
+        mcp_idempotency_identity -> Nullable<Bpchar>,
     }
 }
 
@@ -384,6 +386,8 @@ diesel::table! {
         author_id -> Int4,
         body -> Text,
         created_at -> Timestamp,
+        #[max_length = 64]
+        mcp_idempotency_identity -> Nullable<Bpchar>,
     }
 }
 
@@ -484,6 +488,8 @@ diesel::table! {
         stable_code -> Varchar,
         current_version_id -> Nullable<Int4>,
         first_created_at -> Timestamp,
+        #[max_length = 64]
+        mcp_idempotency_identity -> Nullable<Bpchar>,
     }
 }
 
@@ -618,6 +624,8 @@ diesel::table! {
         reviewer_id -> Int4,
         status_set_by -> Nullable<Int4>,
         status_set_at -> Nullable<Timestamp>,
+        #[max_length = 64]
+        mcp_idempotency_identity -> Nullable<Bpchar>,
     }
 }
 

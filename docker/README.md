@@ -95,10 +95,11 @@ MARREQ_SECURE_SESSION_COOKIE=1
 MARREQ_PUBLIC_BASE_URL=https://marreq.example.com
 MARREQ_MCP_PUBLIC_URL=https://marreq.example.com/mcp
 MARREQ_MCP_ALLOWED_HOSTS=marreq.example.com
+MARREQ_MCP_AUDIT_SECRET=<output of: openssl rand -hex 32>
 CSRF_ALLOWED_ORIGINS=https://marreq.example.com
 ```
 
-`docker-compose.prod.yml` also requires the canonical HTTPS MCP URL and its allowed public hostname. For cloud deployments use `MARREQ_CLOUD_MCP_PUBLIC_URL` and `MARREQ_CLOUD_MCP_ALLOWED_HOSTS`. Compose fails during configuration when a required value is missing.
+`docker-compose.prod.yml` also requires the canonical HTTPS MCP URL, its allowed public hostname, and a random internal audit secret shared only by Rocket and MCP. For cloud deployments set `MARREQ_CLOUD_PUBLIC_BASE_URL`, `MARREQ_CLOUD_MCP_PUBLIC_URL`, `MARREQ_CLOUD_MCP_ALLOWED_HOSTS`, and `MARREQ_CLOUD_CSRF_ALLOWED_ORIGINS`. Rocket and Node receive the exact same MCP resource URL. Compose fails during configuration when a required value is missing.
 
 ### 2. Start the production stack
 

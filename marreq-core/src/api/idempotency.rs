@@ -8,6 +8,19 @@ use crate::repository::{IdempotencyClaim, IdempotencyRepository};
 
 pub struct OptionalIdempotencyKey(pub Option<String>);
 
+pub fn operation_identity(
+    user_id: i32,
+    principal_key: &str,
+    target_key: &str,
+    operation: &str,
+    key: &OptionalIdempotencyKey,
+) -> Option<String> {
+    key.0.as_deref().map(|key| {
+        let value = format!("{user_id}\0{principal_key}\0{target_key}\0{operation}\0{key}");
+        format!("{:x}", Sha256::digest(value.as_bytes()))
+    })
+}
+
 #[async_trait]
 impl<'r> FromRequest<'r> for OptionalIdempotencyKey {
     type Error = ();
@@ -83,6 +96,45 @@ pub fn complete(
         )?;
     }
     Ok(())
+}
+
+pub fn release(
+    state: &State<AppState>,
+    user_id: i32,
+    principal_key: &str,
+    target_key: &str,
+    operation: &str,
+    key: &OptionalIdempotencyKey,
+) {
+    if let Some(key) = key.0.as_deref() {
+        if let Err(error) = state.repo_write().release_idempotency(
+            user_id,
+            principal_key,
+            target_key,
+            operation,
+            key,
+        ) {
+            eprintln!("failed to release idempotency claim for {operation}: {error}");
+        }
+    }
+}
+
+pub fn release_on_repo_error<T>(
+    result: Result<T, crate::repository::errors::RepoError>,
+    state: &State<AppState>,
+    user_id: i32,
+    principal_key: &str,
+    target_key: &str,
+    operation: &str,
+    key: &OptionalIdempotencyKey,
+) -> ApiResult<T> {
+    match result {
+        Ok(value) => Ok(value),
+        Err(error) => {
+            release(state, user_id, principal_key, target_key, operation, key);
+            Err(ApiError::from(error))
+        }
+    }
 }
 
 #[cfg(test)]

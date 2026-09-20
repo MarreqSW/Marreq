@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { createServer, type Server } from "node:http";
+import { createServer, request as httpRequest, type Server } from "node:http";
 import { once } from "node:events";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -8,6 +8,8 @@ import { loadTransportConfig, startRemoteServer } from "./remote.js";
 
 const servers: Server[] = [];
 let rejectApiCredential = false;
+let principalFailure: "none" | "invalid" | "revoked" | "unavailable" = "none";
+let auditFailure = false;
 
 async function listen(server: Server): Promise<number> {
   server.listen(0, "127.0.0.1");
@@ -18,11 +20,35 @@ async function listen(server: Server): Promise<number> {
   return address.port;
 }
 
+async function statusWithHost(port: number, host: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const request = httpRequest(
+      { host: "127.0.0.1", port, path: "/healthz", headers: { Host: host } },
+      (response) => { response.resume(); resolve(response.statusCode ?? 0); }
+    );
+    request.on("error", reject);
+    request.end();
+  });
+}
+
 async function startApi(): Promise<number> {
   return listen(
     createServer((req, res) => {
       const token = req.headers.authorization?.replace(/^Bearer /, "");
       const known = ["valid-token", "refreshed-token", "different-token"].includes(token ?? "");
+      if (req.url === "/api/mcp/audit" && auditFailure) {
+        res.writeHead(503).end('{"error":"audit unavailable"}');
+        return;
+      }
+      if (req.url === "/api/mcp/principal" && principalFailure !== "none") {
+        if (principalFailure === "unavailable") {
+          res.writeHead(503).end('{"error":"unavailable"}');
+        } else {
+          res.setHeader("WWW-Authenticate", `Bearer resource_metadata="http://127.0.0.1/mcp", error="invalid_token", error_description="The access token is invalid or expired"`);
+          res.writeHead(401).end(`{"error":"${principalFailure}"}`);
+        }
+        return;
+      }
       if (!known || (rejectApiCredential && req.url !== "/api/mcp/principal")) {
         res.writeHead(401).end('{"error":"unauthorized"}');
         return;
@@ -94,7 +120,10 @@ async function rawRpc(url: URL, sessionId: string, token: string, body: object) 
 describe("remote Streamable HTTP transport", () => {
   beforeEach(() => {
     process.env.MARREQ_MODE = "read_only";
+    process.env.MARREQ_MCP_AUDIT_SECRET = "test-only-mcp-audit-secret-32-bytes-long";
     rejectApiCredential = false;
+    principalFailure = "none";
+    auditFailure = false;
   });
 
   afterEach(async () => {
@@ -166,6 +195,23 @@ describe("remote Streamable HTTP transport", () => {
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" }),
     });
     expect(unknown.status).toBe(404);
+  });
+
+  it("keeps local health checks while enforcing the configured public Host allowlist", async () => {
+    const apiPort = await startApi();
+    process.env.MARREQ_BASE_URL = `http://127.0.0.1:${apiPort}`;
+    process.env.MARREQ_MCP_PUBLIC_URL = `http://127.0.0.1:${apiPort}/mcp`;
+    const server = await startRemoteServer(
+      { kind: "http", host: "127.0.0.1", port: 0, path: "/mcp", publicUrl: process.env.MARREQ_MCP_PUBLIC_URL, allowedHosts: ["marreq.example.com"] },
+      createMarreqServer
+    );
+    servers.push(server);
+    const address = server.address();
+    if (!address || typeof address === "string") throw new Error("missing address");
+    const base = `http://127.0.0.1:${address.port}`;
+    expect((await fetch(`${base}/healthz`)).status).toBe(200);
+    expect(await statusWithHost(address.port, "marreq.example.com")).toBe(200);
+    expect(await statusWithHost(address.port, "evil.example")).toBe(403);
   });
 
   it("does not read local mode flags for the remote tool surface", async () => {
@@ -251,5 +297,56 @@ describe("remote Streamable HTTP transport", () => {
       `Bearer resource_metadata="http://127.0.0.1:${apiPort}/.well-known/oauth-protected-resource/mcp", error="invalid_token", error_description="The access token is invalid or expired"`
     );
     await remote.transport.terminateSession();
+  });
+
+  for (const failure of ["invalid", "revoked"] as const) {
+    it(`preserves the invalid-token challenge when principal validation reports ${failure}`, async () => {
+      const apiPort = await startApi();
+      const { url } = await startMcp(apiPort);
+      const remote = client(url);
+      await remote.client.connect(remote.transport);
+      principalFailure = failure;
+      const result = await rawRpc(url, remote.transport.sessionId!, "valid-token", {
+        jsonrpc: "2.0", id: 80, method: "tools/list",
+      });
+      expect(result.response.status).toBe(401);
+      expect(result.response.headers.get("www-authenticate")).toContain('error="invalid_token"');
+    });
+  }
+
+  it("reports principal backend outages as 5xx without an OAuth challenge", async () => {
+    const apiPort = await startApi();
+    const { url } = await startMcp(apiPort);
+    const remote = client(url);
+    await remote.client.connect(remote.transport);
+    principalFailure = "unavailable";
+    const result = await rawRpc(url, remote.transport.sessionId!, "valid-token", {
+      jsonrpc: "2.0", id: 81, method: "tools/list",
+    });
+    expect(result.response.status).toBe(503);
+    expect(result.response.headers.has("www-authenticate")).toBe(false);
+  });
+
+  it("returns a committed tool result when best-effort audit persistence fails", async () => {
+    const apiPort = await startApi();
+    const { url } = await startMcp(apiPort);
+    const remote = client(url);
+    await remote.client.connect(remote.transport);
+    auditFailure = true;
+    const errors = console.error;
+    const messages: string[] = [];
+    console.error = (message?: unknown) => messages.push(String(message));
+    try {
+      const result = await remote.client.callTool({
+        name: "get_requirement",
+        arguments: { project_id: 7, requirement_id: "42" },
+      });
+      expect(result.isError).not.toBe(true);
+      expect(JSON.stringify(result.content)).toContain("Remote requirement");
+      expect(messages.some((message) => message.includes("audit persistence failed"))).toBe(true);
+    } finally {
+      console.error = errors;
+      await remote.transport.terminateSession();
+    }
   });
 });

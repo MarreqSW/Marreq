@@ -102,7 +102,7 @@ impl Requirement {
 }
 
 /// Immutable comment on a requirement (general) or a specific requirement version.
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Selectable, Clone, Debug)]
 #[diesel(table_name = crate::schema::requirement_comments)]
 pub struct RequirementComment {
     pub id: i32,
@@ -121,6 +121,8 @@ pub struct NewRequirementComment {
     pub requirement_version_id: Option<i32>,
     pub author_id: i32,
     pub body: String,
+    #[serde(skip)]
+    pub mcp_idempotency_identity: Option<String>,
 }
 
 /// Link between a requirement version and a verification method (many-to-many).
@@ -178,8 +180,9 @@ pub struct MatrixLink {
 }
 
 /// Immutable project baseline (snapshot of requirement versions and traceability at creation time).
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Selectable, Clone, Debug)]
 #[diesel(table_name = crate::schema::baselines)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Baseline {
     pub id: i32,
     pub project_id: i32,
@@ -192,7 +195,7 @@ pub struct Baseline {
 }
 
 /// Snapshot row: which requirement_version was in the baseline for each requirement.
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Selectable, Clone, Debug)]
 #[diesel(table_name = crate::schema::baseline_requirements)]
 pub struct BaselineRequirement {
     pub baseline_id: i32,
@@ -343,7 +346,7 @@ fn default_email_verified() -> bool {
 }
 
 /// A verification (formerly test case) that can verify one or more requirements.
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Selectable, Clone, Debug)]
 #[diesel(table_name = crate::schema::verifications)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Verification {

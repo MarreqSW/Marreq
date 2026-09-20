@@ -497,10 +497,30 @@ impl<'a> RequirementService<'a> {
     pub fn create(
         &self,
         actor: &User,
+        payload: NewRequirement,
+        verification_method_ids: &[i32],
+        custom_fields: Option<&[CustomFieldValueInput]>,
+        parent_links: Option<Vec<(i32, String, Option<String>)>>,
+    ) -> Result<i32, RepoError> {
+        self.create_with_idempotency(
+            actor,
+            payload,
+            verification_method_ids,
+            custom_fields,
+            parent_links,
+            None,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn create_with_idempotency(
+        &self,
+        actor: &User,
         mut payload: NewRequirement,
         verification_method_ids: &[i32],
         custom_fields: Option<&[CustomFieldValueInput]>,
         parent_links: Option<Vec<(i32, String, Option<String>)>>,
+        mcp_idempotency_identity: Option<&str>,
     ) -> Result<i32, RepoError> {
         self.prepare_payload(&mut payload)?;
 
@@ -514,6 +534,7 @@ impl<'a> RequirementService<'a> {
                 verification_method_ids,
                 custom_fields,
                 &parent_link_rows,
+                mcp_idempotency_identity,
             )?
         };
 
@@ -873,6 +894,7 @@ mod tests {
                 project_id: 7,
                 metadata: None,
             }],
+            None,
         );
 
         assert!(result.is_err());

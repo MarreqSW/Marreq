@@ -117,6 +117,9 @@ export class MarreqClient {
     async postAudit(payload) {
         return this.request("/api/mcp/audit", {
             method: "POST",
+            headers: process.env.MARREQ_MCP_AUDIT_SECRET
+                ? { "X-Marreq-MCP-Audit-Secret": process.env.MARREQ_MCP_AUDIT_SECRET }
+                : {},
             body: JSON.stringify(payload),
         });
     }

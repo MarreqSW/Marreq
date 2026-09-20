@@ -17,7 +17,14 @@ impl RequirementCommentsRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         diesel::insert_into(schema::requirement_comments::table)
             .values(new)
-            .returning(schema::requirement_comments::all_columns)
+            .returning((
+                schema::requirement_comments::id,
+                schema::requirement_comments::requirement_id,
+                schema::requirement_comments::requirement_version_id,
+                schema::requirement_comments::author_id,
+                schema::requirement_comments::body,
+                schema::requirement_comments::created_at,
+            ))
             .get_result(conn.as_mut())
             .map_err(RepoError::from)
     }
@@ -31,6 +38,14 @@ impl RequirementCommentsRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         let q = dsl::requirement_comments
             .filter(dsl::requirement_id.eq(requirement_id))
+            .select((
+                dsl::id,
+                dsl::requirement_id,
+                dsl::requirement_version_id,
+                dsl::author_id,
+                dsl::body,
+                dsl::created_at,
+            ))
             .order(dsl::created_at.asc());
         let rows = match version_id {
             Some(vid) => q

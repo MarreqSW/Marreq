@@ -187,6 +187,19 @@ impl IdempotencyRepository for DieselRepoMock {
         stored.1 = Some(response.clone());
         Ok(())
     }
+    fn release_idempotency(
+        &mut self,
+        user_id: i32,
+        principal_key: &str,
+        target_key: &str,
+        operation: &str,
+        key: &str,
+    ) -> Result<(), RepoError> {
+        self.idempotency.remove(&format!(
+            "{user_id}:{principal_key}:{target_key}:{operation}:{key}"
+        ));
+        Ok(())
+    }
 }
 
 impl DelegatedOAuthRepository for DieselRepoMock {
@@ -1599,6 +1612,7 @@ impl RequirementsRepository for DieselRepoMock {
         verification_method_ids: &[i32],
         custom_fields: Option<&[CustomFieldValueInput]>,
         parent_links: &[NewRequirementVersionLink],
+        _mcp_idempotency_identity: Option<&str>,
     ) -> Result<i32, RepoError> {
         let requirements = self.requirements.clone();
         let requirement_versions = self.requirement_versions.clone();
@@ -1968,6 +1982,14 @@ impl VerificationsRepository for DieselRepoMock {
         };
         self.verifications.insert(id, verification);
         Ok(id)
+    }
+
+    fn insert_verification_idempotent(
+        &mut self,
+        new: &NewVerification,
+        _mcp_idempotency_identity: Option<&str>,
+    ) -> Result<i32, RepoError> {
+        self.insert_verification(new)
     }
 
     fn edit_verification(&mut self, _new: &NewVerification) -> Result<bool, RepoError> {

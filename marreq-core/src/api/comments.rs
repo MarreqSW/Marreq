@@ -83,24 +83,6 @@ pub async fn create_by_project(
         project_id,
         Permission::EditRequirements,
     )?;
-    if let Some(response) = crate::api::idempotency::claim(
-        state,
-        access.user().id,
-        &access.auth().idempotency_principal(),
-        &format!("project:{project_id}:requirement:{requirement_id}"),
-        "create_requirement_comment",
-        &idempotency_key,
-        &*payload,
-    )? {
-        return Ok((
-            Status::Created,
-            Json(
-                serde_json::from_value(response).map_err(|_| {
-                    ApiError::Internal("invalid stored idempotency response".into())
-                })?,
-            ),
-        ));
-    }
     let requirement = RequirementService::new(state.inner()).get_by_id(requirement_id)?;
     if requirement.project_id != project_id {
         return Err(ApiError::NotFound("requirement not in project".into()));
@@ -120,11 +102,47 @@ pub async fn create_by_project(
             ));
         }
     }
-    let comment = CommentService::new(state.inner()).create_comment(
-        access.user(),
-        requirement_id,
-        payload.requirement_version_id,
-        payload.body.clone(),
+    let principal = access.auth().idempotency_principal();
+    let target = format!("project:{project_id}:requirement:{requirement_id}");
+    let operation_identity = crate::api::idempotency::operation_identity(
+        access.user().id,
+        &principal,
+        &target,
+        "create_requirement_comment",
+        &idempotency_key,
+    );
+    if let Some(response) = crate::api::idempotency::claim(
+        state,
+        access.user().id,
+        &principal,
+        &target,
+        "create_requirement_comment",
+        &idempotency_key,
+        &*payload,
+    )? {
+        return Ok((
+            Status::Created,
+            Json(
+                serde_json::from_value(response).map_err(|_| {
+                    ApiError::Internal("invalid stored idempotency response".into())
+                })?,
+            ),
+        ));
+    }
+    let comment = crate::api::idempotency::release_on_repo_error(
+        CommentService::new(state.inner()).create_comment_with_idempotency(
+            access.user(),
+            requirement_id,
+            payload.requirement_version_id,
+            payload.body.clone(),
+            operation_identity,
+        ),
+        state,
+        access.user().id,
+        &principal,
+        &target,
+        "create_requirement_comment",
+        &idempotency_key,
     )?;
     let author = UserService::new(state.inner())
         .get_by_id(comment.author_id)

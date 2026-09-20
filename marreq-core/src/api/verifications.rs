@@ -111,17 +111,6 @@ pub async fn create_by_project(
             "verification project mismatch".into(),
         ));
     }
-    if let Some(response) = crate::api::idempotency::claim(
-        state,
-        access.user().id,
-        &access.auth().idempotency_principal(),
-        &format!("project:{project_id}"),
-        "create_verification",
-        &idempotency_key,
-        &payload,
-    )? {
-        return Ok(response);
-    }
     require_project_permission(
         state,
         access.user(),
@@ -134,7 +123,39 @@ pub async fn create_by_project(
         project_id,
         payload.status_id,
     )?;
-    let id = VerificationService::new(state.inner()).create(access.user(), payload)?;
+    let principal = access.auth().idempotency_principal();
+    let target = format!("project:{project_id}");
+    let operation_identity = crate::api::idempotency::operation_identity(
+        access.user().id,
+        &principal,
+        &target,
+        "create_verification",
+        &idempotency_key,
+    );
+    if let Some(response) = crate::api::idempotency::claim(
+        state,
+        access.user().id,
+        &principal,
+        &target,
+        "create_verification",
+        &idempotency_key,
+        &payload,
+    )? {
+        return Ok(response);
+    }
+    let id = crate::api::idempotency::release_on_repo_error(
+        VerificationService::new(state.inner()).create_with_idempotency(
+            access.user(),
+            payload,
+            operation_identity.as_deref(),
+        ),
+        state,
+        access.user().id,
+        &principal,
+        &target,
+        "create_verification",
+        &idempotency_key,
+    )?;
     let response = json!({ "status": "ok", "id": id });
     crate::api::idempotency::complete(
         state,

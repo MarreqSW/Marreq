@@ -36,6 +36,8 @@ async function withAudit(
       params_summary: paramsSummary,
       result_summary: resultSummary,
       is_write: isWrite,
+    }).catch((error) => {
+      console.error(`MCP audit persistence failed for ${toolName}: ${error instanceof Error ? error.message : "unknown error"}`);
     });
     return out;
   } catch (err) {
@@ -47,7 +49,9 @@ async function withAudit(
       params_summary: paramsSummary,
       result_summary: `error: ${resultSummary}`,
       is_write: isWrite,
-    }).catch(() => {});
+    }).catch((auditError) => {
+      console.error(`MCP audit persistence failed for ${toolName}: ${auditError instanceof Error ? auditError.message : "unknown error"}`);
+    });
     throw err;
   }
 }
@@ -139,7 +143,7 @@ export function createMarreqServer(ctx: SessionContext) {
     const annotations = {
       readOnlyHint: !mutating,
       destructiveHint: false,
-      idempotentHint: !mutating || replayProtectedCreate,
+      idempotentHint: !mutating || Boolean(ctx.remote && replayProtectedCreate),
       openWorldHint: false,
       ...((config.annotations as Record<string, unknown> | undefined) ?? {}),
     };

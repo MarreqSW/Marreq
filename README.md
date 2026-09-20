@@ -63,7 +63,7 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 - **Extended read**: `MARREQ_MODE=read_extended` (or `draft_write`) — verifications, baseline list, audit activity, comments, matrix read, catalog, baseline-vs-current diff.
 - **Draft write**: `MARREQ_MODE=draft_write` — create/patch requirement, approvals, baselines, requirement comments.
 - **Trace write**: `MARREQ_TRACE_WRITE=true` — replace verification matrix links, clear suspect flags.
-- **Audit**: Every tool call is logged to Marreq (`POST /api/mcp/audit`).
+- **Audit**: Tool calls emit trusted, best-effort audit events through an internally authenticated endpoint; audit transport failure never changes a committed tool result into a retryable failure.
 
 ### ✅ Requirement approval workflow (UI)
 - **Detail page**: Approval badge (draft / reviewed / approved), metadata (approved by, date), and contextual actions: *Mark as Reviewed* and *Approve Requirement* for users in the **project reviewers** list (or administrators). Confirmation modals before each transition.

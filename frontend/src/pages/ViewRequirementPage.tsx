@@ -10,12 +10,14 @@ import {
   listRequirementStatuses,
   listRequirementVersionsByProject,
   listRequirements,
+  listProjectMembers,
   listUsersOptional,
   listVerificationStatuses,
   listVerifications,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import { StatusBadge } from '@/components/StatusBadge';
+import { formatUserLabel } from '@/utils/userLabel';
 import type {
   Applicability,
   Category,
@@ -27,6 +29,7 @@ import type {
   RequirementStatus,
   RequirementVersion,
   RequirementVersionLink,
+  ProjectMember,
   User,
   Verification,
   VerificationStatus,
@@ -112,6 +115,7 @@ export default function ViewRequirementPage() {
   const [projectReqs, setProjectReqs] = useState<Requirement[]>([]);
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [users, setUsers] = useState<User[] | null>(null);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
   const [activityLog, setActivityLog] = useState<EntityActivityItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -120,7 +124,7 @@ export default function ViewRequirementPage() {
     if (!Number.isFinite(pid) || !Number.isFinite(rid)) return;
     setLoadError(null);
     try {
-      const [d, v, st, vst, cat, app, reqs, ver, u, cmts, p, act] = await Promise.all([
+      const [d, v, st, vst, cat, app, reqs, ver, u, mem, cmts, p, act] = await Promise.all([
         getRequirementByProject(pid, rid),
         listRequirementVersionsByProject(pid, rid),
         listRequirementStatuses(),
@@ -130,6 +134,7 @@ export default function ViewRequirementPage() {
         listRequirements(pid),
         listVerifications(),
         listUsersOptional(),
+        listProjectMembers(pid),
         listRequirementComments(rid),
         getMyPermissions(pid).catch(() => null),
         listRequirementActivityByProject(pid, rid).catch(() => [] as EntityActivityItem[]),
@@ -147,6 +152,7 @@ export default function ViewRequirementPage() {
       setProjectReqs(reqs);
       setVerifications(ver.filter((x) => x.project_id === pid));
       setUsers(u);
+      setMembers(mem);
       setComments(cmts);
       setPerms(p);
       setActivityLog(act);
@@ -160,14 +166,8 @@ export default function ViewRequirementPage() {
   }, [load]);
 
   const userLabel = useCallback(
-    (id: number) => {
-      if (users?.length) {
-        const u = users.find((x) => x.id === id);
-        if (u) return `${u.name} (${u.username})`;
-      }
-      return `User #${id}`;
-    },
-    [users],
+    (id: number) => formatUserLabel(id, { users, members }),
+    [users, members],
   );
 
   const statusById = useMemo(() => {

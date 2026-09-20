@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import { escapeCsv, downloadCsv } from '@/utils/tableUtils';
+import { formatUserLabel } from '@/utils/userLabel';
 import { Pagination } from '@/components/table/Pagination';
 import { CsvDownloadButton, ExcelDownloadButton } from '@/components/table/CsvDownloadButton';
 import {
   getMyPermissions,
+  listProjectMembers,
   listUsersOptional,
   listVerificationMethodsByProject,
   listVerificationStatuses,
@@ -15,6 +17,7 @@ import {
 } from '@/api/client';
 import type {
   EffectivePermissions,
+  ProjectMember,
   User,
   Verification,
   VerificationMethod,
@@ -47,6 +50,7 @@ export default function VerificationsTable({
   const [methods, setMethods] = useState<VerificationMethod[]>([]);
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
   const [users, setUsers] = useState<User[] | null>(null);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [saveErr, setSaveErr] = useState<string | null>(null);
@@ -65,18 +69,20 @@ export default function VerificationsTable({
     setLoading(true);
     setErr(null);
     try {
-      const [ver, st, m, p, u] = await Promise.all([
+      const [ver, st, m, p, u, mem] = await Promise.all([
         listVerifications(),
         listVerificationStatuses(),
         listVerificationMethodsByProject(projectId),
         getMyPermissions(projectId).catch(() => null),
         listUsersOptional(),
+        listProjectMembers(projectId),
       ]);
       setRows(ver.filter((v) => v.project_id === projectId));
       setStatuses(st);
       setMethods(m);
       setPerms(p);
       setUsers(u);
+      setMembers(mem);
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -167,12 +173,8 @@ export default function VerificationsTable({
   const closeCellEdit = () => setEditCell(null);
 
   const userLabel = useCallback(
-    (uid: number) => {
-      const u = users?.find((x) => x.id === uid);
-      if (u) return `${u.name} (${u.username})`;
-      return `User #${uid}`;
-    },
-    [users],
+    (uid: number) => formatUserLabel(uid, { members, users }),
+    [members, users],
   );
 
   const saveField = useCallback(

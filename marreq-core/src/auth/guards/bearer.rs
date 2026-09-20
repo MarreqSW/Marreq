@@ -11,8 +11,14 @@ use rocket::{async_trait, Request};
 use sha2::{Digest, Sha256};
 use std::ops::Deref;
 
+fn mcp_public_resource() -> String {
+    crate::config::AppConfig::try_current()
+        .map(|cfg| cfg.mcp_public_url.clone())
+        .unwrap_or_else(|| "http://localhost/mcp".to_owned())
+}
+
 fn bearer_challenge(request: &Request<'_>, error: Option<(&str, &str)>, scope: Option<&str>) {
-    let resource = &crate::config::AppConfig::current().mcp_public_url;
+    let resource = mcp_public_resource();
     let mut value = format!(
         "Bearer resource_metadata=\"{}/.well-known/oauth-protected-resource/mcp\"",
         resource.trim_end_matches("/mcp").trim_end_matches('/')
@@ -181,10 +187,7 @@ async fn authenticate(
                 | DelegatedPolicy::Scopes(_)
                 | DelegatedPolicy::McpAudit => {}
             }
-            let resource = crate::config::AppConfig::current()
-                .mcp_public_url
-                .trim_end_matches('/')
-                .to_owned();
+            let resource = mcp_public_resource().trim_end_matches('/').to_owned();
             let principal = match state.try_repo_read().and_then(|repo| {
                 crate::auth::delegated::validate_access(
                     &*repo,

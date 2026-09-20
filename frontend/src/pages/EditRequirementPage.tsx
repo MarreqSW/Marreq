@@ -550,6 +550,13 @@ export default function EditRequirementPage() {
                       Compare with last approved
                     </button>
                   ) : null}
+                  <Link
+                    to={`${basePath}/requirements/new?from=${rid}`}
+                    className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline"
+                  >
+                    <span className="material-symbols-outlined text-sm">content_copy</span>
+                    Duplicate
+                  </Link>
                 </div>
                 <input
                   className="text-3xl font-bold font-headline bg-transparent border-none focus:ring-0 w-full p-0 text-stitch-fg placeholder:text-stitch-muted"

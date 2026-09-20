@@ -1015,6 +1015,15 @@ export default function RequirementsTable({
                     >
                       <span className="material-symbols-outlined text-lg">edit</span>
                     </Link>
+                    {canEdit ? (
+                      <Link
+                        to={`${basePath}/requirements/new?from=${req.id}`}
+                        className="p-1.5 text-stitch-muted hover:text-stitch-accent"
+                        title="Duplicate"
+                      >
+                        <span className="material-symbols-outlined text-lg">content_copy</span>
+                      </Link>
+                    ) : null}
                   </div>
                 </div>
               </li>
@@ -1384,6 +1393,15 @@ export default function RequirementsTable({
                         >
                           <span className="material-symbols-outlined text-lg">edit</span>
                         </Link>
+                        {canEdit ? (
+                          <Link
+                            to={`${basePath}/requirements/new?from=${req.id}`}
+                            className="p-1.5 text-stitch-muted hover:text-stitch-accent"
+                            title="Duplicate"
+                          >
+                            <span className="material-symbols-outlined text-lg">content_copy</span>
+                          </Link>
+                        ) : null}
                       </div>
                     </td>
                     )}

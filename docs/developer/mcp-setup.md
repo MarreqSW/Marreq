@@ -37,31 +37,48 @@ and never expose it to a browser or external client.
 
 ## Remote Streamable HTTP
 
+For delegated OAuth, clients must use a **single public origin** that exposes the
+MCP transport and Marreq Core's OAuth routes together. The Docker development
+stack already provides this topology through the frontend nginx proxy:
+
 ```dotenv
 MARREQ_MCP_TRANSPORT=http
-MARREQ_MCP_HOST=127.0.0.1
+MARREQ_MCP_HOST=0.0.0.0
 MARREQ_MCP_PORT=3000
 MARREQ_MCP_PATH=/mcp
-MARREQ_BASE_URL=http://127.0.0.1:8000
-MARREQ_MCP_PUBLIC_URL=http://127.0.0.1:3000/mcp
+MARREQ_BASE_URL=http://marreq-server:8000
+MARREQ_MCP_PUBLIC_URL=http://localhost:8080/mcp
 ```
 
-Connect to `http://127.0.0.1:3000/mcp` and send `Authorization: Bearer
-<Marreq API token or delegated OAuth access token>`. `MARREQ_API_TOKEN` and
-`MARREQ_PROJECT_ID` are not used in HTTP mode because identity and project are
-request/tool scoped. Remote mode registers the complete bounded tool surface;
-OAuth scopes and normal Marreq permissions authorize each REST call rather than
-server-wide `MARREQ_MODE` or `MARREQ_TRACE_WRITE` flags. Start with
-`list_projects`, then pass the selected `project_id` to every project-scoped
-tool. `MARREQ_MCP_ALLOWED_HOSTS` is an optional
-comma-separated Host allowlist and should be set when listening on a non-loopback
-interface.
+Connect OAuth-capable clients to `http://localhost:8080/mcp`. On that same
+`http://localhost:8080` origin, nginx routes:
+
+- `/mcp` to the MCP Node service;
+- `/.well-known/*` to Marreq Core for OAuth discovery;
+- `/oauth/*` to Marreq Core for registration, authorization, and token exchange;
+- `/api/*` to Marreq Core for the REST API.
+
+Send `Authorization: Bearer <Marreq API token or delegated OAuth access token>`.
+`MARREQ_API_TOKEN` and `MARREQ_PROJECT_ID` are not used in HTTP mode because
+identity and project are request/tool scoped. Remote mode registers the complete
+bounded tool surface; OAuth scopes and normal Marreq permissions authorize each
+REST call rather than server-wide `MARREQ_MODE` or `MARREQ_TRACE_WRITE` flags.
+Start with `list_projects`, then pass the selected `project_id` to every
+project-scoped tool. `MARREQ_MCP_ALLOWED_HOSTS` is an optional comma-separated
+Host allowlist and should be set when listening on a non-loopback interface.
 
 `MARREQ_BASE_URL` is the private REST origin used by the Node process.
 `MARREQ_MCP_PUBLIC_URL` is the canonical externally reachable OAuth resource
-and is used in authentication challenges. In production it must be HTTPS and
-must exactly match the same setting on Marreq Core; never expose an internal
+used in authentication challenges. Its origin must also expose
+`/.well-known/*`, `/oauth/*`, and `/api/*`. In production it must be HTTPS
+and must exactly match the same setting on Marreq Core; never expose an internal
 container hostname in `MARREQ_MCP_PUBLIC_URL`.
+
+The raw Node listener (for example `http://127.0.0.1:3000/mcp`) serves the MCP
+transport and `/healthz` only. Connecting to it directly is suitable for
+Bearer/API-token transport testing, but **not** for delegated OAuth unless the
+operator separately reverse-proxies Marreq Core's `/.well-known/*` and
+`/oauth/*` routes onto that same public origin.
 
 Production deployments must terminate HTTPS at a trusted reverse proxy and
 forward `/mcp` without logging `Authorization`, cookies, MCP bodies, or query

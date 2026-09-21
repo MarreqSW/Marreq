@@ -157,8 +157,9 @@ Metrics (e.g. total count, by status) are shown at the top.
 
 ### 4.2 Requirement Detail Page
 
-- URL: `/<project-slug>/requirements/show/<requirement_id>`.
-- For a specific version: `/<project-slug>/requirements/show/<requirement_id>/version/<version_id>`.
+- URL: `/<project-slug>/requirements/<requirement_id>`.
+- For a specific version: `/<project-slug>/requirements/<requirement_id>/versions/<version_id>`.
+- Classic bookmarks `/<project-slug>/requirements/show/<requirement_id>` and `/<project-slug>/requirements/show/<requirement_id>/version/<version_id>` redirect to those SPA URLs.
 
 On the detail page you see:
 
@@ -195,7 +196,7 @@ You can optionally pass a parent or template via query parameters (`parent`, `te
 
 1. Open the requirement detail page.
 2. Click **Edit**.
-3. URL: `/<project-slug>/requirements/edit/<requirement_id>`.
+3. URL: `/<project-slug>/requirements/<requirement_id>/edit`.
 4. Change title, statement, rationale, category, status, applicability, verification, reviewer, parent, and custom fields as needed.
 5. Use **Save** to create a new version. **Cancel** returns to the detail view.
 
@@ -203,7 +204,8 @@ The editor supports rich text (bold, italic, list, code, link) and a preview tog
 
 ### 4.5 Version History & Diff
 
-- On the requirement detail page, the **Version history** section lists all versions (newest first); each shows approval state.
+- On the requirement detail page, the **Changelog** section lists all versions (newest first); each shows approval state. Click a version label (`v1`, `v2`, …) to open that version as a **read-only snapshot** (`/<project-slug>/requirements/<id>/versions/<version_id>`).
+- A historical snapshot shows title, statement, rationale, metadata, custom fields, and approval as stored on that version. Edit, duplicate, and adding comments are hidden. Use **View current** to return to the latest version.
 - Select **Compare versions** to compare any two saved versions. The latest version and its predecessor are selected by default.
 - Use **Compare with previous** on a version-history row to open that adjacent pair directly.
 - When an older approved snapshot exists, use **Compare with last approved** beside the approval state before reviewing the current draft.

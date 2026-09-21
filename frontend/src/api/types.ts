@@ -287,6 +287,14 @@ export interface RequirementVersion {
   approval_state: string;
   approved_by: number | null;
   approved_at: string | null;
+  reviewed_by?: number | null;
+  reviewed_at?: string | null;
+  custom_fields?: Array<{
+    field_id: number;
+    label: string;
+    value: string | null;
+  }>;
+  verification_method_ids?: number[];
 }
 
 export interface TextDiffResult {

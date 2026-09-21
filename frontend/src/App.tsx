@@ -18,6 +18,7 @@ import AccountPage from '@/pages/AccountPage';
 import VerifyEmailPage from '@/pages/VerifyEmailPage';
 import ProjectLayout from '@/pages/ProjectLayout';
 import LegacyNamespaceProjectRedirect from '@/pages/LegacyNamespaceProjectRedirect';
+import ClassicRequirementShowRedirect from '@/pages/ClassicRequirementShowRedirect';
 import AdminPage from '@/pages/AdminPage';
 import CreateRequirementPage from '@/pages/CreateRequirementPage';
 import CreateVerificationPage from '@/pages/CreateVerificationPage';
@@ -118,6 +119,18 @@ export default function App() {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="requirements/new" element={<CreateRequirementPage />} />
           <Route path="requirements/:requirementId/edit" element={<EditRequirementPage />} />
+          <Route
+            path="requirements/:requirementId/versions/:versionId"
+            element={<ViewRequirementPage />}
+          />
+          <Route
+            path="requirements/show/:requirementId/version/:versionId"
+            element={<ClassicRequirementShowRedirect />}
+          />
+          <Route
+            path="requirements/show/:requirementId"
+            element={<ClassicRequirementShowRedirect />}
+          />
           <Route path="requirements/:requirementId" element={<ViewRequirementPage />} />
           <Route path="requirements" element={<RequirementsPage />} />
           <Route path="verifications/new" element={<CreateVerificationPage />} />

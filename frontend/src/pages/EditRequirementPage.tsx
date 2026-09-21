@@ -1012,10 +1012,10 @@ export default function EditRequirementPage() {
                 File attachments are not managed through this API-backed UI yet.
               </p>
               <a
-                href={`${basePath}/requirements/show/${rid}`}
+                href={`${basePath}/requirements/${rid}`}
                 className="text-xs font-bold text-stitch-accent hover:underline"
               >
-                Open classic requirement →
+                Open requirement →
               </a>
             </div>
           </aside>

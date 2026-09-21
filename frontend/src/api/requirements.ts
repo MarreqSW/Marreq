@@ -112,6 +112,16 @@ export async function listRequirementVersionsByProject(
   );
 }
 
+export async function getRequirementVersionByProject(
+  projectId: number,
+  requirementId: number,
+  versionId: number,
+): Promise<RequirementVersion> {
+  return fetchJson<RequirementVersion>(
+    `/api/projects/${projectId}/requirements/${requirementId}/versions/${versionId}`,
+  );
+}
+
 export async function compareRequirementVersionsByProject(
   projectId: number,
   requirementId: number,

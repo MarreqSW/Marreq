@@ -3,19 +3,21 @@ import { Link, useOutletContext, useParams } from 'react-router-dom';
 import {
   getMyPermissions,
   getRequirementByProject,
+  getRequirementVersionByProject,
   listApplicability,
   listCategories,
   listRequirementActivityByProject,
   listRequirementComments,
   listRequirementStatuses,
+  listRequirementVersionLinks,
   listRequirementVersionsByProject,
   listRequirements,
   listProjectMembers,
   listUsersOptional,
+  listVerificationMethodsByProject,
   listVerificationStatuses,
   listVerifications,
 } from '@/api/client';
-import { useDashboard } from '@/context/DashboardContext';
 import RequirementVersionDiffDialog from '@/components/RequirementVersionDiffDialog';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatUserLabel } from '@/utils/userLabel';
@@ -33,6 +35,7 @@ import type {
   ProjectMember,
   User,
   Verification,
+  VerificationMethod,
   VerificationStatus,
 } from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
@@ -41,8 +44,9 @@ function approvalLabel(state: string): string {
   return state.replace(/_/g, ' ').toUpperCase();
 }
 
-function priorityFromCustomFields(req: Requirement): string {
-  const fields = req.custom_fields;
+function priorityFromCustomFields(
+  fields: Requirement['custom_fields'] | undefined,
+): string {
   if (!fields?.length) return '—';
   const p = fields.find((f) => f.label && /priority/i.test(f.label));
   return p?.value?.trim() || '—';
@@ -102,11 +106,15 @@ function formatRelativeTime(iso: string): string {
 
 export default function ViewRequirementPage() {
   const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();
-  const { requirementId: requirementIdParam } = useParams();
+  const { requirementId: requirementIdParam, versionId: versionIdParam } = useParams();
   const rid = Number(requirementIdParam);
-  const { dashboard } = useDashboard();
+  const requestedVersionId = versionIdParam != null ? Number(versionIdParam) : NaN;
+  const viewingVersionParam = Number.isFinite(requestedVersionId);
 
   const [detail, setDetail] = useState<RequirementDetailPayload | null>(null);
+  const [snapshot, setSnapshot] = useState<RequirementVersion | null>(null);
+  const [snapshotParents, setSnapshotParents] = useState<RequirementVersionLink[]>([]);
+  const [methods, setMethods] = useState<VerificationMethod[]>([]);
   const [versions, setVersions] = useState<RequirementVersion[]>([]);
   const [comments, setComments] = useState<RequirementCommentItem[]>([]);
   const [statuses, setStatuses] = useState<RequirementStatus[]>([]);
@@ -130,7 +138,24 @@ export default function ViewRequirementPage() {
     if (!Number.isFinite(pid) || !Number.isFinite(rid)) return;
     setLoadError(null);
     try {
-      const [d, v, st, vst, cat, app, reqs, ver, u, mem, cmts, p, act] = await Promise.all([
+      const [
+        d,
+        v,
+        st,
+        vst,
+        cat,
+        app,
+        reqs,
+        ver,
+        u,
+        mem,
+        p,
+        act,
+        methodList,
+        snap,
+        snapParents,
+        cmts,
+      ] = await Promise.all([
         getRequirementByProject(pid, rid),
         listRequirementVersionsByProject(pid, rid),
         listRequirementStatuses(),
@@ -141,15 +166,24 @@ export default function ViewRequirementPage() {
         listVerifications(),
         listUsersOptional(),
         listProjectMembers(pid),
-        listRequirementComments(rid),
         getMyPermissions(pid).catch(() => null),
         listRequirementActivityByProject(pid, rid).catch(() => [] as EntityActivityItem[]),
+        listVerificationMethodsByProject(pid).catch(() => [] as VerificationMethod[]),
+        viewingVersionParam
+          ? getRequirementVersionByProject(pid, rid, requestedVersionId)
+          : Promise.resolve(null),
+        viewingVersionParam
+          ? listRequirementVersionLinks(pid, { source_version_id: requestedVersionId })
+          : Promise.resolve([] as RequirementVersionLink[]),
+        listRequirementComments(rid, viewingVersionParam ? requestedVersionId : undefined),
       ]);
       if (d.project_id !== pid) {
         setLoadError('This requirement belongs to another project.');
         return;
       }
       setDetail(d);
+      setSnapshot(snap);
+      setSnapshotParents(snapParents);
       setVersions(v);
       setStatuses(st);
       setVerifStatuses(vst);
@@ -162,10 +196,11 @@ export default function ViewRequirementPage() {
       setComments(cmts);
       setPerms(p);
       setActivityLog(act);
+      setMethods(methodList);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load requirement');
     }
-  }, [pid, rid]);
+  }, [pid, rid, requestedVersionId, viewingVersionParam]);
 
   useEffect(() => {
     void load();
@@ -276,7 +311,75 @@ export default function ViewRequirementPage() {
     });
   }, [versionsNewestFirst]);
 
-  const canEdit = Boolean(perms?.edit_requirements);
+  const isHistorical =
+    viewingVersionParam &&
+    snapshot != null &&
+    detail != null &&
+    snapshot.id !== detail.current_version_id;
+
+  const snapshotRevNum = useMemo(() => {
+    if (!snapshot) return null;
+    const i = versionsNewestFirst.findIndex((v) => v.id === snapshot.id);
+    if (i < 0) return null;
+    return versionsNewestFirst.length - i;
+  }, [snapshot, versionsNewestFirst]);
+
+  const methodById = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const x of methods) m.set(x.id, x.title);
+    return m;
+  }, [methods]);
+
+  const view = useMemo(() => {
+    if (!detail) return null;
+    if (isHistorical && snapshot) {
+      return {
+        title: snapshot.title,
+        description: snapshot.description,
+        justification: snapshot.justification,
+        status_id: snapshot.status_id,
+        author_id: snapshot.author_id,
+        reviewer_id: snapshot.reviewer_id,
+        category_id: snapshot.category_id,
+        applicability_id: snapshot.applicability_id,
+        approval_state: snapshot.approval_state,
+        approved_by: snapshot.approved_by,
+        approved_at: snapshot.approved_at,
+        custom_fields: snapshot.custom_fields,
+        verification_method_ids: snapshot.verification_method_ids ?? [],
+        update_date: snapshot.created_at,
+        parent_links: snapshotParents,
+        versionLabel: snapshotRevNum != null ? `v${snapshotRevNum}` : `version #${snapshot.id}`,
+      };
+    }
+    return {
+      title: detail.title,
+      description: detail.description,
+      justification: detail.justification,
+      status_id: detail.status_id,
+      author_id: detail.author_id,
+      reviewer_id: detail.reviewer_id,
+      category_id: detail.category_id,
+      applicability_id: detail.applicability_id,
+      approval_state: detail.approval_state,
+      approved_by: detail.approved_by,
+      approved_at: detail.approved_at,
+      custom_fields: detail.custom_fields,
+      verification_method_ids: detail.verification_method_ids ?? [],
+      update_date: detail.update_date,
+      parent_links: detail.trace_summary.parent_links,
+      versionLabel: latestVersionLabel,
+    };
+  }, [
+    detail,
+    isHistorical,
+    snapshot,
+    snapshotParents,
+    snapshotRevNum,
+    latestVersionLabel,
+  ]);
+
+  const canMutate = Boolean(perms?.edit_requirements) && !isHistorical;
   const openVersionDiff = (pair?: { oldVersionId: number; newVersionId: number }) => {
     setDiffInitialPair(pair ?? null);
     setDiffOpen(true);
@@ -295,7 +398,7 @@ export default function ViewRequirementPage() {
     );
   }
 
-  if (!detail) {
+  if (!detail || !view) {
     return (
       <div className="text-stitch-muted text-sm py-12 text-center bg-stitch-canvas rounded-lg">
         Loading requirement…
@@ -303,8 +406,9 @@ export default function ViewRequirementPage() {
     );
   }
 
-  const st = statusById.get(detail.status_id);
+  const st = statusById.get(view.status_id);
   const ts = detail.trace_summary;
+  const parentLinks = view.parent_links;
 
   return (
     <div className="max-w-7xl mx-auto pb-12">
@@ -317,7 +421,9 @@ export default function ViewRequirementPage() {
           <span className="text-stitch-accent font-bold font-headline truncate">
             {detail.reference_code || `REQ-${detail.id}`}
           </span>
-          <span className="text-stitch-muted font-normal normal-case tracking-normal">· View</span>
+          <span className="text-stitch-muted font-normal normal-case tracking-normal">
+            {isHistorical ? '· Historical snapshot' : '· View'}
+          </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -329,7 +435,7 @@ export default function ViewRequirementPage() {
             <span className="material-symbols-outlined text-sm">difference</span>
             Compare versions
           </button>
-          {canEdit ? (
+          {canMutate ? (
             <>
               <Link
                 to={`${basePath}/requirements/new?from=${rid}`}
@@ -350,6 +456,24 @@ export default function ViewRequirementPage() {
         </div>
       </nav>
 
+      {isHistorical ? (
+        <div
+          role="status"
+          className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-stitch-fg"
+        >
+          <p>
+            Viewing historical snapshot <span className="font-mono font-bold">{view.versionLabel}</span>
+            {' · '}not the current version.
+          </p>
+          <Link
+            to={`${basePath}/requirements/${rid}`}
+            className="text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline"
+          >
+            View current
+          </Link>
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-8 space-y-8">
           <section className="bg-stitch-surface p-6 md:p-8 rounded-xl border border-stitch-border shadow-stitch">
@@ -358,9 +482,9 @@ export default function ViewRequirementPage() {
                 {detail.reference_code || `#${detail.id}`}
               </span>
               <span className="text-xs font-medium text-stitch-accent-dim bg-stitch-elevated px-2 py-1 rounded border border-stitch-border uppercase tracking-wide">
-                {approvalLabel(detail.approval_state)}
+                {approvalLabel(view.approval_state)}
               </span>
-              {lastApprovedVersion && detail.current_version_id != null ? (
+              {!isHistorical && lastApprovedVersion && detail.current_version_id != null ? (
                 <button
                   type="button"
                   onClick={() =>
@@ -377,7 +501,7 @@ export default function ViewRequirementPage() {
               {st ? <StatusBadge title={st.title} tagColor={st.tag_color} /> : null}
             </div>
             <h1 className="text-2xl md:text-3xl font-bold font-headline text-stitch-fg mb-6">
-              {detail.title.trim() || '—'}
+              {view.title.trim() || '—'}
             </h1>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-stitch-elevated rounded-lg border border-stitch-border text-sm">
@@ -385,48 +509,60 @@ export default function ViewRequirementPage() {
                 <span className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                   Priority
                 </span>
-                <span className="font-semibold text-stitch-fg">{priorityFromCustomFields(detail)}</span>
+                <span className="font-semibold text-stitch-fg">{priorityFromCustomFields(view.custom_fields)}</span>
               </div>
               <div>
                 <span className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                   Version
                 </span>
-                <span className="font-mono font-medium text-stitch-fg">{latestVersionLabel}</span>
+                <span className="font-mono font-medium text-stitch-fg">{view.versionLabel}</span>
               </div>
               <div>
                 <span className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                   Author
                 </span>
-                <span className="font-semibold text-stitch-fg line-clamp-2">{userLabel(detail.author_id)}</span>
+                <span className="font-semibold text-stitch-fg line-clamp-2">{userLabel(view.author_id)}</span>
               </div>
               <div>
                 <span className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
                   Reviewer
                 </span>
-                <span className="font-semibold text-stitch-fg line-clamp-2">{userLabel(detail.reviewer_id)}</span>
+                <span className="font-semibold text-stitch-fg line-clamp-2">{userLabel(view.reviewer_id)}</span>
               </div>
             </div>
 
             <dl className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <dt className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">Category</dt>
-                <dd className="text-stitch-fg">{categoryById.get(detail.category_id) ?? `Category #${detail.category_id}`}</dd>
+                <dd className="text-stitch-fg">{categoryById.get(view.category_id) ?? `Category #${view.category_id}`}</dd>
               </div>
               <div>
                 <dt className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">Applicability</dt>
                 <dd className="text-stitch-fg">
-                  {applicabilityById.get(detail.applicability_id) ??
-                    `Applicability #${detail.applicability_id}`}
+                  {applicabilityById.get(view.applicability_id) ??
+                    `Applicability #${view.applicability_id}`}
+                </dd>
+              </div>
+              <div className="sm:col-span-2">
+                <dt className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+                  Verification methods
+                </dt>
+                <dd className="text-stitch-fg">
+                  {view.verification_method_ids.length === 0
+                    ? '—'
+                    : view.verification_method_ids
+                        .map((id) => methodById.get(id) ?? `Method #${id}`)
+                        .join(', ')}
                 </dd>
               </div>
               <div className="sm:col-span-2">
                 <dt className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-2">Parents</dt>
                 <dd>
-                  {ts.parent_links.length === 0 ? (
+                  {parentLinks.length === 0 ? (
                     <span className="text-stitch-muted text-sm">None</span>
                   ) : (
                     <ul className="space-y-2 list-none m-0 p-0">
-                      {ts.parent_links.map((l) => {
+                      {parentLinks.map((l) => {
                         const parentReq = resolveParentReq(l);
                         return (
                           <li
@@ -458,7 +594,7 @@ export default function ViewRequirementPage() {
               </div>
               <div>
                 <dt className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">Modified</dt>
-                <dd className="text-stitch-fg font-mono text-xs">{formatTs(detail.update_date)}</dd>
+                <dd className="text-stitch-fg font-mono text-xs">{formatTs(view.update_date)}</dd>
               </div>
               <div>
                 <dt className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">Created</dt>
@@ -475,10 +611,45 @@ export default function ViewRequirementPage() {
             </div>
             <div className="p-6 md:p-8">
               <div className="text-sm leading-relaxed text-stitch-fg whitespace-pre-wrap">
-                {detail.description.trim() ? detail.description : '—'}
+                {view.description.trim() ? view.description : '—'}
               </div>
             </div>
           </section>
+
+          {view.justification?.trim() ? (
+            <section className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch">
+              <div className="px-6 py-3 border-b border-stitch-border bg-stitch-elevated">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-stitch-muted font-headline">
+                  Rationale
+                </h2>
+              </div>
+              <div className="p-6 md:p-8">
+                <div className="text-sm leading-relaxed text-stitch-fg whitespace-pre-wrap">
+                  {view.justification}
+                </div>
+              </div>
+            </section>
+          ) : null}
+
+          {view.custom_fields && view.custom_fields.length > 0 ? (
+            <section className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch">
+              <div className="px-6 py-3 border-b border-stitch-border bg-stitch-elevated">
+                <h2 className="text-xs font-bold uppercase tracking-widest text-stitch-muted font-headline">
+                  Custom metadata
+                </h2>
+              </div>
+              <dl className="p-6 md:p-8 grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                {view.custom_fields.map((f) => (
+                  <div key={f.field_id}>
+                    <dt className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+                      {f.label}
+                    </dt>
+                    <dd className="text-stitch-fg">{f.value?.trim() || '—'}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ) : null}
         </div>
 
         <aside className="lg:col-span-4 space-y-6">
@@ -490,11 +661,11 @@ export default function ViewRequirementPage() {
             <div className="space-y-6">
               <div>
                 <p className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-2">Upstream (parents)</p>
-                {ts.parent_links.length === 0 ? (
+                {parentLinks.length === 0 ? (
                   <p className="text-xs text-stitch-muted">None</p>
                 ) : (
                   <ul className="space-y-2">
-                    {ts.parent_links.map((l) => {
+                    {parentLinks.map((l) => {
                       const parentReq = resolveParentReq(l);
                       return (
                         <li key={l.id}>
@@ -521,7 +692,7 @@ export default function ViewRequirementPage() {
                 )}
               </div>
 
-              {ts.child_ids.length > 0 ? (
+              {!isHistorical && ts.child_ids.length > 0 ? (
                 <div>
                   <p className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-2">
                     Child requirements
@@ -547,6 +718,7 @@ export default function ViewRequirementPage() {
                 </div>
               ) : null}
 
+              {!isHistorical ? (
               <div>
                 <p className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-2">
                   Downstream (verifications)
@@ -585,6 +757,11 @@ export default function ViewRequirementPage() {
                   </ul>
                 )}
               </div>
+              ) : (
+                <p className="text-xs text-stitch-muted">
+                  Child requirements and linked tests are not frozen on this snapshot. Open the current version to see live traceability.
+                </p>
+              )}
             </div>
           </div>
         </aside>
@@ -636,7 +813,7 @@ export default function ViewRequirementPage() {
               ))
           )}
         </div>
-        {canEdit ? (
+        {canMutate ? (
           <div className="px-4 py-3 border-t border-stitch-border bg-stitch-elevated">
             <Link
               to={`${basePath}/requirements/${rid}/edit`}
@@ -680,13 +857,21 @@ export default function ViewRequirementPage() {
             <ul className="space-y-0 divide-y divide-stitch-border">
               {changelogEntries.map(({ ver, revNum, changes, isLatest, older }) => {
                 const vstRow = statusById.get(ver.status_id);
+                const isOpenSnapshot = viewingVersionParam && ver.id === requestedVersionId;
+                const snapshotHref = `${basePath}/requirements/${rid}/versions/${ver.id}`;
                 return (
-                  <li key={ver.id} className="py-4 first:pt-0">
+                  <li
+                    key={ver.id}
+                    className={`py-4 first:pt-0 ${isOpenSnapshot ? 'bg-stitch-elevated/60 -mx-2 px-2 rounded-lg' : ''}`}
+                  >
                     <div className="flex flex-wrap items-start justify-between gap-3 mb-2">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-stitch-accent bg-stitch-elevated px-2 py-0.5 rounded border border-stitch-border">
+                        <Link
+                          to={snapshotHref}
+                          className="font-mono text-xs font-bold text-stitch-accent bg-stitch-elevated px-2 py-0.5 rounded border border-stitch-border hover:border-stitch-accent/50"
+                        >
                           v{revNum}
-                        </span>
+                        </Link>
                         {isLatest ? (
                           <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded">
                             Latest

@@ -339,21 +339,28 @@ impl DelegatedOAuthRepository for DieselRepoMock {
             .cloned()
             .ok_or(RepoError::NotFound)
     }
-    fn consume_oauth_code(&mut self, hash: &str, now: NaiveDateTime) -> Result<bool, RepoError> {
-        let Some(c) = self.oauth_codes.get_mut(hash) else {
-            return Ok(false);
-        };
-        if c.used_at.is_some() || c.expires_at <= now {
-            return Ok(false);
-        }
-        c.used_at = Some(now);
-        Ok(true)
-    }
-    fn insert_oauth_tokens(
+    fn consume_oauth_code_and_insert_tokens(
         &mut self,
+        hash: &str,
         a: &NewOAuthAccessToken,
         r: &NewOAuthRefreshToken,
-    ) -> Result<(), RepoError> {
+        now: NaiveDateTime,
+    ) -> Result<bool, RepoError> {
+        if self.force_err {
+            return Err(RepoError::Pool("force_err".into()));
+        }
+        if self.oauth_access_tokens.contains_key(&a.token_hash)
+            || self.oauth_refresh_tokens.contains_key(&r.token_hash)
+        {
+            return Err(RepoError::BadInput("duplicate OAuth token hash".into()));
+        }
+        let Some(code) = self.oauth_codes.get_mut(hash) else {
+            return Ok(false);
+        };
+        if code.used_at.is_some() || code.expires_at <= now {
+            return Ok(false);
+        }
+        code.used_at = Some(now);
         self.oauth_access_tokens.insert(
             a.token_hash.clone(),
             OAuthAccessToken {
@@ -383,7 +390,7 @@ impl DelegatedOAuthRepository for DieselRepoMock {
                 replaced_by_hash: None,
             },
         );
-        Ok(())
+        Ok(true)
     }
     fn get_oauth_access_token(
         &self,

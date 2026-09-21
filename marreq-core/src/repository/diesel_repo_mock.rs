@@ -450,11 +450,7 @@ impl DelegatedOAuthRepository for DieselRepoMock {
 }
 
 impl DieselRepoMock {
-    fn insert_oauth_token_rows(
-        &mut self,
-        a: &NewOAuthAccessToken,
-        r: &NewOAuthRefreshToken,
-    ) {
+    fn insert_oauth_token_rows(&mut self, a: &NewOAuthAccessToken, r: &NewOAuthRefreshToken) {
         self.oauth_access_tokens.insert(
             a.token_hash.clone(),
             OAuthAccessToken {

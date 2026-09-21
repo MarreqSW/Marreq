@@ -525,19 +525,15 @@ impl<R: Repository> super::DelegatedOAuthRepository for CacheRepository<R> {
     ) -> Result<crate::models::OAuthAuthorizationCode, RepoError> {
         self.inner.get_oauth_code(hash)
     }
-    fn consume_oauth_code(
+    fn consume_oauth_code_and_insert_tokens(
         &mut self,
         hash: &str,
-        now: chrono::NaiveDateTime,
-    ) -> Result<bool, RepoError> {
-        self.inner.consume_oauth_code(hash, now)
-    }
-    fn insert_oauth_tokens(
-        &mut self,
         a: &crate::models::NewOAuthAccessToken,
         r: &crate::models::NewOAuthRefreshToken,
-    ) -> Result<(), RepoError> {
-        self.inner.insert_oauth_tokens(a, r)
+        now: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError> {
+        self.inner
+            .consume_oauth_code_and_insert_tokens(hash, a, r, now)
     }
     fn get_oauth_access_token(
         &self,

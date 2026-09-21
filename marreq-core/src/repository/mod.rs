@@ -101,16 +101,13 @@ pub trait DelegatedOAuthRepository {
     ) -> Result<bool, RepoError>;
     fn insert_oauth_code(&mut self, code: &NewOAuthAuthorizationCode) -> Result<(), RepoError>;
     fn get_oauth_code(&self, code_hash: &str) -> Result<OAuthAuthorizationCode, RepoError>;
-    fn consume_oauth_code(
+    fn consume_oauth_code_and_insert_tokens(
         &mut self,
         code_hash: &str,
-        now: chrono::NaiveDateTime,
-    ) -> Result<bool, RepoError>;
-    fn insert_oauth_tokens(
-        &mut self,
         access: &NewOAuthAccessToken,
         refresh: &NewOAuthRefreshToken,
-    ) -> Result<(), RepoError>;
+        now: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError>;
     fn get_oauth_access_token(
         &self,
         token_hash: &str,

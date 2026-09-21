@@ -106,9 +106,18 @@ impl<'a> VerificationService<'a> {
 
     /// Create a new verification entry and log the action.
     pub fn create(&self, user: &User, new_verification: NewVerification) -> Result<i32, RepoError> {
+        self.create_with_idempotency(user, new_verification, None)
+    }
+
+    pub fn create_with_idempotency(
+        &self,
+        user: &User,
+        new_verification: NewVerification,
+        mcp_idempotency_identity: Option<&str>,
+    ) -> Result<i32, RepoError> {
         let id = {
             let mut repo = self.state.repo_write();
-            repo.insert_verification(&new_verification)?
+            repo.insert_verification_idempotent(&new_verification, mcp_idempotency_identity)?
         };
 
         self.audit_created(user, id, &new_verification);

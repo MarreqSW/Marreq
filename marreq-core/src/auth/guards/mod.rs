@@ -18,8 +18,20 @@ pub(crate) mod session;
 
 pub use admin::AdminOnly;
 pub use api::ApiUser;
-pub use bearer::ApiUserOrBearer;
+pub use bearer::{
+    ApiUserOrBearer, AuthenticationSource, BaselinesRead, BaselinesWrite, McpAuditAuth,
+    McpPrincipalAuth, ProjectsRead, RequirementsAndBaselinesRead, RequirementsAndTraceabilityRead,
+    RequirementsApprove, RequirementsRead, RequirementsVerificationsAndTraceabilityRead,
+    RequirementsWrite, TraceabilityRead, TraceabilityWrite, VerificationsRead, VerificationsWrite,
+};
 pub use group::{HtmlGroupAccess, HtmlGroupManageAccess};
 pub use html::HtmlProjectAccess;
-pub use project::{ProjectAccess, ProjectAccessOrBearer};
+pub use project::{
+    ProjectAccess, ProjectAccessOrBearer, ProjectBaselinesRead, ProjectBaselinesWrite,
+    ProjectRequirementsAndBaselinesRead, ProjectRequirementsAndTraceabilityRead,
+    ProjectRequirementsApprove, ProjectRequirementsRead,
+    ProjectRequirementsVerificationsAndTraceabilityRead, ProjectRequirementsWrite,
+    ProjectTraceabilityRead, ProjectTraceabilityWrite, ProjectVerificationsRead,
+    ProjectVerificationsWrite,
+};
 pub use session::SessionUser;

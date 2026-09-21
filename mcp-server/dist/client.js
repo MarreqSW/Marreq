@@ -1,20 +1,42 @@
+import { currentBearer } from "./credentials.js";
+export class MarreqAuthenticationError extends Error {
+    status;
+    challenge;
+    constructor(status, challenge) {
+        super("Marreq authorization is required");
+        this.status = status;
+        this.challenge = challenge;
+    }
+}
 export class MarreqClient {
     ctx;
     constructor(ctx) {
         this.ctx = ctx;
+    }
+    withProject(projectId) {
+        return new MarreqClient({ ...this.ctx, projectId });
+    }
+    async listProjects() {
+        return this.request("/api/projects");
+    }
+    async getPrincipal() {
+        return this.request("/api/mcp/principal");
     }
     async request(path, options = {}) {
         const url = `${this.ctx.baseUrl}${path.startsWith("/") ? path : `/${path}`}`;
         const res = await fetch(url, {
             ...options,
             headers: {
-                Authorization: `Bearer ${this.ctx.apiToken}`,
+                Authorization: `Bearer ${this.ctx.remote ? currentBearer() ?? this.ctx.apiToken : this.ctx.apiToken}`,
                 "Content-Type": "application/json",
                 ...options.headers,
             },
         });
         if (!res.ok) {
             const text = await res.text();
+            if (res.status === 401 || (res.status === 403 && res.headers.has("www-authenticate"))) {
+                throw new MarreqAuthenticationError(res.status, res.headers.get("www-authenticate") ?? undefined);
+            }
             throw new Error(`Marreq API ${res.status}: ${text}`);
         }
         if (res.status === 204 || res.headers.get("content-length") === "0") {
@@ -33,6 +55,12 @@ export class MarreqClient {
             params.set("has_tests", String(hasTests));
         const q = params.toString();
         return this.request(`/api/projects/${this.ctx.projectId}/requirements${q ? `?${q}` : ""}`);
+    }
+    async semanticSearchRequirements(query, limit) {
+        const params = new URLSearchParams({ q: query });
+        if (limit != null)
+            params.set("k", String(limit));
+        return this.request(`/api/projects/${this.ctx.projectId}/requirements/semantic_search?${params}`);
     }
     async getVersions(requirementId) {
         return this.request(`/api/projects/${this.ctx.projectId}/requirements/${requirementId}/versions`);
@@ -61,8 +89,18 @@ export class MarreqClient {
         return this.request(`/api/projects/${this.ctx.projectId}/baselines/diff?baseline_a=${baselineA}&baseline_b=${baselineB}`);
     }
     /** Phase 2 draft_write: create requirement (project from context). */
-    async createRequirement(payload) {
-        return this.request(`/api/projects/${this.ctx.projectId}/requirements`, { method: "POST", body: JSON.stringify(payload) });
+    async createRequirement(payload, idempotencyKey) {
+        return this.request(`/api/projects/${this.ctx.projectId}/requirements`, { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify(payload) });
+    }
+    async createVerification(payload, idempotencyKey) {
+        return this.request(`/api/projects/${this.ctx.projectId}/verifications`, {
+            method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify(payload),
+        });
+    }
+    async updateVerification(id, payload) {
+        return this.request(`/api/projects/${this.ctx.projectId}/verifications/${id}`, {
+            method: "PUT", body: JSON.stringify(payload),
+        });
     }
     /** Phase 2 draft_write: patch requirement (project from context). */
     async patchRequirement(requirementId, patch) {
@@ -73,12 +111,20 @@ export class MarreqClient {
         return this.request(`/api/projects/${this.ctx.projectId}/requirements/${requirementId}/versions/${versionId}/approval`, { method: "PUT", body: JSON.stringify({ state }) });
     }
     /** Phase 2 draft_write: create baseline (project from context). */
-    async createBaseline(payload) {
-        return this.request(`/api/projects/${this.ctx.projectId}/baselines`, { method: "POST", body: JSON.stringify(payload) });
+    async createBaseline(payload, idempotencyKey) {
+        return this.request(`/api/projects/${this.ctx.projectId}/baselines`, { method: "POST", headers: { "Idempotency-Key": idempotencyKey }, body: JSON.stringify(payload) });
     }
     async postAudit(payload) {
-        return this.request("/api/mcp/audit", {
+        // Remote MCP shares MARREQ_MCP_AUDIT_SECRET with Rocket and posts to the
+        // internal path. Local stdio uses a personal API token on the legacy path
+        // so operators do not need the server-internal secret.
+        const auditSecret = process.env.MARREQ_MCP_AUDIT_SECRET;
+        const path = auditSecret ? "/api/mcp/internal/audit" : "/api/mcp/audit";
+        return this.request(path, {
             method: "POST",
+            headers: auditSecret
+                ? { "X-Marreq-MCP-Audit-Secret": auditSecret }
+                : {},
             body: JSON.stringify(payload),
         });
     }
@@ -88,7 +134,7 @@ export class MarreqClient {
     }
     /** GET /api/verifications/:id — caller should ensure the row belongs to MARREQ_PROJECT_ID. */
     async getVerificationById(verificationId) {
-        return this.request(`/api/verifications/${verificationId}`);
+        return this.request(`/api/projects/${this.ctx.projectId}/verifications/${verificationId}`);
     }
     /** GET /api/projects/:pid/baselines */
     async listBaselinesByProject() {
@@ -104,7 +150,7 @@ export class MarreqClient {
         const q = versionId != null && versionId > 0
             ? `?version_id=${encodeURIComponent(String(versionId))}`
             : "";
-        return this.request(`/api/requirements/${requirementId}/comments${q}`);
+        return this.request(`/api/projects/${this.ctx.projectId}/requirements/${requirementId}/comments${q}`);
     }
     async getVerificationMatrix(verificationId) {
         return this.request(`/api/projects/${this.ctx.projectId}/verifications/${verificationId}/matrix`);
@@ -116,7 +162,7 @@ export class MarreqClient {
         });
     }
     async clearSuspectLink(reqId, verificationId) {
-        return this.request("/api/traceability/clear_suspect", {
+        return this.request(`/api/projects/${this.ctx.projectId}/traceability/clear_suspect`, {
             method: "POST",
             body: JSON.stringify({
                 req_id: reqId,
@@ -129,33 +175,12 @@ export class MarreqClient {
     }
     /** Aggregated catalog rows for MARREQ_PROJECT_ID (parallel GETs, filtered client-side where needed). */
     async listProjectCatalog() {
-        const pid = this.ctx.projectId;
-        const [categories, applicability, reqStatuses, verifStatuses, methods, fields] = await Promise.all([
-            this.request("/api/categories"),
-            this.request("/api/applicability"),
-            this.request("/api/status"),
-            this.request("/api/verification-status"),
-            this.request(`/api/projects/${pid}/verification-methods`),
-            this.request(`/api/projects/${pid}/custom_fields`),
-        ]);
-        const byProject = (rows) => Array.isArray(rows)
-            ? rows.filter((r) => r &&
-                typeof r === "object" &&
-                "project_id" in r &&
-                r.project_id === pid)
-            : [];
-        return {
-            categories: byProject(categories),
-            applicability: byProject(applicability),
-            requirement_statuses: byProject(reqStatuses),
-            verification_statuses: byProject(verifStatuses),
-            verification_methods: Array.isArray(methods) ? methods : [],
-            custom_fields: Array.isArray(fields) ? fields : [],
-        };
+        return this.request(`/api/projects/${this.ctx.projectId}/catalog`);
     }
-    async createRequirementComment(requirementId, body, requirementVersionId) {
-        return this.request(`/api/requirements/${requirementId}/comments`, {
+    async createRequirementComment(requirementId, body, requirementVersionId, idempotencyKey) {
+        return this.request(`/api/projects/${this.ctx.projectId}/requirements/${requirementId}/comments`, {
             method: "POST",
+            headers: { "Idempotency-Key": idempotencyKey },
             body: JSON.stringify({
                 body,
                 requirement_version_id: requirementVersionId != null && requirementVersionId > 0

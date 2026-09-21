@@ -47,6 +47,13 @@ For **`POST /api/auth/login`** and **`POST /api/auth/logout`**, if the browser s
 | `GET` | `/api/auth/identities` | List connected identities for the current user. |
 | `POST` | `/api/auth/external/{provider}/link` | Begin an explicit, CSRF-protected account link. |
 | `DELETE` | `/api/auth/identities/{id}` | Disconnect an identity if another login method remains. |
+| `GET` | `/api/oauth/grants` | List delegated connected applications for the current user. |
+| `DELETE` | `/api/oauth/grants/{id}` | Revoke an owned delegated application grant. |
+
+Remote MCP OAuth discovery and protocol endpoints are mounted at the origin
+root rather than under `/api`: `/.well-known/oauth-authorization-server`,
+`/.well-known/oauth-protected-resource`, `/oauth/register`, `/oauth/authorize`,
+and `/oauth/token`. See [authentication.md](authentication.md#delegated-applications).
 
 ### Dashboard (SPA home)
 

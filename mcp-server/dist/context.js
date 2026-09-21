@@ -16,19 +16,19 @@ function parseTraceWriteFlag() {
 export function contextAllowsReadExtended(ctx) {
     return ctx.mode === "read_extended" || ctx.mode === "draft_write";
 }
-export function loadContext() {
+export function loadContext(options = {}) {
     const baseUrl = process.env.MARREQ_BASE_URL;
     const apiToken = process.env.MARREQ_API_TOKEN;
     const projectId = process.env.MARREQ_PROJECT_ID;
-    if (!baseUrl || !apiToken || !projectId) {
+    if (!baseUrl || (!apiToken && options.apiTokenRequired !== false) || (!projectId && options.projectRequired !== false)) {
         throw new Error("MARREQ_BASE_URL, MARREQ_API_TOKEN, and MARREQ_PROJECT_ID must be set");
     }
-    const mode = parseMarreqMode(process.env.MARREQ_MODE);
-    const traceWrite = parseTraceWriteFlag();
+    const mode = options.remote ? "draft_write" : parseMarreqMode(process.env.MARREQ_MODE);
+    const traceWrite = options.remote ? true : parseTraceWriteFlag();
     return {
         baseUrl: baseUrl.replace(/\/$/, ""),
-        apiToken,
-        projectId: parseInt(projectId, 10),
+        apiToken: apiToken ?? "",
+        projectId: projectId ? parseInt(projectId, 10) : 0,
         userId: process.env.MARREQ_USER_ID
             ? parseInt(process.env.MARREQ_USER_ID, 10)
             : undefined,
@@ -38,5 +38,7 @@ export function loadContext() {
         sessionId: process.env.MARREQ_SESSION_ID,
         mode,
         traceWrite,
+        remote: options.remote,
+        mcpPublicUrl: options.remote ? process.env.MARREQ_MCP_PUBLIC_URL?.replace(/\/$/, "") : undefined,
     };
 }

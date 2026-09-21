@@ -1,0 +1,14 @@
+--- src/schema.rs
++++ src/schema.rs
+@@ -23 +23 @@
+-        scopes -> Array<Nullable<Text>>,
++        scopes -> Array<Text>,
+@@ -39 +39 @@
+-        scopes -> Array<Nullable<Text>>,
++        scopes -> Array<Text>,
+@@ -52 +52 @@
+-        scopes -> Array<Nullable<Text>>,
++        scopes -> Array<Text>,
+@@ -66 +66 @@
+-        scopes -> Array<Nullable<Text>>,
++        scopes -> Array<Text>,

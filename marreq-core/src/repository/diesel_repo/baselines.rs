@@ -63,9 +63,11 @@ impl BaselineRepository for DieselRepo {
                 created_by,
                 source_saved_view_id,
                 source_view_definition: source_view_definition.clone(),
+                mcp_idempotency_identity: payload.mcp_idempotency_identity.clone(),
             };
             let baseline: Baseline = diesel::insert_into(baselines::table)
                 .values(&new_row)
+                .returning(Baseline::as_returning())
                 .get_result(conn)?;
             let baseline_id = baseline.id;
 
@@ -151,6 +153,7 @@ impl BaselineRepository for DieselRepo {
             // Snapshot: all verifications in project (point-in-time)
             let project_verifications: Vec<Verification> = verifications::table
                 .filter(verifications::project_id.eq(project_id))
+                .select(Verification::as_select())
                 .load(conn)?;
             for v in project_verifications {
                 let bv = NewBaselineVerification {
@@ -193,6 +196,7 @@ impl BaselineRepository for DieselRepo {
         dsl::baselines
             .filter(dsl::project_id.eq(project_id))
             .order(dsl::created_at.desc())
+            .select(Baseline::as_select())
             .load(conn.as_mut())
             .map_err(RepoError::from)
     }
@@ -202,6 +206,7 @@ impl BaselineRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         dsl::baselines
             .filter(dsl::id.eq(baseline_id))
+            .select(Baseline::as_select())
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {

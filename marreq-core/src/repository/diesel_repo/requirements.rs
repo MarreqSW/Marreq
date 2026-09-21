@@ -234,6 +234,7 @@ impl RequirementsRepository for DieselRepo {
                 project_id: new.project_id,
                 stable_code: new.reference_code.clone(),
                 current_version_id: None,
+                mcp_idempotency_identity: None,
             };
             let req_id: i32 = diesel::insert_into(requirements::table)
                 .values(&container)
@@ -261,6 +262,7 @@ impl RequirementsRepository for DieselRepo {
         verification_method_ids: &[i32],
         custom_fields: Option<&[CustomFieldValueInput]>,
         parent_links: &[NewRequirementVersionLink],
+        mcp_idempotency_identity: Option<&str>,
     ) -> Result<i32, RepoError> {
         use schema::custom_field_values;
         use schema::requirement_version_links;
@@ -273,6 +275,7 @@ impl RequirementsRepository for DieselRepo {
                 project_id: new.project_id,
                 stable_code: new.reference_code.clone(),
                 current_version_id: None,
+                mcp_idempotency_identity: mcp_idempotency_identity.map(str::to_owned),
             };
             let req_id: i32 = diesel::insert_into(requirements::table)
                 .values(&container)

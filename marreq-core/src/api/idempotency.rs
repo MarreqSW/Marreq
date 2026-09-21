@@ -1,0 +1,238 @@
+use rocket::http::Status;
+use rocket::request::{FromRequest, Outcome};
+use rocket::{async_trait, Request, State};
+use sha2::{Digest, Sha256};
+
+use crate::api::prelude::*;
+use crate::repository::{IdempotencyClaim, IdempotencyRepository};
+
+pub struct OptionalIdempotencyKey(pub Option<String>);
+
+pub fn operation_identity(
+    user_id: i32,
+    principal_key: &str,
+    target_key: &str,
+    operation: &str,
+    key: &OptionalIdempotencyKey,
+) -> Option<String> {
+    key.0.as_deref().map(|key| {
+        let value = format!("{user_id}\0{principal_key}\0{target_key}\0{operation}\0{key}");
+        format!("{:x}", Sha256::digest(value.as_bytes()))
+    })
+}
+
+#[async_trait]
+impl<'r> FromRequest<'r> for OptionalIdempotencyKey {
+    type Error = ();
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        let key = request.headers().get_one("Idempotency-Key").map(str::trim);
+        match key {
+            Some(value)
+                if value.is_empty()
+                    || value.len() > 200
+                    || !value
+                        .bytes()
+                        .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_' | b'.')) =>
+            {
+                Outcome::Error((Status::BadRequest, ()))
+            }
+            value => Outcome::Success(Self(value.map(str::to_owned))),
+        }
+    }
+}
+
+pub fn claim(
+    state: &State<AppState>,
+    user_id: i32,
+    principal_key: &str,
+    target_key: &str,
+    operation: &str,
+    key: &OptionalIdempotencyKey,
+    payload: &impl serde::Serialize,
+) -> ApiResult<Option<serde_json::Value>> {
+    let Some(key) = key.0.as_deref() else {
+        return Ok(None);
+    };
+    let encoded =
+        serde_json::to_vec(payload).map_err(|_| ApiError::BadRequest("invalid payload".into()))?;
+    let hash = format!("{:x}", Sha256::digest(encoded));
+    match state.repo_write().claim_idempotency(
+        user_id,
+        principal_key,
+        target_key,
+        operation,
+        key,
+        &hash,
+        chrono::Utc::now().naive_utc(),
+    )? {
+        IdempotencyClaim::Acquired => Ok(None),
+        IdempotencyClaim::Replay(response) => Ok(Some(response)),
+        IdempotencyClaim::Pending => Err(ApiError::Conflict(
+            "operation with this idempotency key is still pending".into(),
+        )),
+        IdempotencyClaim::PayloadConflict => Err(ApiError::Conflict(
+            "idempotency key was already used with a different payload".into(),
+        )),
+    }
+}
+
+pub fn complete(
+    state: &State<AppState>,
+    user_id: i32,
+    principal_key: &str,
+    target_key: &str,
+    operation: &str,
+    key: &OptionalIdempotencyKey,
+    response: &serde_json::Value,
+) -> ApiResult<()> {
+    if let Some(key) = key.0.as_deref() {
+        state.repo_write().complete_idempotency(
+            user_id,
+            principal_key,
+            target_key,
+            operation,
+            key,
+            response,
+        )?;
+    }
+    Ok(())
+}
+
+pub fn release(
+    state: &State<AppState>,
+    user_id: i32,
+    principal_key: &str,
+    target_key: &str,
+    operation: &str,
+    key: &OptionalIdempotencyKey,
+) {
+    if let Some(key) = key.0.as_deref() {
+        if let Err(error) = state.repo_write().release_idempotency(
+            user_id,
+            principal_key,
+            target_key,
+            operation,
+            key,
+        ) {
+            eprintln!("failed to release idempotency claim for {operation}: {error}");
+        }
+    }
+}
+
+pub fn release_on_repo_error<T>(
+    result: Result<T, crate::repository::errors::RepoError>,
+    state: &State<AppState>,
+    user_id: i32,
+    principal_key: &str,
+    target_key: &str,
+    operation: &str,
+    key: &OptionalIdempotencyKey,
+) -> ApiResult<T> {
+    match result {
+        Ok(value) => Ok(value),
+        Err(error) => {
+            release(state, user_id, principal_key, target_key, operation, key);
+            Err(ApiError::from(error))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+
+    #[test]
+    fn same_key_replays_and_different_payload_conflicts() {
+        let mut repo = DieselRepoMock::default();
+        let now = chrono::Utc::now().naive_utc();
+        assert_eq!(
+            repo.claim_idempotency(
+                1,
+                "session:user:1",
+                "project:7",
+                "create_requirement",
+                "key",
+                "hash-a",
+                now
+            )
+            .unwrap(),
+            IdempotencyClaim::Acquired
+        );
+        assert_eq!(
+            repo.claim_idempotency(
+                1,
+                "session:user:1",
+                "project:7",
+                "create_requirement",
+                "key",
+                "hash-a",
+                now
+            )
+            .unwrap(),
+            IdempotencyClaim::Pending
+        );
+        let response = serde_json::json!({"id": 42});
+        repo.complete_idempotency(
+            1,
+            "session:user:1",
+            "project:7",
+            "create_requirement",
+            "key",
+            &response,
+        )
+        .unwrap();
+        assert_eq!(
+            repo.claim_idempotency(
+                1,
+                "session:user:1",
+                "project:7",
+                "create_requirement",
+                "key",
+                "hash-a",
+                now
+            )
+            .unwrap(),
+            IdempotencyClaim::Replay(response)
+        );
+        assert_eq!(
+            repo.claim_idempotency(
+                1,
+                "session:user:1",
+                "project:7",
+                "create_requirement",
+                "key",
+                "hash-b",
+                now
+            )
+            .unwrap(),
+            IdempotencyClaim::PayloadConflict
+        );
+    }
+
+    #[test]
+    fn same_key_is_independent_across_projects_resources_and_grants() {
+        let mut repo = DieselRepoMock::default();
+        let now = chrono::Utc::now().naive_utc();
+        for (principal, target) in [
+            ("oauth_grant:1", "project:7"),
+            ("oauth_grant:1", "project:8"),
+            ("oauth_grant:1", "project:7:requirement:42"),
+            ("oauth_grant:2", "project:7"),
+        ] {
+            assert_eq!(
+                repo.claim_idempotency(
+                    1,
+                    principal,
+                    target,
+                    "create_requirement_comment",
+                    "same-key",
+                    "same-hash",
+                    now,
+                )
+                .unwrap(),
+                IdempotencyClaim::Acquired
+            );
+        }
+    }
+}

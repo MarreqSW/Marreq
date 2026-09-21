@@ -7,6 +7,7 @@ use rocket::serde::json::{json, Json, Value};
 
 use crate::api::guards::OptionalSessionUser;
 use crate::api::prelude::*;
+use crate::auth::guards::ProjectsRead;
 use crate::models::Project;
 use crate::repository::ProjectMembersRepository;
 use crate::services::project_service::ProjectService;
@@ -14,18 +15,19 @@ use crate::services::project_service::ProjectService;
 /// List projects visible to the current user (admin: all; others: memberships).
 #[get("/projects")]
 pub fn list_for_session(
-    opt: OptionalSessionUser,
+    auth: ProjectsRead,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<Project>>> {
-    let user = opt
-        .0
-        .ok_or_else(|| ApiError::Unauthorized("not authenticated".into()))?;
+    let user = auth.user();
     let service = ProjectService::new(state.inner());
-    let projects = if user.is_admin {
+    let mut projects = if user.is_admin {
         service.list_all()?
     } else {
         service.get_by_user_id(user.id)?
     };
+    if let Some(project_scope) = auth.token_project_scope() {
+        projects.retain(|project| project.id == project_scope);
+    }
     Ok(Json(projects))
 }
 

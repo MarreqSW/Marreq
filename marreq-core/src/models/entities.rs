@@ -102,7 +102,7 @@ impl Requirement {
 }
 
 /// Immutable comment on a requirement (general) or a specific requirement version.
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Selectable, Clone, Debug)]
 #[diesel(table_name = crate::schema::requirement_comments)]
 pub struct RequirementComment {
     pub id: i32,
@@ -121,6 +121,8 @@ pub struct NewRequirementComment {
     pub requirement_version_id: Option<i32>,
     pub author_id: i32,
     pub body: String,
+    #[serde(skip)]
+    pub mcp_idempotency_identity: Option<String>,
 }
 
 /// Link between a requirement version and a verification method (many-to-many).
@@ -178,8 +180,9 @@ pub struct MatrixLink {
 }
 
 /// Immutable project baseline (snapshot of requirement versions and traceability at creation time).
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Selectable, Clone, Debug)]
 #[diesel(table_name = crate::schema::baselines)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Baseline {
     pub id: i32,
     pub project_id: i32,
@@ -192,7 +195,7 @@ pub struct Baseline {
 }
 
 /// Snapshot row: which requirement_version was in the baseline for each requirement.
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Selectable, Clone, Debug)]
 #[diesel(table_name = crate::schema::baseline_requirements)]
 pub struct BaselineRequirement {
     pub baseline_id: i32,
@@ -271,12 +274,79 @@ pub struct UserIdentity {
     pub last_login_at: Option<chrono::NaiveDateTime>,
 }
 
+#[derive(Queryable, Selectable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_clients)]
+pub struct OAuthClient {
+    pub client_id: String,
+    pub name: String,
+    pub redirect_uris: serde_json::Value,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+#[derive(Queryable, Selectable, Serialize, Deserialize, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_grants)]
+pub struct OAuthGrant {
+    pub id: i32,
+    pub user_id: i32,
+    pub client_id: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+    pub last_used_at: Option<chrono::NaiveDateTime>,
+    pub revoked_at: Option<chrono::NaiveDateTime>,
+}
+
+#[derive(Queryable, Selectable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_authorization_codes)]
+pub struct OAuthAuthorizationCode {
+    pub code_hash: String,
+    pub grant_id: i32,
+    pub client_id: String,
+    pub redirect_uri: String,
+    pub code_challenge: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+    pub expires_at: chrono::NaiveDateTime,
+    pub used_at: Option<chrono::NaiveDateTime>,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+#[derive(Queryable, Selectable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_access_tokens)]
+pub struct OAuthAccessToken {
+    pub token_hash: String,
+    pub grant_id: i32,
+    pub client_id: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+    pub expires_at: chrono::NaiveDateTime,
+    pub created_at: chrono::NaiveDateTime,
+    pub last_used_at: Option<chrono::NaiveDateTime>,
+}
+
+#[derive(Queryable, Selectable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_refresh_tokens)]
+pub struct OAuthRefreshToken {
+    pub token_hash: String,
+    pub family_id: String,
+    pub grant_id: i32,
+    pub client_id: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+    pub expires_at: chrono::NaiveDateTime,
+    pub created_at: chrono::NaiveDateTime,
+    pub used_at: Option<chrono::NaiveDateTime>,
+    pub revoked_at: Option<chrono::NaiveDateTime>,
+    pub replaced_by_hash: Option<String>,
+}
+
 fn default_email_verified() -> bool {
     true
 }
 
 /// A verification (formerly test case) that can verify one or more requirements.
-#[derive(Serialize, Deserialize, Queryable, Clone, Debug)]
+#[derive(Serialize, Deserialize, Queryable, Selectable, Clone, Debug)]
 #[diesel(table_name = crate::schema::verifications)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Verification {

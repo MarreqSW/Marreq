@@ -216,12 +216,14 @@ impl<R: Repository> RequirementsRepository for CacheRepository<R> {
         verification_method_ids: &[i32],
         custom_fields: Option<&[CustomFieldValueInput]>,
         parent_links: &[NewRequirementVersionLink],
+        mcp_idempotency_identity: Option<&str>,
     ) -> Result<i32, RepoError> {
         let id = self.inner.create_requirement_atomic(
             new,
             verification_method_ids,
             custom_fields,
             parent_links,
+            mcp_idempotency_identity,
         )?;
         self.cache.invalidate_requirement(id);
         self.cache.invalidate_project(new.project_id);
@@ -481,6 +483,155 @@ impl<R: Repository> ExternalIdentityRepository for CacheRepository<R> {
     }
 }
 
+impl<R: Repository> super::DelegatedOAuthRepository for CacheRepository<R> {
+    fn insert_oauth_client(&mut self, v: &crate::models::NewOAuthClient) -> Result<(), RepoError> {
+        self.inner.insert_oauth_client(v)
+    }
+    fn get_oauth_client(&self, id: &str) -> Result<crate::models::OAuthClient, RepoError> {
+        self.inner.get_oauth_client(id)
+    }
+    fn upsert_oauth_grant(
+        &mut self,
+        v: &crate::models::NewOAuthGrant,
+    ) -> Result<crate::models::OAuthGrant, RepoError> {
+        self.inner.upsert_oauth_grant(v)
+    }
+    fn get_oauth_grant(&self, id: i32) -> Result<crate::models::OAuthGrant, RepoError> {
+        self.inner.get_oauth_grant(id)
+    }
+    fn list_oauth_grants(
+        &self,
+        user_id: i32,
+    ) -> Result<Vec<(crate::models::OAuthGrant, crate::models::OAuthClient)>, RepoError> {
+        self.inner.list_oauth_grants(user_id)
+    }
+    fn revoke_oauth_grant(
+        &mut self,
+        id: i32,
+        user_id: i32,
+        now: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError> {
+        self.inner.revoke_oauth_grant(id, user_id, now)
+    }
+    fn insert_oauth_code(
+        &mut self,
+        v: &crate::models::NewOAuthAuthorizationCode,
+    ) -> Result<(), RepoError> {
+        self.inner.insert_oauth_code(v)
+    }
+    fn get_oauth_code(
+        &self,
+        hash: &str,
+    ) -> Result<crate::models::OAuthAuthorizationCode, RepoError> {
+        self.inner.get_oauth_code(hash)
+    }
+    fn consume_oauth_code_and_insert_tokens(
+        &mut self,
+        hash: &str,
+        a: &crate::models::NewOAuthAccessToken,
+        r: &crate::models::NewOAuthRefreshToken,
+        now: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError> {
+        self.inner
+            .consume_oauth_code_and_insert_tokens(hash, a, r, now)
+    }
+    fn get_oauth_access_token(
+        &self,
+        hash: &str,
+    ) -> Result<
+        (
+            crate::models::OAuthAccessToken,
+            crate::models::OAuthGrant,
+            crate::models::User,
+        ),
+        RepoError,
+    > {
+        self.inner.get_oauth_access_token(hash)
+    }
+    fn get_oauth_refresh_token(
+        &self,
+        hash: &str,
+    ) -> Result<(crate::models::OAuthRefreshToken, crate::models::OAuthGrant), RepoError> {
+        self.inner.get_oauth_refresh_token(hash)
+    }
+    fn rotate_oauth_refresh_token(
+        &mut self,
+        old: &str,
+        a: &crate::models::NewOAuthAccessToken,
+        r: &crate::models::NewOAuthRefreshToken,
+        now: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError> {
+        self.inner.rotate_oauth_refresh_token(old, a, r, now)
+    }
+    fn revoke_oauth_refresh_family(
+        &mut self,
+        family: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        self.inner.revoke_oauth_refresh_family(family, now)
+    }
+    fn touch_oauth_access(
+        &mut self,
+        hash: &str,
+        grant_id: i32,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError> {
+        self.inner.touch_oauth_access(hash, grant_id, now)
+    }
+}
+
+impl<R: Repository> super::IdempotencyRepository for CacheRepository<R> {
+    fn claim_idempotency(
+        &mut self,
+        user_id: i32,
+        principal_key: &str,
+        target_key: &str,
+        operation: &str,
+        key: &str,
+        request_hash: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<super::IdempotencyClaim, RepoError> {
+        self.inner.claim_idempotency(
+            user_id,
+            principal_key,
+            target_key,
+            operation,
+            key,
+            request_hash,
+            now,
+        )
+    }
+    fn complete_idempotency(
+        &mut self,
+        user_id: i32,
+        principal_key: &str,
+        target_key: &str,
+        operation: &str,
+        key: &str,
+        response: &serde_json::Value,
+    ) -> Result<(), RepoError> {
+        self.inner.complete_idempotency(
+            user_id,
+            principal_key,
+            target_key,
+            operation,
+            key,
+            response,
+        )
+    }
+    fn release_idempotency(
+        &mut self,
+        user_id: i32,
+        principal_key: &str,
+        target_key: &str,
+        operation: &str,
+        key: &str,
+    ) -> Result<(), RepoError> {
+        self.inner
+            .release_idempotency(user_id, principal_key, target_key, operation, key)
+    }
+}
+
 impl<R: Repository> super::WorkspacesRepository for CacheRepository<R> {
     fn insert_workspace(&mut self, new: &crate::models::NewWorkspace) -> Result<i32, RepoError> {
         self.inner.insert_workspace(new)
@@ -681,6 +832,19 @@ impl<R: Repository> VerificationsRepository for CacheRepository<R> {
 
     fn insert_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError> {
         let id = self.inner.insert_verification(new)?;
+        self.cache.invalidate_verification(id);
+        self.cache.invalidate_project(new.project_id);
+        Ok(id)
+    }
+
+    fn insert_verification_idempotent(
+        &mut self,
+        new: &NewVerification,
+        mcp_idempotency_identity: Option<&str>,
+    ) -> Result<i32, RepoError> {
+        let id = self
+            .inner
+            .insert_verification_idempotent(new, mcp_idempotency_identity)?;
         self.cache.invalidate_verification(id);
         self.cache.invalidate_project(new.project_id);
         Ok(id)
@@ -1687,6 +1851,14 @@ mod tests {
             sessions: Vec::new(),
             user_identities: Vec::new(),
             next_user_identity_id: 1,
+            oauth_clients: HashMap::new(),
+            oauth_grants: HashMap::new(),
+            oauth_codes: HashMap::new(),
+            oauth_access_tokens: HashMap::new(),
+            oauth_refresh_tokens: HashMap::new(),
+            next_oauth_grant_id: 1,
+            idempotency: HashMap::new(),
+            api_tokens: HashMap::new(),
         }
     }
 

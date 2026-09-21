@@ -3,17 +3,20 @@
 
 //! MCP (Model Context Protocol) API: audit logging for tool calls.
 
+use rocket::request::{FromRequest, Outcome};
 use rocket::serde::{Deserialize, Serialize};
+use rocket::{async_trait, Request};
 
 use crate::api::prelude::*;
-use crate::auth::guards::ApiUserOrBearer;
+use crate::auth::guards::session::session_user_has_project_access;
+use crate::auth::guards::{AuthenticationSource, McpAuditAuth, McpPrincipalAuth};
 use crate::models::forms::NewLog;
 use crate::repository::LogRepository;
 
 #[derive(Debug, Deserialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct McpAuditRequest {
-    pub project_id: i32,
+    pub project_id: Option<i32>,
     pub session_id: Option<String>,
     pub tool_name: String,
     pub params_summary: Option<String>,
@@ -27,15 +30,168 @@ pub struct McpAuditResponse {
     pub status: &'static str,
 }
 
-/// Record an MCP tool call for audit. Requires auth (session or Bearer).
-/// Logged to the same logs table with entity_type "MCP", action_type "MCP_TOOL".
-#[post("/mcp/audit", data = "<body>")]
-pub async fn audit(
-    user: ApiUserOrBearer,
+#[derive(Debug, Serialize)]
+#[serde(crate = "rocket::serde", rename_all = "snake_case")]
+pub struct McpPrincipalResponse {
+    pub user_id: i32,
+    pub authentication_type: &'static str,
+    pub principal_id: String,
+    pub client_id: Option<String>,
+    pub grant_id: Option<i32>,
+}
+
+/// Return the stable identity represented by a credential without requiring a
+/// project/domain scope. The opaque principal id lets the MCP transport accept
+/// rotated OAuth access tokens only when they belong to the same grant.
+#[get("/mcp/principal")]
+pub fn principal(user: McpPrincipalAuth) -> Json<McpPrincipalResponse> {
+    let (authentication_type, principal_id, client_id, grant_id) = match user.source() {
+        AuthenticationSource::Session => {
+            ("session", format!("user:{}", user.user().id), None, None)
+        }
+        AuthenticationSource::ApiToken { token_hash, .. } => {
+            ("api_token", format!("token:{token_hash}"), None, None)
+        }
+        AuthenticationSource::DelegatedOAuth {
+            client_id,
+            grant_id,
+            ..
+        } => (
+            "delegated_oauth",
+            format!("grant:{grant_id}"),
+            Some(client_id.clone()),
+            Some(*grant_id),
+        ),
+    };
+    Json(McpPrincipalResponse {
+        user_id: user.user().id,
+        authentication_type,
+        principal_id,
+        client_id,
+        grant_id,
+    })
+}
+
+const MCP_TOOL_NAMES: &[&str] = &[
+    "list_projects",
+    "get_requirement",
+    "list_requirements",
+    "get_versions",
+    "semantic_search_requirements",
+    "compare_versions",
+    "trace_up",
+    "trace_down",
+    "coverage_report",
+    "get_baseline",
+    "diff_baselines",
+    "list_verifications",
+    "get_verification",
+    "list_baselines",
+    "get_requirement_activity",
+    "get_verification_activity",
+    "list_requirement_comments",
+    "get_verification_matrix",
+    "list_project_catalog",
+    "diff_baseline_vs_current",
+    "create_requirement",
+    "patch_requirement",
+    "set_approval",
+    "create_baseline",
+    "create_requirement_comment",
+    "create_verification",
+    "update_verification",
+    "put_verification_matrix",
+    "clear_suspect",
+];
+
+pub struct InternalMcpAudit;
+
+/// Personal API-token authentication for the legacy stdio MCP audit path.
+/// Delegated OAuth and browser sessions are rejected: remote clients must use
+/// the internal audit endpoint with the shared service secret.
+pub struct StdioMcpAuditAuth(pub McpAuditAuth);
+
+fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
+    if left.len() != right.len() {
+        return false;
+    }
+    left.iter()
+        .zip(right)
+        .fold(0u8, |difference, (a, b)| difference | (a ^ b))
+        == 0
+}
+
+#[async_trait]
+impl<'r> FromRequest<'r> for InternalMcpAudit {
+    type Error = ();
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        let expected = std::env::var("MARREQ_MCP_AUDIT_SECRET").ok();
+        let supplied = request.headers().get_one("X-Marreq-MCP-Audit-Secret");
+        if expected
+            .as_deref()
+            .filter(|value| value.len() >= 32)
+            .zip(supplied)
+            .is_some_and(|(expected, supplied)| {
+                constant_time_eq(expected.as_bytes(), supplied.as_bytes())
+            })
+        {
+            Outcome::Success(Self)
+        } else {
+            Outcome::Error((Status::Forbidden, ()))
+        }
+    }
+}
+
+#[async_trait]
+impl<'r> FromRequest<'r> for StdioMcpAuditAuth {
+    type Error = ();
+    async fn from_request(request: &'r Request<'_>) -> Outcome<Self, Self::Error> {
+        match request.guard::<McpAuditAuth>().await {
+            Outcome::Success(auth)
+                if matches!(auth.source(), AuthenticationSource::ApiToken { .. }) =>
+            {
+                Outcome::Success(Self(auth))
+            }
+            Outcome::Success(_) => Outcome::Error((Status::Forbidden, ())),
+            Outcome::Error(error) => Outcome::Error(error),
+            Outcome::Forward(forward) => Outcome::Forward(forward),
+        }
+    }
+}
+
+fn record_audit(
+    user: &McpAuditAuth,
     state: &State<AppState>,
-    body: Json<McpAuditRequest>,
+    payload: McpAuditRequest,
 ) -> ApiResult<Json<McpAuditResponse>> {
-    let payload = body.into_inner();
+    if !MCP_TOOL_NAMES.contains(&payload.tool_name.as_str())
+        || payload.tool_name.len() > 100
+        || payload
+            .params_summary
+            .as_ref()
+            .is_some_and(|v| v.len() > 2_000)
+        || payload
+            .result_summary
+            .as_ref()
+            .is_some_and(|v| v.len() > 2_000)
+    {
+        return Err(ApiError::BadRequest("audit payload is too large".into()));
+    }
+    if matches!(
+        user.source(),
+        AuthenticationSource::ApiToken {
+            project_scope: Some(scope), ..
+        } if payload.project_id.is_some_and(|project_id| *scope != project_id)
+    ) {
+        return Err(ApiError::Forbidden("project access denied".into()));
+    }
+    if let Some(project_id) = payload.project_id {
+        if !session_user_has_project_access(state, user.user(), project_id)
+            .map_err(|_| ApiError::Internal("repository unavailable".into()))?
+        {
+            return Err(ApiError::Forbidden("project access denied".into()));
+        }
+    }
     let user_id = user.user().id;
     let description = serde_json::json!({
         "tool": payload.tool_name,
@@ -51,7 +207,7 @@ pub async fn audit(
         action_type: "MCP_TOOL".to_string(),
         entity_type: "MCP".to_string(),
         entity_id: None,
-        project_id: Some(payload.project_id),
+        project_id: payload.project_id,
         old_values: None,
         new_values: None,
         description: Some(description),
@@ -64,6 +220,31 @@ pub async fn audit(
         .insert_log(&new_log)
         .map_err(ApiError::from)?;
     Ok(Json(McpAuditResponse { status: "ok" }))
+}
+
+/// Legacy stdio audit path. Authenticated solely by a personal API token; the
+/// event identity is derived from that token. Delegated OAuth clients cannot
+/// use this route to forge audit events.
+#[post("/mcp/audit", data = "<body>")]
+pub async fn audit(
+    user: StdioMcpAuditAuth,
+    state: &State<AppState>,
+    body: Json<McpAuditRequest>,
+) -> ApiResult<Json<McpAuditResponse>> {
+    record_audit(&user.0, state, body.into_inner())
+}
+
+/// Remote MCP audit path. Requires the internal service secret and a valid user
+/// credential. The secret alone cannot impersonate a user; a bearer alone cannot
+/// forge remote audit events.
+#[post("/mcp/internal/audit", data = "<body>")]
+pub async fn internal_audit(
+    _internal: InternalMcpAudit,
+    user: McpAuditAuth,
+    state: &State<AppState>,
+    body: Json<McpAuditRequest>,
+) -> ApiResult<Json<McpAuditResponse>> {
+    record_audit(&user, state, body.into_inner())
 }
 
 #[cfg(test)]
@@ -80,13 +261,23 @@ mod tests {
         test_session_cookie_for(state, user_id)
     }
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
-    use rocket::http::{ContentType, Status};
+    use rocket::http::{ContentType, Header, Status};
     use rocket::local::asynchronous::Client;
+    use sha2::{Digest, Sha256};
     use std::sync::{Arc, RwLock};
 
     type TestState = AppState<CacheRepository<DieselRepoMock>>;
 
     const ADMIN_ID: i32 = 1;
+    const AUDIT_SECRET: &str = "test-only-mcp-audit-secret-32-bytes-long";
+    const API_TOKEN: &str = "stdio-personal-api-token";
+
+    fn token_hash(raw: &str) -> String {
+        Sha256::digest(raw.as_bytes())
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect()
+    }
 
     fn state_from_repo(repo: DieselRepoMock) -> TestState {
         AppState {
@@ -95,9 +286,18 @@ mod tests {
     }
 
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
+        std::env::set_var("MARREQ_MCP_AUDIT_SECRET", AUDIT_SECRET);
+        std::env::set_var(
+            "DATABASE_URL",
+            std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://unused".into()),
+        );
+        std::env::set_var("MARREQ_MCP_PUBLIC_URL", "http://localhost:8080/mcp");
+        if let Ok(cfg) = crate::config::AppConfig::from_env() {
+            crate::config::AppConfig::install(cfg);
+        }
         let rocket = rocket::build()
             .manage(state_from_repo(repo))
-            .mount("/api", routes![audit]);
+            .mount("/api", routes![audit, internal_audit]);
         Client::tracked(rocket).await.unwrap()
     }
 
@@ -105,18 +305,27 @@ mod tests {
         auth_cookie_for(client, ADMIN_ID)
     }
 
+    fn admin_with_token() -> DieselRepoMock {
+        DieselRepoMock::default().with_admin_user().with_api_token(
+            &token_hash(API_TOKEN),
+            ADMIN_ID,
+            None,
+        )
+    }
+
     #[rocket::async_test]
-    async fn audit_returns_ok_when_authenticated() {
+    async fn internal_audit_returns_ok_when_authenticated() {
         let client = client_with_repo(DieselRepoMock::default().with_admin_user()).await;
         let response = client
-            .post("/api/mcp/audit")
+            .post("/api/mcp/internal/audit")
             .header(ContentType::JSON)
+            .header(Header::new("X-Marreq-MCP-Audit-Secret", AUDIT_SECRET))
             .private_cookie(auth_cookie(&client))
             .body(
                 r#"{
                 "project_id": 1,
                 "session_id": "sess-1",
-                "tool_name": "test_tool",
+                "tool_name": "list_projects",
                 "params_summary": "a=1",
                 "result_summary": "ok",
                 "is_write": false
@@ -130,11 +339,12 @@ mod tests {
     }
 
     #[rocket::async_test]
-    async fn audit_requires_auth() {
+    async fn internal_audit_requires_auth() {
         let client = client_with_repo(DieselRepoMock::default().with_admin_user()).await;
         let response = client
-            .post("/api/mcp/audit")
+            .post("/api/mcp/internal/audit")
             .header(ContentType::JSON)
+            .header(Header::new("X-Marreq-MCP-Audit-Secret", AUDIT_SECRET))
             .body(
                 r#"{
                 "project_id": 1,
@@ -147,11 +357,85 @@ mod tests {
         assert_eq!(response.status(), Status::Unauthorized);
     }
 
+    #[rocket::async_test]
+    async fn internal_audit_rejects_cross_project_spoofing() {
+        let user = DieselRepoMock::make_user(2, "member", "hash");
+        let client = client_with_repo(DieselRepoMock::with_users([user])).await;
+        let response = client
+            .post("/api/mcp/internal/audit")
+            .header(ContentType::JSON)
+            .header(Header::new("X-Marreq-MCP-Audit-Secret", AUDIT_SECRET))
+            .private_cookie(auth_cookie_for(&client, 2))
+            .body(r#"{"project_id":999,"tool_name":"list_projects","is_write":false}"#)
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Forbidden);
+    }
+
+    #[rocket::async_test]
+    async fn end_user_auth_alone_cannot_forge_internal_audit() {
+        let client = client_with_repo(DieselRepoMock::default().with_admin_user()).await;
+        let response = client
+            .post("/api/mcp/internal/audit")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(r#"{"tool_name":"create_requirement","is_write":true}"#)
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Forbidden);
+    }
+
+    #[rocket::async_test]
+    async fn oauth_style_bearer_alone_cannot_use_legacy_audit() {
+        let client = client_with_repo(DieselRepoMock::default().with_admin_user()).await;
+        let response = client
+            .post("/api/mcp/audit")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(r#"{"tool_name":"create_requirement","is_write":true}"#)
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Forbidden);
+    }
+
+    #[rocket::async_test]
+    async fn stdio_api_token_can_audit_without_secret() {
+        let client = client_with_repo(admin_with_token()).await;
+        let response = client
+            .post("/api/mcp/audit")
+            .header(ContentType::JSON)
+            .header(Header::new("Authorization", format!("Bearer {API_TOKEN}")))
+            .body(r#"{"tool_name":"list_projects","is_write":false}"#)
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Ok);
+        let body: serde_json::Value = response.into_json().await.unwrap();
+        assert_eq!(body.get("status").and_then(|v| v.as_str()), Some("ok"));
+    }
+
+    #[rocket::async_test]
+    async fn project_scoped_api_token_cannot_spoof_other_project_audit() {
+        let client = client_with_repo(DieselRepoMock::default().with_admin_user().with_api_token(
+            &token_hash(API_TOKEN),
+            ADMIN_ID,
+            Some(1),
+        ))
+        .await;
+        let response = client
+            .post("/api/mcp/audit")
+            .header(ContentType::JSON)
+            .header(Header::new("Authorization", format!("Bearer {API_TOKEN}")))
+            .body(r#"{"project_id":2,"tool_name":"list_projects","is_write":false}"#)
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Forbidden);
+    }
+
     #[test]
     fn mcp_audit_request_deserialize() {
         let json = r#"{"project_id":1,"tool_name":"x","is_write":true}"#;
         let req: McpAuditRequest = serde_json::from_str(json).unwrap();
-        assert_eq!(req.project_id, 1);
+        assert_eq!(req.project_id, Some(1));
         assert_eq!(req.tool_name, "x");
         assert!(req.is_write);
         assert!(req.session_id.is_none());

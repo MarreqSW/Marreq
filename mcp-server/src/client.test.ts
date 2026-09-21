@@ -105,7 +105,7 @@ describe("MarreqClient", () => {
         project_id: 1,
         verification_method_ids: [1],
       };
-      await client.createRequirement(payload);
+      await client.createRequirement(payload, "operation-key-0001");
 
       expect(fetchSpy).toHaveBeenCalledWith(
         "http://localhost:8000/api/projects/1/requirements",
@@ -115,9 +115,20 @@ describe("MarreqClient", () => {
           headers: expect.objectContaining({
             Authorization: "Bearer test-token",
             "Content-Type": "application/json",
+            "Idempotency-Key": "operation-key-0001",
           }),
         })
       );
+    });
+
+    it("relies on the persistent backend idempotency result", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ status: "ok", id: 10 }), { status: 200, headers: { "Content-Type": "application/json" } })
+      );
+      const payload = { title: "New Req", description: "Desc", reference_code: "REQ-001", author_id: 1, reviewer_id: 1, category_id: 1, status_id: 1, applicability_id: 1, project_id: 1, verification_method_ids: [1] };
+      await makeClient().createRequirement(payload, "stable-operation-key");
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(fetchSpy.mock.calls[0]?.[1]?.headers).toMatchObject({ "Idempotency-Key": "stable-operation-key" });
     });
 
     it("patchRequirement calls PATCH with project-scoped URL and body", async () => {
@@ -244,7 +255,7 @@ describe("MarreqClient", () => {
 
       const client = makeClient();
       await expect(client.getRequirement(1)).rejects.toThrow(
-        /Marreq API 401/
+        /Marreq authorization is required/
       );
     });
   });
@@ -308,12 +319,63 @@ describe("MarreqClient", () => {
       const client = makeClient();
       await client.clearSuspectLink(5, 7);
       expect(fetchSpy).toHaveBeenCalledWith(
-        "http://localhost:8000/api/traceability/clear_suspect",
+        "http://localhost:8000/api/projects/1/traceability/clear_suspect",
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({ req_id: 5, verification_id: 7 }),
         })
       );
+    });
+  });
+
+  describe("postAudit trust modes", () => {
+    it("stdio uses legacy audit path without secret header", async () => {
+      delete process.env.MARREQ_MCP_AUDIT_SECRET;
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ status: "ok" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+      const client = makeClient();
+      await client.postAudit({
+        tool_name: "list_projects",
+        is_write: false,
+      });
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "http://localhost:8000/api/mcp/audit",
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.not.objectContaining({
+            "X-Marreq-MCP-Audit-Secret": expect.anything(),
+          }),
+        })
+      );
+    });
+
+    it("remote uses internal audit path with shared secret", async () => {
+      process.env.MARREQ_MCP_AUDIT_SECRET = "test-only-mcp-audit-secret-32-bytes-long";
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response(JSON.stringify({ status: "ok" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+      );
+      const client = makeClient();
+      await client.postAudit({
+        tool_name: "create_requirement",
+        is_write: true,
+      });
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "http://localhost:8000/api/mcp/internal/audit",
+        expect.objectContaining({
+          method: "POST",
+          headers: expect.objectContaining({
+            "X-Marreq-MCP-Audit-Secret": "test-only-mcp-audit-secret-32-bytes-long",
+          }),
+        })
+      );
+      delete process.env.MARREQ_MCP_AUDIT_SECRET;
     });
   });
 });

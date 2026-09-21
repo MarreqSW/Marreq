@@ -1,9 +1,13 @@
 #!/usr/bin/env node
+import { pathToFileURL } from "node:url";
+import { randomUUID } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import { contextAllowsReadExtended, loadContext } from "./context.js";
-import { MarreqClient } from "./client.js";
+import type { SessionContext } from "./context.js";
+import { MarreqAuthenticationError, MarreqClient } from "./client.js";
+import { loadTransportConfig, startRemoteServer } from "./remote.js";
 
 function jsonContent(data: unknown) {
   const text =
@@ -26,51 +30,171 @@ async function withAudit(
         ? JSON.stringify(out).slice(0, 500)
         : String(out);
     await client.postAudit({
-      project_id: client.projectId,
+      project_id: client.projectId || undefined,
       session_id: client.sessionId,
       tool_name: toolName,
       params_summary: paramsSummary,
       result_summary: resultSummary,
       is_write: isWrite,
-    }).catch(() => {});
+    }).catch((error) => {
+      console.error(`MCP audit persistence failed for ${toolName}: ${error instanceof Error ? error.message : "unknown error"}`);
+    });
     return out;
   } catch (err) {
     resultSummary = err instanceof Error ? err.message : String(err);
     await client.postAudit({
-      project_id: client.projectId,
+      project_id: client.projectId || undefined,
       session_id: client.sessionId,
       tool_name: toolName,
       params_summary: paramsSummary,
       result_summary: `error: ${resultSummary}`,
       is_write: isWrite,
-    }).catch(() => {});
+    }).catch((auditError) => {
+      console.error(`MCP audit persistence failed for ${toolName}: ${auditError instanceof Error ? auditError.message : "unknown error"}`);
+    });
     throw err;
   }
 }
 
-async function main() {
-  const ctx = loadContext();
+export function createMarreqServer(ctx: SessionContext) {
   const client = new MarreqClient(ctx);
+  const projectField = { project_id: z.number().int().positive().optional() };
+  const operationKey = ctx.remote
+    ? z.string().min(16).max(200)
+    : z.string().min(16).max(200).optional();
+  const forProject = (projectId: number | undefined) => {
+    if (!ctx.remote) return client;
+    if (!projectId) throw new Error("project_id is required in remote mode");
+    return client.withProject(projectId);
+  };
 
   const server = new McpServer({
     name: "marreq-mcp-server",
     version: "0.1.0",
   });
 
+  // MCP SDK 1.x does not yet model ChatGPT's top-level `securitySchemes`
+  // extension. Decorate only the public tools/list handler result so the wire
+  // representation is correct while keeping the SDK responsible for schemas,
+  // dispatch, and validation.
+  const protocol = server.server as unknown as {
+    setRequestHandler: (schema: unknown, handler: (...args: unknown[]) => unknown) => void;
+  };
+  const setRequestHandler = protocol.setRequestHandler.bind(protocol);
+  protocol.setRequestHandler = (schema, handler) => setRequestHandler(schema, async (...args) => {
+    const result = await handler(...args) as { tools?: Array<Record<string, unknown>> };
+    if (Array.isArray(result?.tools)) {
+      result.tools = result.tools.map((tool) => {
+        const metadata = tool._meta as Record<string, unknown> | undefined;
+        const securitySchemes = metadata?.securitySchemes;
+        if (!securitySchemes) return tool;
+        const { securitySchemes: _legacy, ...remainingMetadata } = metadata;
+        return {
+          ...tool,
+          securitySchemes,
+          ...(Object.keys(remainingMetadata).length ? { _meta: remainingMetadata } : { _meta: undefined }),
+        };
+      });
+    }
+    return result;
+  });
+
+  const toolScopes: Record<string, string[]> = {
+    list_projects: ["projects:read"],
+    get_requirement: ["requirements:read"],
+    list_requirements: ["requirements:read"],
+    get_versions: ["requirements:read"],
+    semantic_search_requirements: ["requirements:read"],
+    compare_versions: ["requirements:read"],
+    get_requirement_activity: ["requirements:read"],
+    list_requirement_comments: ["requirements:read"],
+    list_project_catalog: ["requirements:read"],
+    create_requirement: ["requirements:write"],
+    patch_requirement: ["requirements:write"],
+    create_requirement_comment: ["requirements:write"],
+    set_approval: ["requirements:approve"],
+    list_verifications: ["verifications:read"],
+    get_verification: ["verifications:read"],
+    get_verification_activity: ["verifications:read"],
+    create_verification: ["verifications:write"],
+    update_verification: ["verifications:write"],
+    trace_up: ["requirements:read", "traceability:read"],
+    trace_down: ["requirements:read", "verifications:read", "traceability:read"],
+    coverage_report: ["traceability:read"],
+    get_verification_matrix: ["traceability:read"],
+    put_verification_matrix: ["traceability:write"],
+    clear_suspect: ["traceability:write"],
+    get_baseline: ["baselines:read"],
+    list_baselines: ["baselines:read"],
+    diff_baselines: ["baselines:read"],
+    diff_baseline_vs_current: ["requirements:read", "baselines:read"],
+    create_baseline: ["baselines:write"],
+  };
+  const originalRegisterTool = server.registerTool.bind(server);
+  const unsafeRegisterTool = originalRegisterTool as unknown as (
+    name: string,
+    config: Record<string, unknown>,
+    callback: (...args: unknown[]) => Promise<unknown>
+  ) => unknown;
+  server.registerTool = ((name: string, config: Record<string, unknown>, callback: (...args: unknown[]) => unknown) => {
+    const scopes = toolScopes[name];
+    const mutating = scopes?.some((scope) => scope.endsWith(":write") || scope.endsWith(":approve")) ?? false;
+    const replayProtectedCreate = ["create_requirement", "create_baseline", "create_requirement_comment", "create_verification"].includes(name);
+    const annotations = {
+      readOnlyHint: !mutating,
+      destructiveHint: false,
+      idempotentHint: !mutating || Boolean(ctx.remote && replayProtectedCreate),
+      openWorldHint: false,
+      ...((config.annotations as Record<string, unknown> | undefined) ?? {}),
+    };
+    const securedConfig = ctx.remote && scopes
+      ? { ...config, annotations, _meta: { ...((config._meta as Record<string, unknown> | undefined) ?? {}), securitySchemes: [{ type: "oauth2", scopes }] } }
+      : { ...config, annotations };
+    return unsafeRegisterTool(name, securedConfig, async (...args: unknown[]) => {
+      try {
+        return await callback(...args);
+      } catch (error) {
+        if (ctx.remote && error instanceof MarreqAuthenticationError) {
+          const challenge = error.challenge ?? `Bearer resource_metadata="${new URL(ctx.mcpPublicUrl!).origin}/.well-known/oauth-protected-resource${new URL(ctx.mcpPublicUrl!).pathname}", error="invalid_token", error_description="The access token is invalid or expired"`;
+          return {
+            isError: true,
+            content: [{ type: "text", text: "Marreq authorization is required" }],
+            _meta: { "mcp/www_authenticate": challenge },
+          };
+        }
+        throw error;
+      }
+    });
+  }) as typeof server.registerTool;
+
+  server.registerTool(
+    "list_projects",
+    {
+      description: "List only projects accessible to the authenticated Marreq user.",
+      inputSchema: z.object({}),
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      const out = await withAudit(client, "list_projects", "{}", false, () => client.listProjects());
+      return { content: [jsonContent(out)] };
+    }
+  );
+
   server.registerTool(
     "get_requirement",
     {
       description: "Get a requirement by id (project-scoped, with trace summary)",
-      inputSchema: z.object({ requirement_id: z.string() }),
+      inputSchema: z.object({ ...projectField, requirement_id: z.string() }),
     },
-    async ({ requirement_id }) => {
+    async ({ project_id, requirement_id }) => {
       const id = parseInt(requirement_id, 10);
+      const toolClient = forProject(project_id);
       const out = await withAudit(
-        client,
+        toolClient,
         "get_requirement",
         JSON.stringify({ requirement_id }),
         false,
-        () => client.getRequirement(id)
+        () => toolClient.getRequirement(id)
       );
       return { content: [jsonContent(out)] };
     }
@@ -82,6 +206,7 @@ async function main() {
       description:
         "List requirements in the project with optional filters (approval_state, has_tests)",
       inputSchema: z.object({
+        ...projectField,
         filter: z
           .object({
             approval_state: z.enum(["draft", "reviewed", "approved"]).optional(),
@@ -92,13 +217,14 @@ async function main() {
     },
     async (args) => {
       const f = args?.filter;
+      const toolClient = forProject(args?.project_id);
       const out = await withAudit(
-        client,
+        toolClient,
         "list_requirements",
         JSON.stringify(args ?? {}),
         false,
         () =>
-          client.listRequirements(
+          toolClient.listRequirements(
             f?.approval_state,
             f?.has_tests
           )
@@ -111,17 +237,32 @@ async function main() {
     "get_versions",
     {
       description: "Get version history for a requirement",
-      inputSchema: z.object({ requirement_id: z.string() }),
+      inputSchema: z.object({ ...projectField, requirement_id: z.string() }),
     },
-    async ({ requirement_id }) => {
+    async ({ project_id, requirement_id }) => {
       const id = parseInt(requirement_id, 10);
+      const toolClient = forProject(project_id);
       const out = await withAudit(
-        client,
+        toolClient,
         "get_versions",
         JSON.stringify({ requirement_id }),
         false,
-        () => client.getVersions(id)
+        () => toolClient.getVersions(id)
       );
+      return { content: [jsonContent(out)] };
+    }
+  );
+
+  server.registerTool(
+    "semantic_search_requirements",
+    {
+      description: "Semantic requirement search when embeddings are enabled; returns an explicit disabled response otherwise.",
+      inputSchema: z.object({ ...projectField, query: z.string().min(1), limit: z.number().int().min(1).max(50).optional() }),
+      annotations: { readOnlyHint: true },
+    },
+    async ({ project_id, query, limit }) => {
+      const toolClient = forProject(project_id);
+      const out = await withAudit(toolClient, "semantic_search_requirements", JSON.stringify({ query_length: query.length, limit }), false, () => toolClient.semanticSearchRequirements(query, limit));
       return { content: [jsonContent(out)] };
     }
   );
@@ -131,19 +272,21 @@ async function main() {
     {
       description: "Structured diff between two requirement versions",
       inputSchema: z.object({
+        ...projectField,
         requirement_id: z.string(),
         v1: z.number(),
         v2: z.number(),
       }),
     },
-    async ({ requirement_id, v1, v2 }) => {
+    async ({ project_id, requirement_id, v1, v2 }) => {
       const id = parseInt(requirement_id, 10);
+      const toolClient = forProject(project_id);
       const out = await withAudit(
-        client,
+        toolClient,
         "compare_versions",
         JSON.stringify({ requirement_id, v1, v2 }),
         false,
-        () => client.compareVersions(id, v1, v2)
+        () => toolClient.compareVersions(id, v1, v2)
       );
       return { content: [jsonContent(out)] };
     }
@@ -153,16 +296,17 @@ async function main() {
     "trace_up",
     {
       description: "Get parent requirement(s) for a requirement",
-      inputSchema: z.object({ requirement_id: z.string() }),
+      inputSchema: z.object({ ...projectField, requirement_id: z.string() }),
     },
-    async ({ requirement_id }) => {
+    async ({ project_id, requirement_id }) => {
       const id = parseInt(requirement_id, 10);
+      const toolClient = forProject(project_id);
       const out = await withAudit(
-        client,
+        toolClient,
         "trace_up",
         JSON.stringify({ requirement_id }),
         false,
-        () => client.traceUp(id)
+        () => toolClient.traceUp(id)
       );
       return { content: [jsonContent(out)] };
     }
@@ -172,16 +316,17 @@ async function main() {
     "trace_down",
     {
       description: "Get child requirements and linked tests",
-      inputSchema: z.object({ requirement_id: z.string() }),
+      inputSchema: z.object({ ...projectField, requirement_id: z.string() }),
     },
-    async ({ requirement_id }) => {
+    async ({ project_id, requirement_id }) => {
       const id = parseInt(requirement_id, 10);
+      const toolClient = forProject(project_id);
       const out = await withAudit(
-        client,
+        toolClient,
         "trace_down",
         JSON.stringify({ requirement_id }),
         false,
-        () => client.traceDown(id)
+        () => toolClient.traceDown(id)
       );
       return { content: [jsonContent(out)] };
     }
@@ -192,15 +337,16 @@ async function main() {
     {
       description:
         "Requirements without tests, tests without requirements, suspect links (scope: project)",
-      inputSchema: z.object({ scope: z.literal("project").optional() }),
+      inputSchema: z.object({ ...projectField, scope: z.literal("project").optional() }),
     },
-    async () => {
+    async ({ project_id }) => {
+      const toolClient = forProject(project_id);
       const out = await withAudit(
-        client,
+        toolClient,
         "coverage_report",
         '{"scope":"project"}',
         false,
-        () => client.coverageReport()
+        () => toolClient.coverageReport()
       );
       return { content: [jsonContent(out)] };
     }
@@ -210,15 +356,16 @@ async function main() {
     "get_baseline",
     {
       description: "Get baseline metadata, requirements snapshot, and traceability",
-      inputSchema: z.object({ baseline_id: z.number() }),
+      inputSchema: z.object({ ...projectField, baseline_id: z.number() }),
     },
-    async ({ baseline_id }) => {
+    async ({ project_id, baseline_id }) => {
+      const toolClient = forProject(project_id);
       const out = await withAudit(
-        client,
+        toolClient,
         "get_baseline",
         JSON.stringify({ baseline_id }),
         false,
-        () => client.getBaseline(baseline_id)
+        () => toolClient.getBaseline(baseline_id)
       );
       return { content: [jsonContent(out)] };
     }
@@ -229,17 +376,19 @@ async function main() {
     {
       description: "Compare two baselines (requirements and traceability diff)",
       inputSchema: z.object({
+        ...projectField,
         baseline_a: z.number(),
         baseline_b: z.number(),
       }),
     },
-    async ({ baseline_a, baseline_b }) => {
+    async ({ project_id, baseline_a, baseline_b }) => {
+      const toolClient = forProject(project_id);
       const out = await withAudit(
-        client,
+        toolClient,
         "diff_baselines",
         JSON.stringify({ baseline_a, baseline_b }),
         false,
-        () => client.diffBaselines(baseline_a, baseline_b)
+        () => toolClient.diffBaselines(baseline_a, baseline_b)
       );
       return { content: [jsonContent(out)] };
     }
@@ -252,15 +401,16 @@ async function main() {
       {
         description:
           "List verifications (tests) in the project. Requires MARREQ_MODE=read_extended or draft_write.",
-        inputSchema: z.object({}),
+        inputSchema: z.object({ ...projectField }),
       },
-      async () => {
+      async ({ project_id }) => {
+        const toolClient = forProject(project_id);
         const out = await withAudit(
-          client,
+          toolClient,
           "list_verifications",
           "{}",
           false,
-          () => client.listVerificationsByProject()
+          () => toolClient.listVerificationsByProject()
         );
         return { content: [jsonContent(out)] };
       }
@@ -271,22 +421,24 @@ async function main() {
       {
         description:
           "Get one verification by id. The record must belong to MARREQ_PROJECT_ID. Requires read_extended or draft_write mode.",
-        inputSchema: z.object({ verification_id: z.string() }),
+        inputSchema: z.object({ ...projectField, verification_id: z.string() }),
       },
-      async ({ verification_id }) => {
+      async ({ project_id, verification_id }) => {
         const id = parseInt(verification_id, 10);
+        const toolClient = forProject(project_id);
         const out = await withAudit(
-          client,
+          toolClient,
           "get_verification",
           JSON.stringify({ verification_id }),
           false,
           async () => {
-            const row = (await client.getVerificationById(id)) as {
+            const row = (await toolClient.getVerificationById(id)) as {
               project_id?: number;
             };
-            if (row?.project_id != null && row.project_id !== ctx.projectId) {
+            const expectedProject = project_id ?? ctx.projectId;
+            if (row?.project_id != null && row.project_id !== expectedProject) {
               throw new Error(
-                `Verification ${id} is not in project ${ctx.projectId}`
+                `Verification ${id} is not in project ${expectedProject}`
               );
             }
             return row;
@@ -301,15 +453,16 @@ async function main() {
       {
         description:
           "List baselines for the project (metadata only). Use get_baseline for full snapshot.",
-        inputSchema: z.object({}),
+        inputSchema: z.object({ ...projectField }),
       },
-      async () => {
+      async ({ project_id }) => {
+        const toolClient = forProject(project_id);
         const out = await withAudit(
-          client,
+          toolClient,
           "list_baselines",
           "{}",
           false,
-          () => client.listBaselinesByProject()
+          () => toolClient.listBaselinesByProject()
         );
         return { content: [jsonContent(out)] };
       }
@@ -320,16 +473,17 @@ async function main() {
       {
         description:
           "Audit log entries for a requirement (create/update history with field summaries).",
-        inputSchema: z.object({ requirement_id: z.string() }),
+        inputSchema: z.object({ ...projectField, requirement_id: z.string() }),
       },
-      async ({ requirement_id }) => {
+      async ({ project_id, requirement_id }) => {
         const id = parseInt(requirement_id, 10);
+        const toolClient = forProject(project_id);
         const out = await withAudit(
-          client,
+          toolClient,
           "get_requirement_activity",
           JSON.stringify({ requirement_id }),
           false,
-          () => client.getRequirementActivity(id)
+          () => toolClient.getRequirementActivity(id)
         );
         return { content: [jsonContent(out)] };
       }
@@ -339,16 +493,17 @@ async function main() {
       "get_verification_activity",
       {
         description: "Audit log entries for a verification (test).",
-        inputSchema: z.object({ verification_id: z.string() }),
+        inputSchema: z.object({ ...projectField, verification_id: z.string() }),
       },
-      async ({ verification_id }) => {
+      async ({ project_id, verification_id }) => {
         const id = parseInt(verification_id, 10);
+        const toolClient = forProject(project_id);
         const out = await withAudit(
-          client,
+          toolClient,
           "get_verification_activity",
           JSON.stringify({ verification_id }),
           false,
-          () => client.getVerificationActivity(id)
+          () => toolClient.getVerificationActivity(id)
         );
         return { content: [jsonContent(out)] };
       }
@@ -360,19 +515,21 @@ async function main() {
         description:
           "List comments for a requirement. Optional requirement_version_id filters by version.",
         inputSchema: z.object({
+          ...projectField,
           requirement_id: z.string(),
           requirement_version_id: z.number().optional(),
         }),
       },
-      async ({ requirement_id, requirement_version_id }) => {
+      async ({ project_id, requirement_id, requirement_version_id }) => {
         const id = parseInt(requirement_id, 10);
+        const toolClient = forProject(project_id);
         const out = await withAudit(
-          client,
+          toolClient,
           "list_requirement_comments",
           JSON.stringify({ requirement_id, requirement_version_id }),
           false,
           () =>
-            client.listRequirementComments(id, requirement_version_id ?? null)
+            toolClient.listRequirementComments(id, requirement_version_id ?? null)
         );
         return { content: [jsonContent(out)] };
       }
@@ -383,16 +540,17 @@ async function main() {
       {
         description:
           "Requirement ids linked to a verification in the traceability matrix (read).",
-        inputSchema: z.object({ verification_id: z.string() }),
+        inputSchema: z.object({ ...projectField, verification_id: z.string() }),
       },
-      async ({ verification_id }) => {
+      async ({ project_id, verification_id }) => {
         const id = parseInt(verification_id, 10);
+        const toolClient = forProject(project_id);
         const out = await withAudit(
-          client,
+          toolClient,
           "get_verification_matrix",
           JSON.stringify({ verification_id }),
           false,
-          () => client.getVerificationMatrix(id)
+          () => toolClient.getVerificationMatrix(id)
         );
         return { content: [jsonContent(out)] };
       }
@@ -403,15 +561,16 @@ async function main() {
       {
         description:
           "Project-scoped catalog: categories, applicability, requirement/verification statuses, verification methods, custom field definitions.",
-        inputSchema: z.object({}),
+        inputSchema: z.object({ ...projectField }),
       },
-      async () => {
+      async ({ project_id }) => {
+        const toolClient = forProject(project_id);
         const out = await withAudit(
-          client,
+          toolClient,
           "list_project_catalog",
           "{}",
           false,
-          () => client.listProjectCatalog()
+          () => toolClient.listProjectCatalog()
         );
         return { content: [jsonContent(out)] };
       }
@@ -423,18 +582,20 @@ async function main() {
         description:
           "Structured diff between a requirement as captured in a baseline and its current version.",
         inputSchema: z.object({
+          ...projectField,
           baseline_id: z.number(),
           requirement_id: z.string(),
         }),
       },
-      async ({ baseline_id, requirement_id }) => {
+      async ({ project_id, baseline_id, requirement_id }) => {
         const rid = parseInt(requirement_id, 10);
+        const toolClient = forProject(project_id);
         const out = await withAudit(
-          client,
+          toolClient,
           "diff_baseline_vs_current",
           JSON.stringify({ baseline_id, requirement_id }),
           false,
-          () => client.diffBaselineVsCurrent(baseline_id, rid)
+          () => toolClient.diffBaselineVsCurrent(baseline_id, rid)
         );
         return { content: [jsonContent(out)] };
       }
@@ -447,8 +608,10 @@ async function main() {
       "create_requirement",
       {
         description:
-          "Create a new requirement in the project (draft). Requires draft_write mode.",
+          "Create a new draft requirement. reference_code is the persistent idempotency identity: retry with the same reference, title, and description returns the existing requirement; conflicting content is rejected.",
         inputSchema: z.object({
+          ...projectField,
+          idempotency_key: operationKey,
           title: z.string(),
           description: z.string(),
           reference_code: z.string(),
@@ -462,21 +625,71 @@ async function main() {
           custom_fields: z
             .array(z.object({ field_id: z.number(), value: z.string() }))
             .optional(),
+          parent_links: z.array(z.object({
+            target_version_id: z.number().int().positive(),
+            link_type: z.string().min(1),
+            rationale: z.string().nullable().optional(),
+          })).optional(),
         }),
       },
       async (args) => {
-        const projectId = ctx.projectId;
+        const { idempotency_key, ...request } = args;
+        const projectId = ctx.remote ? args.project_id : ctx.projectId;
+        if (!projectId) throw new Error("project_id is required in remote mode");
+        const toolClient = forProject(projectId);
         const payload = {
-          ...args,
+          ...request,
           project_id: projectId,
         };
         const out = await withAudit(
-          client,
+          toolClient,
           "create_requirement",
           JSON.stringify({ ...args, project_id: projectId }),
           true,
-          () => client.createRequirement(payload)
+          () => toolClient.createRequirement(payload, idempotency_key ?? randomUUID())
         );
+        return { content: [jsonContent(out)] };
+      }
+    );
+
+    const verificationInput = z.object({
+      reference_code: z.string(),
+      name: z.string(),
+      description: z.string(),
+      source: z.string(),
+      status_id: z.number().int().positive(),
+      parent_id: z.number().int().positive().nullable().optional(),
+      verification_method_id: z.number().int().positive().nullable().optional(),
+      author_id: z.number().int().positive(),
+      reviewer_id: z.number().int().positive(),
+    });
+
+    server.registerTool(
+      "create_verification",
+      {
+        description: "Create a project-scoped verification without exposing deletion.",
+        inputSchema: z.object({ ...projectField, idempotency_key: operationKey, verification: verificationInput }),
+      },
+      async ({ project_id, idempotency_key, verification }) => {
+        const toolClient = forProject(project_id);
+        const payload = { ...verification, project_id: toolClient.projectId };
+        const out = await withAudit(toolClient, "create_verification", JSON.stringify(payload), true,
+          () => toolClient.createVerification(payload, idempotency_key ?? randomUUID()));
+        return { content: [jsonContent(out)] };
+      }
+    );
+
+    server.registerTool(
+      "update_verification",
+      {
+        description: "Update a project-scoped verification; status changes retain reviewer enforcement.",
+        inputSchema: z.object({ ...projectField, verification_id: z.number().int().positive(), verification: verificationInput }),
+      },
+      async ({ project_id, verification_id, verification }) => {
+        const toolClient = forProject(project_id);
+        const payload = { ...verification, id: verification_id, project_id: toolClient.projectId };
+        const out = await withAudit(toolClient, "update_verification", JSON.stringify({ verification_id }), true,
+          () => toolClient.updateVerification(verification_id, payload));
         return { content: [jsonContent(out)] };
       }
     );
@@ -487,6 +700,7 @@ async function main() {
         description:
           "Update a requirement (creates new version). Requires draft_write mode. Changing status_id requires the token user to be in the project's reviewer list (or admin).",
         inputSchema: z.object({
+          ...projectField,
           requirement_id: z.string(),
           patch: z.object({
             title: z.string().optional(),
@@ -503,14 +717,15 @@ async function main() {
           }),
         }),
       },
-      async ({ requirement_id, patch }) => {
+      async ({ project_id, requirement_id, patch }) => {
         const id = parseInt(requirement_id, 10);
+        const toolClient = forProject(project_id);
         const out = await withAudit(
-          client,
+          toolClient,
           "patch_requirement",
           JSON.stringify({ requirement_id, patch }),
           true,
-          () => client.patchRequirement(id, patch)
+          () => toolClient.patchRequirement(id, patch)
         );
         return { content: [jsonContent(out)] };
       }
@@ -522,19 +737,21 @@ async function main() {
         description:
           "Set requirement version approval state (reviewed or approved). Requires draft_write mode; the token user must be a designated project reviewer (or admin).",
         inputSchema: z.object({
+          ...projectField,
           requirement_id: z.string(),
           version_id: z.number(),
           state: z.enum(["reviewed", "approved"]),
         }),
       },
-      async ({ requirement_id, version_id, state }) => {
+      async ({ project_id, requirement_id, version_id, state }) => {
         const reqId = parseInt(requirement_id, 10);
+        const toolClient = forProject(project_id);
         const out = await withAudit(
-          client,
+          toolClient,
           "set_approval",
           JSON.stringify({ requirement_id, version_id, state }),
           true,
-          () => client.setApproval(reqId, version_id, state)
+          () => toolClient.setApproval(reqId, version_id, state)
         );
         return { content: [jsonContent(out)] };
       }
@@ -546,21 +763,24 @@ async function main() {
         description:
           "Create a new baseline snapshot for the project. Requires draft_write mode.",
         inputSchema: z.object({
+          ...projectField,
+          idempotency_key: operationKey,
           name: z.string(),
           description: z.string().nullable().optional(),
         }),
       },
       async (args) => {
+        const toolClient = forProject(args.project_id);
         const payload = {
           name: args.name,
           description: args.description ?? null,
         };
         const out = await withAudit(
-          client,
+          toolClient,
           "create_baseline",
           JSON.stringify(args),
           true,
-          () => client.createBaseline(payload)
+          () => toolClient.createBaseline(payload, args.idempotency_key ?? randomUUID())
         );
         return { content: [jsonContent(out)] };
       }
@@ -572,15 +792,18 @@ async function main() {
         description:
           "Add a comment on a requirement. Optional requirement_version_id ties the comment to a version.",
         inputSchema: z.object({
+          ...projectField,
+          idempotency_key: operationKey,
           requirement_id: z.string(),
           body: z.string(),
           requirement_version_id: z.number().optional(),
         }),
       },
-      async ({ requirement_id, body, requirement_version_id }) => {
+      async ({ project_id, idempotency_key, requirement_id, body, requirement_version_id }) => {
         const id = parseInt(requirement_id, 10);
+        const toolClient = forProject(project_id);
         const out = await withAudit(
-          client,
+          toolClient,
           "create_requirement_comment",
           JSON.stringify({
             requirement_id,
@@ -589,10 +812,11 @@ async function main() {
           }),
           true,
           () =>
-            client.createRequirementComment(
+            toolClient.createRequirementComment(
               id,
               body,
-              requirement_version_id ?? null
+              requirement_version_id ?? null,
+              idempotency_key ?? randomUUID()
             )
         );
         return { content: [jsonContent(out)] };
@@ -607,18 +831,20 @@ async function main() {
         description:
           "Replace traceability links for a verification with the given requirement ids (full replace). Requires MARREQ_TRACE_WRITE=true and EditRequirements on the API.",
         inputSchema: z.object({
+          ...projectField,
           verification_id: z.string(),
           requirement_ids: z.array(z.number()),
         }),
       },
-      async ({ verification_id, requirement_ids }) => {
+      async ({ project_id, verification_id, requirement_ids }) => {
         const vid = parseInt(verification_id, 10);
+        const toolClient = forProject(project_id);
         const out = await withAudit(
-          client,
+          toolClient,
           "put_verification_matrix",
           JSON.stringify({ verification_id, requirement_ids }),
           true,
-          () => client.putVerificationMatrix(vid, requirement_ids)
+          () => toolClient.putVerificationMatrix(vid, requirement_ids)
         );
         return { content: [jsonContent(out)] };
       }
@@ -630,28 +856,45 @@ async function main() {
         description:
           "Clear the suspect flag on a requirement↔verification matrix link. Requires MARREQ_TRACE_WRITE=true.",
         inputSchema: z.object({
+          ...projectField,
           req_id: z.number(),
           verification_id: z.number(),
         }),
       },
-      async ({ req_id, verification_id }) => {
+      async ({ project_id, req_id, verification_id }) => {
+        const toolClient = forProject(project_id);
         const out = await withAudit(
-          client,
+          toolClient,
           "clear_suspect",
           JSON.stringify({ req_id, verification_id }),
           true,
-          () => client.clearSuspectLink(req_id, verification_id)
+          () => toolClient.clearSuspectLink(req_id, verification_id)
         );
         return { content: [jsonContent(out)] };
       }
     );
   }
 
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  return server;
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+async function main() {
+  const transportConfig = loadTransportConfig();
+  if (transportConfig.kind === "http") {
+    const listener = await startRemoteServer(transportConfig, createMarreqServer);
+    const shutdown = () => listener.close();
+    process.once("SIGTERM", shutdown);
+    process.once("SIGINT", shutdown);
+    return;
+  }
+
+  const server = createMarreqServer(loadContext());
+  await server.connect(new StdioServerTransport());
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((err) => {
+    console.error(err instanceof Error ? err.message : "MCP server failed");
+    process.exitCode = 1;
+  });
+}

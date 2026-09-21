@@ -108,6 +108,7 @@ pub fn build_with_auth(
         .manage(auth_config)
         .manage(mode)
         .manage(crate::auth::rate_limiter::LoginRateLimiter::new())
+        .manage(crate::api::oauth::OAuthRegistrationRateLimiter::new())
         .mount(
             "/",
             routes![
@@ -116,6 +117,7 @@ pub fn build_with_auth(
             ],
         )
         .mount("/api", api_routes)
+        .mount("/", crate::api::oauth::routes())
         .register(
             "/",
             catchers![
@@ -126,6 +128,7 @@ pub fn build_with_auth(
         )
         .attach(crate::fairings::SecurityHeadersFairing)
         .attach(crate::fairings::RequestLogFairing)
+        .attach(crate::fairings::OAuthChallengeFairing)
         .attach(crate::fairings::CsrfFairing::new())
         .attach(crate::cors::CorsFairing(crate::cors::CorsPolicy::from_env()))
         .attach(crate::fairings::AntiCacheFairing)

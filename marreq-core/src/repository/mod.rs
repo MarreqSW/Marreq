@@ -87,6 +87,106 @@ pub trait ApiTokensRepository {
     fn update_api_token_last_used_at(&mut self, token_hash: &str) -> Result<(), RepoError>;
 }
 
+pub trait DelegatedOAuthRepository {
+    fn insert_oauth_client(&mut self, client: &NewOAuthClient) -> Result<(), RepoError>;
+    fn get_oauth_client(&self, client_id: &str) -> Result<OAuthClient, RepoError>;
+    fn upsert_oauth_grant(&mut self, grant: &NewOAuthGrant) -> Result<OAuthGrant, RepoError>;
+    fn get_oauth_grant(&self, grant_id: i32) -> Result<OAuthGrant, RepoError>;
+    fn list_oauth_grants(&self, user_id: i32) -> Result<Vec<(OAuthGrant, OAuthClient)>, RepoError>;
+    fn revoke_oauth_grant(
+        &mut self,
+        grant_id: i32,
+        user_id: i32,
+        now: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError>;
+    fn insert_oauth_code(&mut self, code: &NewOAuthAuthorizationCode) -> Result<(), RepoError>;
+    fn get_oauth_code(&self, code_hash: &str) -> Result<OAuthAuthorizationCode, RepoError>;
+    fn consume_oauth_code_and_insert_tokens(
+        &mut self,
+        code_hash: &str,
+        access: &NewOAuthAccessToken,
+        refresh: &NewOAuthRefreshToken,
+        now: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError>;
+    fn get_oauth_access_token(
+        &self,
+        token_hash: &str,
+    ) -> Result<(OAuthAccessToken, OAuthGrant, User), RepoError>;
+    fn get_oauth_refresh_token(
+        &self,
+        token_hash: &str,
+    ) -> Result<(OAuthRefreshToken, OAuthGrant), RepoError>;
+    fn rotate_oauth_refresh_token(
+        &mut self,
+        old_hash: &str,
+        new_access: &NewOAuthAccessToken,
+        new_refresh: &NewOAuthRefreshToken,
+        now: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError>;
+    fn revoke_oauth_refresh_family(
+        &mut self,
+        family_id: &str,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError>;
+    fn touch_oauth_access(
+        &mut self,
+        token_hash: &str,
+        grant_id: i32,
+        now: chrono::NaiveDateTime,
+    ) -> Result<(), RepoError>;
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum IdempotencyClaim {
+    Acquired,
+    Replay(serde_json::Value),
+    Pending,
+    PayloadConflict,
+}
+
+pub trait IdempotencyRepository {
+    #[allow(clippy::too_many_arguments)]
+    fn claim_idempotency(
+        &mut self,
+        _user_id: i32,
+        _principal_key: &str,
+        _target_key: &str,
+        _operation: &str,
+        _key: &str,
+        _request_hash: &str,
+        _now: chrono::NaiveDateTime,
+    ) -> Result<IdempotencyClaim, RepoError> {
+        Err(RepoError::BadInput(
+            "idempotency storage unavailable".into(),
+        ))
+    }
+    fn complete_idempotency(
+        &mut self,
+        _user_id: i32,
+        _principal_key: &str,
+        _target_key: &str,
+        _operation: &str,
+        _key: &str,
+        _response: &serde_json::Value,
+    ) -> Result<(), RepoError> {
+        Err(RepoError::BadInput(
+            "idempotency storage unavailable".into(),
+        ))
+    }
+    fn release_idempotency(
+        &mut self,
+        _user_id: i32,
+        _principal_key: &str,
+        _target_key: &str,
+        _operation: &str,
+        _key: &str,
+    ) -> Result<(), RepoError> {
+        Err(RepoError::BadInput(
+            "idempotency storage unavailable".into(),
+        ))
+    }
+}
+
 /// Server-side authenticated sessions backed by `sessions(token_hash, user_id, ...)`.
 ///
 /// The cookie carries a 256-bit base64url **raw** token; the SHA-256 of that
@@ -165,6 +265,7 @@ pub trait RequirementsRepository {
         verification_method_ids: &[i32],
         custom_fields: Option<&[CustomFieldValueInput]>,
         parent_links: &[NewRequirementVersionLink],
+        mcp_idempotency_identity: Option<&str>,
     ) -> Result<i32, RepoError>;
     fn edit_requirement(&mut self, new: &NewRequirement) -> Result<bool, RepoError>;
     #[allow(clippy::too_many_arguments)]
@@ -222,6 +323,11 @@ pub trait VerificationsRepository {
     ) -> Result<Vec<Verification>, RepoError>;
 
     fn insert_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError>;
+    fn insert_verification_idempotent(
+        &mut self,
+        new: &NewVerification,
+        mcp_idempotency_identity: Option<&str>,
+    ) -> Result<i32, RepoError>;
     fn edit_verification(&mut self, new: &NewVerification) -> Result<bool, RepoError>;
     fn delete_verification(&mut self, verification_id: i32) -> Result<Verification, RepoError>;
     fn update_verification_requirement_links(
@@ -590,6 +696,8 @@ pub trait NotificationRepository {
 
 pub trait Repository:
     ApiTokensRepository
+    + DelegatedOAuthRepository
+    + IdempotencyRepository
     + UserRepository
     + ExternalIdentityRepository
     + LookupRepository
@@ -616,6 +724,8 @@ pub trait Repository:
 
 impl<T> Repository for T where
     T: ApiTokensRepository
+        + DelegatedOAuthRepository
+        + IdempotencyRepository
         + UserRepository
         + ExternalIdentityRepository
         + LookupRepository

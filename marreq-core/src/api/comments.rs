@@ -6,6 +6,7 @@
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
+use crate::auth::guards::{ProjectRequirementsRead, ProjectRequirementsWrite};
 use crate::config;
 use crate::models::{EntityType, NewLog, RequirementComment};
 use crate::repository::{LogRepository, ProjectMembersRepository};
@@ -24,6 +25,34 @@ pub struct CommentResponse {
     pub created_at: chrono::NaiveDateTime,
 }
 
+#[get("/projects/<project_id>/requirements/<requirement_id>/comments?<version_id>")]
+pub async fn list_by_project(
+    access: ProjectRequirementsRead,
+    project_id: i32,
+    requirement_id: i32,
+    version_id: Option<i32>,
+    state: &State<AppState>,
+) -> ApiResult<Json<Vec<CommentResponse>>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let requirement = RequirementService::new(state.inner()).get_by_id(requirement_id)?;
+    if requirement.project_id != project_id {
+        return Err(ApiError::NotFound("requirement not in project".into()));
+    }
+    let comments = CommentService::new(state.inner()).list_comments(requirement_id, version_id)?;
+    let users = UserService::new(state.inner());
+    Ok(Json(
+        comments
+            .iter()
+            .map(|c| comment_to_response(c, users.get_by_id(c.author_id).ok().map(|u| u.name)))
+            .collect(),
+    ))
+}
+
 fn comment_to_response(c: &RequirementComment, author_name: Option<String>) -> CommentResponse {
     CommentResponse {
         id: c.id,
@@ -36,7 +65,105 @@ fn comment_to_response(c: &RequirementComment, author_name: Option<String>) -> C
     }
 }
 
-#[derive(Debug, rocket::serde::Deserialize)]
+#[post(
+    "/projects/<project_id>/requirements/<requirement_id>/comments",
+    data = "<payload>"
+)]
+pub async fn create_by_project(
+    access: ProjectRequirementsWrite,
+    project_id: i32,
+    requirement_id: i32,
+    state: &State<AppState>,
+    payload: Json<CreateCommentRequest>,
+    idempotency_key: crate::api::idempotency::OptionalIdempotencyKey,
+) -> ApiResult<(Status, Json<CommentResponse>)> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::EditRequirements,
+    )?;
+    let requirement = RequirementService::new(state.inner()).get_by_id(requirement_id)?;
+    if requirement.project_id != project_id {
+        return Err(ApiError::NotFound("requirement not in project".into()));
+    }
+    if let Some(version_id) = payload.requirement_version_id {
+        let version = RequirementService::new(state.inner()).get_version_by_id(version_id)?;
+        if version.requirement_id != requirement_id {
+            return Err(ApiError::NotFound(
+                "version does not belong to requirement".into(),
+            ));
+        }
+        if config::lock_approved_version_comments()
+            && version.approval_state.eq_ignore_ascii_case("approved")
+        {
+            return Err(ApiError::Forbidden(
+                "approved versions cannot receive new comments when locked".into(),
+            ));
+        }
+    }
+    let principal = access.auth().idempotency_principal();
+    let target = format!("project:{project_id}:requirement:{requirement_id}");
+    let operation_identity = crate::api::idempotency::operation_identity(
+        access.user().id,
+        &principal,
+        &target,
+        "create_requirement_comment",
+        &idempotency_key,
+    );
+    if let Some(response) = crate::api::idempotency::claim(
+        state,
+        access.user().id,
+        &principal,
+        &target,
+        "create_requirement_comment",
+        &idempotency_key,
+        &*payload,
+    )? {
+        return Ok((
+            Status::Created,
+            Json(
+                serde_json::from_value(response).map_err(|_| {
+                    ApiError::Internal("invalid stored idempotency response".into())
+                })?,
+            ),
+        ));
+    }
+    let comment = crate::api::idempotency::release_on_repo_error(
+        CommentService::new(state.inner()).create_comment_with_idempotency(
+            access.user(),
+            requirement_id,
+            payload.requirement_version_id,
+            payload.body.clone(),
+            operation_identity,
+        ),
+        state,
+        access.user().id,
+        &principal,
+        &target,
+        "create_requirement_comment",
+        &idempotency_key,
+    )?;
+    let author = UserService::new(state.inner())
+        .get_by_id(comment.author_id)
+        .ok()
+        .map(|u| u.name);
+    let response = comment_to_response(&comment, author);
+    let stored = serde_json::to_value(&response)
+        .map_err(|_| ApiError::Internal("failed to serialize comment".into()))?;
+    crate::api::idempotency::complete(
+        state,
+        access.user().id,
+        &access.auth().idempotency_principal(),
+        &format!("project:{project_id}:requirement:{requirement_id}"),
+        "create_requirement_comment",
+        &idempotency_key,
+        &stored,
+    )?;
+    Ok((Status::Created, Json(response)))
+}
+
+#[derive(Debug, rocket::serde::Deserialize, rocket::serde::Serialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct CreateCommentRequest {
     pub body: String,

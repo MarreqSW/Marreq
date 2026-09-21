@@ -6,6 +6,7 @@ pub mod applicability;
 pub mod auth;
 pub mod baselines;
 pub mod cache;
+pub mod catalog;
 pub mod categories;
 pub mod comments;
 pub mod custom_fields;
@@ -14,12 +15,14 @@ pub mod error;
 pub mod exports;
 pub mod groups;
 pub mod guards;
+pub mod idempotency;
 pub mod imports;
 pub mod matrix;
 pub mod mcp;
 pub mod members;
 pub mod meta;
 pub mod notifications;
+pub mod oauth;
 pub mod prelude;
 pub mod projects;
 pub mod projects_session;
@@ -84,12 +87,15 @@ pub fn routes() -> Vec<Route> {
         requirements::patch_by_project,
         comments::list,
         comments::create,
+        comments::list_by_project,
+        comments::create_by_project,
         requirement_diff::diff_versions,
         requirement_diff::diff_versions_by_project,
         requirement_diff::diff_baseline_vs_current,
         verifications::list,
         verifications::list_by_project,
         verifications::get,
+        verifications::get_by_project,
         activity::verification_activity_by_project,
         verification_methods::list_by_project,
         verification_methods::create_by_project,
@@ -99,6 +105,8 @@ pub fn routes() -> Vec<Route> {
         verification_diff::diff_snapshots_by_project,
         verification_diff::diff_baseline_vs_current,
         verifications::create,
+        verifications::create_by_project,
+        verifications::update_by_project,
         verifications::delete,
         verifications::update_field,
         verifications::update_field_by_project,
@@ -139,6 +147,8 @@ pub fn routes() -> Vec<Route> {
         traceability::trace_down,
         traceability::coverage_report,
         traceability::clear_suspect,
+        traceability::clear_suspect_by_project,
+        catalog::get,
         requirement_version_links::create,
         requirement_version_links::list,
         requirement_version_links::delete,
@@ -163,6 +173,8 @@ pub fn routes() -> Vec<Route> {
         semantic_search::index_status,
         semantic_search::search_status,
         mcp::audit,
+        mcp::internal_audit,
+        mcp::principal,
         // Notifications
         notifications::list,
         notifications::unread_count,

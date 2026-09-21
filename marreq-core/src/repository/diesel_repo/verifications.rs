@@ -18,6 +18,7 @@ impl VerificationsRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         dsl::verifications
             .filter(dsl::id.eq(verification_id))
+            .select(Verification::as_select())
             .get_result(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {
@@ -33,6 +34,7 @@ impl VerificationsRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         dsl::verifications
             .order(dsl::id)
+            .select(Verification::as_select())
             .load::<Verification>(conn.as_mut())
             .map_err(|e| e.into())
     }
@@ -42,6 +44,7 @@ impl VerificationsRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         dsl::verifications
             .filter(dsl::project_id.eq(project))
+            .select(Verification::as_select())
             .load::<Verification>(conn.as_mut())
             .map_err(|e| e.into())
     }
@@ -133,9 +136,21 @@ impl VerificationsRepository for DieselRepo {
     }
 
     fn insert_verification(&mut self, new: &NewVerification) -> Result<i32, RepoError> {
+        self.insert_verification_idempotent(new, None)
+    }
+
+    fn insert_verification_idempotent(
+        &mut self,
+        new: &NewVerification,
+        mcp_idempotency_identity: Option<&str>,
+    ) -> Result<i32, RepoError> {
         let mut conn = self.get_conn()?;
         let res: Verification = diesel::insert_into(schema::verifications::table)
-            .values(new)
+            .values((
+                new,
+                schema::verifications::mcp_idempotency_identity.eq(mcp_idempotency_identity),
+            ))
+            .returning(Verification::as_returning())
             .get_result(conn.as_mut())?;
         Ok(res.id)
     }
@@ -184,6 +199,7 @@ impl VerificationsRepository for DieselRepo {
         let mut conn = self.get_conn()?;
         let verification = dsl::verifications
             .filter(dsl::id.eq(verification_id))
+            .select(Verification::as_select())
             .get_result::<Verification>(conn.as_mut())
             .map_err(|e| {
                 if e == diesel::result::Error::NotFound {

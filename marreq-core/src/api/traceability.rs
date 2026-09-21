@@ -6,7 +6,11 @@
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::auth::guards::ProjectAccessOrBearer;
+use crate::auth::guards::{
+    ApiUser, ProjectRequirementsAndTraceabilityRead,
+    ProjectRequirementsVerificationsAndTraceabilityRead, ProjectTraceabilityRead,
+    ProjectTraceabilityWrite,
+};
 use crate::models::{Requirement, Verification};
 use crate::repository::{MatrixRepository, RequirementsRepository, VerificationsRepository};
 use crate::services::{MatrixService, RequirementService};
@@ -22,7 +26,7 @@ pub struct ClearSuspectRequest {
 /// Returns multiple parents from requirement version links (DAG).
 #[get("/projects/<project_id>/requirements/<id>/trace_up")]
 pub async fn trace_up(
-    access: ProjectAccessOrBearer,
+    access: ProjectRequirementsAndTraceabilityRead,
     project_id: i32,
     id: i32,
     state: &State<AppState>,
@@ -74,7 +78,7 @@ pub struct TraceUpResponse {
 /// Trace down: child requirements and linked tests. Project-scoped; accepts session or Bearer.
 #[get("/projects/<project_id>/requirements/<id>/trace_down")]
 pub async fn trace_down(
-    access: ProjectAccessOrBearer,
+    access: ProjectRequirementsVerificationsAndTraceabilityRead,
     project_id: i32,
     id: i32,
     state: &State<AppState>,
@@ -108,7 +112,7 @@ pub struct TraceDownResponse {
 /// Coverage report: requirements without tests, tests without requirements, suspect links. Project-scoped.
 #[get("/projects/<project_id>/coverage_report")]
 pub async fn coverage_report(
-    access: ProjectAccessOrBearer,
+    access: ProjectTraceabilityRead,
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<CoverageReport>> {
@@ -183,6 +187,39 @@ pub async fn clear_suspect(
         "status": if updated { "ok" } else { "no_change" },
         "cleared": updated
     })))
+}
+
+#[post("/projects/<project_id>/traceability/clear_suspect", data = "<body>")]
+pub async fn clear_suspect_by_project(
+    access: ProjectTraceabilityWrite,
+    project_id: i32,
+    state: &State<AppState>,
+    body: Json<ClearSuspectRequest>,
+) -> ApiResult<Json<serde_json::Value>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::EditRequirements,
+    )?;
+    let payload = body.into_inner();
+    let repo = state.repo_read();
+    let requirement = repo.get_requirement_by_id(payload.req_id)?;
+    let verification = repo.get_verification_by_id(payload.verification_id)?;
+    drop(repo);
+    if requirement.project_id != project_id || verification.project_id != project_id {
+        return Err(ApiError::NotFound(
+            "traceability link not in project".into(),
+        ));
+    }
+    let updated = MatrixService::new(state.inner()).clear_suspect(
+        access.user(),
+        payload.req_id,
+        payload.verification_id,
+    )?;
+    Ok(Json(
+        json!({"status": if updated {"ok"} else {"no_change"}, "cleared": updated}),
+    ))
 }
 
 #[cfg(test)]

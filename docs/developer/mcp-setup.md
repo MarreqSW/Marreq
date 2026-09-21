@@ -4,8 +4,116 @@ Marreq can be used from AI assistants (Cursor, Claude, etc.) via an optional **M
 
 ## Architecture
 
-- **AI client** (Cursor / Claude) ↔ **Marreq MCP server** (stdio) ↔ **Marreq REST API** (HTTP + Bearer token) ↔ **Database**
-- All access is project-scoped and permission-checked. Every tool call is audited (see `postAudit` → `POST /api/mcp/audit`).
+- **Local AI client** ↔ **Marreq MCP server** (`stdio`) ↔ **Marreq REST API** (HTTP + Bearer token) ↔ **Database**
+- **Remote AI client** ↔ **Marreq MCP server** (Streamable HTTP) ↔ **Marreq REST API** (HTTP + the request Bearer token) ↔ **Database**
+- All access is project-scoped and permission-checked. Tool calls emit trusted,
+  best-effort audit events.
+
+Audit trust modes:
+
+| Mode | Auth | Audit endpoint | Secret |
+|------|------|----------------|--------|
+| Local `stdio` | Personal `MARREQ_API_TOKEN` | `POST /api/mcp/audit` | Not required |
+| Remote HTTP | Request Bearer + shared service secret | `POST /api/mcp/internal/audit` | `MARREQ_MCP_AUDIT_SECRET` (≥32 chars) |
+
+`stdio` remains the default and keeps the existing environment contract. Remote
+mode creates an independent MCP server/transport for every initialized session;
+request identity is never stored in a process-global variable. Until delegated
+OAuth is configured, remote mode accepts an existing Marreq API token as its
+Bearer credential. The credential is resolved to a stable user/client/grant
+principal. OAuth access-token rotation therefore does not break an established
+session, while a token from another grant cannot assume it. The bearer from the
+current MCP request is always the one forwarded to Rocket.
+Sessions expire after 30 minutes idle or eight hours absolute and the process
+admits at most 1,000 concurrent sessions. Closing the transport removes its
+state; credentials are still sent and checked on every downstream REST call.
+
+Remote deployments require `MARREQ_MCP_AUDIT_SECRET` in both Rocket and the MCP
+process. An end-user session, API token, or OAuth token alone cannot manufacture
+an internal MCP audit event. Local stdio attributes audit rows to the authenticated
+personal API token (with project-scope and tool-name limits) and does not need the
+server-internal secret. Generate the remote secret with `openssl rand -hex 32`
+and never expose it to a browser or external client.
+
+## Remote Streamable HTTP
+
+For delegated OAuth, clients must use a **single public origin** that exposes the
+MCP transport and Marreq Core's OAuth routes together. The Docker development
+stack already provides this topology through the frontend nginx proxy:
+
+```dotenv
+MARREQ_MCP_TRANSPORT=http
+MARREQ_MCP_HOST=0.0.0.0
+MARREQ_MCP_PORT=3000
+MARREQ_MCP_PATH=/mcp
+MARREQ_BASE_URL=http://marreq-server:8000
+MARREQ_MCP_PUBLIC_URL=http://localhost:8080/mcp
+```
+
+Connect OAuth-capable clients to `http://localhost:8080/mcp`. On that same
+`http://localhost:8080` origin, nginx routes:
+
+- `/mcp` to the MCP Node service;
+- `/.well-known/*` to Marreq Core for OAuth discovery;
+- `/oauth/*` to Marreq Core for registration, authorization, and token exchange;
+- `/api/*` to Marreq Core for the REST API.
+
+Send `Authorization: Bearer <Marreq API token or delegated OAuth access token>`.
+`MARREQ_API_TOKEN` and `MARREQ_PROJECT_ID` are not used in HTTP mode because
+identity and project are request/tool scoped. Remote mode registers the complete
+bounded tool surface; OAuth scopes and normal Marreq permissions authorize each
+REST call rather than server-wide `MARREQ_MODE` or `MARREQ_TRACE_WRITE` flags.
+Start with `list_projects`, then pass the selected `project_id` to every
+project-scoped tool. `MARREQ_MCP_ALLOWED_HOSTS` is an optional comma-separated
+Host allowlist and should be set when listening on a non-loopback interface.
+
+`MARREQ_BASE_URL` is the private REST origin used by the Node process.
+`MARREQ_MCP_PUBLIC_URL` is the canonical externally reachable OAuth resource
+used in authentication challenges. Its origin must also expose
+`/.well-known/*`, `/oauth/*`, and `/api/*`. In production it must be HTTPS
+and must exactly match the same setting on Marreq Core; never expose an internal
+container hostname in `MARREQ_MCP_PUBLIC_URL`.
+
+The raw Node listener (for example `http://127.0.0.1:3000/mcp`) serves the MCP
+transport and `/healthz` only. Connecting to it directly is suitable for
+Bearer/API-token transport testing, but **not** for delegated OAuth unless the
+operator separately reverse-proxies Marreq Core's `/.well-known/*` and
+`/oauth/*` routes onto that same public origin.
+
+Production deployments must terminate HTTPS at a trusted reverse proxy and
+forward `/mcp` without logging `Authorization`, cookies, MCP bodies, or query
+strings containing credentials. Preserve the `Mcp-Session-Id` and
+`Last-Event-ID` headers and disable proxy buffering for event streams. Bind the
+Node process to a private interface; do not expose plaintext HTTP publicly.
+
+The tool operation is authoritative. The separate audit write is best-effort:
+if audit persistence is unavailable, MCP logs a sanitized server-side error
+without credentials and returns the already-committed domain result. This
+avoids turning a successful mutation into an ambiguous failure and retry.
+
+### Hosted clients and ChatGPT
+
+Expose the HTTPS resource URL `https://your-marreq-origin.example/mcp`. A modern
+MCP client discovers authorization from the protected-resource and
+authorization-server metadata on that same origin, dynamically registers its
+exact callback URI, and opens Marreq's consent page. The user signs in through
+the normal Marreq password/federated flow before approving scopes. No API token
+or upstream identity-provider credential is embedded in client configuration.
+
+In ChatGPT or another hosted MCP client, add a custom remote MCP connection and
+enter the `/mcp` URL. The client should perform OAuth discovery automatically.
+If it asks for a client ID, register the client with `POST /oauth/register`
+using the exact HTTPS callback URI supplied by the client. Self-hosted instances
+must set `MARREQ_PUBLIC_BASE_URL` to the externally reachable HTTPS origin so
+issuer and resource validation agree at every hop.
+An unauthenticated request receives a `WWW-Authenticate: Bearer` challenge with
+the `resource_metadata` URL for `/.well-known/oauth-protected-resource/mcp`.
+
+Reusable requirements-engineering guidance is provided in
+[`mcp-server/MARREQ_SKILL.md`](../../mcp-server/MARREQ_SKILL.md). It is plain
+behavioral guidance and is not an authorization mechanism. No client-specific
+manifest is committed: the integration uses standard remote MCP and OAuth
+discovery rather than a fabricated or vendor-locked packaging format.
 
 The MCP server implements a **subset** of the HTTP API on purpose (smaller attack surface). A full route-by-route matrix is in [API parity (MCP vs REST)](#api-parity-mcp-vs-rest) below.
 
@@ -126,6 +234,7 @@ For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For trac
 | `list_requirements` | List requirements; optional filter by `approval_state` (draft/reviewed/approved) and `has_tests` (true/false) |
 | `get_versions` | Version history for a requirement |
 | `compare_versions` | Structured diff between two requirement versions |
+| `semantic_search_requirements` | Semantic requirement search (when embeddings are configured) |
 | `trace_up` | Parent requirement(s) for a requirement |
 | `trace_down` | Child requirements and linked tests |
 | `coverage_report` | Requirements without tests, tests without requirements, suspect links |
@@ -150,7 +259,9 @@ For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For trac
 
 | Tool | Description |
 |------|-------------|
-| `create_requirement` | Create a new requirement in the project |
+| `create_requirement` | Create a requirement, including structured parent links; requires a persistent idempotency key in remote mode |
+| `create_verification` | Create a project-scoped verification with persistent idempotency |
+| `update_verification` | Update a project-scoped verification (status changes retain reviewer rules) |
 | `patch_requirement` | Update a requirement (creates new version). Changing `status_id` requires project reviewer rules on the API |
 | `set_approval` | Set requirement version approval to `reviewed` or `approved` |
 | `create_baseline` | Create a new baseline snapshot |
@@ -163,7 +274,10 @@ For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For trac
 | `put_verification_matrix` | Replace all requirement links for a verification |
 | `clear_suspect` | Clear suspect flag on a matrix link (`req_id`, `verification_id`) |
 
-All tools are scoped to `MARREQ_PROJECT_ID` where the API provides a project path. Audit entries are written to Marreq (`POST /api/mcp/audit`).
+All tools are scoped to `MARREQ_PROJECT_ID` where the API provides a project path.
+Local stdio audit entries are written via `POST /api/mcp/audit` using the personal
+API token. Remote MCP writes audit entries via `POST /api/mcp/internal/audit` with
+the shared service secret.
 
 ## 6. API parity (MCP vs REST)
 
@@ -177,8 +291,8 @@ Reference: shared route list in `marreq-core/src/api/mod.rs` (plus deployment-sp
 | Requirements: impacted tests | **No** |
 | Activity (`.../requirements/:id/activity`, `.../verifications/:id/activity`) | **Yes** (extended read) |
 | Comments list/create | **Yes** (extended / draft_write) |
-| Version parent links CRUD | **No** |
-| Verifications: list/get | **Yes** (extended); create/update/delete | **No** |
+| Requirement hierarchy | **Create with parent links**; standalone link/unlink is not exposed |
+| Verifications | **List/get/create/update**; deletion is intentionally not exposed |
 | Matrix get/put | **Yes** (extended read; put with `MARREQ_TRACE_WRITE`) |
 | Trace up/down, coverage | **Yes** (core read) |
 | `clear_suspect` | **Yes** (`MARREQ_TRACE_WRITE`) |
@@ -186,15 +300,17 @@ Reference: shared route list in `marreq-core/src/api/mod.rs` (plus deployment-sp
 | Categories, applicability, statuses, methods, custom fields | **Read** via `list_project_catalog`; **CRUD** | **No** |
 | Members, reviewers, permissions | **No** |
 | Users, groups, projects (admin) | **No** |
-| Semantic search / reindex | **No** |
+| Semantic search | **Yes** |
+| RAG ask / semantic reindex | **No** |
 | Cache admin | **No** |
-| MCP audit endpoint | **Internal** (called after each tool) |
+| MCP audit endpoint | **Internal** remote path + **legacy** stdio path (called after each tool) |
 
 ## 7. Security notes
 
 - **Token**: Store `MARREQ_API_TOKEN` securely; never commit it. Use env or a secrets manager.
 - **Base URL**: For production, use HTTPS and a URL the MCP server can reach.
 - **Project scope**: Prefer creating tokens with `project_id` set so a compromised token only exposes one project.
+- **Audit**: Remote MCP requires `MARREQ_MCP_AUDIT_SECRET`. Local stdio does not; audit identity comes from the personal API token. Delegated OAuth clients cannot forge audit events through either path without the internal secret.
 - **Modes**: Default `read_only` limits tools. Use `read_extended` only when assistants need verifications, audit trails, or catalog. Use `draft_write` and `MARREQ_TRACE_WRITE` only for trusted automation.
 
 ## 8. Troubleshooting

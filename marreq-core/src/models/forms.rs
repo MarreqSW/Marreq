@@ -62,6 +62,7 @@ pub struct NewRequirementContainer {
     pub project_id: i32,
     pub stable_code: String,
     pub current_version_id: Option<i32>,
+    pub mcp_idempotency_identity: Option<String>,
 }
 
 impl NewRequirement {
@@ -226,6 +227,8 @@ pub struct NewBaseline {
     /// Optional saved view that produced this baseline (locks the view).
     #[serde(default)]
     pub saved_view_id: Option<i32>,
+    #[serde(skip)]
+    pub mcp_idempotency_identity: Option<String>,
 }
 
 /// Insertable row for baselines table (id is SERIAL).
@@ -240,6 +243,7 @@ pub struct NewBaselineRow {
     pub created_by: i32,
     pub source_saved_view_id: Option<i32>,
     pub source_view_definition: Option<serde_json::Value>,
+    pub mcp_idempotency_identity: Option<String>,
 }
 
 /// Insertable row for baseline_requirements.
@@ -320,6 +324,59 @@ pub struct NewUserIdentity {
     pub subject: String,
 }
 
+#[derive(Insertable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_clients)]
+pub struct NewOAuthClient {
+    pub client_id: String,
+    pub name: String,
+    pub redirect_uris: serde_json::Value,
+}
+
+#[derive(Insertable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_grants)]
+pub struct NewOAuthGrant {
+    pub user_id: i32,
+    pub client_id: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+}
+
+#[derive(Insertable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_authorization_codes)]
+pub struct NewOAuthAuthorizationCode {
+    pub code_hash: String,
+    pub grant_id: i32,
+    pub client_id: String,
+    pub redirect_uri: String,
+    pub code_challenge: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+    pub expires_at: chrono::NaiveDateTime,
+}
+
+#[derive(Insertable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_access_tokens)]
+pub struct NewOAuthAccessToken {
+    pub token_hash: String,
+    pub grant_id: i32,
+    pub client_id: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+    pub expires_at: chrono::NaiveDateTime,
+}
+
+#[derive(Insertable, Debug, Clone)]
+#[diesel(table_name = crate::schema::oauth_refresh_tokens)]
+pub struct NewOAuthRefreshToken {
+    pub token_hash: String,
+    pub family_id: String,
+    pub grant_id: i32,
+    pub client_id: String,
+    pub scopes: Vec<String>,
+    pub resource: String,
+    pub expires_at: chrono::NaiveDateTime,
+}
+
 /// Partial user information used when editing an existing user.
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]
@@ -332,7 +389,7 @@ pub struct UpdateUser {
 }
 
 /// Form used to create or update a [`Verification`].
-#[derive(Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
+#[derive(Clone, Serialize, Deserialize, Insertable, FromForm, AsChangeset)]
 #[serde(crate = "rocket::serde")]
 #[diesel(table_name = verifications)]
 #[diesel(check_for_backend(diesel::pg::Pg))]

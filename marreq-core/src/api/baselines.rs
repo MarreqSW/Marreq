@@ -3,17 +3,17 @@
 
 //! API routes for immutable project baselines.
 
-use rocket::serde::Deserialize;
+use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::auth::guards::ProjectAccessOrBearer;
+use crate::auth::guards::{ProjectBaselinesRead, ProjectBaselinesWrite};
 use crate::models::{
     Baseline, BaselineTraceability, BaselineVerification, NewBaseline, Requirement,
 };
 use crate::services::baseline_service::BaselineDiff;
 use crate::services::BaselineService;
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
 pub struct CreateBaselineRequest {
     pub name: String,
@@ -25,7 +25,7 @@ pub struct CreateBaselineRequest {
 /// List baselines (session or Bearer). Project-scoped.
 #[get("/projects/<project_id>/baselines")]
 pub async fn list(
-    access: ProjectAccessOrBearer,
+    access: ProjectBaselinesRead,
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<Baseline>>> {
@@ -43,7 +43,7 @@ pub async fn list(
 /// Get baseline by id (session or Bearer). Project-scoped.
 #[get("/projects/<project_id>/baselines/<baseline_id>")]
 pub async fn get(
-    access: ProjectAccessOrBearer,
+    access: ProjectBaselinesRead,
     project_id: i32,
     baseline_id: i32,
     state: &State<AppState>,
@@ -67,11 +67,12 @@ pub async fn get(
 /// Create baseline (session or Bearer). Project-scoped; supports MCP Phase 2 draft_write.
 #[post("/projects/<project_id>/baselines", data = "<payload>")]
 pub async fn create(
-    access: ProjectAccessOrBearer,
+    access: ProjectBaselinesWrite,
     project_id: i32,
     state: &State<AppState>,
     payload: Json<CreateBaselineRequest>,
-) -> ApiResult<Json<Baseline>> {
+    idempotency_key: crate::api::idempotency::OptionalIdempotencyKey,
+) -> ApiResult<Json<serde_json::Value>> {
     require_project_permission(
         state,
         access.user(),
@@ -95,20 +96,60 @@ pub async fn create(
             return Err(ApiError::NotFound("saved view not found".into()));
         }
     }
+    let principal = access.auth().idempotency_principal();
+    let target = format!("project:{project_id}");
+    let operation_identity = crate::api::idempotency::operation_identity(
+        access.user().id,
+        &principal,
+        &target,
+        "create_baseline",
+        &idempotency_key,
+    );
+    if let Some(response) = crate::api::idempotency::claim(
+        state,
+        access.user().id,
+        &principal,
+        &target,
+        "create_baseline",
+        &idempotency_key,
+        &payload,
+    )? {
+        return Ok(Json(response));
+    }
     let new_baseline = NewBaseline {
         name: payload.name,
         description: payload.description,
         saved_view_id: payload.saved_view_id,
+        mcp_idempotency_identity: operation_identity,
     };
     let service = BaselineService::new(state.inner());
-    let baseline = service.create_baseline(project_id, access.user().id, &new_baseline)?;
-    Ok(Json(baseline))
+    let baseline = crate::api::idempotency::release_on_repo_error(
+        service.create_baseline(project_id, access.user().id, &new_baseline),
+        state,
+        access.user().id,
+        &principal,
+        &target,
+        "create_baseline",
+        &idempotency_key,
+    )?;
+    let response = serde_json::to_value(baseline)
+        .map_err(|_| ApiError::Internal("failed to serialize baseline".into()))?;
+    crate::api::idempotency::complete(
+        state,
+        access.user().id,
+        &access.auth().idempotency_principal(),
+        &format!("project:{project_id}"),
+        "create_baseline",
+        &idempotency_key,
+        &response,
+    )?;
+    Ok(Json(response))
 }
 
 /// Retrieve baseline contents: requirements as at baseline time (from snapshot). Session or Bearer.
 #[get("/projects/<project_id>/baselines/<baseline_id>/requirements")]
 pub async fn get_requirements(
-    access: ProjectAccessOrBearer,
+    access: ProjectBaselinesRead,
     project_id: i32,
     baseline_id: i32,
     state: &State<AppState>,
@@ -133,7 +174,7 @@ pub async fn get_requirements(
 /// Retrieve baseline traceability snapshot (requirement–test links). Session or Bearer.
 #[get("/projects/<project_id>/baselines/<baseline_id>/traceability")]
 pub async fn get_traceability(
-    access: ProjectAccessOrBearer,
+    access: ProjectBaselinesRead,
     project_id: i32,
     baseline_id: i32,
     state: &State<AppState>,
@@ -158,7 +199,7 @@ pub async fn get_traceability(
 /// Retrieve baseline verifications snapshot. Session or Bearer.
 #[get("/projects/<project_id>/baselines/<baseline_id>/verifications")]
 pub async fn get_verifications(
-    access: ProjectAccessOrBearer,
+    access: ProjectBaselinesRead,
     project_id: i32,
     baseline_id: i32,
     state: &State<AppState>,
@@ -183,7 +224,7 @@ pub async fn get_verifications(
 /// Compare two baselines. Query: baseline_a, baseline_b. Accepts session or Bearer token.
 #[get("/projects/<project_id>/baselines/diff?<baseline_a>&<baseline_b>")]
 pub async fn diff_baselines(
-    access: ProjectAccessOrBearer,
+    access: ProjectBaselinesRead,
     project_id: i32,
     baseline_a: i32,
     baseline_b: i32,

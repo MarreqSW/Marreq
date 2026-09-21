@@ -1,6 +1,6 @@
 --- src/schema.rs
 +++ src/schema.rs
-@@ -15,7 +15,7 @@
+@@ -20,7 +20,7 @@
          id -> Int4,
          user_id -> Int4,
          client_id -> Varchar,
@@ -9,7 +9,7 @@
          resource -> Varchar,
          created_at -> Timestamp,
          updated_at -> Timestamp,
-@@ -30,7 +30,7 @@
+@@ -35,7 +35,7 @@
          client_id -> Varchar,
          redirect_uri -> Varchar,
          code_challenge -> Varchar,
@@ -18,7 +18,7 @@
          resource -> Varchar,
          expires_at -> Timestamp,
          used_at -> Nullable<Timestamp>,
-@@ -44,7 +44,7 @@
+@@ -49,7 +49,7 @@
          token_hash -> Varchar,
          grant_id -> Int4,
          client_id -> Varchar,
@@ -27,7 +27,7 @@
          resource -> Varchar,
          expires_at -> Timestamp,
          created_at -> Timestamp,
-@@ -58,7 +58,7 @@
+@@ -63,7 +63,7 @@
          family_id -> Varchar,
          grant_id -> Int4,
          client_id -> Varchar,

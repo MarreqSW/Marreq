@@ -273,6 +273,15 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
         false,
     );
 
+    marreq_core::config::AppConfig::install_from_env_or_exit();
+    let rocket = marreq_core::app::build_with_auth(
+        &TEST_MODE,
+        marreq_core::auth::AuthConfig::default(),
+        vec![],
+        vec![],
+    );
+    let client = Client::tracked(rocket).await.expect("Rocket client");
+
     // Authorization-code consumption and token persistence must be one PostgreSQL
     // transaction. Force the refresh-token insert to fail after the code update
     // and access-token insert, then verify the whole transaction is retryable.
@@ -506,14 +515,6 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
     assert_eq!(concurrent_access_count, 1);
     assert_eq!(concurrent_refresh_count, 1);
 
-    marreq_core::config::AppConfig::install_from_env_or_exit();
-    let rocket = marreq_core::app::build_with_auth(
-        &TEST_MODE,
-        marreq_core::auth::AuthConfig::default(),
-        vec![],
-        vec![],
-    );
-    let client = Client::tracked(rocket).await.expect("Rocket client");
 
     let response = client
         .get("/api/projects")

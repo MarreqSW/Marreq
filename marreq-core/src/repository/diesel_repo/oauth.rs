@@ -146,34 +146,36 @@ impl DelegatedOAuthRepository for DieselRepo {
             .first(&mut *self.get_conn()?)
             .map_err(Into::into)
     }
-    fn consume_oauth_code(&mut self, hash: &str, now: NaiveDateTime) -> Result<bool, RepoError> {
-        diesel::update(
-            oauth_authorization_codes::table.filter(
-                oauth_authorization_codes::code_hash
-                    .eq(hash)
-                    .and(oauth_authorization_codes::used_at.is_null())
-                    .and(oauth_authorization_codes::expires_at.gt(now)),
-            ),
-        )
-        .set(oauth_authorization_codes::used_at.eq(now))
-        .execute(&mut *self.get_conn()?)
-        .map(|n| n == 1)
-        .map_err(Into::into)
-    }
-    fn insert_oauth_tokens(
+    fn consume_oauth_code_and_insert_tokens(
         &mut self,
+        hash: &str,
         access: &NewOAuthAccessToken,
         refresh: &NewOAuthRefreshToken,
-    ) -> Result<(), RepoError> {
+        now: NaiveDateTime,
+    ) -> Result<bool, RepoError> {
         let mut conn = self.get_conn()?;
         conn.transaction(|conn| {
+            let count = diesel::update(
+                oauth_authorization_codes::table.filter(
+                    oauth_authorization_codes::code_hash
+                        .eq(hash)
+                        .and(oauth_authorization_codes::used_at.is_null())
+                        .and(oauth_authorization_codes::expires_at.gt(now)),
+                ),
+            )
+            .set(oauth_authorization_codes::used_at.eq(now))
+            .execute(conn)?;
+            if count != 1 {
+                return Ok(false);
+            }
+
             diesel::insert_into(oauth_access_tokens::table)
                 .values(access)
                 .execute(conn)?;
             diesel::insert_into(oauth_refresh_tokens::table)
                 .values(refresh)
                 .execute(conn)?;
-            Ok(())
+            Ok(true)
         })
         .map_err(map_db_error)
     }

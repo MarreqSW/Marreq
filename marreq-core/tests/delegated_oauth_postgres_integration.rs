@@ -377,23 +377,17 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
             .unwrap(),
         "rolled-back authorization code must remain retryable"
     );
-    assert!(
-        oauth_repo
-            .get_oauth_code(&atomic_code_hash)
-            .unwrap()
-            .used_at
-            .is_some()
-    );
-    assert!(
-        oauth_repo
-            .get_oauth_access_token(&atomic_access.token_hash)
-            .is_ok()
-    );
-    assert!(
-        oauth_repo
-            .get_oauth_refresh_token(&retry_refresh.token_hash)
-            .is_ok()
-    );
+    assert!(oauth_repo
+        .get_oauth_code(&atomic_code_hash)
+        .unwrap()
+        .used_at
+        .is_some());
+    assert!(oauth_repo
+        .get_oauth_access_token(&atomic_access.token_hash)
+        .is_ok());
+    assert!(oauth_repo
+        .get_oauth_refresh_token(&retry_refresh.token_hash)
+        .is_ok());
 
     let replay_access = NewOAuthAccessToken {
         token_hash: hash_secret("atomic-replay-access"),
@@ -490,13 +484,11 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
         1,
         "only one concurrent exchange may consume the code"
     );
-    assert!(
-        oauth_repo
-            .get_oauth_code(&concurrent_code_hash)
-            .unwrap()
-            .used_at
-            .is_some()
-    );
+    assert!(oauth_repo
+        .get_oauth_code(&concurrent_code_hash)
+        .unwrap()
+        .used_at
+        .is_some());
     let concurrent_access_count = (0..2)
         .filter(|index| {
             oauth_repo

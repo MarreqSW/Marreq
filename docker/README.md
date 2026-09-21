@@ -20,7 +20,7 @@ For the end-to-end setup flows for **`marreq-server`** and **`marreq-cloud`** (D
 - `Dockerfile`: Marreq image (Rust binary; build context: repository root). Accepts `MARREQ_BIN` build-arg (`marreq-server` by default; `marreq-cloud` for the cloud variant).
 - `frontend/Dockerfile`: **Frontend** image (multi-stage: `npm run build` + nginx)
 - `frontend/nginx.conf.template`: nginx template used by both frontend containers; serves the SPA and proxies `/api/`, `/oauth/`, and `/.well-known/` to Rocket and `/mcp` to Node
-- `../mcp-server/Dockerfile`: production MCP image (TypeScript build stage; non-root Node runtime)
+- `../mcp-server/Dockerfile`: production MCP image (TypeScript build stage; non-root Node runtime). Tagged releases push `ghcr.io/<owner>/marreq-mcp-server`.
 - `Dockerfile.dockerignore`: Build context exclusions for `Dockerfile`
 - `docker-entrypoint.sh`: Backend container startup (wait for DB + migrations + start app)
 
@@ -243,6 +243,12 @@ Frontend (from repo root):
 
 ```bash
 docker build -f docker/frontend/Dockerfile -t marreq-frontend:local ..
+```
+
+MCP server (from repo root):
+
+```bash
+docker build -f mcp-server/Dockerfile -t marreq-mcp-server:local .
 ```
 
 ## CI Compose Overrides

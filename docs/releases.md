@@ -1,11 +1,12 @@
 # Releases and dual artifact versioning
 
-Marreq ships two independently versioned artifacts:
+Marreq ships independently versioned artifacts:
 
 | Artifact | Version source of truth | Compatibility declaration |
 | --- | --- | --- |
 | Backend (`marreq-server` / `marreq-cloud`) | `marreq-core/Cargo.toml` `version` | `marreq-core/frontend_compatibility.json` |
 | Frontend (SPA) | `frontend/package.json` `version` | `frontend/compatibility.json` |
+| MCP server | `mcp-server/package.json` `version` | — |
 
 Both start at **`0.1.0`**. Server and cloud share one API surface and therefore **one** frontend compatibility matrix.
 
@@ -45,8 +46,9 @@ Widen or tighten the JSON files when introducing a breaking API or UI contract c
 | --- | --- |
 | `marreq-server-vX.Y.Z` | Backend image / binary (version `X.Y.Z`) |
 | `marreq-frontend-vX.Y.Z` | Frontend image (version `X.Y.Z`) |
+| `marreq-mcp-vX.Y.Z` | MCP server image (version `X.Y.Z`) |
 
-Pushing a matching tag runs `.github/workflows/release-artifacts.yml`, which builds and pushes the corresponding Docker image to GHCR (`ghcr.io/<owner>/marreq-server` or `marreq-frontend`) tagged with the semver and `latest`.
+Pushing a matching tag runs `.github/workflows/release-artifacts.yml`, which builds and pushes the corresponding Docker image to GHCR (`ghcr.io/<owner>/marreq-server`, `marreq-frontend`, or `marreq-mcp-server`) tagged with the semver and `latest`.
 
 ## Manual Docker builds
 
@@ -63,6 +65,10 @@ docker build -f docker/frontend/Dockerfile \
   --build-arg MARREQ_VERSION=0.1.0 \
   --build-arg MARREQ_GIT_SHA="$(git rev-parse HEAD)" \
   -t marreq-frontend:0.1.0 .
+
+# MCP server
+docker build -f mcp-server/Dockerfile \
+  -t marreq-mcp-server:0.1.0 .
 ```
 
 Images carry OCI label `org.opencontainers.image.version`. Backend builds inject `MARREQ_GIT_SHA` into the binary (`option_env!`); frontend builds bake version and SHA via Vite `define`.

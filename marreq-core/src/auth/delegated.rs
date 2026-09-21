@@ -265,11 +265,10 @@ pub fn exchange_code<R: DelegatedOAuthRepository>(
     if code.scopes.is_empty() {
         return Err(DelegatedOAuthError::InvalidGrant);
     }
-    if !repo.consume_oauth_code(&hash, now)? {
+    let (response, access, refresh) = token_pair(&code, random_secret(), now);
+    if !repo.consume_oauth_code_and_insert_tokens(&hash, &access, &refresh, now)? {
         return Err(DelegatedOAuthError::InvalidGrant);
     }
-    let (response, access, refresh) = token_pair(&code, random_secret(), now);
-    repo.insert_oauth_tokens(&access, &refresh)?;
     Ok(response)
 }
 

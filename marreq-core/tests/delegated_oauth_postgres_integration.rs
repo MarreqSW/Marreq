@@ -515,7 +515,6 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
     assert_eq!(concurrent_access_count, 1);
     assert_eq!(concurrent_refresh_count, 1);
 
-
     let response = client
         .get("/api/projects")
         .header(bearer("projects"))

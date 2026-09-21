@@ -210,7 +210,7 @@ Behind the Docker frontend (or Vite dev), use the **same origin** as the SPA (e.
 - `GET /requirements` - List all requirements
 - `GET /requirements/{id}` - Get specific requirement
 - `GET /requirements/{id}/versions` - List versions for a requirement (newest first)
-- `GET /requirements/{req_id}/versions/{version_id}` - Get a specific requirement version
+- `GET /requirements/{req_id}/versions/{version_id}` - Get a specific requirement version (includes custom fields and verification method ids)
 - `GET /requirements/{req_id}/versions/{v1}/diff/{v2}` - Diff two requirement versions (structured JSON: text and metadata added/removed/unchanged; includes optional labels for status, category, applicability, verification)
 - `PUT /requirements/{req_id}/versions/{version_id}/approval` - Set approval state (body: `state`: "reviewed" | "approved"; project owners/managers only)
 - `GET /requirements/{id}/comments` - List comments for a requirement (query: optional `version_id`; chronological order)
@@ -224,6 +224,8 @@ Behind the Docker frontend (or Vite dev), use the **same origin** as the SPA (e.
 **Project-scoped (session or Bearer token):**
 - `GET /projects/{project_id}/requirements` - List requirements; query: `approval_state`, `has_tests`
 - `GET /projects/{project_id}/requirements/{id}` - Get requirement with trace summary (parent, children, linked tests)
+- `GET /projects/{project_id}/requirements/{id}/versions` - List versions (newest first)
+- `GET /projects/{project_id}/requirements/{req_id}/versions/{version_id}` - Get a version snapshot (includes custom fields and verification method ids)
 - `GET /projects/{project_id}/requirements/{req_id}/versions/{v1}/diff/{v2}` - Diff two versions (requirement must belong to project)
 - `POST /projects/{project_id}/requirements` - Create requirement (body must include `project_id` matching route)
 - `PATCH /projects/{project_id}/requirements/{id}` - Partially update requirement

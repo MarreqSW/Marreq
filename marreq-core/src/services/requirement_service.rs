@@ -221,6 +221,24 @@ impl<'a> RequirementService<'a> {
         self.repo_read().get_requirement_version_by_id(version_id)
     }
 
+    /// Custom field values stored on a specific requirement version.
+    pub fn custom_fields_for_version(
+        &self,
+        version_id: i32,
+    ) -> Result<Vec<crate::models::CustomFieldValueDisplay>, RepoError> {
+        self.repo_read()
+            .get_custom_field_values_for_version(version_id)
+    }
+
+    /// Verification method IDs linked to a specific requirement version.
+    pub fn verification_method_ids_for_version(
+        &self,
+        version_id: i32,
+    ) -> Result<Vec<i32>, RepoError> {
+        self.repo_read()
+            .get_verification_method_ids_for_version(version_id)
+    }
+
     /// Verification method IDs linked to this requirement.
     pub fn get_verification_method_ids(&self, requirement_id: i32) -> Result<Vec<i32>, RepoError> {
         self.repo_read()

@@ -10,8 +10,8 @@ use crate::auth::guards::{
     ProjectRequirementsApprove, ProjectRequirementsRead, ProjectRequirementsWrite,
 };
 use crate::models::{
-    CustomFieldValueInput, NewRequirement, Requirement, RequirementVersion, RequirementVersionLink,
-    Verification,
+    CustomFieldValueDisplay, CustomFieldValueInput, NewRequirement, Requirement,
+    RequirementVersion, RequirementVersionLink, Verification,
 };
 use crate::repository::{
     errors::RepoError, MatrixRepository, RequirementsRepository, SavedViewRepository,
@@ -38,6 +38,31 @@ pub struct RequirementWithTraceSummary {
     #[serde(flatten)]
     pub requirement: Requirement,
     pub trace_summary: TraceSummary,
+}
+
+/// Single requirement version plus version-scoped custom fields and verification methods.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde", rename_all = "snake_case")]
+pub struct RequirementVersionDetail {
+    #[serde(flatten)]
+    pub version: RequirementVersion,
+    #[serde(default)]
+    pub custom_fields: Vec<CustomFieldValueDisplay>,
+    #[serde(default)]
+    pub verification_method_ids: Vec<i32>,
+}
+
+fn version_detail(
+    service: &RequirementService,
+    version: RequirementVersion,
+) -> ApiResult<RequirementVersionDetail> {
+    let custom_fields = service.custom_fields_for_version(version.id)?;
+    let verification_method_ids = service.verification_method_ids_for_version(version.id)?;
+    Ok(RequirementVersionDetail {
+        version,
+        custom_fields,
+        verification_method_ids,
+    })
 }
 
 /// One parent link when creating a requirement (target version + link type).
@@ -649,7 +674,7 @@ pub async fn get_version(
     req_id: i32,
     version_id: i32,
     state: &State<AppState>,
-) -> ApiResult<Json<RequirementVersion>> {
+) -> ApiResult<Json<RequirementVersionDetail>> {
     let service = RequirementService::new(state.inner());
     let version = service.get_version_by_id(version_id)?;
     if version.requirement_id != req_id {
@@ -657,7 +682,7 @@ pub async fn get_version(
             "version does not belong to requirement".into(),
         ));
     }
-    Ok(Json(version))
+    Ok(Json(version_detail(&service, version)?))
 }
 
 /// Project-scoped get version (session or Bearer). Enforces requirement belongs to project.
@@ -668,7 +693,7 @@ pub async fn get_version_by_project(
     req_id: i32,
     version_id: i32,
     state: &State<AppState>,
-) -> ApiResult<Json<RequirementVersion>> {
+) -> ApiResult<Json<RequirementVersionDetail>> {
     require_project_permission(
         state,
         access.user(),
@@ -686,7 +711,7 @@ pub async fn get_version_by_project(
             "version does not belong to requirement".into(),
         ));
     }
-    Ok(Json(version))
+    Ok(Json(version_detail(&service, version)?))
 }
 
 /// List tests linked to the requirement that are currently marked suspect (impacted by requirement changes).
@@ -1072,6 +1097,7 @@ mod tests {
                     get,
                     list_versions,
                     get_version,
+                    get_version_by_project,
                     create,
                     delete,
                     patch_requirement,
@@ -1224,6 +1250,7 @@ mod tests {
         assert_eq!(versions[1].title, "V1 Title");
 
         let first_version_id = versions[1].id;
+        let current_version_id = versions[0].id;
         let single = client
             .get(format!(
                 "/api/requirements/{id}/versions/{first_version_id}"
@@ -1232,10 +1259,98 @@ mod tests {
             .dispatch()
             .await;
         assert_eq!(single.status(), Status::Ok);
-        let v: RequirementVersion = single.into_json().await.unwrap();
-        assert_eq!(v.id, first_version_id);
-        assert_eq!(v.requirement_id, id);
-        assert_eq!(v.title, "V1 Title");
+        let v: RequirementVersionDetail = single.into_json().await.unwrap();
+        assert_eq!(v.version.id, first_version_id);
+        assert_eq!(v.version.requirement_id, id);
+        assert_eq!(v.version.title, "V1 Title");
+
+        let current = client
+            .get(format!(
+                "/api/requirements/{id}/versions/{current_version_id}"
+            ))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        assert_eq!(current.status(), Status::Ok);
+        let current_detail: RequirementVersionDetail = current.into_json().await.unwrap();
+        assert_eq!(current_detail.verification_method_ids, vec![1]);
+
+        let scoped = client
+            .get(format!(
+                "/api/projects/1/requirements/{id}/versions/{first_version_id}"
+            ))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        assert_eq!(scoped.status(), Status::Ok);
+
+        let wrong_project = client
+            .get(format!(
+                "/api/projects/2/requirements/{id}/versions/{first_version_id}"
+            ))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        assert_eq!(wrong_project.status(), Status::NotFound);
+
+        let wrong_req = client
+            .get(format!("/api/requirements/999/versions/{first_version_id}"))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        assert_eq!(wrong_req.status(), Status::NotFound);
+    }
+
+    #[rocket::async_test]
+    async fn get_version_includes_custom_fields() {
+        use crate::models::CustomFieldDefinitionPayload;
+        use crate::repository::CustomFieldRepository;
+
+        let mut repo = DieselRepoMock::default();
+        repo.create_custom_field_definition(
+            1,
+            &CustomFieldDefinitionPayload {
+                label: "Priority".into(),
+                field_type: "text".into(),
+                enum_values: None,
+                sort_order: Some(0),
+            },
+        )
+        .unwrap();
+        let client = client_with_repo(repo).await;
+        let mut req = sample_requirement("V1 Title");
+        req["custom_fields"] = json!([{ "field_id": 1, "value": "High" }]);
+        let create_response = client
+            .post("/api/requirements")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(req.to_string())
+            .dispatch()
+            .await;
+        assert_eq!(create_response.status(), Status::Ok);
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
+
+        let versions_resp = client
+            .get(format!("/api/requirements/{id}/versions"))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        let versions: Vec<RequirementVersion> = versions_resp.into_json().await.unwrap();
+        let version_id = versions[0].id;
+
+        let single = client
+            .get(format!("/api/requirements/{id}/versions/{version_id}"))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await;
+        assert_eq!(single.status(), Status::Ok);
+        let detail: RequirementVersionDetail = single.into_json().await.unwrap();
+        assert_eq!(detail.custom_fields.len(), 1);
+        assert_eq!(detail.custom_fields[0].field_id, 1);
+        assert_eq!(detail.custom_fields[0].label, "Priority");
+        assert_eq!(detail.custom_fields[0].value.as_deref(), Some("High"));
+        assert_eq!(detail.verification_method_ids, vec![1]);
     }
 
     #[rocket::async_test]

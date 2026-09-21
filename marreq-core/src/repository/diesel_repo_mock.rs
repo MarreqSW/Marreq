@@ -361,35 +361,7 @@ impl DelegatedOAuthRepository for DieselRepoMock {
             return Ok(false);
         }
         code.used_at = Some(now);
-        self.oauth_access_tokens.insert(
-            a.token_hash.clone(),
-            OAuthAccessToken {
-                token_hash: a.token_hash.clone(),
-                grant_id: a.grant_id,
-                client_id: a.client_id.clone(),
-                scopes: a.scopes.clone(),
-                resource: a.resource.clone(),
-                expires_at: a.expires_at,
-                created_at: epoch(),
-                last_used_at: None,
-            },
-        );
-        self.oauth_refresh_tokens.insert(
-            r.token_hash.clone(),
-            OAuthRefreshToken {
-                token_hash: r.token_hash.clone(),
-                family_id: r.family_id.clone(),
-                grant_id: r.grant_id,
-                client_id: r.client_id.clone(),
-                scopes: r.scopes.clone(),
-                resource: r.resource.clone(),
-                expires_at: r.expires_at,
-                created_at: epoch(),
-                used_at: None,
-                revoked_at: None,
-                replaced_by_hash: None,
-            },
-        );
+        self.insert_oauth_token_rows(a, r);
         Ok(true)
     }
     fn get_oauth_access_token(
@@ -444,7 +416,7 @@ impl DelegatedOAuthRepository for DieselRepoMock {
         }
         t.used_at = Some(now);
         t.replaced_by_hash = Some(r.token_hash.clone());
-        self.insert_oauth_tokens(a, r)?;
+        self.insert_oauth_token_rows(a, r);
         Ok(true)
     }
     fn revoke_oauth_refresh_family(
@@ -478,6 +450,42 @@ impl DelegatedOAuthRepository for DieselRepoMock {
 }
 
 impl DieselRepoMock {
+    fn insert_oauth_token_rows(
+        &mut self,
+        a: &NewOAuthAccessToken,
+        r: &NewOAuthRefreshToken,
+    ) {
+        self.oauth_access_tokens.insert(
+            a.token_hash.clone(),
+            OAuthAccessToken {
+                token_hash: a.token_hash.clone(),
+                grant_id: a.grant_id,
+                client_id: a.client_id.clone(),
+                scopes: a.scopes.clone(),
+                resource: a.resource.clone(),
+                expires_at: a.expires_at,
+                created_at: epoch(),
+                last_used_at: None,
+            },
+        );
+        self.oauth_refresh_tokens.insert(
+            r.token_hash.clone(),
+            OAuthRefreshToken {
+                token_hash: r.token_hash.clone(),
+                family_id: r.family_id.clone(),
+                grant_id: r.grant_id,
+                client_id: r.client_id.clone(),
+                scopes: r.scopes.clone(),
+                resource: r.resource.clone(),
+                expires_at: r.expires_at,
+                created_at: epoch(),
+                used_at: None,
+                revoked_at: None,
+                replaced_by_hash: None,
+            },
+        );
+    }
+
     pub fn with_users(users: impl IntoIterator<Item = User>) -> Self {
         let mut map = HashMap::new();
         for u in users {

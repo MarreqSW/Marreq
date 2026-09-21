@@ -12,7 +12,10 @@ use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::sql_types::{Array, Integer, Text};
 use marreq_core::auth::delegated::hash_secret;
-use marreq_core::repository::{DieselRepo, IdempotencyClaim, IdempotencyRepository};
+use marreq_core::models::{NewOAuthAccessToken, NewOAuthRefreshToken};
+use marreq_core::repository::{
+    DelegatedOAuthRepository, DieselRepo, IdempotencyClaim, IdempotencyRepository,
+};
 use rocket::http::{ContentType, Header, Status};
 use rocket::local::asynchronous::{Client, LocalResponse};
 
@@ -269,6 +272,247 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
         false,
         false,
     );
+
+    // Authorization-code consumption and token persistence must be one PostgreSQL
+    // transaction. Force the refresh-token insert to fail after the code update
+    // and access-token insert, then verify the whole transaction is retryable.
+    let oauth_now = Utc::now().naive_utc();
+    let oauth_client_id = "client-req-read";
+    let oauth_resource = "http://localhost:8080/mcp";
+    let oauth_scopes = vec!["requirements:read".to_owned()];
+    let atomic_code_hash = hash_secret("atomic-code");
+    diesel::sql_query(
+        "INSERT INTO oauth_authorization_codes
+         (code_hash,grant_id,client_id,redirect_uri,code_challenge,scopes,resource,expires_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
+    )
+    .bind::<Text, _>(&atomic_code_hash)
+    .bind::<Integer, _>(req_read)
+    .bind::<Text, _>(oauth_client_id)
+    .bind::<Text, _>("http://localhost/callback")
+    .bind::<Text, _>("test-challenge")
+    .bind::<Array<Text>, _>(&oauth_scopes)
+    .bind::<Text, _>(oauth_resource)
+    .bind::<diesel::sql_types::Timestamp, _>(oauth_now + Duration::minutes(5))
+    .execute(&mut conn)
+    .unwrap();
+
+    let duplicate_refresh_hash = hash_secret("duplicate-refresh");
+    diesel::sql_query(
+        "INSERT INTO oauth_refresh_tokens
+         (token_hash,family_id,grant_id,client_id,scopes,resource,expires_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7)",
+    )
+    .bind::<Text, _>(&duplicate_refresh_hash)
+    .bind::<Text, _>("preexisting-family")
+    .bind::<Integer, _>(req_read)
+    .bind::<Text, _>(oauth_client_id)
+    .bind::<Array<Text>, _>(&oauth_scopes)
+    .bind::<Text, _>(oauth_resource)
+    .bind::<diesel::sql_types::Timestamp, _>(oauth_now + Duration::days(30))
+    .execute(&mut conn)
+    .unwrap();
+
+    let atomic_access = NewOAuthAccessToken {
+        token_hash: hash_secret("atomic-access"),
+        grant_id: req_read,
+        client_id: oauth_client_id.to_owned(),
+        scopes: oauth_scopes.clone(),
+        resource: oauth_resource.to_owned(),
+        expires_at: oauth_now + Duration::minutes(15),
+    };
+    let duplicate_refresh = NewOAuthRefreshToken {
+        token_hash: duplicate_refresh_hash,
+        family_id: "atomic-family".to_owned(),
+        grant_id: req_read,
+        client_id: oauth_client_id.to_owned(),
+        scopes: oauth_scopes.clone(),
+        resource: oauth_resource.to_owned(),
+        expires_at: oauth_now + Duration::days(30),
+    };
+    let mut oauth_repo = DieselRepo::new().expect("production repository");
+    assert!(
+        oauth_repo
+            .consume_oauth_code_and_insert_tokens(
+                &atomic_code_hash,
+                &atomic_access,
+                &duplicate_refresh,
+                oauth_now,
+            )
+            .is_err(),
+        "duplicate refresh-token insert must fail the transaction"
+    );
+    assert!(
+        oauth_repo
+            .get_oauth_code(&atomic_code_hash)
+            .unwrap()
+            .used_at
+            .is_none(),
+        "failed token persistence must roll back code consumption"
+    );
+    assert!(
+        oauth_repo
+            .get_oauth_access_token(&atomic_access.token_hash)
+            .is_err(),
+        "failed refresh insert must roll back the access-token insert"
+    );
+
+    let retry_refresh = NewOAuthRefreshToken {
+        token_hash: hash_secret("atomic-retry-refresh"),
+        family_id: "atomic-family".to_owned(),
+        grant_id: req_read,
+        client_id: oauth_client_id.to_owned(),
+        scopes: oauth_scopes.clone(),
+        resource: oauth_resource.to_owned(),
+        expires_at: oauth_now + Duration::days(30),
+    };
+    assert!(
+        oauth_repo
+            .consume_oauth_code_and_insert_tokens(
+                &atomic_code_hash,
+                &atomic_access,
+                &retry_refresh,
+                oauth_now,
+            )
+            .unwrap(),
+        "rolled-back authorization code must remain retryable"
+    );
+    assert!(
+        oauth_repo
+            .get_oauth_code(&atomic_code_hash)
+            .unwrap()
+            .used_at
+            .is_some()
+    );
+    assert!(
+        oauth_repo
+            .get_oauth_access_token(&atomic_access.token_hash)
+            .is_ok()
+    );
+    assert!(
+        oauth_repo
+            .get_oauth_refresh_token(&retry_refresh.token_hash)
+            .is_ok()
+    );
+
+    let replay_access = NewOAuthAccessToken {
+        token_hash: hash_secret("atomic-replay-access"),
+        grant_id: req_read,
+        client_id: oauth_client_id.to_owned(),
+        scopes: oauth_scopes.clone(),
+        resource: oauth_resource.to_owned(),
+        expires_at: oauth_now + Duration::minutes(15),
+    };
+    let replay_refresh = NewOAuthRefreshToken {
+        token_hash: hash_secret("atomic-replay-refresh"),
+        family_id: "atomic-replay-family".to_owned(),
+        grant_id: req_read,
+        client_id: oauth_client_id.to_owned(),
+        scopes: oauth_scopes.clone(),
+        resource: oauth_resource.to_owned(),
+        expires_at: oauth_now + Duration::days(30),
+    };
+    assert!(
+        !oauth_repo
+            .consume_oauth_code_and_insert_tokens(
+                &atomic_code_hash,
+                &replay_access,
+                &replay_refresh,
+                oauth_now,
+            )
+            .unwrap(),
+        "a successfully consumed code must not issue a second token pair"
+    );
+    assert!(oauth_repo
+        .get_oauth_access_token(&replay_access.token_hash)
+        .is_err());
+    assert!(oauth_repo
+        .get_oauth_refresh_token(&replay_refresh.token_hash)
+        .is_err());
+
+    // Two repositories racing on one code must still yield exactly one token pair.
+    let concurrent_code_hash = hash_secret("concurrent-code");
+    diesel::sql_query(
+        "INSERT INTO oauth_authorization_codes
+         (code_hash,grant_id,client_id,redirect_uri,code_challenge,scopes,resource,expires_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)",
+    )
+    .bind::<Text, _>(&concurrent_code_hash)
+    .bind::<Integer, _>(req_read)
+    .bind::<Text, _>(oauth_client_id)
+    .bind::<Text, _>("http://localhost/callback")
+    .bind::<Text, _>("test-challenge")
+    .bind::<Array<Text>, _>(&oauth_scopes)
+    .bind::<Text, _>(oauth_resource)
+    .bind::<diesel::sql_types::Timestamp, _>(oauth_now + Duration::minutes(5))
+    .execute(&mut conn)
+    .unwrap();
+
+    let barrier = std::sync::Arc::new(std::sync::Barrier::new(3));
+    let mut handles = Vec::new();
+    for index in 0..2 {
+        let barrier = barrier.clone();
+        let code_hash = concurrent_code_hash.clone();
+        let client_id = oauth_client_id.to_owned();
+        let resource = oauth_resource.to_owned();
+        let scopes = oauth_scopes.clone();
+        handles.push(std::thread::spawn(move || {
+            let mut repo = DieselRepo::new().expect("concurrent repository");
+            let access = NewOAuthAccessToken {
+                token_hash: hash_secret(&format!("concurrent-access-{index}")),
+                grant_id: req_read,
+                client_id: client_id.clone(),
+                scopes: scopes.clone(),
+                resource: resource.clone(),
+                expires_at: oauth_now + Duration::minutes(15),
+            };
+            let refresh = NewOAuthRefreshToken {
+                token_hash: hash_secret(&format!("concurrent-refresh-{index}")),
+                family_id: format!("concurrent-family-{index}"),
+                grant_id: req_read,
+                client_id,
+                scopes,
+                resource,
+                expires_at: oauth_now + Duration::days(30),
+            };
+            barrier.wait();
+            repo.consume_oauth_code_and_insert_tokens(&code_hash, &access, &refresh, oauth_now)
+                .unwrap()
+        }));
+    }
+    barrier.wait();
+    let outcomes = handles
+        .into_iter()
+        .map(|handle| handle.join().expect("concurrent exchange thread"))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        outcomes.iter().filter(|issued| **issued).count(),
+        1,
+        "only one concurrent exchange may consume the code"
+    );
+    assert!(
+        oauth_repo
+            .get_oauth_code(&concurrent_code_hash)
+            .unwrap()
+            .used_at
+            .is_some()
+    );
+    let concurrent_access_count = (0..2)
+        .filter(|index| {
+            oauth_repo
+                .get_oauth_access_token(&hash_secret(&format!("concurrent-access-{index}")))
+                .is_ok()
+        })
+        .count();
+    let concurrent_refresh_count = (0..2)
+        .filter(|index| {
+            oauth_repo
+                .get_oauth_refresh_token(&hash_secret(&format!("concurrent-refresh-{index}")))
+                .is_ok()
+        })
+        .count();
+    assert_eq!(concurrent_access_count, 1);
+    assert_eq!(concurrent_refresh_count, 1);
 
     marreq_core::config::AppConfig::install_from_env_or_exit();
     let rocket = marreq_core::app::build_with_auth(

@@ -76,6 +76,7 @@ WORKDIR /app
 COPY --from=builder /app/target/release/${MARREQ_BIN} /usr/local/bin/marreq
 COPY --from=builder /app/marreq-core/migrations /app/migrations
 COPY --from=builder /app/marreq-core/scripts /app/scripts
+COPY --from=builder /app/marreq-core/src/schema.patch /app/src/schema.patch
 COPY --from=builder /usr/local/cargo/bin/diesel /usr/local/bin/diesel
 
 # Rocket.toml is crate-specific; pull from the selected binary's crate

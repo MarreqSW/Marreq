@@ -9,6 +9,10 @@ export async function listGroups(): Promise<GroupResponse[]> {
   return fetchJson<GroupResponse[]>('/api/groups');
 }
 
+export async function listCreatableGroups(): Promise<GroupResponse[]> {
+  return fetchJson<GroupResponse[]>('/api/groups/creatable');
+}
+
 export async function getGroup(id: number): Promise<GroupResponse> {
   return fetchJson<GroupResponse>(`/api/groups/${id}`);
 }

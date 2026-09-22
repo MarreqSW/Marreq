@@ -2,7 +2,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 
 type NoProjectsHomeProps = {
-  isAdmin: boolean;
   /** Shown in the greeting line when present. */
   displayName: string;
 };
@@ -10,7 +9,7 @@ type NoProjectsHomeProps = {
 /**
  * Shown on `/` when the session has no accessible projects (empty membership list for non-admins, or no projects in the instance for admins).
  */
-export default function NoProjectsHome({ isAdmin, displayName }: NoProjectsHomeProps) {
+export default function NoProjectsHome({ displayName }: NoProjectsHomeProps) {
   const { logout } = useDashboard();
   const navigate = useNavigate();
 
@@ -25,28 +24,24 @@ export default function NoProjectsHome({ isAdmin, displayName }: NoProjectsHomeP
         <p className="text-xs font-semibold uppercase tracking-wider text-stitch-muted mb-1">
           Marreq
         </p>
-        <h1 className="text-2xl font-bold text-stitch-fg mb-2">No projects available</h1>
+        <h1 className="text-2xl font-bold text-stitch-fg mb-2">You don&apos;t have any projects yet</h1>
         <p className="text-stitch-muted text-sm mb-6">
           {displayName ? `Signed in as ${displayName}. ` : null}
-          {isAdmin
-            ? 'There is no project to open yet. Create one to get started.'
-            : 'You are not a member of any project. Ask a site administrator to add you to a project.'}
+          Create a personal project to get started, or create a group for a team workspace.
         </p>
 
         <div className="flex flex-col gap-3">
-          {isAdmin ? (
-            <a
-              href="/new_project"
-              className="w-full text-center rounded-lg bg-gradient-to-br from-[#000666] to-[#1a237e] text-white font-semibold py-2.5 text-sm hover:opacity-95"
-            >
-              Create project
-            </a>
-          ) : null}
           <Link
-            to="/groups"
+            to="/projects/new"
+            className="w-full text-center rounded-lg bg-gradient-to-br from-[#000666] to-[#1a237e] text-white font-semibold py-2.5 text-sm hover:opacity-95"
+          >
+            New project
+          </Link>
+          <Link
+            to="/groups/new"
             className="w-full text-center rounded-lg border border-stitch-border bg-stitch-elevated text-stitch-fg font-semibold py-2.5 text-sm hover:bg-stitch-canvas"
           >
-            Browse groups
+            New group
           </Link>
           <Link
             to="/change-password"

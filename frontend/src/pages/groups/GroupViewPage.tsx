@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
-  createProject,
   deleteGroup,
   getGroup,
   listGroupMembers,
@@ -9,6 +8,7 @@ import {
   listUsersOptional,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
+import ProjectCreateForm from '@/components/ProjectCreateForm';
 import type { GroupMemberResponse, GroupResponse, Project, User } from '@/api/types';
 
 const ROLE_LABELS: Record<number, string> = {
@@ -35,10 +35,6 @@ export default function GroupViewPage() {
 
   // Create project inline form
   const [showCreateProject, setShowCreateProject] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectDesc, setNewProjectDesc] = useState('');
-  const [createProjectBusy, setCreateProjectBusy] = useState(false);
-  const [createProjectError, setCreateProjectError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(gid)) return;
@@ -90,36 +86,6 @@ export default function GroupViewPage() {
       setDeleteBusy(false);
     }
   }
-
-  async function handleCreateProject() {
-    const token = csrfToken ?? '';
-    if (!token || !newProjectName.trim()) return;
-    setCreateProjectBusy(true);
-    setCreateProjectError(null);
-    try {
-      const result = await createProject(
-        {
-          name: newProjectName.trim(),
-          description: newProjectDesc.trim() || null,
-          group_id: gid,
-        },
-        token,
-      );
-      setNewProjectName('');
-      setNewProjectDesc('');
-      setShowCreateProject(false);
-      await refreshDashboard();
-      await load();
-      navigate(`/${result.slug}/dashboard`);
-    } catch (e) {
-      setCreateProjectError(e instanceof Error ? e.message : 'Failed to create project');
-    } finally {
-      setCreateProjectBusy(false);
-    }
-  }
-
-  const inputClass =
-    'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
 
   if (loading) {
     return (
@@ -206,55 +172,20 @@ export default function GroupViewPage() {
               </div>
 
               {showCreateProject && (
-                <div className="px-5 py-4 border-b border-stitch-border bg-stitch-elevated/50 space-y-3">
-                  <div>
-                    <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
-                      Project name
-                    </label>
-                    <input
-                      value={newProjectName}
-                      onChange={(e) => setNewProjectName(e.target.value)}
-                      placeholder="e.g. Flight Control System"
-                      className={inputClass}
-                      autoFocus
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
-                      Description (optional)
-                    </label>
-                    <input
-                      value={newProjectDesc}
-                      onChange={(e) => setNewProjectDesc(e.target.value)}
-                      placeholder="Brief description"
-                      className={inputClass}
-                    />
-                  </div>
-                  {createProjectError && (
-                    <div className="text-xs text-red-400">{createProjectError}</div>
-                  )}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={createProjectBusy || !newProjectName.trim()}
-                      onClick={() => void handleCreateProject()}
-                      className="bg-gradient-to-br from-[#000666] to-[#1a237e] text-white px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-widest shadow-lg disabled:opacity-50 hover:opacity-95 transition-opacity"
-                    >
-                      {createProjectBusy ? 'Creating…' : 'Create'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowCreateProject(false);
-                        setNewProjectName('');
-                        setNewProjectDesc('');
-                        setCreateProjectError(null);
-                      }}
-                      className="text-xs font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-fg transition-colors px-2 py-1.5"
-                    >
-                      Cancel
-                    </button>
-                  </div>
+                <div className="px-5 py-4 border-b border-stitch-border bg-stitch-elevated/50">
+                  <ProjectCreateForm
+                    csrfToken={csrfToken ?? ''}
+                    personalNamespace=""
+                    fixedGroupId={gid}
+                    compact
+                    onCreated={async (project) => {
+                      setShowCreateProject(false);
+                      await refreshDashboard();
+                      await load();
+                      navigate(`${project.project_base_path}/dashboard`);
+                    }}
+                    onCancel={() => setShowCreateProject(false)}
+                  />
                 </div>
               )}
 

@@ -176,6 +176,12 @@ fn group_permissions_for_role(role: i32) -> BTreeSet<GroupPermission> {
     }
 }
 
+/// Returns whether a stored group role grants the requested permission.
+/// Unknown roles are denied.
+pub fn group_role_has_permission(role: i32, permission: GroupPermission) -> bool {
+    group_permissions_for_role(role).contains(&permission)
+}
+
 /// Returns true only if the user has the given permission in the group. Fail-closed.
 pub fn has_group_permission<R>(
     repo: &R,
@@ -197,7 +203,7 @@ where
         Some(m) => m,
         None => return false,
     };
-    group_permissions_for_role(membership.role).contains(&permission)
+    group_role_has_permission(membership.role, permission)
 }
 
 #[cfg(test)]
@@ -260,5 +266,37 @@ mod tests {
         assert!(perms.is_empty());
         let perms = permissions_for_role(99);
         assert!(perms.is_empty());
+    }
+
+    #[test]
+    fn group_role_permission_mapping_is_centralized_and_fail_closed() {
+        assert!(group_role_has_permission(
+            GROUP_ROLE_OWNER,
+            GroupPermission::ManageProjects
+        ));
+        assert!(group_role_has_permission(
+            GROUP_ROLE_MAINTAINER,
+            GroupPermission::ManageProjects
+        ));
+        assert!(!group_role_has_permission(
+            GROUP_ROLE_CONTRIBUTOR,
+            GroupPermission::ManageProjects
+        ));
+        assert!(!group_role_has_permission(
+            GROUP_ROLE_VIEWER,
+            GroupPermission::ManageProjects
+        ));
+        assert!(group_role_has_permission(
+            GROUP_ROLE_CONTRIBUTOR,
+            GroupPermission::ViewGroup
+        ));
+        assert!(!group_role_has_permission(
+            GROUP_ROLE_MAINTAINER,
+            GroupPermission::ManageGroupMembers
+        ));
+        assert!(!group_role_has_permission(
+            99,
+            GroupPermission::ViewGroup
+        ));
     }
 }

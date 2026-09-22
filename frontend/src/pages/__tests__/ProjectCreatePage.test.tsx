@@ -90,6 +90,58 @@ describe('ProjectCreatePage', () => {
     expect(mocks.navigate).toHaveBeenCalledWith('/autopilot/dashboard', { replace: true });
   });
 
+  it('re-enables submission when project creation fails', async () => {
+    const user = userEvent.setup();
+    mocks.createProject.mockRejectedValueOnce(new Error('Creation failed'));
+    render(
+      <MemoryRouter>
+        <ProjectCreatePage />
+      </MemoryRouter>,
+    );
+
+    await user.type(await screen.findByLabelText(/project name/i), 'Autopilot');
+    const submit = screen.getByRole('button', { name: /create project/i });
+    await user.click(submit);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Creation failed');
+    expect(mocks.createProject).toHaveBeenCalledTimes(1);
+    expect(mocks.refresh).not.toHaveBeenCalled();
+    expect(submit).toBeEnabled();
+  });
+
+  it('retries post-create handling without creating a duplicate', async () => {
+    const user = userEvent.setup();
+    mocks.refresh.mockRejectedValueOnce(new Error('Refresh failed'));
+    render(
+      <MemoryRouter>
+        <ProjectCreatePage />
+      </MemoryRouter>,
+    );
+
+    await user.type(await screen.findByLabelText(/project name/i), 'Autopilot');
+    await user.click(screen.getByRole('button', { name: /create project/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Project created successfully, but Marreq could not open it.',
+    );
+    expect(mocks.createProject).toHaveBeenCalledTimes(1);
+    expect(mocks.refresh).toHaveBeenCalledTimes(1);
+    expect(mocks.navigate).not.toHaveBeenCalled();
+
+    const committedSubmit = screen.getByRole('button', { name: /^project created$/i });
+    expect(committedSubmit).toBeDisabled();
+    await user.click(committedSubmit);
+    expect(mocks.createProject).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: /retry opening project/i }));
+
+    await waitFor(() =>
+      expect(mocks.navigate).toHaveBeenCalledWith('/autopilot/dashboard', { replace: true }),
+    );
+    expect(mocks.refresh).toHaveBeenCalledTimes(2);
+    expect(mocks.createProject).toHaveBeenCalledTimes(1);
+  });
+
   it('submits the selected group id', async () => {
     const user = userEvent.setup();
     mocks.createProject.mockResolvedValue({

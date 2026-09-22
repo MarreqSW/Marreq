@@ -28,20 +28,39 @@ export default function ProjectCreateForm({
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createdProject, setCreatedProject] = useState<
+    Awaited<ReturnType<typeof createProject>> | null
+  >(null);
+  const [postCreateError, setPostCreateError] = useState<string | null>(null);
 
   const inputClass =
     'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
 
+  async function handlePostCreate(project: Awaited<ReturnType<typeof createProject>>) {
+    setBusy(true);
+    setPostCreateError(null);
+    try {
+      await onCreated(project);
+    } catch {
+      setPostCreateError('Project created successfully, but Marreq could not open it.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!csrfToken || !name.trim()) return;
+    if (!csrfToken || !name.trim() || createdProject) return;
     const groupId = fixedGroupId ?? (
       namespace === 'personal' ? null : Number(namespace.slice('group:'.length))
     );
     setBusy(true);
     setError(null);
+    setPostCreateError(null);
+
+    let project: Awaited<ReturnType<typeof createProject>>;
     try {
-      const project = await createProject(
+      project = await createProject(
         {
           name: name.trim(),
           description: description.trim() || null,
@@ -49,13 +68,17 @@ export default function ProjectCreateForm({
         },
         csrfToken,
       );
-      await onCreated(project);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create project');
-    } finally {
       setBusy(false);
+      return;
     }
+
+    setCreatedProject(project);
+    await handlePostCreate(project);
   }
+
+  const committed = createdProject !== null;
 
   return (
     <form onSubmit={(event) => void handleSubmit(event)} className={compact ? 'space-y-3' : 'space-y-5'}>
@@ -68,6 +91,7 @@ export default function ProjectCreateForm({
             id="project-namespace"
             value={namespace}
             onChange={(event) => setNamespace(event.target.value)}
+            disabled={busy || committed}
             className={inputClass}
           >
             <option value="personal">{personalNamespace} — Personal</option>
@@ -88,6 +112,7 @@ export default function ProjectCreateForm({
           id="project-name"
           value={name}
           onChange={(event) => setName(event.target.value)}
+          disabled={busy || committed}
           placeholder="e.g. Flight Control System"
           className={inputClass}
           autoFocus
@@ -101,20 +126,34 @@ export default function ProjectCreateForm({
           id="project-description"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
+          disabled={busy || committed}
           placeholder="Brief description"
           className={inputClass}
         />
       </div>
 
       {error ? <div role="alert" className="text-sm text-red-400">{error}</div> : null}
+      {postCreateError && createdProject ? (
+        <div role="alert" className="text-sm text-amber-400">
+          <p>{postCreateError}</p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void handlePostCreate(createdProject)}
+            className="mt-2 text-xs font-bold uppercase tracking-wider text-stitch-accent hover:underline disabled:opacity-50"
+          >
+            {busy ? 'Opening…' : 'Retry opening project'}
+          </button>
+        </div>
+      ) : null}
 
       <div className="flex items-center gap-2">
         <button
           type="submit"
-          disabled={busy || !name.trim()}
+          disabled={busy || committed || !name.trim()}
           className="bg-gradient-to-br from-[#000666] to-[#1a237e] text-white px-4 py-2 rounded-md text-xs font-bold uppercase tracking-widest shadow-lg disabled:opacity-50 hover:opacity-95 transition-opacity"
         >
-          {busy ? 'Creating…' : 'Create project'}
+          {committed ? 'Project created' : busy ? 'Creating…' : 'Create project'}
         </button>
         {onCancel ? (
           <button

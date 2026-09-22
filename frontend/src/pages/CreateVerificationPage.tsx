@@ -139,6 +139,15 @@ export default function CreateVerificationPage() {
     [users, members],
   );
 
+  const blocker =
+    projectReviewerIds.length === 0
+      ? {
+          message: 'This project has no reviewers, so verifications cannot be created.',
+          linkLabel: 'Add a reviewer in Project settings',
+          href: `${basePath}/settings`,
+        }
+      : null;
+
   const selectedParent = useMemo(() => {
     if (parentId === '') return null;
     const id = Number(parentId);
@@ -401,7 +410,7 @@ export default function CreateVerificationPage() {
               {projectReviewerIds.length === 0 ? (
                 <p className="text-xs text-stitch-muted py-2">
                   No project reviewers configured. Add them in{' '}
-                  <Link to={`/p/${pid}/settings`} className="text-stitch-accent underline font-semibold">
+                  <Link to={`${basePath}/settings`} className="text-stitch-accent underline font-semibold">
                     Project settings
                   </Link>{' '}
                   before assigning a reviewer.
@@ -457,13 +466,24 @@ export default function CreateVerificationPage() {
           >
             Cancel
           </Link>
-          <button
-            type="submit"
-            disabled={saving || projectReviewerIds.length === 0}
-            className="bg-stitch-accent text-stitch-canvas px-6 py-2.5 rounded-md text-xs font-bold uppercase tracking-widest shadow-stitch disabled:opacity-50 hover:bg-stitch-accent-dim transition-colors"
-          >
-            {saving ? 'Creating…' : 'Create verification'}
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {blocker ? (
+              <p className="text-xs text-amber-200/90 max-w-md">
+                {blocker.message}{' '}
+                <Link to={blocker.href} className="text-stitch-accent underline font-semibold">
+                  {blocker.linkLabel}
+                </Link>
+                .
+              </p>
+            ) : null}
+            <button
+              type="submit"
+              disabled={saving || blocker != null}
+              className="bg-stitch-accent text-stitch-canvas px-6 py-2.5 rounded-md text-xs font-bold uppercase tracking-widest shadow-stitch disabled:opacity-50 hover:bg-stitch-accent-dim transition-colors"
+            >
+              {saving ? 'Creating…' : 'Create verification'}
+            </button>
+          </div>
         </footer>
       </form>
     </div>

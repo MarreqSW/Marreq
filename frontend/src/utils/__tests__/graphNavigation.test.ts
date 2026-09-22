@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { entityDetailPath, parseGraphNodeId } from '../graphNavigation';
+import { entityCreateChildPath, entityDetailPath, parseGraphNodeId } from '../graphNavigation';
 
 describe('parseGraphNodeId', () => {
   it('parses requirement node ids', () => {
@@ -42,6 +42,22 @@ describe('entityDetailPath', () => {
   it('strips trailing slash from basePath', () => {
     expect(entityDetailPath(`${base}/`, 'requirement', 1)).toBe(
       '/acme/my-project/requirements/1',
+    );
+  });
+});
+
+describe('entityCreateChildPath', () => {
+  const base = '/acme/my-project';
+
+  it('builds requirement create path with parent query', () => {
+    expect(entityCreateChildPath(base, 'requirement', 42)).toBe(
+      '/acme/my-project/requirements/new?parent=42',
+    );
+  });
+
+  it('builds verification create path with parent query', () => {
+    expect(entityCreateChildPath(base, 'verification', 7)).toBe(
+      '/acme/my-project/verifications/new?parent=7',
     );
   });
 });

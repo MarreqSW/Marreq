@@ -27,3 +27,16 @@ export function entityDetailPath(
   }
   return `${base}/verifications/${entityId}`;
 }
+
+/** Create page for a child of the selected graph node. */
+export function entityCreateChildPath(
+  basePath: string,
+  kind: GraphEntityKind,
+  parentId: number,
+): string {
+  const base = basePath.replace(/\/$/, '');
+  if (kind === 'requirement') {
+    return `${base}/requirements/new?parent=${parentId}`;
+  }
+  return `${base}/verifications/new?parent=${parentId}`;
+}

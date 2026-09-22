@@ -69,8 +69,9 @@ describe('HomeRedirect', () => {
         <HomeRedirect />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('heading', { name: /no projects available/i })).toBeInTheDocument();
-    expect(screen.getByText(/not a member of any project/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /don't have any projects yet/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /new project/i })).toHaveAttribute('href', '/projects/new');
+    expect(screen.getByRole('link', { name: /new group/i })).toHaveAttribute('href', '/groups/new');
   });
 
   it('navigates to the selected project dashboard when projects exist', async () => {
@@ -109,16 +110,14 @@ describe('NoProjectsHome', () => {
     };
   });
 
-  it('offers create project for admins', () => {
+  it('offers project and group creation to every authenticated user', () => {
     render(
       <MemoryRouter>
-        <NoProjectsHome isAdmin displayName="Alice" />
+        <NoProjectsHome displayName="Alice" />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('link', { name: /create project/i })).toHaveAttribute(
-      'href',
-      '/new_project',
-    );
+    expect(screen.getByRole('link', { name: /new project/i })).toHaveAttribute('href', '/projects/new');
+    expect(screen.getByRole('link', { name: /new group/i })).toHaveAttribute('href', '/groups/new');
     expect(screen.getByRole('link', { name: /change password/i })).toHaveAttribute(
       'href',
       '/change-password',
@@ -126,17 +125,17 @@ describe('NoProjectsHome', () => {
     expect(screen.getByText(/signed in as alice/i)).toBeInTheDocument();
   });
 
-  it('hides create project for non-admins and signs out', async () => {
+  it('allows a non-admin to start a project and sign out', async () => {
     const user = userEvent.setup();
     render(
       <MemoryRouter>
         <Routes>
-          <Route path="/" element={<NoProjectsHome isAdmin={false} displayName="Bob" />} />
+          <Route path="/" element={<NoProjectsHome displayName="Bob" />} />
           <Route path="/login" element={<div>login-page</div>} />
         </Routes>
       </MemoryRouter>,
     );
-    expect(screen.queryByRole('link', { name: /create project/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /new project/i })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /sign out/i }));
     await waitFor(() => expect(logout).toHaveBeenCalled());
     expect(navigate).toHaveBeenCalledWith('/login', { replace: true });

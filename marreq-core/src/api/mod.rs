@@ -193,6 +193,7 @@ pub fn routes() -> Vec<Route> {
         saved_views::delete,
         // Group endpoints
         groups::list,
+        groups::list_creatable,
         groups::get,
         groups::create,
         groups::update,

@@ -9,8 +9,10 @@ use rocket::State;
 use crate::api::prelude::*;
 use crate::auth::guards::ApiUserOrBearer;
 use crate::models::{NewGroup, UpdateGroup};
-use crate::permissions::{group_role_label, has_group_permission, GroupPermission};
-use crate::repository::GroupsRepository;
+use crate::permissions::{
+    group_role_has_permission, group_role_label, has_group_permission, GroupPermission,
+};
+use crate::repository::{GroupMembersRepository, GroupsRepository};
 use crate::services::GroupService;
 
 /// Response for one group.
@@ -79,6 +81,39 @@ pub async fn list(
     } else {
         service.get_by_user_id(user.id).map_err(ApiError::from)?
     };
+    Ok(Json(groups.into_iter().map(GroupResponse::from).collect()))
+}
+
+/// GET /api/groups/creatable — list groups where the user may create projects.
+#[get("/groups/creatable")]
+pub async fn list_creatable(
+    auth: ApiUserOrBearer,
+    state: &State<AppState>,
+) -> ApiResult<Json<Vec<GroupResponse>>> {
+    let user = auth.user();
+    let service = GroupService::new(state);
+    let mut groups = if user.is_admin {
+        service.list_all().map_err(ApiError::from)?
+    } else {
+        let repo = state.repo_read();
+        let memberships = repo.get_groups_for_user(user.id).map_err(ApiError::from)?;
+        let mut groups = Vec::with_capacity(memberships.len());
+
+        for membership in memberships {
+            if !group_role_has_permission(membership.role, GroupPermission::ManageProjects) {
+                continue;
+            }
+            match repo.get_group_by_id(membership.group_id) {
+                Ok(group) => groups.push(group),
+                Err(crate::repository::errors::RepoError::NotFound) => continue,
+                Err(error) => return Err(ApiError::from(error)),
+            }
+        }
+        groups
+    };
+
+    groups.sort_by_key(|group| group.name.to_lowercase());
+
     Ok(Json(groups.into_iter().map(GroupResponse::from).collect()))
 }
 
@@ -277,6 +312,10 @@ mod tests {
         let state = client.rocket().state::<TestState>().unwrap();
         test_session_cookie_for(state, user_id)
     }
+    use crate::models::{Group, GroupMember};
+    use crate::permissions::{
+        GROUP_ROLE_CONTRIBUTOR, GROUP_ROLE_MAINTAINER, GROUP_ROLE_OWNER, GROUP_ROLE_VIEWER,
+    };
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use rocket::http::{ContentType, Cookie};
     use rocket::local::asynchronous::Client;
@@ -298,7 +337,7 @@ mod tests {
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
         let rocket = rocket::build()
             .manage(state_from_repo(repo))
-            .mount("/api", routes![create]);
+            .mount("/api", routes![create, list_creatable]);
         Client::tracked(rocket).await.expect("client")
     }
 
@@ -309,6 +348,93 @@ mod tests {
         user.name = "Alice".into();
         repo.users.insert(1, user);
         repo
+    }
+
+    fn group(id: i32, name: &str) -> Group {
+        let timestamp = chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap();
+        Group {
+            id,
+            name: name.into(),
+            slug: name.to_lowercase().replace(' ', "-"),
+            description: None,
+            owner_id: None,
+            created_at: timestamp,
+            updated_at: timestamp,
+        }
+    }
+
+    fn add_membership(repo: &mut DieselRepoMock, group_id: i32, role: i32) {
+        let timestamp = chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap();
+        repo.group_members.push(GroupMember {
+            group_id,
+            user_id: 1,
+            role,
+            created_at: timestamp,
+            updated_at: timestamp,
+        });
+    }
+
+    #[rocket::async_test]
+    async fn creatable_groups_only_include_manage_projects_permission() {
+        let mut repo = base_repo();
+        for (id, name, role) in [
+            (1, "Zulu Owners", GROUP_ROLE_OWNER),
+            (2, "Alpha Maintainers", GROUP_ROLE_MAINTAINER),
+            (3, "Contributors", GROUP_ROLE_CONTRIBUTOR),
+            (4, "Viewers", GROUP_ROLE_VIEWER),
+        ] {
+            repo.groups.insert(id, group(id, name));
+            add_membership(&mut repo, id, role);
+        }
+        repo.groups.insert(5, group(5, "Not a member"));
+        let client = client_with_repo(repo).await;
+
+        let response = client
+            .get("/api/groups/creatable")
+            .private_cookie(session_cookie(&client))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let groups: Vec<Value> = response.into_json().await.expect("json");
+        assert_eq!(
+            groups
+                .iter()
+                .map(|group| group["id"].as_i64().unwrap())
+                .collect::<Vec<_>>(),
+            vec![2_i64, 1]
+        );
+    }
+
+    #[rocket::async_test]
+    async fn admin_sees_all_groups_as_creatable_without_memberships() {
+        let mut repo = base_repo();
+        repo.users.get_mut(&1).expect("user").is_admin = true;
+        repo.groups.insert(1, group(1, "Zulu Group"));
+        repo.groups.insert(2, group(2, "Alpha Group"));
+        let client = client_with_repo(repo).await;
+
+        let response = client
+            .get("/api/groups/creatable")
+            .private_cookie(session_cookie(&client))
+            .dispatch()
+            .await;
+
+        assert_eq!(response.status(), Status::Ok);
+        let groups: Vec<Value> = response.into_json().await.expect("json");
+        assert_eq!(
+            groups
+                .iter()
+                .map(|group| group["id"].as_i64().unwrap())
+                .collect::<Vec<_>>(),
+            vec![2_i64, 1]
+        );
     }
 
     #[rocket::async_test]

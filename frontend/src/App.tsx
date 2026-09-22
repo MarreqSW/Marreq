@@ -30,6 +30,7 @@ import ViewVerificationPage from '@/pages/ViewVerificationPage';
 import HelpPage from '@/pages/HelpPage';
 import ImportPage from '@/pages/ImportPage';
 import ProjectSettingsPage from '@/pages/ProjectSettingsPage';
+import ProjectCreatePage from '@/pages/ProjectCreatePage';
 import ReportsPage from '@/pages/ReportsPage';
 import RequirementsPage from '@/pages/RequirementsPage';
 import TraceabilityPage from '@/pages/TraceabilityPage';
@@ -107,6 +108,7 @@ export default function App() {
         <Route path="change-password" element={<ChangePasswordPage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="change_password" element={<Navigate to="/change-password" replace />} />
+        <Route path="projects/new" element={<ProjectCreatePage />} />
         {/* Groups routes (reserved — matched before :projectSlug catch-all) */}
         <Route path="groups" element={<GroupsListPage />} />
         <Route path="groups/new" element={<GroupCreatePage />} />

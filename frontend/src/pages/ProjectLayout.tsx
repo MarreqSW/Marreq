@@ -258,6 +258,14 @@ export default function ProjectLayout() {
             label: 'Help',
           })}
           <Link
+            to="/projects/new"
+            className={`flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider font-bold transition-all rounded-r-md border-l-4 border-transparent text-stitch-muted hover:bg-stitch-elevated hover:text-stitch-fg ${!sidebarWide ? 'justify-center px-2' : ''}`}
+            title={!sidebarWide ? 'New project' : undefined}
+          >
+            <span className="material-symbols-outlined text-lg shrink-0">add_box</span>
+            {sidebarWide ? <span className="truncate">New project</span> : null}
+          </Link>
+          <Link
             to="/groups"
             className={`flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider font-bold transition-all rounded-r-md border-l-4 border-transparent text-stitch-muted hover:bg-stitch-elevated hover:text-stitch-fg ${!sidebarWide ? 'justify-center px-2' : ''}`}
             title={!sidebarWide ? 'Groups' : undefined}

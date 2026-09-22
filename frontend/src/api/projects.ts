@@ -11,7 +11,13 @@ import { fetchJson, JSON_HEADERS } from './transport';
 export async function createProject(
   body: { name: string; description?: string | null; group_id?: number | null },
   csrfToken: string,
-): Promise<{ id: number; name: string; slug: string; group_id: number | null }> {
+): Promise<{
+  id: number;
+  name: string;
+  slug: string;
+  group_id: number | null;
+  project_base_path: string;
+}> {
   return fetchJson('/api/projects', {
     method: 'POST',
     headers: { ...JSON_HEADERS, 'X-CSRF-Token': csrfToken },

@@ -33,9 +33,8 @@ export default function HomeRedirect() {
   }
 
   if (!hasProjects) {
-    const isAdmin = user?.is_admin ?? false;
     const displayName = (user?.name?.trim() || user?.username || '').trim();
-    return <NoProjectsHome isAdmin={isAdmin} displayName={displayName} />;
+    return <NoProjectsHome displayName={displayName} />;
   }
 
   return (

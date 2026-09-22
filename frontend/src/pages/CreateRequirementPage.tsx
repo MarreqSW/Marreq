@@ -253,6 +253,21 @@ export default function CreateRequirementPage() {
   const projectName =
     dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
 
+  const blocker =
+    methods.length === 0
+      ? {
+          message: 'This project has no verification methods, so requirements cannot be created.',
+          linkLabel: 'Add a verification method',
+          href: `${basePath}/catalog/verification-methods`,
+        }
+      : projectReviewerIds.length === 0
+        ? {
+            message: 'This project has no reviewers, so requirements cannot be created.',
+            linkLabel: 'Add a reviewer in Project settings',
+            href: `${basePath}/settings`,
+          }
+        : null;
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     const token = csrfToken ?? '';
@@ -517,7 +532,7 @@ export default function CreateRequirementPage() {
               {projectReviewerIds.length === 0 ? (
                 <p className="text-xs text-stitch-muted py-2">
                   No project reviewers configured. Add them in{' '}
-                  <Link to={`/p/${pid}/settings`} className="text-stitch-accent underline font-semibold">
+                  <Link to={`${basePath}/settings`} className="text-stitch-accent underline font-semibold">
                     Project settings
                   </Link>{' '}
                   before assigning a reviewer.
@@ -694,13 +709,24 @@ export default function CreateRequirementPage() {
           >
             Cancel
           </Link>
-          <button
-            type="submit"
-            disabled={saving || methods.length === 0 || projectReviewerIds.length === 0}
-            className="bg-stitch-accent text-stitch-canvas px-6 py-2.5 rounded-md text-xs font-bold uppercase tracking-widest shadow-stitch disabled:opacity-50 hover:bg-stitch-accent-dim transition-colors"
-          >
-            {saving ? 'Creating…' : isDuplicate ? 'Create duplicate' : 'Create requirement'}
-          </button>
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {blocker ? (
+              <p className="text-xs text-amber-200/90 max-w-md">
+                {blocker.message}{' '}
+                <Link to={blocker.href} className="text-stitch-accent underline font-semibold">
+                  {blocker.linkLabel}
+                </Link>
+                .
+              </p>
+            ) : null}
+            <button
+              type="submit"
+              disabled={saving || blocker != null}
+              className="bg-stitch-accent text-stitch-canvas px-6 py-2.5 rounded-md text-xs font-bold uppercase tracking-widest shadow-stitch disabled:opacity-50 hover:bg-stitch-accent-dim transition-colors"
+            >
+              {saving ? 'Creating…' : isDuplicate ? 'Create duplicate' : 'Create requirement'}
+            </button>
+          </div>
         </footer>
       </form>
     </div>

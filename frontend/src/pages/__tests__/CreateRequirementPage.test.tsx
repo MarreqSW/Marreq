@@ -213,4 +213,23 @@ describe('CreateRequirementPage duplication', () => {
     expect(payload).not.toHaveProperty('approval_state');
     expect(payload).not.toHaveProperty('comments');
   });
+
+  it('explains why creating is blocked when the project has no reviewers', async () => {
+    vi.mocked(apiClient.getProjectReviewers).mockResolvedValue({ user_ids: [] });
+    render(
+      <MemoryRouter initialEntries={['/space-project/requirements/new']}>
+        <Routes>
+          <Route path="/:projectSlug/requirements/new" element={<CreateRequirementPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByText(/no reviewers, so requirements cannot be created/i),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create requirement/i })).toBeDisabled();
+    expect(
+      screen.getAllByRole('link', { name: /project settings/i })[0],
+    ).toHaveAttribute('href', '/space-project/settings');
+  });
 });

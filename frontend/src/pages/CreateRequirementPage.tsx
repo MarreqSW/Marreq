@@ -387,6 +387,22 @@ export default function CreateRequirementPage() {
             />
           </div>
           <div>
+            <label
+              htmlFor="requirement-rationale"
+              className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1"
+            >
+              Rationale (optional)
+            </label>
+            <textarea
+              id="requirement-rationale"
+              value={justification}
+              onChange={(e) => setJustification(e.target.value)}
+              rows={4}
+              className={`${selectClass} min-h-[96px] resize-y`}
+              placeholder="Why this requirement exists…"
+            />
+          </div>
+          <div>
             <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-2">
               Verification methods <span className="text-stitch-danger">*</span>
             </label>
@@ -477,17 +493,6 @@ export default function CreateRequirementPage() {
                   </option>
                 ))}
               </select>
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
-                Justification (optional)
-              </label>
-              <input
-                value={justification}
-                onChange={(e) => setJustification(e.target.value)}
-                className={selectClass}
-                placeholder="—"
-              />
             </div>
             <div>
               <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">

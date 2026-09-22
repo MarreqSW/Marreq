@@ -119,6 +119,7 @@ pub struct RequirementPatch {
     pub reviewer_id: Option<i32>,
     pub category_id: Option<i32>,
     pub applicability_id: Option<i32>,
+    pub justification: Option<String>,
     pub custom_fields: Option<Vec<CustomFieldValueInput>>,
 }
 
@@ -147,6 +148,7 @@ impl RequirementPatch {
             || self.reviewer_id.is_some()
             || self.category_id.is_some()
             || self.applicability_id.is_some()
+            || self.justification.is_some()
             || self.custom_fields.is_some()
     }
 }
@@ -217,11 +219,24 @@ fn apply_requirement_patch(
         reviewer_id,
         category_id,
         applicability_id,
+        justification,
         custom_fields,
     } = patch;
 
     let verification_method_ids =
         filter_positive_ids(verification_method_ids.unwrap_or(default_verification_method_ids));
+
+    let justification = match justification {
+        Some(raw) => {
+            let trimmed = raw.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        }
+        None => requirement.justification,
+    };
 
     let requirement = NewRequirement {
         id: Some(requirement.id),
@@ -233,7 +248,7 @@ fn apply_requirement_patch(
         reference_code: requirement.reference_code,
         reviewer_id: reviewer_id.unwrap_or(requirement.reviewer_id),
         applicability_id: applicability_id.unwrap_or(requirement.applicability_id),
-        justification: requirement.justification,
+        justification,
         project_id: requirement.project_id,
     };
 
@@ -1195,6 +1210,60 @@ mod tests {
         let requirement: Requirement = get_response.into_json().await.unwrap();
         assert_eq!(requirement.title, "Updated");
         assert_eq!(requirement.description, "Updated description");
+    }
+
+    #[rocket::async_test]
+    async fn patch_updates_and_clears_justification() {
+        let client = client_with_repo(DieselRepoMock::default()).await;
+        let mut req = sample_requirement("Original");
+        req["justification"] = json!("Customer constraint");
+        let create_response = client
+            .post("/api/requirements")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(req.to_string())
+            .dispatch()
+            .await;
+        let created: Value = create_response.into_json().await.unwrap();
+        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
+
+        let set_response = client
+            .patch(format!("/api/requirements/{id}"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(json!({ "justification": "From analysis" }).to_string())
+            .dispatch()
+            .await;
+        assert_eq!(set_response.status(), Status::Ok);
+
+        let after_set: Requirement = client
+            .get(format!("/api/requirements/{id}"))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await
+            .into_json()
+            .await
+            .unwrap();
+        assert_eq!(after_set.justification.as_deref(), Some("From analysis"));
+
+        let clear_response = client
+            .patch(format!("/api/requirements/{id}"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(json!({ "justification": "  " }).to_string())
+            .dispatch()
+            .await;
+        assert_eq!(clear_response.status(), Status::Ok);
+
+        let after_clear: Requirement = client
+            .get(format!("/api/requirements/{id}"))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await
+            .into_json()
+            .await
+            .unwrap();
+        assert_eq!(after_clear.justification, None);
     }
 
     #[rocket::async_test]

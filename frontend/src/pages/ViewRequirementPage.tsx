@@ -304,7 +304,7 @@ export default function ViewRequirementPage() {
         if (older.reviewer_id !== ver.reviewer_id) changes.push('Reviewer');
         if (older.category_id !== ver.category_id) changes.push('Category');
         if (older.applicability_id !== ver.applicability_id) changes.push('Applicability');
-        if ((older.justification ?? '') !== (ver.justification ?? '')) changes.push('Justification');
+        if ((older.justification ?? '') !== (ver.justification ?? '')) changes.push('Rationale');
         if ((older.deadline_date ?? '') !== (ver.deadline_date ?? '')) changes.push('Deadline');
       }
       return { ver, revNum, older, changes, isLatest: i === 0 };
@@ -616,20 +616,18 @@ export default function ViewRequirementPage() {
             </div>
           </section>
 
-          {view.justification?.trim() ? (
-            <section className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch">
-              <div className="px-6 py-3 border-b border-stitch-border bg-stitch-elevated">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-stitch-muted font-headline">
-                  Rationale
-                </h2>
+          <section className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch">
+            <div className="px-6 py-3 border-b border-stitch-border bg-stitch-elevated">
+              <h2 className="text-xs font-bold uppercase tracking-widest text-stitch-muted font-headline">
+                Rationale
+              </h2>
+            </div>
+            <div className="p-6 md:p-8">
+              <div className="text-sm leading-relaxed text-stitch-fg whitespace-pre-wrap">
+                {view.justification?.trim() ? view.justification : '—'}
               </div>
-              <div className="p-6 md:p-8">
-                <div className="text-sm leading-relaxed text-stitch-fg whitespace-pre-wrap">
-                  {view.justification}
-                </div>
-              </div>
-            </section>
-          ) : null}
+            </div>
+          </section>
 
           {view.custom_fields && view.custom_fields.length > 0 ? (
             <section className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch">

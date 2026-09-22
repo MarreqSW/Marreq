@@ -294,9 +294,6 @@ mod tests {
             GROUP_ROLE_MAINTAINER,
             GroupPermission::ManageGroupMembers
         ));
-        assert!(!group_role_has_permission(
-            99,
-            GroupPermission::ViewGroup
-        ));
+        assert!(!group_role_has_permission(99, GroupPermission::ViewGroup));
     }
 }

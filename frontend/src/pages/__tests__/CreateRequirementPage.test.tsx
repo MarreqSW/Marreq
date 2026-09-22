@@ -232,4 +232,79 @@ describe('CreateRequirementPage duplication', () => {
       screen.getAllByRole('link', { name: /project settings/i })[0],
     ).toHaveAttribute('href', '/space-project/settings');
   });
+
+  it('prefills from ?template= the same way as ?from=', async () => {
+    render(
+      <MemoryRouter initialEntries={['/space-project/requirements/new?template=1']}>
+        <Routes>
+          <Route
+            path="/:projectSlug/requirements/new"
+            element={<CreateRequirementPage />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByDisplayValue('REQ-PWR-002')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Power mode (Copy)')).toBeInTheDocument();
+    expect(screen.getByText('REQ-SYS-001')).toBeInTheDocument();
+  });
+
+  it('prefills a parent link from ?parent= and includes it on create', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/space-project/requirements/new?parent=2']}>
+        <Routes>
+          <Route
+            path="/:projectSlug/requirements/new"
+            element={<CreateRequirementPage />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('REQ-SYS-001')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+
+    await user.type(screen.getByPlaceholderText('REQ-0001'), 'REQ-CHILD-001');
+    await user.type(screen.getByPlaceholderText('Short title'), 'Child of system');
+    await user.type(screen.getByPlaceholderText('Requirement statement…'), 'Shall derive.');
+    await user.click(screen.getByRole('button', { name: /create requirement/i }));
+
+    await waitFor(() =>
+      expect(apiClient.createRequirementByProject).toHaveBeenCalledWith(
+        5,
+        expect.objectContaining({
+          title: 'Child of system',
+          reference_code: 'REQ-CHILD-001',
+          parent_links: [
+            {
+              target_version_id: 22,
+              link_type: 'derives-from',
+              rationale: null,
+            },
+          ],
+        }),
+        'csrf-test',
+      ),
+    );
+  });
+
+  it('warns and skips parent prefill when ?parent= is not in the project', async () => {
+    render(
+      <MemoryRouter initialEntries={['/space-project/requirements/new?parent=99']}>
+        <Routes>
+          <Route
+            path="/:projectSlug/requirements/new"
+            element={<CreateRequirementPage />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Parent requirement 99 is not in this project',
+    );
+    expect(screen.getByText('No parent requirements selected.')).toBeInTheDocument();
+  });
 });

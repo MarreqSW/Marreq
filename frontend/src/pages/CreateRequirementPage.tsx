@@ -36,6 +36,7 @@ import {
   duplicateRequirementTitle,
   nextDuplicateReference,
 } from '@/utils/duplicateRequirement';
+import { duplicateSourceQueryId, parsePositiveQueryId } from '@/utils/createQueryParams';
 
 const selectClass =
   'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
@@ -51,8 +52,9 @@ export default function CreateRequirementPage() {
   const { csrfToken, dashboard, refresh: refreshDashboard } = useDashboard();
 
   const me = useMemo(() => parseUser(dashboard?.user), [dashboard?.user]);
-  const duplicateFrom = Number(searchParams.get('from'));
-  const isDuplicate = Number.isFinite(duplicateFrom) && duplicateFrom > 0;
+  const duplicateFrom = duplicateSourceQueryId(searchParams);
+  const parentQueryId = parsePositiveQueryId(searchParams.get('parent'));
+  const isDuplicate = duplicateFrom != null;
 
   const [statuses, setStatuses] = useState<RequirementStatus[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -66,6 +68,7 @@ export default function CreateRequirementPage() {
   const [linkTypes, setLinkTypes] = useState<string[]>([]);
   const [users, setUsers] = useState<User[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [queryWarning, setQueryWarning] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -89,6 +92,7 @@ export default function CreateRequirementPage() {
   const load = useCallback(async () => {
     if (!Number.isFinite(pid)) return;
     setLoadError(null);
+    setQueryWarning(null);
     try {
       const [st, cat, app, mem, meth, revPool, p, u, reqs, fields, types] = await Promise.all([
         listRequirementStatuses(),
@@ -124,40 +128,74 @@ export default function CreateRequirementPage() {
       if (firstApp) setApplicabilityId((id) => (id === 0 ? firstApp.id : id));
       setMethodIds((prev) => (prev.length === 0 && meth[0] ? [meth[0]!.id] : prev));
 
-      if (isDuplicate) {
-        const source = await getRequirementByProject(pid, duplicateFrom);
-        setTitle(duplicateRequirementTitle(source.title));
-        setDescription(source.description);
-        setReferenceCode(nextDuplicateReference(source.reference_code, reqs));
-        setStatusId(source.status_id);
-        setCategoryId(source.category_id);
-        setApplicabilityId(source.applicability_id);
-        setReviewerId(source.reviewer_id);
-        setJustification(source.justification ?? '');
-        setMethodIds(source.verification_method_ids ?? []);
-        setCustomFieldValues(
-          Object.fromEntries(
-            (source.custom_fields ?? []).map((field) => [field.field_id, field.value ?? '']),
-          ),
-        );
-        setParentLinks(
-          source.trace_summary.parent_links.map((link) => ({
-            target_version_id: link.target_version_id,
-            link_type: link.link_type,
-            rationale: link.rationale,
-          })),
-        );
+      const warnings: string[] = [];
+      const defaultLinkType = types[0] ?? 'derives-from';
+      let links: Array<{
+        target_version_id: number;
+        link_type: string;
+        rationale: string | null;
+      }> = [];
+
+      if (duplicateFrom != null) {
+        const listed = reqs.find((requirement) => requirement.id === duplicateFrom);
+        if (!listed) {
+          warnings.push(`Template requirement ${duplicateFrom} is not in this project`);
+        } else {
+          try {
+            const source = await getRequirementByProject(pid, duplicateFrom);
+            if (source.project_id !== pid) {
+              warnings.push(`Template requirement ${duplicateFrom} is not in this project`);
+            } else {
+              setTitle(duplicateRequirementTitle(source.title));
+              setDescription(source.description);
+              setReferenceCode(nextDuplicateReference(source.reference_code, reqs));
+              setStatusId(source.status_id);
+              setCategoryId(source.category_id);
+              setApplicabilityId(source.applicability_id);
+              setReviewerId(source.reviewer_id);
+              setJustification(source.justification ?? '');
+              setMethodIds(source.verification_method_ids ?? []);
+              setCustomFieldValues(
+                Object.fromEntries(
+                  (source.custom_fields ?? []).map((field) => [field.field_id, field.value ?? '']),
+                ),
+              );
+              links = source.trace_summary.parent_links.map((link) => ({
+                target_version_id: link.target_version_id,
+                link_type: link.link_type,
+                rationale: link.rationale,
+              }));
+            }
+          } catch {
+            warnings.push(`Template requirement ${duplicateFrom} is not in this project`);
+          }
+        }
       }
+
+      if (parentQueryId != null) {
+        const parent = reqs.find((requirement) => requirement.id === parentQueryId);
+        if (!parent) {
+          warnings.push(`Parent requirement ${parentQueryId} is not in this project`);
+        } else if (parent.current_version_id == null) {
+          warnings.push(`Parent requirement ${parentQueryId} has no current version`);
+        } else if (!links.some((link) => link.target_version_id === parent.current_version_id)) {
+          links = [
+            ...links,
+            {
+              target_version_id: parent.current_version_id,
+              link_type: defaultLinkType,
+              rationale: null,
+            },
+          ];
+        }
+      }
+
+      setParentLinks(links);
+      setQueryWarning(warnings.length > 0 ? warnings.join(' ') : null);
     } catch (e) {
-      setLoadError(
-        e instanceof Error
-          ? e.message
-          : isDuplicate
-            ? 'Failed to load requirement to duplicate'
-            : 'Failed to load form data',
-      );
+      setLoadError(e instanceof Error ? e.message : 'Failed to load form data');
     }
-  }, [duplicateFrom, isDuplicate, pid]);
+  }, [duplicateFrom, parentQueryId, pid]);
 
   useEffect(() => {
     void load();
@@ -361,6 +399,15 @@ export default function CreateRequirementPage() {
           </p>
         </div>
       </div>
+
+      {queryWarning ? (
+        <div
+          role="status"
+          className="mb-6 rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-sm text-amber-100"
+        >
+          {queryWarning}
+        </div>
+      ) : null}
 
       <form onSubmit={onSubmit} className="space-y-8">
         <section className="bg-stitch-surface rounded-xl border border-stitch-border shadow-stitch p-6 md:p-8 space-y-6">

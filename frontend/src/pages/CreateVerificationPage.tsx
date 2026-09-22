@@ -1,9 +1,10 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useOutletContext } from 'react-router-dom';
+import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   createVerification,
   getMyPermissions,
   getProjectReviewers,
+  getVerification,
   listProjectMembers,
   listUsersOptional,
   listRequirements,
@@ -27,6 +28,8 @@ import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { initialVerificationStatusIdForAuthor } from '@/statusAuthorDefaults';
 import { formatUserLabel } from '@/utils/userLabel';
+import { nextDuplicateReference } from '@/utils/duplicateRequirement';
+import { duplicateSourceQueryId, parsePositiveQueryId } from '@/utils/createQueryParams';
 
 const selectClass =
   'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
@@ -34,7 +37,10 @@ const selectClass =
 export default function CreateVerificationPage() {
   const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { csrfToken, dashboard, refresh: refreshDashboard } = useDashboard();
+  const duplicateFrom = duplicateSourceQueryId(searchParams);
+  const parentQueryId = parsePositiveQueryId(searchParams.get('parent'));
 
   const [statuses, setStatuses] = useState<VerificationStatus[]>([]);
   const [methods, setMethods] = useState<VerificationMethod[]>([]);
@@ -42,6 +48,7 @@ export default function CreateVerificationPage() {
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [linkedReqIds, setLinkedReqIds] = useState<number[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [queryWarning, setQueryWarning] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -62,6 +69,7 @@ export default function CreateVerificationPage() {
   const load = useCallback(async () => {
     if (!Number.isFinite(pid)) return;
     setLoadError(null);
+    setQueryWarning(null);
     try {
       const [st, meth, ver, reqs, mem, userList, revPool, p] = await Promise.all([
         listVerificationStatuses(),
@@ -78,7 +86,8 @@ export default function CreateVerificationPage() {
       setUsers(userList);
       setStatuses(st);
       setMethods(meth);
-      setExisting(ver.filter((v) => v.project_id === pid));
+      const projectVers = ver.filter((v) => v.project_id === pid);
+      setExisting(projectVers);
       setRequirements(reqs);
       setMembers(mem);
       const forProject = st.filter((s) => s.project_id === pid);
@@ -97,10 +106,57 @@ export default function CreateVerificationPage() {
           : revSorted[0] ?? 0;
       setAuthorId((prev) => (prev === 0 ? authorPick : prev));
       setReviewerId((prev) => (prev === 0 ? reviewerPick : prev));
+
+      const warnings: string[] = [];
+      let nextParent = '';
+
+      if (duplicateFrom != null) {
+        const listed = projectVers.find((v) => v.id === duplicateFrom);
+        if (!listed) {
+          warnings.push(`Template verification ${duplicateFrom} is not in this project`);
+        } else {
+          try {
+            const source = await getVerification(duplicateFrom);
+            if (source.project_id !== pid) {
+              warnings.push(`Template verification ${duplicateFrom} is not in this project`);
+            } else {
+              const trimmedName = source.name.trim();
+              setName(`${trimmedName || 'Untitled verification'} (Copy)`);
+              setDescription(source.description);
+              setSource(source.source || 'manual');
+              setReferenceCode(nextDuplicateReference(source.reference_code, projectVers));
+              setStatusId(source.status_id);
+              setMethodId(
+                source.verification_method_id != null ? String(source.verification_method_id) : '',
+              );
+              setReviewerId(source.reviewer_id);
+              if (
+                source.parent_id != null &&
+                projectVers.some((v) => v.id === source.parent_id)
+              ) {
+                nextParent = String(source.parent_id);
+              }
+            }
+          } catch {
+            warnings.push(`Template verification ${duplicateFrom} is not in this project`);
+          }
+        }
+      }
+
+      if (parentQueryId != null) {
+        if (!projectVers.some((v) => v.id === parentQueryId)) {
+          warnings.push(`Parent verification ${parentQueryId} is not in this project`);
+        } else {
+          nextParent = String(parentQueryId);
+        }
+      }
+
+      setParentId(nextParent);
+      setQueryWarning(warnings.length > 0 ? warnings.join(' ') : null);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load form data');
     }
-  }, [pid, dashboard?.user]);
+  }, [dashboard?.user, duplicateFrom, parentQueryId, pid]);
 
   useEffect(() => {
     void load();
@@ -252,6 +308,15 @@ export default function CreateVerificationPage() {
         </p>
       </div>
 
+      {queryWarning ? (
+        <div
+          role="status"
+          className="mb-6 rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-sm text-amber-100"
+        >
+          {queryWarning}
+        </div>
+      ) : null}
+
       <form onSubmit={onSubmit} className="space-y-8">
         <section className="bg-stitch-surface rounded-xl border border-stitch-border shadow-stitch p-6 md:p-8 space-y-6">
           <div>
@@ -334,10 +399,14 @@ export default function CreateVerificationPage() {
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+              <label
+                htmlFor="verification-parent"
+                className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1"
+              >
                 Parent verification (optional)
               </label>
               <select
+                id="verification-parent"
                 className={selectClass}
                 value={parentId}
                 onChange={(e) => setParentId(e.target.value)}

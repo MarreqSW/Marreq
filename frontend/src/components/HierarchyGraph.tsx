@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import ReactFlow, {
   Background,
   Controls,
@@ -19,6 +19,7 @@ import {
 import ResizableGraphShell from '@/components/graph/ResizableGraphShell';
 import { useGraphNodeNavigation } from '@/hooks/useGraphNodeNavigation';
 import { highlightEdgesForSelection, highlightNodesForSelection } from '@/utils/graphHighlight';
+import { entityCreateChildPath, parseGraphNodeId } from '@/utils/graphNavigation';
 
 export type HierarchyKind = 'reqs' | 'vers' | 'both';
 
@@ -223,11 +224,27 @@ export default function HierarchyGraph({
 
   const { onNodeDoubleClick } = useGraphNodeNavigation(basePath);
 
+  const selectedEntity = selectedNodeId ? parseGraphNodeId(selectedNodeId) : null;
+  const addChildHref = selectedEntity
+    ? entityCreateChildPath(basePath, selectedEntity.kind, selectedEntity.entityId)
+    : null;
+
   const empty = baseNodes.length === 0 && !loading && !err;
 
   return (
     <div>
-      <KindFilter kind={kind} onChange={setKind} />
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <KindFilter kind={kind} onChange={setKind} />
+        {addChildHref ? (
+          <Link
+            to={addChildHref}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md border border-stitch-border text-stitch-accent hover:bg-stitch-higher transition-colors"
+          >
+            <span className="material-symbols-outlined text-sm">add</span>
+            Add child
+          </Link>
+        ) : null}
+      </div>
       {err ? (
         <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-200 text-sm">
           {err}
@@ -290,7 +307,7 @@ function KindFilter({
     <div
       role="group"
       aria-label="Hierarchy filter"
-      className="flex p-1 bg-stitch-surface rounded-lg gap-1 border border-stitch-border w-fit mb-4"
+      className="flex p-1 bg-stitch-surface rounded-lg gap-1 border border-stitch-border w-fit"
     >
       <button
         type="button"

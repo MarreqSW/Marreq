@@ -179,10 +179,10 @@ export default function GroupViewPage() {
                     fixedGroupId={gid}
                     compact
                     onCreated={async (project) => {
-                      setShowCreateProject(false);
                       await refreshDashboard();
                       await load();
                       navigate(`${project.project_base_path}/dashboard`);
+                      setShowCreateProject(false);
                     }}
                     onCancel={() => setShowCreateProject(false)}
                   />

@@ -574,6 +574,7 @@ export type RequirementPatchBody = {
   reviewer_id?: number;
   category_id?: number;
   applicability_id?: number;
+  justification?: string | null;
   verification_method_ids?: number[];
   custom_fields?: CustomFieldPatchItem[];
 };

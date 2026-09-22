@@ -148,6 +148,8 @@ describe('ViewRequirementPage snapshot', () => {
       'href',
       '/space-project/requirements/42/versions/102',
     );
+    expect(screen.getByRole('heading', { name: 'Rationale' })).toBeInTheDocument();
+    expect(screen.getByText('Current rationale')).toBeInTheDocument();
   });
 
   it('shows a read-only historical snapshot without edit actions', async () => {

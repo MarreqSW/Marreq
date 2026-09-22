@@ -184,6 +184,7 @@ describe('CreateRequirementPage duplication', () => {
     expect(await screen.findByDisplayValue('REQ-PWR-002')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Power mode (Copy)')).toBeInTheDocument();
     expect(screen.getByDisplayValue('High')).toBeInTheDocument();
+    expect(screen.getByLabelText('Rationale (optional)')).toHaveValue('Needed');
 
     await user.click(screen.getByRole('button', { name: /create duplicate/i }));
 
@@ -193,6 +194,7 @@ describe('CreateRequirementPage duplication', () => {
         expect.objectContaining({
           title: 'Power mode (Copy)',
           reference_code: 'REQ-PWR-002',
+          justification: 'Needed',
           author_id: 7,
           reviewer_id: 9,
           custom_fields: [{ field_id: 21, value: 'High' }],

@@ -103,6 +103,7 @@ export default function EditRequirementPage() {
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [justification, setJustification] = useState('');
   const [statusId, setStatusId] = useState(0);
   const [categoryId, setCategoryId] = useState(0);
   const [applicabilityId, setApplicabilityId] = useState(0);
@@ -112,6 +113,7 @@ export default function EditRequirementPage() {
   const [baseline, setBaseline] = useState({
     title: '',
     description: '',
+    justification: '',
     status_id: 0,
     category_id: 0,
     applicability_id: 0,
@@ -171,6 +173,7 @@ export default function EditRequirementPage() {
 
       setTitle(d.title);
       setDescription(d.description);
+      setJustification(d.justification ?? '');
       setStatusId(d.status_id);
       setCategoryId(d.category_id);
       setApplicabilityId(d.applicability_id);
@@ -179,6 +182,7 @@ export default function EditRequirementPage() {
       setBaseline({
         title: d.title,
         description: d.description,
+        justification: d.justification ?? '',
         status_id: d.status_id,
         category_id: d.category_id,
         applicability_id: d.applicability_id,
@@ -286,17 +290,29 @@ export default function EditRequirementPage() {
     return (
       title !== baseline.title ||
       description !== baseline.description ||
+      justification !== baseline.justification ||
       statusId !== baseline.status_id ||
       categoryId !== baseline.category_id ||
       applicabilityId !== baseline.applicability_id ||
       authorId !== baseline.author_id ||
       reviewerId !== baseline.reviewer_id
     );
-  }, [title, description, statusId, categoryId, applicabilityId, authorId, reviewerId, baseline]);
+  }, [
+    title,
+    description,
+    justification,
+    statusId,
+    categoryId,
+    applicabilityId,
+    authorId,
+    reviewerId,
+    baseline,
+  ]);
 
   function revert() {
     setTitle(baseline.title);
     setDescription(baseline.description);
+    setJustification(baseline.justification);
     setStatusId(baseline.status_id);
     setCategoryId(baseline.category_id);
     setApplicabilityId(baseline.applicability_id);
@@ -381,6 +397,9 @@ export default function EditRequirementPage() {
       const patch: RequirementPatchBody = {};
       if (title.trim() !== baseline.title) patch.title = title.trim();
       if (description.trim() !== baseline.description) patch.description = description.trim();
+      if (justification.trim() !== baseline.justification.trim()) {
+        patch.justification = justification.trim();
+      }
       if (statusId !== baseline.status_id) {
         if (!perms?.is_project_reviewer) {
           setSaveError('Only project reviewers can change requirement status.');
@@ -735,6 +754,26 @@ export default function EditRequirementPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   required
+                />
+              </div>
+            </section>
+
+            <section className="bg-stitch-surface rounded-xl shadow-sm border border-stitch-border overflow-hidden">
+              <div className="px-6 py-3 border-b border-stitch-border bg-stitch-elevated">
+                <label
+                  htmlFor="requirement-rationale"
+                  className="text-xs font-bold uppercase tracking-widest text-stitch-muted font-headline"
+                >
+                  Rationale (optional)
+                </label>
+              </div>
+              <div className="p-6 md:p-8">
+                <textarea
+                  id="requirement-rationale"
+                  className="w-full min-h-[140px] text-sm leading-relaxed text-stitch-fg bg-transparent border-none focus:ring-0 rounded-md p-0 resize-y placeholder:text-stitch-muted"
+                  placeholder="Why this requirement exists…"
+                  value={justification}
+                  onChange={(e) => setJustification(e.target.value)}
                 />
               </div>
             </section>

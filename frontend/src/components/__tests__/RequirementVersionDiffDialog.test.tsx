@@ -123,6 +123,7 @@ describe('RequirementVersionDiffDialog', () => {
     );
     expect(await screen.findByText('Old power statement')).toBeInTheDocument();
     expect(screen.getByText('New power statement')).toBeInTheDocument();
+    expect(screen.getByText('Rationale')).toBeInTheDocument();
     expect(screen.getByText('Third rationale')).toBeInTheDocument();
     expect(screen.getByText('Draft')).toBeInTheDocument();
     expect(screen.getByText('Approved')).toBeInTheDocument();

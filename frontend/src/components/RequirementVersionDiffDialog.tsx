@@ -60,7 +60,7 @@ export function RequirementDiffContent({ diff }: { diff: RequirementDiff }) {
     <div className="space-y-5">
       <TextDiffField label="Title" diff={diff.text.title} />
       <TextDiffField label="Statement" diff={diff.text.description} />
-      <TextDiffField label="Justification" diff={diff.text.justification} />
+      <TextDiffField label="Rationale" diff={diff.text.justification} />
       <section className="rounded-xl border border-stitch-border bg-stitch-canvas/60 px-4">
         <h3 className="pt-4 text-xs font-bold uppercase tracking-widest text-stitch-fg">Metadata</h3>
         <SingleValueRow label="Status" diff={diff.metadata.status} />

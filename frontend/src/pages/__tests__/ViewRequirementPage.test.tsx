@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useOutletContext } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as apiClient from '@/api/client';
@@ -7,6 +8,17 @@ import type { RequirementDetailPayload, RequirementVersion } from '@/api/types';
 import ViewRequirementPage from '../ViewRequirementPage';
 
 vi.mock('@/api/client');
+
+vi.mock('@/context/DashboardContext', () => ({
+  useDashboard: () => ({
+    csrfToken: 'csrf-test',
+    dashboard: {
+      user: { id: 9, username: 'reviewer' },
+      projects: [{ id: 5, name: 'Space Project' }],
+    },
+    refresh: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
@@ -133,6 +145,15 @@ describe('ViewRequirementPage snapshot', () => {
     ]);
     vi.mocked(apiClient.getRequirementVersionByProject).mockResolvedValue(v1);
     vi.mocked(apiClient.listRequirementVersionLinks).mockResolvedValue([]);
+    vi.mocked(apiClient.createRequirementComment).mockResolvedValue({
+      id: 77,
+      requirement_id: 42,
+      requirement_version_id: 102,
+      author_id: 9,
+      author_name: 'Reviewer',
+      body: 'Need a clarification on power.',
+      created_at: '2026-03-02T00:00:00Z',
+    });
   });
 
   it('links changelog rows to version snapshots on the current view', async () => {
@@ -166,5 +187,53 @@ describe('ViewRequirementPage snapshot', () => {
     expect(screen.getByText('Approved rationale')).toBeInTheDocument();
     expect(screen.getAllByText('High').length).toBeGreaterThan(0);
     expect(screen.queryByText('Child requirements')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /add comment/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Add a comment')).not.toBeInTheDocument();
+  });
+
+  it('lets a reviewer add a comment without edit permission', async () => {
+    vi.mocked(apiClient.getMyPermissions).mockResolvedValue({
+      view_requirements: true,
+      edit_requirements: false,
+      approve_versions: false,
+      is_project_reviewer: true,
+      manage_custom_fields: false,
+      manage_project_members: false,
+    });
+    const user = userEvent.setup();
+    renderView('/space-project/requirements/42');
+
+    const box = await screen.findByLabelText('Add a comment');
+    await user.type(box, 'Need a clarification on power.');
+    await user.click(screen.getByRole('button', { name: /add comment/i }));
+
+    await waitFor(() =>
+      expect(apiClient.createRequirementComment).toHaveBeenCalledWith(
+        42,
+        { body: 'Need a clarification on power.', requirement_version_id: 102 },
+        'csrf-test',
+      ),
+    );
+    expect(await screen.findByText('Need a clarification on power.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'edit Edit' })).not.toBeInTheDocument();
+  });
+
+  it('hides the composer when the current version is approved', async () => {
+    vi.mocked(apiClient.getRequirementByProject).mockResolvedValue({
+      ...current,
+      approval_state: 'approved',
+      approved_by: 9,
+      approved_at: '2026-03-02T00:00:00Z',
+    });
+    vi.mocked(apiClient.listRequirementVersionsByProject).mockResolvedValue([
+      { ...v2, approval_state: 'approved', approved_by: 9, approved_at: '2026-03-02T00:00:00Z' },
+      v1,
+    ]);
+    renderView('/space-project/requirements/42');
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Current title' })).toBeInTheDocument());
+    expect(screen.getByText('Comments are locked on this approved version.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /add comment/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Add a comment in the editor')).not.toBeInTheDocument();
   });
 });

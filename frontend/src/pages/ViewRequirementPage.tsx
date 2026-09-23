@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
+import RequirementCommentComposer, {
+  commentsLockedForApproval,
+} from '@/components/RequirementCommentComposer';
+import { useDashboard } from '@/context/DashboardContext';
 import {
   getMyPermissions,
   getRequirementByProject,
@@ -106,6 +110,7 @@ function formatRelativeTime(iso: string): string {
 
 export default function ViewRequirementPage() {
   const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();
+  const { csrfToken } = useDashboard();
   const { requirementId: requirementIdParam, versionId: versionIdParam } = useParams();
   const rid = Number(requirementIdParam);
   const requestedVersionId = versionIdParam != null ? Number(versionIdParam) : NaN;
@@ -811,17 +816,17 @@ export default function ViewRequirementPage() {
               ))
           )}
         </div>
-        {canMutate ? (
+        {isHistorical ? null : (
           <div className="px-4 py-3 border-t border-stitch-border bg-stitch-elevated">
-            <Link
-              to={`${basePath}/requirements/${rid}/edit`}
-              className="text-xs font-bold text-stitch-accent hover:underline inline-flex items-center gap-1"
-            >
-              <span className="material-symbols-outlined text-sm">add_comment</span>
-              Add a comment in the editor
-            </Link>
+            <RequirementCommentComposer
+              requirementId={rid}
+              versionId={detail.current_version_id}
+              csrfToken={csrfToken}
+              locked={commentsLockedForApproval(view.approval_state)}
+              onPosted={(comment) => setComments((prev) => [comment, ...prev])}
+            />
           </div>
-        ) : null}
+        )}
       </section>
 
       <section className="mt-8 bg-stitch-surface rounded-xl border border-stitch-border shadow-stitch overflow-hidden">

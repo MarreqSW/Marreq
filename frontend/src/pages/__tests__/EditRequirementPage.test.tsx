@@ -1,9 +1,10 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useOutletContext } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as apiClient from '@/api/client';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
+import { EDIT_APPROVED_CONFIRM_MESSAGE, resetApprovedEditPromptsForTests, setEditApprovedAck } from '@/utils/confirmEditApprovedRequirement';
 import EditRequirementPage from '../EditRequirementPage';
 
 vi.mock('@/api/client');
@@ -102,6 +103,14 @@ describe('EditRequirementPage rationale', () => {
     vi.mocked(apiClient.listRequirementVersionLinkTypes).mockResolvedValue(['derives-from']);
     vi.mocked(apiClient.getProjectReviewers).mockResolvedValue({ user_ids: [9] });
     vi.mocked(apiClient.patchRequirementByProject).mockResolvedValue(undefined);
+    sessionStorage.clear();
+    resetApprovedEditPromptsForTests();
+    window.confirm = vi.fn(() => true);
+  });
+
+  afterEach(() => {
+    sessionStorage.clear();
+    resetApprovedEditPromptsForTests();
   });
 
   it('patches justification when rationale is edited', async () => {
@@ -200,5 +209,104 @@ describe('EditRequirementPage rationale', () => {
       await screen.findByText('Comments are locked on this approved version.'),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /add comment/i })).not.toBeInTheDocument();
+    expect(window.confirm).toHaveBeenCalledWith(EDIT_APPROVED_CONFIRM_MESSAGE);
+  });
+
+  it('leaves the editor when the approved-edit warning is cancelled', async () => {
+    vi.mocked(apiClient.getRequirementByProject).mockResolvedValue({
+      id: 4,
+      current_version_id: 30,
+      title: 'Power mode',
+      description: 'The system shall provide 500W.',
+      status_id: 13,
+      author_id: 7,
+      reviewer_id: 9,
+      reference_code: 'REQ-PWR-001',
+      category_id: 11,
+      parent_id: null,
+      creation_date: '2026-01-01T00:00:00Z',
+      update_date: '2026-01-03T00:00:00Z',
+      deadline_date: null,
+      applicability_id: 12,
+      justification: 'Customer power budget',
+      project_id: 5,
+      approval_state: 'approved',
+      approved_by: 9,
+      approved_at: '2026-01-03T00:00:00Z',
+      verification_method_ids: [14],
+      custom_fields: [],
+      trace_summary: {
+        child_ids: [],
+        linked_test_ids: [],
+        parent_links: [],
+      },
+    });
+    vi.mocked(window.confirm).mockReturnValue(false);
+
+    render(
+      <MemoryRouter initialEntries={['/space-project/requirements/4/edit']}>
+        <Routes>
+          <Route
+            path="/:projectSlug/requirements/:requirementId/edit"
+            element={<EditRequirementPage />}
+          />
+          <Route
+            path="/:projectSlug/requirements/:requirementId"
+            element={<div>requirement view</div>}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('requirement view')).toBeInTheDocument();
+    expect(window.confirm).toHaveBeenCalledWith(EDIT_APPROVED_CONFIRM_MESSAGE);
+  });
+
+  it('skips the approved-edit prompt when a prior confirm ack is present', async () => {
+    setEditApprovedAck(4);
+    vi.mocked(apiClient.getRequirementByProject).mockResolvedValue({
+      id: 4,
+      current_version_id: 30,
+      title: 'Power mode',
+      description: 'The system shall provide 500W.',
+      status_id: 13,
+      author_id: 7,
+      reviewer_id: 9,
+      reference_code: 'REQ-PWR-001',
+      category_id: 11,
+      parent_id: null,
+      creation_date: '2026-01-01T00:00:00Z',
+      update_date: '2026-01-03T00:00:00Z',
+      deadline_date: null,
+      applicability_id: 12,
+      justification: 'Customer power budget',
+      project_id: 5,
+      approval_state: 'approved',
+      approved_by: 9,
+      approved_at: '2026-01-03T00:00:00Z',
+      verification_method_ids: [14],
+      custom_fields: [],
+      trace_summary: {
+        child_ids: [],
+        linked_test_ids: [],
+        parent_links: [],
+      },
+    });
+
+    render(
+      <MemoryRouter initialEntries={['/space-project/requirements/4/edit']}>
+        <Routes>
+          <Route
+            path="/:projectSlug/requirements/:requirementId/edit"
+            element={<EditRequirementPage />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByText('Comments are locked on this approved version.'),
+    ).toBeInTheDocument();
+    expect(window.confirm).not.toHaveBeenCalled();
   });
 });

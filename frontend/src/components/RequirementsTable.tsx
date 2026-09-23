@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import { escapeCsv, downloadCsv } from '@/utils/tableUtils';
 import { formatUserLabel } from '@/utils/userLabel';
+import { preventEditNavigationIfUnconfirmed } from '@/utils/confirmEditApprovedRequirement';
 import { Pagination } from '@/components/table/Pagination';
 import { CsvDownloadButton, ExcelDownloadButton } from '@/components/table/CsvDownloadButton';
 import SavedViewsToolbar from '@/components/SavedViewsToolbar';
@@ -1010,6 +1011,9 @@ export default function RequirementsTable({
                     </Link>
                     <Link
                       to={`${basePath}/requirements/${req.id}/edit`}
+                      onClick={(event) =>
+                        preventEditNavigationIfUnconfirmed(event, req.approval_state, req.id)
+                      }
                       className="p-1.5 text-stitch-muted hover:text-stitch-accent"
                       title="Edit"
                     >
@@ -1388,6 +1392,9 @@ export default function RequirementsTable({
                         </Link>
                         <Link
                           to={`${basePath}/requirements/${req.id}/edit`}
+                          onClick={(event) =>
+                            preventEditNavigationIfUnconfirmed(event, req.approval_state, req.id)
+                          }
                           className="p-1.5 text-stitch-muted hover:text-stitch-accent"
                           title="Edit"
                         >

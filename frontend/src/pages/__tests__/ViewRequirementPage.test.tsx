@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useOutletContext } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import * as apiClient from '@/api/client';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import type { RequirementDetailPayload, RequirementVersion } from '@/api/types';
@@ -154,6 +154,12 @@ describe('ViewRequirementPage snapshot', () => {
       body: 'Need a clarification on power.',
       created_at: '2026-03-02T00:00:00Z',
     });
+    vi.mocked(apiClient.setRequirementVersionApproval).mockResolvedValue(v2);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    vi.mocked(window.confirm).mockRestore();
   });
 
   it('links changelog rows to version snapshots on the current view', async () => {
@@ -189,6 +195,8 @@ describe('ViewRequirementPage snapshot', () => {
     expect(screen.queryByText('Child requirements')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /add comment/i })).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Add a comment')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /mark as reviewed/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /approve requirement/i })).not.toBeInTheDocument();
   });
 
   it('lets a reviewer add a comment without edit permission', async () => {
@@ -235,5 +243,63 @@ describe('ViewRequirementPage snapshot', () => {
     expect(screen.getByText('Comments are locked on this approved version.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /add comment/i })).not.toBeInTheDocument();
     expect(screen.queryByText('Add a comment in the editor')).not.toBeInTheDocument();
+  });
+
+  it('lets a project reviewer mark a draft as reviewed', async () => {
+    const user = userEvent.setup();
+    renderView('/space-project/requirements/42');
+
+    await user.click(await screen.findByRole('button', { name: /mark as reviewed/i }));
+
+    await waitFor(() =>
+      expect(apiClient.setRequirementVersionApproval).toHaveBeenCalledWith(
+        5,
+        42,
+        102,
+        'reviewed',
+        'csrf-test',
+      ),
+    );
+  });
+
+  it('lets a project reviewer approve a reviewed requirement', async () => {
+    vi.mocked(apiClient.getRequirementByProject).mockResolvedValue({
+      ...current,
+      approval_state: 'reviewed',
+    });
+    vi.mocked(apiClient.listRequirementVersionsByProject).mockResolvedValue([
+      { ...v2, approval_state: 'reviewed' },
+      v1,
+    ]);
+    const user = userEvent.setup();
+    renderView('/space-project/requirements/42');
+
+    await user.click(await screen.findByRole('button', { name: /approve requirement/i }));
+
+    await waitFor(() =>
+      expect(apiClient.setRequirementVersionApproval).toHaveBeenCalledWith(
+        5,
+        42,
+        102,
+        'approved',
+        'csrf-test',
+      ),
+    );
+  });
+
+  it('hides approval actions when the user is not a project reviewer', async () => {
+    vi.mocked(apiClient.getMyPermissions).mockResolvedValue({
+      view_requirements: true,
+      edit_requirements: true,
+      approve_versions: false,
+      is_project_reviewer: false,
+      manage_custom_fields: false,
+      manage_project_members: false,
+    });
+    renderView('/space-project/requirements/42');
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Current title' })).toBeInTheDocument());
+    expect(screen.queryByRole('button', { name: /mark as reviewed/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /approve requirement/i })).not.toBeInTheDocument();
   });
 });

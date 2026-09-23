@@ -133,4 +133,72 @@ describe('EditRequirementPage rationale', () => {
       ),
     );
   });
+
+  it('hides the comment composer when the latest version is approved', async () => {
+    vi.mocked(apiClient.getRequirementByProject).mockResolvedValue({
+      id: 4,
+      current_version_id: 30,
+      title: 'Power mode',
+      description: 'The system shall provide 500W.',
+      status_id: 13,
+      author_id: 7,
+      reviewer_id: 9,
+      reference_code: 'REQ-PWR-001',
+      category_id: 11,
+      parent_id: null,
+      creation_date: '2026-01-01T00:00:00Z',
+      update_date: '2026-01-03T00:00:00Z',
+      deadline_date: null,
+      applicability_id: 12,
+      justification: 'Customer power budget',
+      project_id: 5,
+      approval_state: 'approved',
+      approved_by: 9,
+      approved_at: '2026-01-03T00:00:00Z',
+      verification_method_ids: [14],
+      custom_fields: [],
+      trace_summary: {
+        child_ids: [],
+        linked_test_ids: [],
+        parent_links: [],
+      },
+    });
+    vi.mocked(apiClient.listRequirementVersionsByProject).mockResolvedValue([
+      {
+        id: 30,
+        requirement_id: 4,
+        title: 'Power mode',
+        description: 'The system shall provide 500W.',
+        status_id: 13,
+        author_id: 7,
+        reviewer_id: 9,
+        category_id: 11,
+        applicability_id: 12,
+        justification: 'Customer power budget',
+        deadline_date: null,
+        created_at: '2026-01-03T00:00:00Z',
+        approval_state: 'approved',
+        approved_by: 9,
+        approved_at: '2026-01-03T00:00:00Z',
+        custom_fields: [],
+        verification_method_ids: [14],
+      },
+    ]);
+
+    render(
+      <MemoryRouter initialEntries={['/space-project/requirements/4/edit']}>
+        <Routes>
+          <Route
+            path="/:projectSlug/requirements/:requirementId/edit"
+            element={<EditRequirementPage />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    expect(
+      await screen.findByText('Comments are locked on this approved version.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /add comment/i })).not.toBeInTheDocument();
+  });
 });

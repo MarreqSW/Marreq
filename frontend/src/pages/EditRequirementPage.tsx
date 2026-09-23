@@ -1,7 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import {
-  createRequirementComment,
   createRequirementVersionLink,
   deleteRequirementGlobally,
   deleteRequirementVersionLink,
@@ -39,6 +38,9 @@ import type {
   VerificationStatus,
 } from '@/api/types';
 import RequirementVersionDiffDialog from '@/components/RequirementVersionDiffDialog';
+import RequirementCommentComposer, {
+  commentsLockedForApproval,
+} from '@/components/RequirementCommentComposer';
 import { StatusBadge, statusTagColorSwatchStyle } from '@/components/StatusBadge';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { formatUserLabel } from '@/utils/userLabel';
@@ -88,8 +90,6 @@ export default function EditRequirementPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [comments, setComments] = useState<RequirementCommentItem[]>([]);
-  const [commentBody, setCommentBody] = useState('');
-  const [commentPosting, setCommentPosting] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [linkBusy, setLinkBusy] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
@@ -331,30 +331,6 @@ export default function EditRequirementPage() {
       });
     } catch {
       return iso;
-    }
-  }
-
-  async function postComment() {
-    const token = csrfToken ?? '';
-    if (!token || !commentBody.trim()) return;
-    setCommentPosting(true);
-    setSaveError(null);
-    try {
-      const sorted = [...versions].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      );
-      const latestVid = sorted[0]?.id ?? null;
-      const c = await createRequirementComment(
-        rid,
-        { body: commentBody.trim(), requirement_version_id: latestVid },
-        token,
-      );
-      setComments((prev) => [c, ...prev]);
-      setCommentBody('');
-    } catch (e) {
-      setSaveError(e instanceof Error ? e.message : 'Failed to post comment');
-    } finally {
-      setCommentPosting(false);
     }
   }
 
@@ -1023,20 +999,15 @@ export default function EditRequirementPage() {
                   ))}
               </div>
               <div className="px-6 py-3 border-t border-stitch-border bg-stitch-elevated shrink-0">
-                <textarea
-                  className={`w-full min-h-[72px] text-sm resize-y ${selectStitch}`}
-                  placeholder="Add a comment…"
-                  value={commentBody}
-                  onChange={(e) => setCommentBody(e.target.value)}
+                <RequirementCommentComposer
+                  requirementId={rid}
+                  versionId={versionsNewestFirst[0]?.id ?? detail.current_version_id}
+                  csrfToken={csrfToken}
+                  locked={commentsLockedForApproval(
+                    versionsNewestFirst[0]?.approval_state ?? detail.approval_state,
+                  )}
+                  onPosted={(comment) => setComments((prev) => [comment, ...prev])}
                 />
-                <button
-                  type="button"
-                  disabled={commentPosting || !commentBody.trim() || !(csrfToken ?? '').length}
-                  onClick={() => void postComment()}
-                  className="mt-2 text-stitch-accent text-[10px] font-bold uppercase tracking-wider hover:underline disabled:opacity-40"
-                >
-                  {commentPosting ? 'Posting…' : 'Add comment'}
-                </button>
               </div>
             </div>
 

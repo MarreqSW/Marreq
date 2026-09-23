@@ -35,7 +35,7 @@ Marreq helps you:
 - **Manage tests** — create and organize tests (including hierarchy), track test status (e.g. Pass/Fail/Pending), link tests to requirements, and see coverage in reports and on requirement pages
 - **View and export** traceability matrices and reports
 - **Create immutable baselines** for audits or releases
-- **Import/export** via Excel and ReqIF 1.2
+- **Import/export** via Excel, ReqIF 1.2, and JSON project bundles
 
 Data is organized by **projects**. Each project has its own requirements, tests, categories, applicability options, and baselines. You must be logged in to use the application.
 
@@ -82,7 +82,7 @@ The top navigation bar includes:
 | **Requirements**          | Project requirements (active when a project is selected)                                                             |
 | **Verifications**         | Project verifications (test cases and their status)                                                                  |
 | **Reports**               | Project reports & analytics                                                                                          |
-| **Import**                | Excel/CSV column mapping and ReqIF 1.2 XML import                                                                    |
+| **Import**                | Excel/CSV, ReqIF 1.2, and JSON project bundle                                                                        |
 | **Members**               | Project members                                                                                                      |
 | **Baselines**             | Project baselines                                                                                                    |
 | **Quick Actions** (admin) | Shortcuts: New Project, New Requirement/Verification/Category/Applicability/Verification Method/Verification Status, New User, Import File/ReqIF |
@@ -456,6 +456,12 @@ You see:
 - **Current project**: open **Reports** and download **Requirements (.reqif)** for the live requirement set (comments are included as Remarks when present).
 - **From a baseline**: open the baseline and use **Export ReqIF** for an immutable ReqIF 1.2 snapshot.
 
+### 9.5 Exporting a project bundle (JSON)
+
+- Open **Reports** and download **Project bundle (.json)**.
+- The file is a portable snapshot of the project catalog, current requirements, verifications, matrix links, comments, and members (by username). It does not include version history, baselines, or passwords.
+- Anyone who can view the project can export the bundle.
+
 ---
 
 ## 10. Import
@@ -479,6 +485,15 @@ Unmapped catalog fields (status, category, applicability, verification method) u
 4. Review the imported count, created links, and any warnings or errors, then open the requirements list.
 
 Import creates new requirements; it does not update existing ones. Custom attributes, attachments, and original ReqIF identifiers are not persisted. Empty catalogs (especially verification methods) cause the import to fail until they exist.
+
+### 10.3 Importing a project bundle (JSON)
+
+1. Go to **New project** (`/projects/new`) and open **Import from JSON bundle**, or visit `/projects/import-bundle`.
+2. Upload a `marreq.project-bundle.v1` file exported from Reports. Optionally choose a group namespace you manage.
+3. Marreq **creates a new project** (it does not merge into an existing one). Catalog tags, requirement and verification reference codes, matrix links, and comments are restored. Authors and members are matched by username or email on this instance; missing users are skipped or mapped to you.
+4. After import, you land on the new project's dashboard.
+
+This is separate from in-project Excel/CSV and ReqIF import, which add records to the project you already have open.
 
 ---
 

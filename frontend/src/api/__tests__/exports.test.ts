@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   downloadBaselineReqif,
   downloadMatrixXlsx,
+  downloadProjectBundleJson,
   downloadProjectReportPdf,
   downloadRequirementsPdf,
   downloadRequirementsReqif,
@@ -85,6 +86,12 @@ describe('workbook downloads', () => {
       download: downloadRequirementsReqif,
       path: '/api/projects/7/exports/requirements.reqif',
       filename: 'requirements-project-7.reqif',
+    },
+    {
+      name: 'the project JSON bundle',
+      download: downloadProjectBundleJson,
+      path: '/api/projects/7/exports/bundle.json',
+      filename: 'project-7-bundle.json',
     },
   ])('downloads $name for a project', async ({ download, path, filename }) => {
     const anchor = stubDownloadEnvironment();

@@ -13,6 +13,7 @@ import {
   listRequirementActivityByProject,
   listRequirementComments,
   listRequirementStatuses,
+  setRequirementVersionApproval,
   listRequirementVersionLinks,
   listRequirementVersionsByProject,
   listRequirements,
@@ -133,6 +134,8 @@ export default function ViewRequirementPage() {
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
   const [activityLog, setActivityLog] = useState<EntityActivityItem[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
+  const [approvalBusy, setApprovalBusy] = useState(false);
   const [diffOpen, setDiffOpen] = useState(false);
   const [diffInitialPair, setDiffInitialPair] = useState<{
     oldVersionId?: number;
@@ -142,6 +145,7 @@ export default function ViewRequirementPage() {
   const load = useCallback(async () => {
     if (!Number.isFinite(pid) || !Number.isFinite(rid)) return;
     setLoadError(null);
+    setApprovalError(null);
     try {
       const [
         d,
@@ -385,6 +389,35 @@ export default function ViewRequirementPage() {
   ]);
 
   const canMutate = Boolean(perms?.edit_requirements) && !isHistorical;
+  const currentApproval = (view?.approval_state ?? '').toLowerCase();
+  const canChangeApproval =
+    !isHistorical && Boolean(perms?.is_project_reviewer) && detail?.current_version_id != null;
+
+  async function setApproval(state: 'reviewed' | 'approved') {
+    const versionId = detail?.current_version_id;
+    const token = csrfToken ?? '';
+    if (versionId == null || !token) {
+      setApprovalError('Missing CSRF token; refresh the page.');
+      return;
+    }
+    const ok = window.confirm(
+      state === 'reviewed'
+        ? 'Mark this requirement version as reviewed?'
+        : 'Approve this requirement version? Comments on approved versions may be locked.',
+    );
+    if (!ok) return;
+    setApprovalBusy(true);
+    setApprovalError(null);
+    try {
+      await setRequirementVersionApproval(pid, rid, versionId, state, token);
+      await load();
+    } catch (e) {
+      setApprovalError(e instanceof Error ? e.message : 'Failed to update approval');
+    } finally {
+      setApprovalBusy(false);
+    }
+  }
+
   const openVersionDiff = (pair?: { oldVersionId: number; newVersionId: number }) => {
     setDiffInitialPair(pair ?? null);
     setDiffOpen(true);
@@ -489,6 +522,32 @@ export default function ViewRequirementPage() {
               <span className="text-xs font-medium text-stitch-accent-dim bg-stitch-elevated px-2 py-1 rounded border border-stitch-border uppercase tracking-wide">
                 {approvalLabel(view.approval_state)}
               </span>
+              {view.approved_at ? (
+                <span className="text-[10px] text-stitch-muted">
+                  Approved {formatTs(view.approved_at)}
+                  {view.approved_by != null ? ` · ${userLabel(view.approved_by)}` : ''}
+                </span>
+              ) : null}
+              {canChangeApproval && currentApproval === 'draft' ? (
+                <button
+                  type="button"
+                  disabled={approvalBusy || !(csrfToken ?? '').length}
+                  onClick={() => void setApproval('reviewed')}
+                  className="text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline disabled:opacity-40"
+                >
+                  {approvalBusy ? 'Updating…' : 'Mark as Reviewed'}
+                </button>
+              ) : null}
+              {canChangeApproval && currentApproval === 'reviewed' ? (
+                <button
+                  type="button"
+                  disabled={approvalBusy || !(csrfToken ?? '').length}
+                  onClick={() => void setApproval('approved')}
+                  className="text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline disabled:opacity-40"
+                >
+                  {approvalBusy ? 'Updating…' : 'Approve Requirement'}
+                </button>
+              ) : null}
               {!isHistorical && lastApprovedVersion && detail.current_version_id != null ? (
                 <button
                   type="button"
@@ -505,6 +564,11 @@ export default function ViewRequirementPage() {
               ) : null}
               {st ? <StatusBadge title={st.title} tagColor={st.tag_color} /> : null}
             </div>
+            {approvalError ? (
+              <p role="alert" className="mb-4 text-sm text-red-200">
+                {approvalError}
+              </p>
+            ) : null}
             <h1 className="text-2xl md:text-3xl font-bold font-headline text-stitch-fg mb-6">
               {view.title.trim() || '—'}
             </h1>

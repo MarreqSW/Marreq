@@ -164,7 +164,7 @@ Metrics (e.g. total count, by status) are shown at the top.
 On the detail page you see:
 
 - **Approval badge**: Draft / Reviewed / Approved, and who approved and when.
-- **Actions** (for project owners/managers): **Mark as Reviewed**, **Approve Requirement** (with confirmation).
+- **Actions** (for **project reviewers**, or an administrator when no reviewers are configured): **Mark as Reviewed**, **Approve Requirement** (with confirmation).
 - **Content**: Title, reference code, statement, rationale, category, status, applicability, verification methods, author, reviewer, dates.
 - **Traceability**: Upstream/downstream requirements and **Verified by** — list of linked verifications with links to verification detail pages.
 - **Verification** panel: pass/fail/pending counts and overall pass rate; list of linked verifications.

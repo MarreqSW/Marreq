@@ -103,6 +103,23 @@ export async function deleteRequirementGlobally(
   });
 }
 
+export async function setRequirementVersionApproval(
+  projectId: number,
+  requirementId: number,
+  versionId: number,
+  state: 'reviewed' | 'approved',
+  csrfToken: string,
+): Promise<RequirementVersion> {
+  return fetchJson<RequirementVersion>(
+    `/api/projects/${projectId}/requirements/${requirementId}/versions/${versionId}/approval`,
+    {
+      method: 'PUT',
+      headers: { ...JSON_HEADERS, 'X-CSRF-Token': csrfToken },
+      body: JSON.stringify({ state }),
+    },
+  );
+}
+
 export async function listRequirementVersionsByProject(
   projectId: number,
   requirementId: number,

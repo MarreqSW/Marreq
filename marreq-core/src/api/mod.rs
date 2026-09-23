@@ -205,6 +205,7 @@ pub fn routes() -> Vec<Route> {
         imports::preview_excel,
         imports::commit_excel,
         imports::commit_reqif,
+        imports::import_project_bundle,
         exports::export_requirements_xlsx,
         exports::export_verifications_xlsx,
         exports::export_matrix_xlsx,
@@ -212,6 +213,7 @@ pub fn routes() -> Vec<Route> {
         exports::export_report_pdf,
         exports::export_requirements_reqif,
         exports::export_baseline_reqif,
+        exports::export_project_bundle,
     ];
     r
 }

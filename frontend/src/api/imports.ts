@@ -94,3 +94,29 @@ export async function commitExcelImport(
     body,
   });
 }
+
+export interface ProjectBundleImportResult {
+  project_id: number;
+  slug: string;
+  project_base_path: string;
+  imported_counts: Record<string, number>;
+  warnings: string[];
+  errors: string[];
+}
+
+export async function importProjectBundle(
+  file: File,
+  csrfToken: string,
+  groupId?: number | null,
+): Promise<ProjectBundleImportResult> {
+  const body = new FormData();
+  body.append('file', file);
+  if (groupId != null) {
+    body.append('group_id', String(groupId));
+  }
+  return fetchJson<ProjectBundleImportResult>('/api/projects/imports/bundle', {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrfToken },
+    body,
+  });
+}

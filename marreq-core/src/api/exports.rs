@@ -7,6 +7,8 @@ use rocket::Responder;
 use crate::api::prelude::*;
 use crate::auth::guards::ProjectAccessOrBearer;
 use crate::generators::{excel, reports, GeneratorError};
+use crate::importers::project_bundle;
+use crate::repository::ProjectsRepository;
 use crate::services::ReqIFService;
 
 const XLSX_CONTENT_TYPE: &str = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -43,6 +45,10 @@ impl FileDownload {
 
     fn xml(bytes: Vec<u8>, filename: String) -> Self {
         Self::new(bytes, XML_CONTENT_TYPE, filename)
+    }
+
+    fn json(bytes: Vec<u8>, filename: String) -> Self {
+        Self::new(bytes, "application/json", filename)
     }
 }
 
@@ -194,5 +200,31 @@ pub async fn export_baseline_reqif(
     Ok(FileDownload::xml(
         xml.into_bytes(),
         format!("baseline-{baseline_id}-project-{project_id}.reqif"),
+    ))
+}
+
+#[get("/projects/<project_id>/exports/bundle.json")]
+pub async fn export_project_bundle(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    state: &State<AppState>,
+) -> ApiResult<FileDownload> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let project = state
+        .repo_read()
+        .get_project_by_id(project_id)
+        .map_err(ApiError::from)?;
+    let bundle =
+        project_bundle::export_bundle(state.inner(), project_id).map_err(ApiError::from)?;
+    let bytes = serde_json::to_vec_pretty(&bundle)
+        .map_err(|e| ApiError::Internal(format!("could not serialize project bundle: {e}")))?;
+    Ok(FileDownload::json(
+        bytes,
+        format!("project-{}-bundle.json", project.slug),
     ))
 }

@@ -7,9 +7,9 @@ use rocket::serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
 use crate::api::prelude::*;
-use crate::auth::guards::ProjectAccessOrBearer;
-use crate::importers::{ColumnMapping, ExcelImporter, ImportConfig, ValueMapping};
-use crate::repository::{LookupRepository, ProjectMembersRepository};
+use crate::auth::guards::{ApiUserOrBearer, ProjectAccessOrBearer};
+use crate::importers::{project_bundle, ColumnMapping, ExcelImporter, ImportConfig, ValueMapping};
+use crate::repository::{GroupsRepository, LookupRepository, ProjectMembersRepository};
 use crate::reqif::import::ImportConfig as ReqifImportConfig;
 use crate::services::ReqIFService;
 
@@ -26,6 +26,12 @@ pub struct ExcelCommitForm<'r> {
     import_type: String,
     column_mappings: String,
     value_mappings: Option<String>,
+}
+
+#[derive(FromForm)]
+pub struct BundleImportForm<'r> {
+    file: TempFile<'r>,
+    group_id: Option<i32>,
 }
 
 #[derive(Debug, Serialize)]
@@ -342,4 +348,26 @@ async fn read_upload(file: &mut TempFile<'_>) -> ApiResult<(String, Vec<u8>)> {
     let bytes = std::fs::read(&path).map_err(|e| ApiError::Internal(e.to_string()))?;
     let _ = std::fs::remove_file(&path);
     Ok((filename, bytes))
+}
+
+/// POST /api/projects/imports/bundle — create a new project from a JSON snapshot.
+#[post("/projects/imports/bundle", data = "<form>")]
+pub async fn import_project_bundle(
+    auth: ApiUserOrBearer,
+    state: &State<AppState>,
+    mut form: Form<BundleImportForm<'_>>,
+) -> ApiResult<Json<project_bundle::BundleImportResult>> {
+    let user = auth.user();
+    if let Some(group_id) = form.group_id {
+        state
+            .repo_read()
+            .get_group_by_id(group_id)
+            .map_err(ApiError::from)?;
+        require_group_permission(state, user, group_id, GroupPermission::ManageProjects)?;
+    }
+    let (_filename, bytes) = read_upload(&mut form.file).await?;
+    let bundle = project_bundle::parse_bundle(&bytes).map_err(ApiError::BadRequest)?;
+    let result = project_bundle::import_bundle(state.inner(), user, bundle, form.group_id)
+        .map_err(ApiError::from)?;
+    Ok(Json(result))
 }

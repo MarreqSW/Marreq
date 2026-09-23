@@ -36,7 +36,10 @@ export default function ProjectCreatePage() {
         <div className="rounded-xl border border-stitch-border bg-stitch-surface p-6 shadow-stitch">
           <h1 className="text-2xl font-bold font-headline tracking-tight">New project</h1>
           <p className="text-sm text-stitch-muted mt-1 mb-6">
-            Create a personal project or choose a group namespace you manage.
+            Create a personal project or choose a group namespace you manage.{' '}
+            <Link to="/projects/import-bundle" className="text-stitch-accent hover:underline">
+              Import from JSON bundle
+            </Link>
           </p>
 
           {loading ? (

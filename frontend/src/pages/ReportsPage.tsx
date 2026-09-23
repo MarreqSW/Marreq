@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useOutletContext } from 'react-router-dom';
 import {
   downloadMatrixXlsx,
+  downloadProjectBundleJson,
   downloadProjectReportPdf,
   downloadRequirementsPdf,
   downloadRequirementsReqif,
@@ -56,6 +57,7 @@ const PROJECT_EXPORTS = [
   { key: 'requirements-pdf', label: 'Requirements PDF', run: downloadRequirementsPdf },
   { key: 'report-pdf', label: 'Report PDF', run: downloadProjectReportPdf },
   { key: 'requirements-reqif', label: 'Requirements (.reqif)', run: downloadRequirementsReqif },
+  { key: 'project-bundle-json', label: 'Project bundle (.json)', run: downloadProjectBundleJson },
 ] as const;
 
 export default function ReportsPage() {
@@ -579,7 +581,7 @@ export default function ReportsPage() {
 
         <ReportSection
           title="Exports"
-          subtitle="Excel, PDF, and ReqIF downloads covering the whole project"
+          subtitle="Excel, PDF, ReqIF, and JSON bundle downloads covering the whole project"
         >
           <div className="p-4 space-y-3">
             <div className="flex flex-wrap gap-3 text-sm">

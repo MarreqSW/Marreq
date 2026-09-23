@@ -67,6 +67,10 @@ describe('ProjectCreatePage', () => {
     expect(namespace).toHaveTextContent('alice — Personal');
     expect(namespace).toHaveTextContent('flight-systems — Group');
     expect(namespace).not.toHaveTextContent('view-only-team');
+    expect(screen.getByRole('link', { name: /import from json bundle/i })).toHaveAttribute(
+      'href',
+      '/projects/import-bundle',
+    );
   });
 
   it('creates a personal project with a null group and uses the canonical path', async () => {

@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Marreq
 
 pub mod excel;
+pub mod project_bundle;
 
 pub use excel::*;
 

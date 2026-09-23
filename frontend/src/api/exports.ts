@@ -47,3 +47,9 @@ export async function downloadBaselineReqif(
   );
   triggerDownload(blob, `baseline-${baselineId}-project-${projectId}.reqif`);
 }
+
+/** Downloads a JSON project bundle (catalog, current requirements, tests, matrix, comments). */
+export async function downloadProjectBundleJson(projectId: number): Promise<void> {
+  const blob = await fetchBlob(`/api/projects/${projectId}/exports/bundle.json`);
+  triggerDownload(blob, `project-${projectId}-bundle.json`);
+}

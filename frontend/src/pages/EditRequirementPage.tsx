@@ -44,6 +44,13 @@ import RequirementCommentComposer, {
 import { StatusBadge, statusTagColorSwatchStyle } from '@/components/StatusBadge';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { formatUserLabel } from '@/utils/userLabel';
+import {
+  confirmEditApprovedRequirement,
+  consumeEditApprovedAck,
+  hasApprovedEditPrompted,
+  isApprovedRequirement,
+  markApprovedEditPrompted,
+} from '@/utils/confirmEditApprovedRequirement';
 
 function approvalLabel(state: string): string {
   return state.replace(/_/g, ' ').toUpperCase();
@@ -198,6 +205,17 @@ export default function EditRequirementPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!detail) return;
+    if (!isApprovedRequirement(detail.approval_state)) return;
+    if (hasApprovedEditPrompted(rid)) return;
+    markApprovedEditPrompted(rid);
+    if (consumeEditApprovedAck(rid)) return;
+    if (!confirmEditApprovedRequirement(detail.approval_state)) {
+      navigate(`${basePath}/requirements/${rid}`, { replace: true });
+    }
+  }, [basePath, detail, navigate, rid]);
 
   const userLabel = useCallback(
     (id: number) => formatUserLabel(id, { users, members }),

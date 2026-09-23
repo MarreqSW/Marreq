@@ -6,6 +6,7 @@ import * as apiClient from '@/api/client';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import type { RequirementDetailPayload, RequirementVersion } from '@/api/types';
 import ViewRequirementPage from '../ViewRequirementPage';
+import { EDIT_APPROVED_CONFIRM_MESSAGE, resetApprovedEditPromptsForTests } from '@/utils/confirmEditApprovedRequirement';
 
 vi.mock('@/api/client');
 
@@ -92,6 +93,10 @@ function renderView(path: string) {
       <Routes>
         <Route path="/:projectSlug/requirements/:requirementId/versions/:versionId" element={<ViewRequirementPage />} />
         <Route path="/:projectSlug/requirements/:requirementId" element={<ViewRequirementPage />} />
+        <Route
+          path="/:projectSlug/requirements/:requirementId/edit"
+          element={<div>requirement editor</div>}
+        />
       </Routes>
     </MemoryRouter>,
   );
@@ -155,11 +160,15 @@ describe('ViewRequirementPage snapshot', () => {
       created_at: '2026-03-02T00:00:00Z',
     });
     vi.mocked(apiClient.setRequirementVersionApproval).mockResolvedValue(v2);
+    sessionStorage.clear();
+    resetApprovedEditPromptsForTests();
     vi.spyOn(window, 'confirm').mockReturnValue(true);
   });
 
   afterEach(() => {
     vi.mocked(window.confirm).mockRestore();
+    sessionStorage.clear();
+    resetApprovedEditPromptsForTests();
   });
 
   it('links changelog rows to version snapshots on the current view', async () => {
@@ -285,6 +294,50 @@ describe('ViewRequirementPage snapshot', () => {
         'csrf-test',
       ),
     );
+  });
+
+  it('opens the editor without a prompt when the current version is a draft', async () => {
+    const user = userEvent.setup();
+    renderView('/space-project/requirements/42');
+
+    await user.click(await screen.findByRole('link', { name: 'edit Edit' }));
+
+    expect(await screen.findByText('requirement editor')).toBeInTheDocument();
+    expect(window.confirm).not.toHaveBeenCalled();
+  });
+
+  it('warns before editing an approved requirement and stays on cancel', async () => {
+    vi.mocked(apiClient.getRequirementByProject).mockResolvedValue({
+      ...current,
+      approval_state: 'approved',
+      approved_by: 9,
+      approved_at: '2026-03-02T00:00:00Z',
+    });
+    vi.mocked(window.confirm).mockReturnValue(false);
+    const user = userEvent.setup();
+    renderView('/space-project/requirements/42');
+
+    await user.click(await screen.findByRole('link', { name: 'edit Edit' }));
+
+    expect(window.confirm).toHaveBeenCalledWith(EDIT_APPROVED_CONFIRM_MESSAGE);
+    expect(screen.getByRole('heading', { name: 'Current title' })).toBeInTheDocument();
+    expect(screen.queryByText('requirement editor')).not.toBeInTheDocument();
+  });
+
+  it('opens the editor after confirming an approved requirement', async () => {
+    vi.mocked(apiClient.getRequirementByProject).mockResolvedValue({
+      ...current,
+      approval_state: 'approved',
+      approved_by: 9,
+      approved_at: '2026-03-02T00:00:00Z',
+    });
+    const user = userEvent.setup();
+    renderView('/space-project/requirements/42');
+
+    await user.click(await screen.findByRole('link', { name: 'edit Edit' }));
+
+    expect(window.confirm).toHaveBeenCalledWith(EDIT_APPROVED_CONFIRM_MESSAGE);
+    expect(await screen.findByText('requirement editor')).toBeInTheDocument();
   });
 
   it('hides approval actions when the user is not a project reviewer', async () => {

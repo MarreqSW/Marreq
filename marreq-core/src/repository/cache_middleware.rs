@@ -1532,6 +1532,13 @@ impl<R: LogRepository> LogRepository for CacheRepository<R> {
         self.inner.get_logs_by_entity(entity_type, entity_id)
     }
 
+    fn get_logs_filtered(
+        &self,
+        query: &crate::repository::LogListQuery,
+    ) -> Result<(Vec<Log>, i64), RepoError> {
+        self.inner.get_logs_filtered(query)
+    }
+
     fn cleanup_logs(&mut self, days: i64) -> Result<usize, RepoError> {
         self.inner.cleanup_logs(days)
     }

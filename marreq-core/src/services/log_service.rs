@@ -7,7 +7,7 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::LoggerError;
 use crate::models::Log;
 use crate::repository::errors::RepoError;
-use crate::repository::{LogRepository, UserRepository};
+use crate::repository::{LogListQuery, LogRepository, UserRepository};
 use serde::Serialize;
 use serde_json::Value as JsonValue;
 use thiserror::Error;
@@ -504,6 +504,15 @@ impl<'a> LogService<'a> {
         Ok(logs)
     }
 
+    /// Filtered instance-wide audit log (newest first), enriched with usernames.
+    pub fn list_filtered(
+        &self,
+        query: &LogListQuery,
+    ) -> Result<(Vec<LogWithUser>, i64), LogServiceError> {
+        let (logs, total) = self.state.repo_read().get_logs_filtered(query)?;
+        Ok((self.enrich_with_usernames(logs)?, total))
+    }
+
     /// Serialize the provided logs into a pretty printed JSON string.
     pub fn logs_to_json(&self, logs: &[Log]) -> Result<String, LogServiceError> {
         Ok(serde_json::to_string_pretty(logs)?)
@@ -710,6 +719,36 @@ mod tests {
 
         let logs = service.recent_logs(3).unwrap();
         assert_eq!(logs.len(), 3);
+    }
+
+    #[test]
+    fn list_filtered_applies_entity_type_and_pagination() {
+        let user = DieselRepoMock::make_user(1, "alice", "");
+        let mut repo = DieselRepoMock::with_users([user]);
+        let mut a = sample_log(1, 1);
+        a.entity_type = "REQUIREMENT".into();
+        let mut b = sample_log(2, 1);
+        b.entity_type = "REQUIREMENT".into();
+        let mut c = sample_log(3, 1);
+        c.entity_type = "VERIFICATION".into();
+        repo.logs.push(a);
+        repo.logs.push(b);
+        repo.logs.push(c);
+
+        let state = state_with_repo(repo);
+        let service = LogService::new(&state);
+        let (items, total) = service
+            .list_filtered(&LogListQuery {
+                entity_type: Some("REQUIREMENT".into()),
+                limit: 1,
+                offset: 0,
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(total, 2);
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].username, "alice");
+        assert_eq!(items[0].log.entity_type, "REQUIREMENT");
     }
 
     #[test]

@@ -108,6 +108,16 @@ Structured errors from `ApiError` responses:
 
 HTTP status matches the error class (400, 401, 403, 404, 409, 422, 500).
 
+## Admin audit logs
+
+Instance-wide (not project-scoped). All three routes require a **global administrator**; other authenticated users receive **403**.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/admin/logs` | JSON `{ items, total, limit, offset }`. Query: `entity_type`, `entity_id`, `user_id`, `action_type`, `project_id`, `since`, `until` (RFC 3339 or `YYYY-MM-DD[THH:MM]`), `limit` (default 50, max 100), `offset`. Each item matches entity activity (`log_id`, `user_id`, `username`, `action_type`, `summary`, `description`, `created_at`, `changes`) plus `entity_type`, `entity_id`, `project_id`. Newest first. |
+| `GET` | `/api/admin/logs/export.json` | Same filters; `limit` default/max 10000. JSON attachment `audit-logs.json`. Records an `EXPORT` audit row. |
+| `POST` | `/api/admin/logs/cleanup` | JSON `{ "days": n }` with `n >= 1`. Response `{ "deleted": <count> }`. Removes rows older than `n` days. |
+
 ## Full route list
 
 Rocket mounts all JSON routes under `/api` in `marreq-core/src/api/mod.rs` (shared routes) and the deployment crate's `src/routes.rs` (deployment-specific routes). The project [README](../../README.md) includes a human-maintained endpoint summary (requirements, tests, matrix, baselines, MCP audit, etc.).

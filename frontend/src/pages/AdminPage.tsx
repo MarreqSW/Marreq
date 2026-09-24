@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { listUsersOptional } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
@@ -8,7 +8,7 @@ import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { parseUser } from '@/utils/parseUser';
 
 export default function AdminPage() {
-  const { projectId: pid } = useOutletContext<ProjectOutletContext>();
+  const { projectId: pid, basePath } = useOutletContext<ProjectOutletContext>();
   const { dashboard } = useDashboard();
 
   const me = parseUser(dashboard?.user);
@@ -69,6 +69,12 @@ export default function AdminPage() {
         title="User directory"
         subtitle="All accounts in the system (admin API). User management actions remain in the legacy admin UI for now."
       >
+        <Link
+          to={`${basePath}/admin/logs`}
+          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
+        >
+          System logs
+        </Link>
         <button
           type="button"
           onClick={() => void load()}

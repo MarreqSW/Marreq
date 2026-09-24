@@ -576,7 +576,7 @@ Generate a backup file; download or save as configured.
 ### 13.5 System Logs
 
 - **Admin → System Logs**.
-- URL: `/logs`.
+- URL: `/<project-slug>/admin/logs`.
 
 Browse audit logs (entity type, entity ID, user, action, timestamp). You can filter by entity and export logs (e.g. **Export logs** with optional filename). **Cleanup logs** (if available) removes old entries.
 

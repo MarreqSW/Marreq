@@ -14,7 +14,7 @@ const blocks: { title: string; body: string }[] = [
   {
     title: 'Navigation',
     body:
-      'Use the sidebar for Dashboard, Requirements, Verifications, Traceability, Matrix, Baselines, Reports, Import, Settings, and Admin (administrators only). Project scope follows the project selected in the header.',
+      'Use the sidebar for Dashboard, Requirements, Verifications, Traceability, Matrix, Baselines, Reports, Import, Settings, Admin, and System logs (administrators only). Project scope follows the project selected in the header.',
   },
   {
     title: 'Search',
@@ -34,7 +34,7 @@ const blocks: { title: string; body: string }[] = [
   {
     title: 'Classic (legacy) UI',
     body:
-      'Some admin tools (server logs, database backup) are not in this workspace yet. Reports includes Excel, PDF, and ReqIF downloads served by the API. Import ReqIF from the Import page.',
+      'System logs are under Admin → System logs in the sidebar. Database backup is not in this workspace yet. Reports includes Excel, PDF, and ReqIF downloads served by the API. Import ReqIF from the Import page.',
   },
 ];
 

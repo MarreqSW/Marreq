@@ -1,16 +1,25 @@
-import { Fragment, FormEvent, useCallback, useEffect, useState } from 'react';
+import { Fragment, FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import {
   cleanupAdminLogs,
   downloadAdminLogsJson,
   listAdminLogs,
+  listApplicability,
+  listCategories,
+  listRequirementStatuses,
   listUsersOptional,
+  listVerificationMethods,
+  listVerificationStatuses,
 } from '@/api/client';
 import type { AdminLogItem, AdminLogListParams } from '@/api/types';
 import { Pagination } from '@/components/table/Pagination';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import { useDashboard } from '@/context/DashboardContext';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
+import {
+  formatLogChangeValue,
+  type CatalogLabelMaps,
+} from '@/utils/formatLogChangeValue';
 import { parseUser } from '@/utils/parseUser';
 
 const PAGE_SIZE = 50;
@@ -59,6 +68,13 @@ export default function SystemLogsPage() {
   const [since, setSince] = useState('');
   const [until, setUntil] = useState('');
   const [applied, setApplied] = useState<AdminLogListParams>({});
+  const [catalogs, setCatalogs] = useState<CatalogLabelMaps>({
+    requirementStatusById: new Map(),
+    verificationStatusById: new Map(),
+    categoryById: new Map(),
+    applicabilityById: new Map(),
+    methodById: new Map(),
+  });
 
   const projectName =
     dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
@@ -86,9 +102,23 @@ export default function SystemLogsPage() {
           return;
         }
         setAllowed(true);
-        const res = await listAdminLogs(filterParams(pageNum));
+        const [res, reqSt, verSt, cats, apps, methods] = await Promise.all([
+          listAdminLogs(filterParams(pageNum)),
+          listRequirementStatuses().catch(() => []),
+          listVerificationStatuses().catch(() => []),
+          listCategories().catch(() => []),
+          listApplicability().catch(() => []),
+          listVerificationMethods().catch(() => []),
+        ]);
         setItems(res.items);
         setTotal(res.total);
+        setCatalogs({
+          requirementStatusById: new Map(reqSt.map((s) => [s.id, s.title])),
+          verificationStatusById: new Map(verSt.map((s) => [s.id, s.title])),
+          categoryById: new Map(cats.map((c) => [c.id, c.title])),
+          applicabilityById: new Map(apps.map((a) => [a.id, a.title])),
+          methodById: new Map(methods.map((m) => [m.id, m.title])),
+        });
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to load logs');
       } finally {
@@ -158,6 +188,13 @@ export default function SystemLogsPage() {
   }
 
   const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const projectNameById = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const p of dashboard?.projects ?? []) {
+      m.set(p.id, p.name);
+    }
+    return m;
+  }, [dashboard?.projects]);
 
   if (loading && allowed === null) {
     return (
@@ -356,8 +393,10 @@ export default function SystemLogsPage() {
                         {row.entity_type}
                         {row.entity_id != null ? ` #${row.entity_id}` : ''}
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-stitch-muted">
-                        {row.project_id ?? '—'}
+                      <td className="px-4 py-3 text-xs text-stitch-muted">
+                        {row.project_id == null
+                          ? '—'
+                          : (projectNameById.get(row.project_id) ?? `#${row.project_id}`)}
                       </td>
                       <td className="px-4 py-3 text-stitch-fg">{row.summary}</td>
                     </tr>
@@ -381,9 +420,21 @@ export default function SystemLogsPage() {
                                   <span className="font-bold text-stitch-muted">{ch.field}</span>
                                   <span className="sm:col-span-2 text-stitch-fg/90">
                                     <span className="text-red-300/90 line-through mr-2">
-                                      {ch.old_value}
+                                      {formatLogChangeValue(
+                                        ch.field,
+                                        ch.old_value,
+                                        row.entity_type,
+                                        catalogs,
+                                      )}
                                     </span>
-                                    <span>{ch.new_value}</span>
+                                    <span>
+                                      {formatLogChangeValue(
+                                        ch.field,
+                                        ch.new_value,
+                                        row.entity_type,
+                                        catalogs,
+                                      )}
+                                    </span>
                                   </span>
                                 </li>
                               ))}

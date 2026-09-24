@@ -11,6 +11,11 @@ const mocks = vi.hoisted(() => ({
   listAdminLogs: vi.fn(),
   downloadAdminLogsJson: vi.fn(),
   cleanupAdminLogs: vi.fn(),
+  listRequirementStatuses: vi.fn(),
+  listVerificationStatuses: vi.fn(),
+  listCategories: vi.fn(),
+  listApplicability: vi.fn(),
+  listVerificationMethods: vi.fn(),
 }));
 
 vi.mock('@/api/client', () => ({
@@ -18,6 +23,11 @@ vi.mock('@/api/client', () => ({
   listAdminLogs: mocks.listAdminLogs,
   downloadAdminLogsJson: mocks.downloadAdminLogsJson,
   cleanupAdminLogs: mocks.cleanupAdminLogs,
+  listRequirementStatuses: mocks.listRequirementStatuses,
+  listVerificationStatuses: mocks.listVerificationStatuses,
+  listCategories: mocks.listCategories,
+  listApplicability: mocks.listApplicability,
+  listVerificationMethods: mocks.listVerificationMethods,
 }));
 
 vi.mock('@/context/DashboardContext', () => ({
@@ -48,7 +58,11 @@ const sampleRow = {
   summary: 'Created requirement',
   description: null,
   created_at: '2024-06-01T12:00:00',
-  changes: [],
+  changes: [
+    { field: 'Status', old_value: '—', new_value: '13' },
+    { field: 'Category', old_value: '—', new_value: '2' },
+    { field: 'Applicability', old_value: '—', new_value: '8' },
+  ],
   entity_type: 'REQUIREMENT',
   entity_id: 12,
   project_id: 5,
@@ -86,6 +100,11 @@ describe('SystemLogsPage', () => {
     });
     mocks.downloadAdminLogsJson.mockResolvedValue(undefined);
     mocks.cleanupAdminLogs.mockResolvedValue({ deleted: 2 });
+    mocks.listRequirementStatuses.mockResolvedValue([{ id: 13, title: 'Draft' }]);
+    mocks.listVerificationStatuses.mockResolvedValue([]);
+    mocks.listCategories.mockResolvedValue([{ id: 2, title: 'Functional' }]);
+    mocks.listApplicability.mockResolvedValue([{ id: 8, title: 'Flight' }]);
+    mocks.listVerificationMethods.mockResolvedValue([]);
   });
 
   it('shows access denied when admin APIs are forbidden', async () => {
@@ -135,5 +154,18 @@ describe('SystemLogsPage', () => {
       expect(window.confirm).toHaveBeenCalled();
       expect(mocks.cleanupAdminLogs).toHaveBeenCalledWith(90, 'csrf-token');
     });
+  });
+
+  it('shows catalog titles instead of ids in expanded change details', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await waitFor(() => {
+      expect(screen.getByText('Created requirement')).toBeInTheDocument();
+    });
+    await user.click(screen.getByText('Created requirement'));
+    expect(screen.getByText('Draft')).toBeInTheDocument();
+    expect(screen.getByText('Functional')).toBeInTheDocument();
+    expect(screen.getByText('Flight')).toBeInTheDocument();
+    expect(screen.queryByText('13')).not.toBeInTheDocument();
   });
 });

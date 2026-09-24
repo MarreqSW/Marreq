@@ -612,7 +612,23 @@ pub trait LogRepository {
     fn insert_log(&mut self, new: &NewLog) -> Result<(), RepoError>;
     fn get_logs_recent(&self, limit: i64) -> Result<Vec<Log>, RepoError>;
     fn get_logs_by_entity(&self, entity_type: &str, entity_id: i32) -> Result<Vec<Log>, RepoError>;
+    /// Filtered instance-wide audit log (newest first) plus total matching rows.
+    fn get_logs_filtered(&self, query: &LogListQuery) -> Result<(Vec<Log>, i64), RepoError>;
     fn cleanup_logs(&mut self, days: i64) -> Result<usize, RepoError>;
+}
+
+/// Filters for [`LogRepository::get_logs_filtered`]. Empty options are ignored.
+#[derive(Debug, Clone, Default)]
+pub struct LogListQuery {
+    pub entity_type: Option<String>,
+    pub entity_id: Option<i32>,
+    pub user_id: Option<i32>,
+    pub action_type: Option<String>,
+    pub project_id: Option<i32>,
+    pub since: Option<chrono::NaiveDateTime>,
+    pub until: Option<chrono::NaiveDateTime>,
+    pub limit: i64,
+    pub offset: i64,
 }
 
 pub trait RequirementCommentsRepository {

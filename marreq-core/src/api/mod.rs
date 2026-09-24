@@ -17,6 +17,7 @@ pub mod groups;
 pub mod guards;
 pub mod idempotency;
 pub mod imports;
+pub mod logs;
 pub mod matrix;
 pub mod mcp;
 pub mod members;
@@ -139,6 +140,9 @@ pub fn routes() -> Vec<Route> {
         users::get,
         users::create,
         users::delete,
+        logs::list,
+        logs::export_json,
+        logs::cleanup,
         matrix::list,
         matrix::list_by_project,
         matrix::get_verification_matrix,

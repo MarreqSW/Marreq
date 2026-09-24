@@ -3075,11 +3075,59 @@ impl LogRepository for DieselRepoMock {
             .collect())
     }
 
-    fn cleanup_logs(&mut self, _days: i64) -> Result<usize, RepoError> {
-        let len_before = self.logs.len();
-        // In mock, we just clear everything for simplicity or keep it all
-        // Let's say we remove nothing as dates are all epoch
-        Ok(len_before - self.logs.len())
+    fn get_logs_filtered(
+        &self,
+        query: &crate::repository::LogListQuery,
+    ) -> Result<(Vec<Log>, i64), RepoError> {
+        let mut logs: Vec<Log> = self
+            .logs
+            .iter()
+            .filter(|l| {
+                query
+                    .entity_type
+                    .as_ref()
+                    .map(|v| l.entity_type == *v)
+                    .unwrap_or(true)
+                    && query
+                        .entity_id
+                        .map(|id| l.entity_id == Some(id))
+                        .unwrap_or(true)
+                    && query.user_id.map(|id| l.user_id == id).unwrap_or(true)
+                    && query
+                        .action_type
+                        .as_ref()
+                        .map(|v| l.action_type == *v)
+                        .unwrap_or(true)
+                    && query
+                        .project_id
+                        .map(|id| l.project_id == Some(id))
+                        .unwrap_or(true)
+                    && query.since.map(|t| l.created_at >= t).unwrap_or(true)
+                    && query.until.map(|t| l.created_at <= t).unwrap_or(true)
+            })
+            .cloned()
+            .collect();
+        logs.sort_by(|a, b| {
+            b.created_at
+                .cmp(&a.created_at)
+                .then(b.log_id.cmp(&a.log_id))
+        });
+        let total = logs.len() as i64;
+        let start = query.offset.max(0) as usize;
+        let limit = query.limit.max(0) as usize;
+        let page = if start >= logs.len() {
+            Vec::new()
+        } else {
+            logs.into_iter().skip(start).take(limit).collect()
+        };
+        Ok((page, total))
+    }
+
+    fn cleanup_logs(&mut self, days: i64) -> Result<usize, RepoError> {
+        let cutoff = chrono::Utc::now().naive_utc() - chrono::Duration::days(days);
+        let before = self.logs.len();
+        self.logs.retain(|l| l.created_at >= cutoff);
+        Ok(before - self.logs.len())
     }
 }
 
@@ -3405,5 +3453,56 @@ impl super::NotificationRepository for DieselRepoMock {
             .filter(|p| p.project_id == project_id && p.notify_in_app)
             .cloned()
             .collect())
+    }
+}
+
+#[cfg(test)]
+mod log_filter_tests {
+    use super::*;
+    use crate::repository::{LogListQuery, LogRepository};
+
+    #[test]
+    fn get_logs_filtered_pages_and_filters_entity_type() {
+        let mut repo = DieselRepoMock::default();
+        for i in 0..3 {
+            repo.insert_log(&NewLog {
+                user_id: 1,
+                entity_type: "requirement".into(),
+                entity_id: Some(i),
+                action_type: "create".into(),
+                description: None,
+                project_id: Some(1),
+                old_values: None,
+                new_values: None,
+                ip_address: None,
+                user_agent: None,
+            })
+            .unwrap();
+        }
+        repo.insert_log(&NewLog {
+            user_id: 2,
+            entity_type: "verification".into(),
+            entity_id: Some(9),
+            action_type: "update".into(),
+            description: None,
+            project_id: Some(2),
+            old_values: None,
+            new_values: None,
+            ip_address: None,
+            user_agent: None,
+        })
+        .unwrap();
+
+        let (page, total) = repo
+            .get_logs_filtered(&LogListQuery {
+                entity_type: Some("requirement".into()),
+                limit: 2,
+                offset: 0,
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(total, 3);
+        assert_eq!(page.len(), 2);
+        assert!(page.iter().all(|l| l.entity_type == "requirement"));
     }
 }

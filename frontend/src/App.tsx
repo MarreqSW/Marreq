@@ -20,6 +20,7 @@ import ProjectLayout from '@/pages/ProjectLayout';
 import LegacyNamespaceProjectRedirect from '@/pages/LegacyNamespaceProjectRedirect';
 import ClassicRequirementShowRedirect from '@/pages/ClassicRequirementShowRedirect';
 import AdminPage from '@/pages/AdminPage';
+import SystemLogsPage from '@/pages/SystemLogsPage';
 import CreateRequirementPage from '@/pages/CreateRequirementPage';
 import CreateVerificationPage from '@/pages/CreateVerificationPage';
 import DashboardPage from '@/pages/DashboardPage';
@@ -160,6 +161,7 @@ export default function App() {
             <Route path="verification-methods" element={<CatalogVerificationMethodsPage />} />
           </Route>
           <Route path="help" element={<HelpPage />} />
+          <Route path="admin/logs" element={<SystemLogsPage />} />
           <Route path="admin" element={<AdminPage />} />
         </Route>
         <Route

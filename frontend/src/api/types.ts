@@ -450,6 +450,32 @@ export interface EntityActivityItem {
   changes: EntityActivityChange[];
 }
 
+/** GET `/api/admin/logs` */
+export interface AdminLogItem extends EntityActivityItem {
+  entity_type: string;
+  entity_id: number | null;
+  project_id: number | null;
+}
+
+export interface AdminLogListResponse {
+  items: AdminLogItem[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface AdminLogListParams {
+  entity_type?: string;
+  entity_id?: number;
+  user_id?: number;
+  action_type?: string;
+  project_id?: number;
+  since?: string;
+  until?: string;
+  limit?: number;
+  offset?: number;
+}
+
 export interface Baseline {
   id: number;
   project_id: number;

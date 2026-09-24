@@ -1981,8 +1981,54 @@ mod tests {
 
         let result = repo.cleanup_logs(30);
         assert!(result.is_ok());
-        // Mock implementation returns 0 as it doesn't actually clean up
-        assert_eq!(result.unwrap(), 0);
+        // Mock logs are inserted at epoch, so they are older than 30 days.
+        assert_eq!(result.unwrap(), 5);
+        assert!(repo.logs.is_empty());
+    }
+
+    #[test]
+    fn test_log_repository_get_logs_filtered() {
+        let mut repo = DieselRepoMock::default();
+        for i in 0..3 {
+            let new_log = NewLog {
+                user_id: 1,
+                entity_type: "requirement".to_string(),
+                entity_id: Some(i),
+                action_type: "create".to_string(),
+                description: Some(format!("Created requirement {i}")),
+                project_id: Some(1),
+                old_values: None,
+                new_values: None,
+                ip_address: None,
+                user_agent: None,
+            };
+            repo.insert_log(&new_log).unwrap();
+        }
+        repo.insert_log(&NewLog {
+            user_id: 2,
+            entity_type: "verification".to_string(),
+            entity_id: Some(9),
+            action_type: "update".to_string(),
+            description: Some("Updated test".to_string()),
+            project_id: Some(2),
+            old_values: None,
+            new_values: None,
+            ip_address: None,
+            user_agent: None,
+        })
+        .unwrap();
+
+        let (page, total) = repo
+            .get_logs_filtered(&crate::repository::LogListQuery {
+                entity_type: Some("requirement".into()),
+                limit: 2,
+                offset: 0,
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(total, 3);
+        assert_eq!(page.len(), 2);
+        assert!(page.iter().all(|l| l.entity_type == "requirement"));
     }
 
     // ============================================================================

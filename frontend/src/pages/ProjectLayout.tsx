@@ -244,6 +244,11 @@ export default function ProjectLayout() {
               icon: 'admin_panel_settings',
               label: 'Admin',
             })}
+            {sideLink({
+              to: `${basePath}/admin/logs`,
+              icon: 'history',
+              label: 'System logs',
+            })}
           </nav>
         </div>
         <div className={`mt-auto px-6 py-6 space-y-2 border-t border-stitch-border ${!sidebarWide ? 'px-2' : ''}`}>

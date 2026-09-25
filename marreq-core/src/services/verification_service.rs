@@ -130,6 +130,7 @@ impl<'a> VerificationService<'a> {
         new_verification: NewVerification,
         mcp_idempotency_identity: Option<&str>,
     ) -> Result<i32, RepoError> {
+        self.require_write_access(user, new_verification.project_id)?;
         let id = {
             let mut repo = self.state.repo_write();
             repo.insert_verification_idempotent(&new_verification, mcp_idempotency_identity)?
@@ -147,6 +148,7 @@ impl<'a> VerificationService<'a> {
         mut updated_verification: NewVerification,
     ) -> Result<Verification, RepoError> {
         let before = self.get_by_id(id)?;
+        self.require_write_access(user, before.project_id)?;
         if updated_verification.project_id != before.project_id {
             return Err(RepoError::CrossProjectViolation(
                 "verification project cannot be changed".into(),
@@ -219,6 +221,84 @@ mod tests {
             Err(RepoError::Unauthorized)
         ));
         assert!(service.get_by_id(1).is_ok());
+    }
+
+    #[test]
+    fn create_rejects_actor_without_project_access() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+        let unauthorized = DieselRepoMock::make_user(9, "outsider", "");
+
+        assert!(matches!(
+            service.create(&unauthorized, new_payload(10)),
+            Err(RepoError::Unauthorized)
+        ));
+    }
+
+    #[test]
+    fn update_rejects_actor_without_project_access() {
+        let mut repo = DieselRepoMock::default();
+        repo.verifications.insert(1, verification(1, 10, "VER-1"));
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+        let unauthorized = DieselRepoMock::make_user(9, "outsider", "");
+
+        assert!(matches!(
+            service.update(&unauthorized, 1, new_payload(10)),
+            Err(RepoError::Unauthorized)
+        ));
+    }
+
+    #[test]
+    fn mutations_allow_project_member_with_edit_permission() {
+        use crate::models::ProjectMember;
+        use crate::permissions::ROLE_AUTHOR;
+
+        let mut repo = DieselRepoMock::default();
+        repo.project_members.push(ProjectMember {
+            project_id: 10,
+            user_id: 5,
+            role: ROLE_AUTHOR,
+            created_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+            updated_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        });
+        repo.verifications.insert(1, verification(1, 10, "VER-1"));
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+        let member = DieselRepoMock::make_user(5, "author", "");
+
+        let id = service
+            .create(&member, new_payload(10))
+            .expect("author may create");
+
+        let mut payload = new_payload(10);
+        payload.name = "Updated".into();
+        let updated = service
+            .update(&member, 1, payload)
+            .expect("author may update");
+        assert_eq!(updated.name, "Updated");
+
+        service.delete(&member, id).expect("author may delete");
+    }
+
+    #[test]
+    fn update_rejects_project_reassignment() {
+        let mut repo = DieselRepoMock::default();
+        repo.verifications.insert(1, verification(1, 10, "VER-1"));
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+
+        assert!(matches!(
+            service.update(&actor(), 1, new_payload(99)),
+            Err(RepoError::CrossProjectViolation(_))
+        ));
     }
 
     fn verification(id: i32, project_id: i32, reference: &str) -> Verification {

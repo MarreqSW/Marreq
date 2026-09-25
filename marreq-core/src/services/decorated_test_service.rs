@@ -471,7 +471,8 @@ mod tests {
         let state = state_with_repo(repo);
         let service = DecoratedTestService::new(&state);
 
-        let actor = DieselRepoMock::make_user(1, "actor", "");
+        let mut actor = DieselRepoMock::make_user(1, "actor", "");
+        actor.is_admin = true;
         let payload = NewVerification {
             id: None,
             reference_code: "TEST-NEW".into(),
@@ -498,7 +499,8 @@ mod tests {
         let state = state_with_repo(repo);
         let service = DecoratedTestService::new(&state);
 
-        let actor = DieselRepoMock::make_user(1, "actor", "");
+        let mut actor = DieselRepoMock::make_user(1, "actor", "");
+        actor.is_admin = true;
         let payload = NewVerification {
             id: Some(1),
             reference_code: "TEST-1".into(),

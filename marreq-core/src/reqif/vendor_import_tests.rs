@@ -37,7 +37,8 @@ fn epoch() -> NaiveDateTime {
 
 fn blank_project() -> (AppState<DieselCachedRepo>, User, ImportConfig) {
     let mut repo = DieselRepoMock::default();
-    let user = DieselRepoMock::make_user(1, "importer", "hash");
+    let mut user = DieselRepoMock::make_user(1, "importer", "hash");
+    user.is_admin = true;
     repo.users.insert(1, user.clone());
     repo.projects.insert(
         1,

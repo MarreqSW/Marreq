@@ -1,4 +1,4 @@
-import { NavLink, useLocation, useOutletContext } from 'react-router-dom';
+import { Link, useLocation, useOutletContext } from 'react-router-dom';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 export default function RequirementsViewSwitcher() {
@@ -15,6 +15,14 @@ export default function RequirementsViewSwitcher() {
   const listActive = onReqSection && listView;
   const graphActive = onGraph;
 
+  const requirementsUrl = (mode: 'table' | 'list') => {
+    const next = new URLSearchParams(loc.search);
+    if (mode === 'list') next.set('view', 'list');
+    else next.delete('view');
+    const query = next.toString();
+    return `${basePath}/requirements${query ? `?${query}` : ''}`;
+  };
+
   const seg =
     'flex items-center gap-2 px-4 py-1.5 text-xs font-bold rounded-md transition-colors';
   const inactive =
@@ -23,27 +31,30 @@ export default function RequirementsViewSwitcher() {
 
   return (
     <div className="flex p-1 bg-stitch-surface rounded-lg gap-1 border border-stitch-border">
-      <NavLink
-        to={`${basePath}/requirements`}
-        className={() => `${seg} ${tableActive ? active : inactive}`}
+      <Link
+        to={requirementsUrl('table')}
+        aria-current={tableActive ? 'page' : undefined}
+        className={`${seg} ${tableActive ? active : inactive}`}
       >
         <span className="material-symbols-outlined text-sm">table_rows</span>
         Table
-      </NavLink>
-      <NavLink
-        to={`${basePath}/requirements?view=list`}
-        className={() => `${seg} ${listActive ? active : inactive}`}
+      </Link>
+      <Link
+        to={requirementsUrl('list')}
+        aria-current={listActive ? 'page' : undefined}
+        className={`${seg} ${listActive ? active : inactive}`}
       >
         <span className="material-symbols-outlined text-sm">view_list</span>
         List
-      </NavLink>
-      <NavLink
+      </Link>
+      <Link
         to={`${basePath}/traceability`}
-        className={() => `${seg} ${graphActive ? active : inactive}`}
+        aria-current={graphActive ? 'page' : undefined}
+        className={`${seg} ${graphActive ? active : inactive}`}
       >
         <span className="material-symbols-outlined text-sm">hub</span>
         Graph
-      </NavLink>
+      </Link>
     </div>
   );
 }

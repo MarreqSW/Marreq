@@ -137,14 +137,18 @@ You are typically taken to the new project or the project list.
 
 Requirements are the core artifact. Each requirement can have multiple **versions** (history), **comments**, and an **approval** state (draft → reviewed → approved). Requirements can be hierarchical (parent/child) and are linked to tests via the traceability matrix.
 
-### 4.1 Requirements List
+### 4.1 Requirements Views
 
 - Open a project, then use **Requirements** in the nav or **View Requirements** on the project detail page.
 - URL: `/<project-slug>/requirements`.
 
 You can:
 
-- **View** requirements in **Card**, **Table**, or **Tree** layout (use the view toggle).
+- Switch between three purpose-built views:
+  - **Table** for dense scanning, comparison, column configuration, and inline editing.
+  - **List** for reading and reviewing requirement statements with status, approval, category, hierarchy, verification method, author, and modification context.
+  - **Graph** for exploring requirement hierarchy and traceability relationships.
+- The List view is responsive for narrow screens. Its review cards use a fixed contextual layout, while the **Columns** control remains specific to Table.
 - **Filter** by status, verification, category, applicability, approval (e.g. Approved only / Not approved), and custom filters.
 - **Search** (and use **Semantic Search** if enabled).
 - **Paginate** through results.

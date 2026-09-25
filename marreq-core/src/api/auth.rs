@@ -215,8 +215,9 @@ pub fn auth_login(
     }
     let form = body.into_inner();
     let ip = client_ip;
+    let canonical_username = crate::auth::canonicalize_username(&form.username);
 
-    match limiter.check_and_delay(&form.username, ip) {
+    match limiter.check_and_delay(&canonical_username, ip) {
         crate::auth::rate_limiter::RateLimitOutcome::Locked(_) => {
             return Err(ApiError::BadRequest(
                 "Too many failed attempts. Please try again later.".into(),
@@ -233,7 +234,7 @@ pub fn auth_login(
 
     match login_user(&mut *repo, &form, cookies, None, ip_str) {
         Ok(user) => {
-            limiter.record_success(&form.username, ip);
+            limiter.record_success(&canonical_username, ip);
             Ok((
                 Status::Ok,
                 Json(json!({
@@ -243,7 +244,7 @@ pub fn auth_login(
             ))
         }
         Err(err) => {
-            limiter.record_failure(&form.username, ip);
+            limiter.record_failure(&canonical_username, ip);
             let msg = match err {
                 AuthError::InvalidCredentials => "Invalid username or password",
                 AuthError::Verify(_) => "Password verification failed",

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getBuildInfo } from '@/api/client';
+import { loadBuildInfo } from '@/hooks/useBuildInfo';
 import type { BuildInfo } from '@/api/types';
 import {
   getFrontendBuildConstants,
@@ -19,7 +19,7 @@ export default function CompatibilityBanner() {
 
   useEffect(() => {
     let alive = true;
-    getBuildInfo()
+    loadBuildInfo()
       .then((build) => {
         if (!alive) return;
         const uiOk = isVersionInInclusiveRange(

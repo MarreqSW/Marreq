@@ -8,7 +8,7 @@ Marreq ships independently versioned artifacts:
 | Frontend (SPA) | `frontend/package.json` `version` | `frontend/compatibility.json` |
 | MCP server | `mcp-server/package.json` `version` | — |
 
-Both start at **`0.1.0`**. Server and cloud share one API surface and therefore **one** frontend compatibility matrix.
+Both start at **`0.1.0`**. Release builds override the manifest version with the tag version (see [Runtime version](#runtime-version)), so the manifest value is only what local/dev builds report. Server and cloud share one API surface and therefore **one** frontend compatibility matrix.
 
 ## Runtime check
 
@@ -17,7 +17,7 @@ At runtime the SPA calls `GET /api/meta/build` and compares:
 1. UI version against the backend’s `frontend_compatibility` `{ min_version, max_version }` (inclusive).
 2. Backend version against the UI’s `requires_backend_min` / `requires_backend_max` (inclusive).
 
-Mismatch shows a non-blocking amber banner. Help shows both versions, deployment mode, and compatible yes/no. Login shows `UI {version}` only.
+Mismatch shows a non-blocking amber banner. Help shows both versions (with short git SHAs), deployment mode, and compatible yes/no. The project sidebar footer and the login page show `UI {version} · API {version}`.
 
 Ranges are plain semver strings (`major.minor.patch`), not npm-style range syntax.
 
@@ -71,4 +71,13 @@ docker build -f mcp-server/Dockerfile \
   -t marreq-mcp-server:0.1.0 .
 ```
 
-Images carry OCI label `org.opencontainers.image.version`. Backend builds inject `MARREQ_GIT_SHA` into the binary (`option_env!`); frontend builds bake version and SHA via Vite `define`.
+Images carry OCI label `org.opencontainers.image.version`.
+
+## Runtime version
+
+`MARREQ_VERSION` (the tag with its `marreq-*-v` prefix stripped, e.g. `0.1.3`) and `MARREQ_GIT_SHA` are baked in at build time:
+
+- Backend: `option_env!` in `marreq-core/src/build_info.rs`; reported as `backend_version` / `backend_git_sha` by `GET /api/meta/build`.
+- Frontend: Vite `define` (`__FRONTEND_VERSION__`, `__FRONTEND_GIT_SHA__`) in `frontend/vite.config.ts`.
+
+When `MARREQ_VERSION` is unset or empty, each artifact falls back to its manifest version. A leading `v` is stripped so the value stays plain `X.Y.Z` for the compatibility check. Local images: `make docker-server MARREQ_VERSION=0.1.3`.

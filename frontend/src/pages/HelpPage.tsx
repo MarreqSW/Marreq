@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
-import { getBuildInfo } from '@/api/client';
-import type { BuildInfo } from '@/api/types';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
+import { useBuildInfo } from '@/hooks/useBuildInfo';
 import {
   getFrontendBuildConstants,
   isVersionInInclusiveRange,
+  shortSha,
 } from '@/utils/semverRange';
 
 const blocks: { title: string; body: string }[] = [
@@ -43,22 +42,9 @@ export default function HelpPage() {
   const pid = projectId;
   const { dashboard } = useDashboard();
   const ui = getFrontendBuildConstants();
-  const [build, setBuild] = useState<BuildInfo | null>(null);
-  const [buildError, setBuildError] = useState(false);
-
-  useEffect(() => {
-    let alive = true;
-    getBuildInfo()
-      .then((info) => {
-        if (alive) setBuild(info);
-      })
-      .catch(() => {
-        if (alive) setBuildError(true);
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const { build, error: buildError } = useBuildInfo();
+  const uiSha = shortSha(ui.gitSha);
+  const apiSha = shortSha(build?.backend_git_sha);
 
   const projectName =
     dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
@@ -96,7 +82,10 @@ export default function HelpPage() {
           <dl className="text-sm text-stitch-muted space-y-1.5">
             <div className="flex gap-2">
               <dt className="font-semibold text-stitch-fg w-36 shrink-0">UI</dt>
-              <dd>{ui.version}</dd>
+              <dd>
+                {ui.version}
+                {uiSha ? <span className="ml-2 font-mono text-xs">({uiSha})</span> : null}
+              </dd>
             </div>
             <div className="flex gap-2">
               <dt className="font-semibold text-stitch-fg w-36 shrink-0">API</dt>
@@ -106,6 +95,7 @@ export default function HelpPage() {
                   : build
                     ? build.backend_version
                     : '…'}
+                {apiSha ? <span className="ml-2 font-mono text-xs">({apiSha})</span> : null}
               </dd>
             </div>
             <div className="flex gap-2">

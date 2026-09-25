@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import LoginPage from '../LoginPage';
 import * as apiClient from '@/api/client';
+import { resetBuildInfoCache } from '@/hooks/useBuildInfo';
 
 vi.mock('@/api/client');
 
@@ -39,6 +40,7 @@ const cloudDeployment = {
 describe('LoginPage', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    resetBuildInfoCache();
     vi.mocked(apiClient.getAuthProviders).mockResolvedValue({ password_enabled: true, external: [] });
   });
 
@@ -63,6 +65,20 @@ describe('LoginPage', () => {
     vi.mocked(apiClient.getDeploymentInfo).mockResolvedValue(serverDeployment);
     renderLoginPage();
     expect(screen.getByTestId('login-ui-version')).toHaveTextContent(/^UI /);
+  });
+
+  it('adds the API version once build info loads', async () => {
+    vi.mocked(apiClient.getDeploymentInfo).mockResolvedValue(serverDeployment);
+    vi.mocked(apiClient.getBuildInfo).mockResolvedValue({
+      backend_version: '0.1.3',
+      backend_git_sha: 'abc1234',
+      deployment_mode: 'server',
+      frontend_compatibility: { min_version: '0.1.0', max_version: '0.1.99' },
+    });
+    renderLoginPage();
+    await waitFor(() =>
+      expect(screen.getByTestId('login-ui-version')).toHaveTextContent(/· API 0\.1\.3$/),
+    );
   });
 
   it('hides self-service links in server mode', async () => {

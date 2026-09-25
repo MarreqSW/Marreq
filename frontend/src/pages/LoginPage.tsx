@@ -5,6 +5,7 @@ import type { AuthProviderDiscovery, DeploymentInfo } from '@/api/types';
 import AuthLayout from '@/components/AuthLayout';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
 import { getFrontendBuildConstants } from '@/utils/semverRange';
+import { useBuildInfo } from '@/hooks/useBuildInfo';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ export default function LoginPage() {
   const [deployment, setDeployment] = useState<DeploymentInfo | null>(null);
   const [providers, setProviders] = useState<AuthProviderDiscovery>({ password_enabled: true, external: [] });
   const uiVersion = getFrontendBuildConstants().version;
+  const { build } = useBuildInfo();
 
   const { error, submitting, onSubmit } = useFormSubmit(async () => {
     const csrf = await getCsrfToken();
@@ -60,6 +62,7 @@ export default function LoginPage() {
           )}
           <p className="text-xs text-stitch-muted" data-testid="login-ui-version">
             UI {uiVersion}
+            {build ? ` · API ${build.backend_version}` : null}
           </p>
         </div>
       }

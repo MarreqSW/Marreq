@@ -34,3 +34,9 @@ export function getFrontendBuildConstants() {
     gitSha: __FRONTEND_GIT_SHA__,
   };
 }
+
+/** First 7 characters of a git SHA, or `null` when unknown/empty. */
+export function shortSha(sha: string | null | undefined): string | null {
+  if (!sha || sha === 'unknown') return null;
+  return sha.slice(0, 7);
+}

@@ -7,6 +7,8 @@ import type { User } from '@/api/types';
 import NotificationPanel from '@/components/NotificationPanel';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { parseUser } from '@/utils/parseUser';
+import { useBuildInfo } from '@/hooks/useBuildInfo';
+import { getFrontendBuildConstants, shortSha } from '@/utils/semverRange';
 
 const APP_VERSION = 'v0.1.0';
 
@@ -29,6 +31,10 @@ export default function ProjectLayout() {
   const { dashboard, setSelectedProjectId, refresh, logout } = useDashboard();
   const { preference, setPreference } = useTheme();
   const [sidebarWide, setSidebarWide] = useState(true);
+  const ui = getFrontendBuildConstants();
+  const { build } = useBuildInfo();
+  const uiSha = shortSha(ui.gitSha);
+  const apiSha = shortSha(build?.backend_git_sha);
   const [globalSearch, setGlobalSearch] = useState('');
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
   const createMenuRef = useRef<HTMLDivElement | null>(null);
@@ -288,6 +294,16 @@ export default function ProjectLayout() {
           >
             {sidebarWide ? 'Collapse' : '»'}
           </button>
+          {sidebarWide ? (
+            <p
+              className="pt-2 text-center text-[10px] text-stitch-muted"
+              data-testid="sidebar-version"
+              title={`UI ${uiSha ?? 'unknown'} · API ${apiSha ?? 'unknown'}`}
+            >
+              UI {ui.version}
+              {build ? ` · API ${build.backend_version}` : null}
+            </p>
+          ) : null}
         </div>
       </aside>
 

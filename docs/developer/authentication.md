@@ -158,13 +158,17 @@ The canonical flow is:
 
 Site administrators retain the documented cross-project override. Project
 roles map to capabilities in `permissions.rs`; project configuration is limited
-to project administrators. Approval requires both the role's
-`ApproveVersions` capability and membership in the explicit project reviewer
-pool. When no reviewer pool exists, only a site administrator may approve.
+to project administrators. Status and version-approval transitions are
+authorized solely by membership in the explicit `project_reviewers` pool (any
+eligible project member may be designated). The role capability
+`ApproveVersions` remains for UI/compatibility display and does not by itself
+authorize those transitions. When no reviewer pool exists, only a site
+administrator may approve.
 
-`api::routes_with_policies()` is the route-policy inventory used by CI. Every
-mounted REST route must be declared as public, authenticated, project read,
-project write, approval, project management, administrator, or internal.
+Route providers return policy-classified routes; `app::declared_route_inventory`
+unions the core API, OAuth, root, and deployment-specific mounts so every
+mounted REST route is declared as public, authenticated, project read, project
+write, approval, project management, administrator, or internal.
 
 Intentionally public REST endpoints are limited to API/build/deployment/health
 metadata, authentication bootstrap/login/provider callbacks, and cache health.

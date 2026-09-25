@@ -483,18 +483,32 @@ pub fn revoke_grant(id: i32, user: SessionUser, state: &State<AppState>) -> ApiR
     }
 }
 
+/// OAuth and well-known routes with declared access policies.
+pub fn routes_with_policies() -> Vec<(super::RoutePolicy, rocket::Route)> {
+    let mut r = Vec::new();
+    r.extend(super::classify(
+        super::RoutePolicy::Public,
+        routes![
+            authorization_server_metadata,
+            protected_resource_metadata,
+            protected_resource_metadata_mcp,
+            register,
+            authorize_page,
+            token,
+        ],
+    ));
+    r.extend(super::classify(
+        super::RoutePolicy::Authenticated,
+        routes![authorize_decision, grants, revoke_grant],
+    ));
+    r
+}
+
 pub fn routes() -> Vec<rocket::Route> {
-    routes![
-        authorization_server_metadata,
-        protected_resource_metadata,
-        protected_resource_metadata_mcp,
-        register,
-        authorize_page,
-        authorize_decision,
-        token,
-        grants,
-        revoke_grant
-    ]
+    routes_with_policies()
+        .into_iter()
+        .map(|(_, route)| route)
+        .collect()
 }
 
 #[cfg(test)]

@@ -55,6 +55,11 @@ pub enum RoutePolicy {
     Internal,
 }
 
+/// Pair a policy with a set of Rocket routes (for deployment-specific mounts).
+pub fn classify(policy: RoutePolicy, routes: Vec<Route>) -> Vec<(RoutePolicy, Route)> {
+    routes.into_iter().map(|route| (policy, route)).collect()
+}
+
 macro_rules! policy_routes {
     ($all:ident, $policy:ident; $($route:path),+ $(,)?) => {
         $all.extend(routes![$($route),+].into_iter().map(|route| (RoutePolicy::$policy, route)));
@@ -262,15 +267,14 @@ pub fn routes() -> Vec<Route> {
         .collect()
 }
 
-#[cfg(test)]
-mod policy_tests {
-    use super::*;
-
-    #[test]
-    fn every_mounted_route_has_exactly_one_declared_policy() {
-        let declared = routes_with_policies();
-        let mounted = routes();
-        assert_eq!(declared.len(), mounted.len());
-        assert!(declared.iter().all(|(_, route)| route.name.is_some()));
-    }
+/// Root-mounted handlers that are not part of `routes()` or OAuth.
+pub fn root_routes_with_policies() -> Vec<(RoutePolicy, Route)> {
+    let mut r = Vec::new();
+    policy_routes!(r, Public;
+        crate::routes::api_info::root_index,
+    );
+    policy_routes!(r, Internal;
+        crate::fairings::csrf_denied,
+    );
+    r
 }

@@ -14,6 +14,7 @@ export interface ExcelImportPreview {
   available_fields: {
     requirements: string[];
     tests: string[];
+    matrix?: string[];
   };
   unique_values: Record<string, string[]>;
 }
@@ -78,7 +79,7 @@ export async function commitReqifImport(
 export async function commitExcelImport(
   projectId: number,
   file: File,
-  importType: 'requirements' | 'tests',
+  importType: 'requirements' | 'tests' | 'matrix',
   columnMappings: ExcelColumnMapping[],
   valueMappings: ExcelValueMapping[],
   csrfToken: string,

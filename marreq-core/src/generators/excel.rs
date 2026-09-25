@@ -4,7 +4,7 @@
 use crate::generators::GeneratorError as WorkbookError;
 use crate::helper_functions::decorators;
 use crate::repository::{DieselRepo, Repository};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::PathBuf;
 
@@ -124,6 +124,55 @@ pub fn matrix_workbook_with_repo<R: Repository>(
         }
     }
 
+    workbook.close()?;
+    temp.read()
+}
+
+/// Two-column workbook (requirement_code, verification_code) matching matrix-links import.
+pub fn matrix_links_workbook_with_repo<R: Repository>(
+    repo: &R,
+    project_id: i32,
+) -> Result<Vec<u8>, WorkbookError> {
+    let reqs = repo
+        .get_requirements_by_project(project_id)
+        .map_err(|e| format!("Error querying requirements by project: {:?}", e))?;
+    let vers = repo
+        .get_verifications_by_project(project_id)
+        .map_err(|e| format!("Error querying tests by project: {:?}", e))?;
+    let links = repo
+        .get_matrix_by_project(project_id)
+        .map_err(|e| format!("Error querying matrix links: {:?}", e))?;
+
+    let req_codes: HashMap<i32, String> =
+        reqs.into_iter().map(|r| (r.id, r.reference_code)).collect();
+    let ver_codes: HashMap<i32, String> =
+        vers.into_iter().map(|v| (v.id, v.reference_code)).collect();
+
+    let mut rows: Vec<(String, String)> = Vec::new();
+    for link in links {
+        let Some(req_code) = req_codes.get(&link.req_id) else {
+            continue;
+        };
+        let Some(ver_code) = ver_codes.get(&link.verification_id) else {
+            continue;
+        };
+        if req_code.trim().is_empty() || ver_code.trim().is_empty() {
+            continue;
+        }
+        rows.push((req_code.clone(), ver_code.clone()));
+    }
+    rows.sort();
+
+    let temp = TempWorkbook::new("matrix-links", project_id);
+    let workbook = xlsxwriter::Workbook::new(temp.path_str()?)?;
+    let mut sheet = workbook.add_worksheet(None)?;
+    sheet.write_string(0, 0, "requirement_code", None)?;
+    sheet.write_string(0, 1, "verification_code", None)?;
+    for (idx, (req_code, ver_code)) in rows.iter().enumerate() {
+        let row = (idx + 1) as u32;
+        sheet.write_string(row, 0, req_code, None)?;
+        sheet.write_string(row, 1, ver_code, None)?;
+    }
     workbook.close()?;
     temp.read()
 }
@@ -299,4 +348,119 @@ pub fn verifications_workbook_with_repo<R: Repository>(
 
     workbook.close()?;
     temp.read()
+}
+
+#[cfg(test)]
+mod matrix_links_tests {
+    use super::matrix_links_workbook_with_repo;
+    use crate::models::{MatrixLink, Requirement, Verification};
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
+    use calamine::{open_workbook_auto_from_rs, Data, Reader};
+    use chrono::{NaiveDate, NaiveDateTime};
+    use std::io::Cursor;
+
+    fn ts() -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    fn req(id: i32, code: &str) -> Requirement {
+        Requirement {
+            id,
+            current_version_id: None,
+            same_as_current: None,
+            title: format!("Req {id}"),
+            description: String::new(),
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            reference_code: code.into(),
+            category_id: 1,
+            parent_id: None,
+            creation_date: ts(),
+            update_date: ts(),
+            deadline_date: None,
+            applicability_id: 1,
+            justification: None,
+            project_id: 1,
+            approval_state: "draft".into(),
+            approved_by: None,
+            approved_at: None,
+            custom_fields: None,
+        }
+    }
+
+    fn ver(id: i32, code: &str) -> Verification {
+        Verification {
+            id,
+            name: format!("Ver {id}"),
+            reference_code: code.into(),
+            description: String::new(),
+            source: String::new(),
+            status_id: 1,
+            parent_id: None,
+            project_id: 1,
+            verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
+        }
+    }
+
+    fn link(req_id: i32, verification_id: i32) -> MatrixLink {
+        MatrixLink {
+            req_id,
+            verification_id,
+            creation_date: ts(),
+            project_id: 1,
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            cleared_by: None,
+            cleared_at: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
+        }
+    }
+
+    fn cell_text(cell: &Data) -> String {
+        match cell {
+            Data::String(s) => s.clone(),
+            other => other.to_string(),
+        }
+    }
+
+    #[test]
+    fn matrix_links_workbook_two_code_columns() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(1, req(1, "REQ-B"));
+        repo.requirements.insert(2, req(2, "REQ-A"));
+        repo.requirements.insert(3, req(3, ""));
+        repo.verifications.insert(10, ver(10, "TST-2"));
+        repo.verifications.insert(11, ver(11, "TST-1"));
+        repo.verifications.insert(12, ver(12, "   "));
+        repo.matrices.push(link(2, 11));
+        repo.matrices.push(link(1, 10));
+        repo.matrices.push(link(3, 11));
+        repo.matrices.push(link(2, 12));
+
+        let bytes = matrix_links_workbook_with_repo(&repo, 1).expect("workbook");
+        let mut workbook = open_workbook_auto_from_rs(Cursor::new(bytes)).expect("open xlsx");
+        let sheet = workbook.sheet_names().first().cloned().expect("sheet");
+        let range = workbook.worksheet_range(&sheet).expect("range");
+        let rows: Vec<Vec<String>> = range
+            .rows()
+            .map(|row| row.iter().take(2).map(cell_text).collect())
+            .filter(|row: &Vec<String>| row.iter().any(|c| !c.trim().is_empty()))
+            .collect();
+        let expected: Vec<Vec<String>> = vec![
+            vec!["requirement_code".into(), "verification_code".into()],
+            vec!["REQ-A".into(), "TST-1".into()],
+            vec!["REQ-B".into(), "TST-2".into()],
+        ];
+        assert_eq!(rows, expected);
+    }
 }

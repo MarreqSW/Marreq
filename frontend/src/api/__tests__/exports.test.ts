@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   downloadBaselineReqif,
+  downloadMatrixLinksXlsx,
   downloadMatrixXlsx,
   downloadProjectBundleJson,
   downloadProjectReportPdf,
@@ -68,6 +69,12 @@ describe('workbook downloads', () => {
       download: downloadMatrixXlsx,
       path: '/api/projects/7/exports/matrix.xlsx',
       filename: 'matrix-project-7.xlsx',
+    },
+    {
+      name: 'the matrix links workbook',
+      download: downloadMatrixLinksXlsx,
+      path: '/api/projects/7/exports/matrix-links.xlsx',
+      filename: 'matrix-links-project-7.xlsx',
     },
     {
       name: 'the requirements PDF',

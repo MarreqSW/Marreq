@@ -50,6 +50,7 @@ pub struct ExcelPreviewResponse {
 pub struct ExcelAvailableFields {
     requirements: Vec<String>,
     tests: Vec<String>,
+    matrix: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -83,6 +84,7 @@ pub async fn preview_excel(
         available_fields: ExcelAvailableFields {
             requirements: ExcelImporter::fields_for("requirements"),
             tests: ExcelImporter::fields_for("tests"),
+            matrix: ExcelImporter::fields_for("matrix"),
         },
         unique_values: importer.unique_values_by_column(),
     }))
@@ -103,9 +105,9 @@ pub async fn commit_excel(
     )?;
 
     let import_type = form.import_type.trim().to_string();
-    if import_type != "requirements" && import_type != "tests" {
+    if import_type != "requirements" && import_type != "tests" && import_type != "matrix" {
         return Err(ApiError::BadRequest(
-            "import_type must be 'requirements' or 'tests'".into(),
+            "import_type must be 'requirements', 'tests', or 'matrix'".into(),
         ));
     }
 
@@ -124,17 +126,33 @@ pub async fn commit_excel(
             .map_err(|e| ApiError::BadRequest(format!("invalid value_mappings JSON: {e}")))?,
         _ => Vec::new(),
     };
-    validate_value_mappings(state, project_id, &import_type, &value_mappings)?;
+    if import_type != "matrix" {
+        validate_value_mappings(state, project_id, &import_type, &value_mappings)?;
+    }
 
-    let required = if import_type == "requirements" {
-        "title"
+    if import_type == "matrix" {
+        let has_req = column_mappings
+            .iter()
+            .any(|m| m.target_field == "requirement_reference_code");
+        let has_ver = column_mappings
+            .iter()
+            .any(|m| m.target_field == "verification_reference_code");
+        if !has_req || !has_ver {
+            return Err(ApiError::BadRequest(
+                "map columns to requirement_reference_code and verification_reference_code".into(),
+            ));
+        }
     } else {
-        "name"
-    };
-    if !column_mappings.iter().any(|m| m.target_field == required) {
-        return Err(ApiError::BadRequest(format!(
-            "map at least one column to {required}"
-        )));
+        let required = if import_type == "requirements" {
+            "title"
+        } else {
+            "name"
+        };
+        if !column_mappings.iter().any(|m| m.target_field == required) {
+            return Err(ApiError::BadRequest(format!(
+                "map at least one column to {required}"
+            )));
+        }
     }
 
     let (filename, bytes) = read_upload(&mut form.file).await?;

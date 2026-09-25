@@ -47,6 +47,8 @@ const FIELD_LABELS: Record<string, string> = {
   justification: 'Justification',
   name: 'Name',
   source: 'Source',
+  requirement_reference_code: 'Requirement code',
+  verification_reference_code: 'Verification code',
 };
 
 const VALUE_MAPPED_FIELDS = new Set([
@@ -119,11 +121,29 @@ function suggestField(columnName: string, fields: string[]): string {
     source: 'source',
     'test name': 'name',
     'test id': 'reference_code',
+    'requirement code': 'requirement_reference_code',
+    requirement_code: 'requirement_reference_code',
+    'verification code': 'verification_reference_code',
+    verification_code: 'verification_reference_code',
+    'test code': 'verification_reference_code',
   };
   const hinted = aliases[n];
   if (hinted && fields.includes(hinted)) return hinted;
   if (fields.includes(n.replace(/ /g, '_'))) return n.replace(/ /g, '_');
   return 'skip';
+}
+
+type ImportKind = 'requirements' | 'tests' | 'matrix';
+
+function fieldsForType(preview: ExcelImportPreview, kind: ImportKind): string[] {
+  if (kind === 'tests') return preview.available_fields.tests;
+  if (kind === 'matrix') return preview.available_fields.matrix ?? [];
+  return preview.available_fields.requirements;
+}
+
+function parseImportKind(value: string): ImportKind {
+  if (value === 'tests' || value === 'matrix') return value;
+  return 'requirements';
 }
 
 export default function ImportPage() {
@@ -134,7 +154,7 @@ export default function ImportPage() {
 
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<ExcelImportPreview | null>(null);
-  const [importType, setImportType] = useState<'requirements' | 'tests'>('requirements');
+  const [importType, setImportType] = useState<ImportKind>('requirements');
   const [mappings, setMappings] = useState<Record<string, string>>({});
   const [catalog, setCatalog] = useState<CatalogData | null>(null);
   const [valueSelections, setValueSelections] = useState<Record<string, number>>({});
@@ -150,9 +170,7 @@ export default function ImportPage() {
   const token = csrfToken ?? '';
   const fields = useMemo(() => {
     if (!preview) return [];
-    return importType === 'tests'
-      ? preview.available_fields.tests
-      : preview.available_fields.requirements;
+    return fieldsForType(preview, importType);
   }, [preview, importType]);
 
   const valueOptions = useMemo<Record<string, ValueOption[]>>(() => {
@@ -219,9 +237,8 @@ export default function ImportPage() {
   }, [preview, mappings, valueOptions, importType, dashboard?.user]);
 
   const applyPreview = useCallback((p: ExcelImportPreview) => {
-    const guessed = p.import_type === 'tests' ? 'tests' : 'requirements';
-    const available =
-      guessed === 'tests' ? p.available_fields.tests : p.available_fields.requirements;
+    const guessed = parseImportKind(p.import_type);
+    const available = fieldsForType(p, guessed);
     const next: Record<string, string> = {};
     for (const col of p.columns) {
       next[col.name] = suggestField(col.name, available);
@@ -331,7 +348,11 @@ export default function ImportPage() {
   }
 
   const listHref =
-    importType === 'tests' ? `${basePath}/verifications` : `${basePath}/requirements`;
+    importType === 'tests'
+      ? `${basePath}/verifications`
+      : importType === 'matrix'
+        ? `${basePath}/matrix`
+        : `${basePath}/requirements`;
 
   return (
     <div>
@@ -370,7 +391,11 @@ export default function ImportPage() {
               {phase === 'preview'
                 ? 'Reading file and preparing column mapping…'
                 : `Importing ${preview?.row_count ?? 0} ${
-                    importType === 'tests' ? 'verification' : 'requirement'
+                    importType === 'tests'
+                      ? 'verification'
+                      : importType === 'matrix'
+                        ? 'matrix link'
+                        : 'requirement'
                   }${(preview?.row_count ?? 0) === 1 ? '' : 's'}…`}
             </p>
           </div>
@@ -418,7 +443,8 @@ export default function ImportPage() {
         </label>
         <p className="text-xs text-stitch-muted">
           First sheet only. Use .xlsx or .csv. Unknown catalog names can be mapped to existing
-          project values before import.
+          project values before import. For coverage and the traceability graph, import a separate
+          matrix file with requirement and verification codes.
         </p>
         <button type="submit" disabled={!file || !token || busy} className={btnPrimary}>
           {phase === 'preview' ? 'Reading…' : 'Upload and map columns'}
@@ -439,12 +465,9 @@ export default function ImportPage() {
                 value={importType}
                 disabled={busy}
                 onChange={(e) => {
-                  const next = e.target.value === 'tests' ? 'tests' : 'requirements';
+                  const next = parseImportKind(e.target.value);
                   setImportType(next);
-                  const available =
-                    next === 'tests'
-                      ? preview.available_fields.tests
-                      : preview.available_fields.requirements;
+                  const available = fieldsForType(preview, next);
                   const remapped: Record<string, string> = {};
                   for (const col of preview.columns) {
                     remapped[col.name] = suggestField(col.name, available);
@@ -455,6 +478,7 @@ export default function ImportPage() {
               >
                 <option value="requirements">Requirements</option>
                 <option value="tests">Verifications</option>
+                <option value="matrix">Matrix links</option>
               </select>
             </label>
             <p className="text-sm text-stitch-muted">
@@ -502,7 +526,7 @@ export default function ImportPage() {
             </table>
           </div>
 
-          {unmatchedValues.length > 0 ? (
+          {unmatchedValues.length > 0 && importType !== 'matrix' ? (
             <div
               className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-3"
               data-testid="value-mapping"
@@ -565,7 +589,10 @@ export default function ImportPage() {
           data-testid="import-result"
         >
           <p className="text-stitch-fg font-semibold">{result.message}</p>
-          <p className="text-sm text-stitch-muted">Imported {result.imported_count} record(s).</p>
+          <p className="text-sm text-stitch-muted">
+            Imported {result.imported_count}{' '}
+            {importType === 'matrix' ? 'link(s)' : 'record(s)'}.
+          </p>
           {result.errors.length > 0 ? (
             <ul className="text-sm text-red-300 list-disc pl-5 space-y-1">
               {result.errors.map((rowErr) => (
@@ -574,7 +601,12 @@ export default function ImportPage() {
             </ul>
           ) : null}
           <Link to={listHref} className="text-stitch-accent font-semibold hover:underline text-sm">
-            Open {importType === 'tests' ? 'verifications' : 'requirements'}
+            Open{' '}
+            {importType === 'tests'
+              ? 'verifications'
+              : importType === 'matrix'
+                ? 'matrix'
+                : 'requirements'}
           </Link>
         </div>
       ) : null}

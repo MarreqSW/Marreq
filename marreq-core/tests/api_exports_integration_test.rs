@@ -344,6 +344,40 @@ async fn export_matrix_forbids_non_member() {
 }
 
 #[rocket::async_test]
+async fn export_matrix_links_returns_workbook() {
+    let client = test_client(export_repo()).await;
+    let response = client
+        .get("/api/projects/1/exports/matrix-links.xlsx")
+        .private_cookie(session_cookie(&client, 1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(
+        response.headers().get_one("Content-Type"),
+        Some(XLSX_CONTENT_TYPE)
+    );
+    assert_eq!(
+        response.headers().get_one("Content-Disposition"),
+        Some("attachment; filename=\"matrix-links-project-1.xlsx\"")
+    );
+
+    let bytes = response.into_bytes().await.expect("body");
+    assert!(bytes.starts_with(ZIP_MAGIC), "expected an xlsx archive");
+}
+
+#[rocket::async_test]
+async fn export_matrix_links_forbids_non_member() {
+    let client = test_client(export_repo()).await;
+    let response = client
+        .get("/api/projects/1/exports/matrix-links.xlsx")
+        .private_cookie(session_cookie(&client, 3))
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
 async fn export_requirements_pdf_returns_document() {
     let client = test_client(export_repo()).await;
     let response = client

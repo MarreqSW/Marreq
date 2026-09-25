@@ -328,8 +328,10 @@ The traceability matrix is central to **test management** and coverage: it shows
 
 ### 6.3 Exporting the Matrix
 
-- **Export Excel**: Use **Export Excel** on the matrix page to download the matrix as `.xls`.
-- **Export CSV**: Use the CSV export link/button when offered (e.g. `/<project-slug>/matrix.csv`).
+From **Reports**, download:
+
+- **Matrix (.xlsx)**: coverage grid (requirements as rows, verifications as columns, `Yes` where linked). For review, not for re-import.
+- **Matrix links (.xlsx)**: two columns (`requirement_code`, `verification_code`), one row per link. Upload this file on **Import** as **Matrix links** (same project is a no-op for existing pairs; use it to copy links into another project that already has those codes).
 
 ---
 
@@ -438,6 +440,7 @@ You see:
 - **Coverage analysis**: Covered vs uncovered requirements, requirements without verifications, verifications without requirements, suspect links. Verification status distribution (e.g. Passed/Failed/Pending) may be shown.
 - **Generate PDF Report**: Button to open/download a full project report PDF.
 - **Download requirements (PDF)**: Link to requirements-only PDF.
+- **Excel downloads**: Requirements, Verifications, **Matrix** (coverage grid), and **Matrix links** (two code columns for import).
 
 ### 9.2 Exporting Requirements to Excel
 
@@ -472,10 +475,12 @@ You see:
 2. You need **Edit requirements** permission.
 3. Upload a **`.xlsx`** or **`.csv`** file (first sheet only).
 4. Click **Upload and map columns**.
-5. Choose **Requirements** or **Verifications**, map each column to a Marreq field (or skip it), then **Import**.
-6. Review the count and any per-row errors, then open the requirements or verifications list.
+5. Choose **Requirements**, **Verifications**, or **Matrix links**, map each column to a Marreq field (or skip it), then **Import**.
+6. Review the count and any per-row errors, then open the requirements or verifications list. After a matrix import, open **Matrix** or **Traceability** to see coverage.
 
 Unmapped catalog fields (status, category, applicability, verification method) use project defaults. When a mapped file value does not exist in the project (for example, a category from another instance), the mapping page preselects a safe project default and asks you to confirm or change it. Parent references remain strict and must identify an existing requirement or an earlier successfully imported row. Import creates new records; it does not update existing ones.
+
+Excel/CSV requirement and verification import does not create matrix links. After both sides exist, upload a second spreadsheet with requirement and verification **reference codes** (Import as **Matrix links**), or download **Matrix links (.xlsx)** from Reports. Missing codes are reported; Marreq does not invent records. Extra columns are ignored. Re-importing a file exported from the same project skips pairs that already exist.
 
 ### 10.2 Importing ReqIF
 
@@ -596,7 +601,7 @@ Analytics views over log data (if implemented).
 - **Requirement diff**: From requirement version history or baseline “Diff vs current”, the diff modal uses **red** for removed, **green** for added, **gray** for unchanged.
 - **Breadcrumbs**: Requirement and test edit/create pages show breadcrumbs (Project → Requirements → …); use them to navigate back.
 - **Project context**: Many links (Requirements, Verifications, Matrix, Reports, Members, Baselines) depend on having a project selected; open a project from Home or Projects first.
-- **Export formats**: Requirements and matrix export as **Excel** (`.xls`); ReqIF export is **XML**. PDF reports are available from the Reports page.
+- **Export formats**: Requirements, verifications, matrix grid, and matrix links export as **Excel** (`.xlsx`) from Reports; ReqIF export is **XML**. PDF reports are available from the Reports page.
 
 ---
 

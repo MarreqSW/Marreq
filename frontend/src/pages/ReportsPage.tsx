@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useOutletContext } from 'react-router-dom';
 import {
+  downloadMatrixLinksXlsx,
   downloadMatrixXlsx,
   downloadProjectBundleJson,
   downloadProjectReportPdf,
@@ -54,6 +55,7 @@ const PROJECT_EXPORTS = [
   { key: 'requirements-xlsx', label: 'Requirements (.xlsx)', run: downloadRequirementsXlsx },
   { key: 'verifications-xlsx', label: 'Verifications (.xlsx)', run: downloadVerificationsXlsx },
   { key: 'matrix-xlsx', label: 'Matrix (.xlsx)', run: downloadMatrixXlsx },
+  { key: 'matrix-links-xlsx', label: 'Matrix links (.xlsx)', run: downloadMatrixLinksXlsx },
   { key: 'requirements-pdf', label: 'Requirements PDF', run: downloadRequirementsPdf },
   { key: 'report-pdf', label: 'Report PDF', run: downloadProjectReportPdf },
   { key: 'requirements-reqif', label: 'Requirements (.reqif)', run: downloadRequirementsReqif },

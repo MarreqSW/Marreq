@@ -134,3 +134,60 @@ stable user ID with canonical issuer `https://gitlab.com`.
 
 Provider secrets and protocol endpoints are backend-only. The frontend performs
 no token exchange.
+
+## Project authorization invariant
+
+Authentication identifies an actor; it never grants access to project data by
+itself. Every project-owned entity is authorized against the `project_id` read
+from the stored entity. A `project_id` supplied in a URL or request body is only
+a constraint and must agree with stored ownership.
+
+The canonical flow is:
+
+1. `SessionUser` or a Bearer guard authenticates the user and records the
+   authentication source.
+2. Delegated OAuth scopes and API-token `project_scope` narrow what the
+   credential may request. They do not replace current project membership.
+3. Project guards verify current membership. The shared functions in
+   `authorization.rs` apply the role capability (`Permission`).
+4. ID-only compatibility routes load the entity first and apply the same check
+   to its stored project. Global list compatibility routes return only entities
+   from projects the actor may view.
+5. Requirement and verification mutation services repeat the write check at
+   the application boundary so a future non-HTTP caller cannot bypass it.
+
+Site administrators retain the documented cross-project override. Project
+roles map to capabilities in `permissions.rs`; project configuration is limited
+to project administrators. Approval requires both the role's
+`ApproveVersions` capability and membership in the explicit project reviewer
+pool. When no reviewer pool exists, only a site administrator may approve.
+
+`api::routes_with_policies()` is the route-policy inventory used by CI. Every
+mounted REST route must be declared as public, authenticated, project read,
+project write, approval, project management, administrator, or internal.
+
+Intentionally public REST endpoints are limited to API/build/deployment/health
+metadata, authentication bootstrap/login/provider callbacks, and cache health.
+Cache statistics, cleanup, mutation, recommendations, and counter reset are
+administrator-only.
+
+## Local credentials and CSRF
+
+Usernames use `trim().to_lowercase()` as their canonical account identifier for
+both credential lookup and rate-limit accounting. Passwords are opaque: no
+trimming or other transformation occurs before password verification.
+
+Unsafe cookie-authenticated requests require the normal CSRF checks. A Bearer
+header bypasses CSRF only after the presented API or delegated OAuth token has
+been authenticated; a malformed or invalid header does not exempt a concurrent
+browser session.
+
+## Session lifetime
+
+Sessions currently have a 30-day absolute expiry stored in `expires_at`.
+`last_seen_at` is recorded but is not an enforced idle timeout and normal reads
+do not write-touch the session. Multi-instance deployments should also replace
+the default in-memory login rate-limit store with a shared `RateLimitStore`
+backend. Idle expiry and throttled session touching are tracked in #285; the
+shared rate-limit backend is tracked in #286. They are not represented as
+stronger guarantees than the current code provides.

@@ -19,6 +19,12 @@ export async function downloadMatrixXlsx(projectId: number): Promise<void> {
   triggerDownload(blob, `matrix-project-${projectId}.xlsx`);
 }
 
+/** Downloads matrix links as two code columns, matching Import → Matrix links. */
+export async function downloadMatrixLinksXlsx(projectId: number): Promise<void> {
+  const blob = await fetchBlob(`/api/projects/${projectId}/exports/matrix-links.xlsx`);
+  triggerDownload(blob, `matrix-links-project-${projectId}.xlsx`);
+}
+
 /** Downloads the requirements table as PDF. */
 export async function downloadRequirementsPdf(projectId: number): Promise<void> {
   const blob = await fetchBlob(`/api/projects/${projectId}/exports/requirements.pdf`);

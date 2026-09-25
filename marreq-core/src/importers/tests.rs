@@ -374,6 +374,26 @@ mod excel_importer_tests {
     }
 
     #[test]
+    fn get_available_fields_for_matrix() {
+        let importer = ExcelImporter {
+            columns: vec![],
+            data: vec![],
+            import_type: "matrix".to_string(),
+        };
+        let fields = importer.get_available_fields();
+        assert_eq!(fields.len(), 2);
+        assert!(fields.contains(&"requirement_reference_code".to_string()));
+        assert!(fields.contains(&"verification_reference_code".to_string()));
+    }
+
+    #[test]
+    fn guess_import_type_matrix_from_code_headers() {
+        let csv = b"requirement_code,verification_code\nREQ-PWR-001,TEST-PWR-001\n";
+        let importer = ExcelImporter::from_bytes("links.csv", csv).unwrap();
+        assert_eq!(importer.import_type, "matrix");
+    }
+
+    #[test]
     fn import_type_detection_requirements() {
         // Test logic for detecting import type based on column names
         let columns = vec!["Title", "Req ID", "Description"];

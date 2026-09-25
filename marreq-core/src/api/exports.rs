@@ -116,6 +116,26 @@ pub async fn export_matrix_xlsx(
     ))
 }
 
+#[get("/projects/<project_id>/exports/matrix-links.xlsx")]
+pub async fn export_matrix_links_xlsx(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    state: &State<AppState>,
+) -> ApiResult<FileDownload> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let bytes = excel::matrix_links_workbook_with_repo(&*state.repo_read(), project_id)
+        .map_err(build_failed)?;
+    Ok(FileDownload::xlsx(
+        bytes,
+        format!("matrix-links-project-{project_id}.xlsx"),
+    ))
+}
+
 #[get("/projects/<project_id>/exports/requirements.pdf")]
 pub async fn export_requirements_pdf(
     access: ProjectAccessOrBearer,

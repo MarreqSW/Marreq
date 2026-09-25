@@ -213,6 +213,7 @@ pub fn routes() -> Vec<Route> {
         exports::export_requirements_xlsx,
         exports::export_verifications_xlsx,
         exports::export_matrix_xlsx,
+        exports::export_matrix_links_xlsx,
         exports::export_requirements_pdf,
         exports::export_report_pdf,
         exports::export_requirements_reqif,

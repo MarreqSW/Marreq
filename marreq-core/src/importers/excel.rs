@@ -8,15 +8,15 @@ use crate::authorization::{
 };
 use crate::models::{NewRequirement, NewVerification, User};
 use crate::repository::{
-    LookupRepository, ProjectMembersRepository, RequirementsRepository, UserRepository,
-    VerificationsRepository,
+    LookupRepository, MatrixRepository, ProjectMembersRepository, RequirementsRepository,
+    UserRepository, VerificationsRepository,
 };
-use crate::services::{RequirementService, VerificationService};
+use crate::services::{MatrixService, RequirementService, VerificationService};
 use anyhow::{anyhow, Result};
 use calamine::{open_workbook_auto_from_rs, Data, Reader};
 use csv::ReaderBuilder;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::Cursor;
 use std::path::Path;
 
@@ -42,7 +42,7 @@ pub struct ValueMapping {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ImportConfig {
-    pub import_type: String, // "requirements" or "tests"
+    pub import_type: String, // "requirements", "tests", or "matrix"
     pub column_mappings: Vec<ColumnMapping>,
     #[serde(default)]
     pub value_mappings: Vec<ValueMapping>,
@@ -246,6 +246,10 @@ impl ExcelImporter {
                 "source".to_string(),
                 "parent_id".to_string(),
             ],
+            "matrix" => vec![
+                "requirement_reference_code".to_string(),
+                "verification_reference_code".to_string(),
+            ],
             _ => vec![],
         }
     }
@@ -282,8 +286,15 @@ impl ExcelImporter {
         actor: &User,
         config: &ImportConfig,
     ) -> Result<ImportResult> {
-        if config.import_type != "requirements" && config.import_type != "tests" {
+        if config.import_type != "requirements"
+            && config.import_type != "tests"
+            && config.import_type != "matrix"
+        {
             return Err(anyhow!("Unknown import type: {}", config.import_type));
+        }
+
+        if config.import_type == "matrix" {
+            return self.import_matrix_links(state, actor, config);
         }
 
         let defaults = CatalogDefaults::load(state, config.project_id, &config.import_type)?;
@@ -337,6 +348,103 @@ impl ExcelImporter {
             imported_count,
             errors,
             imported_requirement_ids,
+        })
+    }
+
+    fn import_matrix_links(
+        &self,
+        state: &AppState<DieselCachedRepo>,
+        actor: &User,
+        config: &ImportConfig,
+    ) -> Result<ImportResult> {
+        let reqs: HashMap<String, i32> = state
+            .repo_read()
+            .get_requirements_by_project(config.project_id)
+            .map_err(|e| anyhow!("{}", e))?
+            .into_iter()
+            .filter(|r| r.project_id == config.project_id && !r.reference_code.trim().is_empty())
+            .map(|r| (r.reference_code, r.id))
+            .collect();
+        let vers: HashMap<String, i32> = state
+            .repo_read()
+            .get_verifications_by_project(config.project_id)
+            .map_err(|e| anyhow!("{}", e))?
+            .into_iter()
+            .filter(|v| v.project_id == config.project_id && !v.reference_code.trim().is_empty())
+            .map(|v| (v.reference_code, v.id))
+            .collect();
+        let existing: HashSet<(i32, i32)> = state
+            .repo_read()
+            .get_matrix_by_project(config.project_id)
+            .map_err(|e| anyhow!("{}", e))?
+            .into_iter()
+            .map(|m| (m.req_id, m.verification_id))
+            .collect();
+
+        let service = MatrixService::new(state);
+        let mut imported_count = 0;
+        let mut errors = Vec::new();
+        let mut seen_this_file: HashSet<(i32, i32)> = HashSet::new();
+
+        for (row_index, row_data) in self.data.iter().enumerate() {
+            let values = self.mapped_values(row_data, &config.column_mappings);
+            let req_code = values
+                .get("requirement_reference_code")
+                .map(|s| s.trim())
+                .unwrap_or("");
+            let ver_code = values
+                .get("verification_reference_code")
+                .map(|s| s.trim())
+                .unwrap_or("");
+            if req_code.is_empty() && ver_code.is_empty() {
+                continue;
+            }
+            if req_code.is_empty() || ver_code.is_empty() {
+                errors.push(format!(
+                    "Row {}: both requirement and verification reference codes are required",
+                    row_index + 2
+                ));
+                continue;
+            }
+            let Some(req_id) = reqs.get(req_code).copied() else {
+                errors.push(format!(
+                    "Row {}: requirement '{req_code}' not found",
+                    row_index + 2
+                ));
+                continue;
+            };
+            let Some(ver_id) = vers.get(ver_code).copied() else {
+                errors.push(format!(
+                    "Row {}: verification '{ver_code}' not found",
+                    row_index + 2
+                ));
+                continue;
+            };
+            if existing.contains(&(req_id, ver_id)) || seen_this_file.contains(&(req_id, ver_id)) {
+                continue;
+            }
+            match service.link(actor, req_id, ver_id, config.project_id) {
+                Ok(()) => {
+                    seen_this_file.insert((req_id, ver_id));
+                    imported_count += 1;
+                }
+                Err(e) => errors.push(format!("Row {}: {e}", row_index + 2)),
+            }
+        }
+
+        Ok(ImportResult {
+            success: errors.is_empty(),
+            message: if errors.is_empty() {
+                format!("Successfully imported {imported_count} matrix links")
+            } else {
+                format!(
+                    "Imported {imported_count} matrix links with {} errors",
+                    errors.len()
+                )
+            },
+            imported_count,
+            errors,
+            imported_requirement_ids: Vec::new(),
         })
     }
 
@@ -818,7 +926,33 @@ impl CatalogDefaults {
     }
 }
 
+fn header_looks_like_requirement_code(name: &str) -> bool {
+    let n = name.to_lowercase();
+    n.contains("requirement_reference_code")
+        || n.contains("requirement_code")
+        || n.contains("requirement code")
+        || (n.contains("req") && (n.contains("code") || n.contains("id") || n.contains("ref")))
+}
+
+fn header_looks_like_verification_code(name: &str) -> bool {
+    let n = name.to_lowercase();
+    n.contains("verification_reference_code")
+        || n.contains("verification_code")
+        || n.contains("verification code")
+        || ((n.contains("test") || n.contains("verif"))
+            && (n.contains("code") || n.contains("id") || n.contains("ref")))
+}
+
 fn guess_import_type(columns: &[ExcelColumn]) -> String {
+    let has_req_code = columns
+        .iter()
+        .any(|col| header_looks_like_requirement_code(&col.name));
+    let has_ver_code = columns
+        .iter()
+        .any(|col| header_looks_like_verification_code(&col.name));
+    if has_req_code && has_ver_code {
+        return "matrix".to_string();
+    }
     if columns
         .iter()
         .any(|col| col.name.to_lowercase().contains("req"))

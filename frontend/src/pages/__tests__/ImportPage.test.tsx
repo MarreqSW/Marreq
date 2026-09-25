@@ -262,4 +262,78 @@ describe('ImportPage', () => {
       '/space-project/requirements',
     );
   });
+
+  it('commits a matrix links spreadsheet', async () => {
+    vi.mocked(apiClient.previewExcelImport).mockResolvedValue({
+      import_type: 'matrix',
+      columns: [
+        { index: 0, name: 'requirement_code', sample_value: 'REQ-PWR-001' },
+        { index: 1, name: 'verification_code', sample_value: 'TEST-PWR-001' },
+      ],
+      sample_rows: [['REQ-PWR-001', 'TEST-PWR-001']],
+      row_count: 1,
+      available_fields: {
+        requirements: ['title'],
+        tests: ['name'],
+        matrix: ['requirement_reference_code', 'verification_reference_code'],
+      },
+      unique_values: {
+        requirement_code: ['REQ-PWR-001'],
+        verification_code: ['TEST-PWR-001'],
+      },
+    });
+    vi.mocked(apiClient.commitExcelImport).mockResolvedValue({
+      success: true,
+      message: 'Successfully imported 1 matrix links',
+      imported_count: 1,
+      errors: [],
+      imported_requirement_ids: [],
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/space-project/import']}>
+          <Routes>
+            <Route path="/:projectSlug/import" element={<ImportPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+
+    const file = new File(
+      ['requirement_code,verification_code\nREQ-PWR-001,TEST-PWR-001\n'],
+      'links.csv',
+      { type: 'text/csv' },
+    );
+    await user.upload(screen.getByTestId('import-file'), file);
+    await user.click(screen.getByRole('button', { name: /upload and map columns/i }));
+
+    const importAs = await screen.findByRole('combobox', { name: /import as/i });
+    expect(importAs).toHaveValue('matrix');
+    await user.click(screen.getByRole('button', { name: /^import$/i }));
+
+    await waitFor(() => expect(apiClient.commitExcelImport).toHaveBeenCalled());
+    expect(apiClient.commitExcelImport).toHaveBeenCalledWith(
+      5,
+      file,
+      'matrix',
+      expect.arrayContaining([
+        expect.objectContaining({
+          excel_column: 'requirement_code',
+          target_field: 'requirement_reference_code',
+        }),
+        expect.objectContaining({
+          excel_column: 'verification_code',
+          target_field: 'verification_reference_code',
+        }),
+      ]),
+      expect.any(Array),
+      'csrf-test',
+    );
+    expect(await screen.findByRole('link', { name: /open matrix/i })).toHaveAttribute(
+      'href',
+      '/space-project/matrix',
+    );
+  });
 });

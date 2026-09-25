@@ -131,6 +131,55 @@ mod test_support {
         repo
     }
 
+    pub fn catalog_with_trace_items() -> DieselRepoMock {
+        let mut repo = catalog_repo();
+        repo.requirements.insert(
+            10,
+            Requirement {
+                id: 10,
+                current_version_id: None,
+                same_as_current: None,
+                title: "Power".into(),
+                description: "Power".into(),
+                status_id: 1,
+                author_id: 1,
+                reviewer_id: 1,
+                reference_code: "REQ-PWR-001".into(),
+                category_id: 1,
+                parent_id: Some(0),
+                creation_date: timestamp(),
+                update_date: timestamp(),
+                deadline_date: None,
+                applicability_id: 1,
+                justification: None,
+                project_id: 1,
+                approval_state: "draft".into(),
+                approved_by: None,
+                approved_at: None,
+                custom_fields: None,
+            },
+        );
+        repo.verifications.insert(
+            20,
+            Verification {
+                id: 20,
+                name: "Power test".into(),
+                reference_code: "TEST-PWR-001".into(),
+                description: "Power test".into(),
+                source: "lab".into(),
+                status_id: 1,
+                parent_id: None,
+                project_id: 1,
+                verification_method_id: Some(1),
+                author_id: 1,
+                reviewer_id: 1,
+                status_set_by: None,
+                status_set_at: None,
+            },
+        );
+        repo
+    }
+
     pub fn csv_preview_body(csv: &str) -> (ContentType, String) {
         let boundary = "----MarreqImportBoundary";
         let ct = ContentType::new("multipart", "form-data").with_params(("boundary", boundary));
@@ -384,4 +433,149 @@ async fn commit_reqif_rejects_reqifz() {
         .dispatch()
         .await;
     assert_eq!(response.status(), Status::BadRequest);
+}
+
+const MATRIX_CSV: &str = "requirement_code,verification_code\nREQ-PWR-001,TEST-PWR-001\n";
+
+#[rocket::async_test]
+async fn preview_excel_guesses_matrix_from_code_columns() {
+    let client = test_client(catalog_with_trace_items()).await;
+    let (ct, body) = csv_preview_body(MATRIX_CSV);
+    let response = client
+        .post("/api/projects/1/imports/excel/preview")
+        .private_cookie(session_cookie(&client, 1))
+        .header(ct)
+        .body(body)
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Ok);
+    let json: Value = response.into_json().await.expect("json");
+    assert_eq!(json["import_type"], "matrix");
+    assert!(json["available_fields"]["matrix"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|v| v == "requirement_reference_code"));
+}
+
+#[rocket::async_test]
+async fn commit_matrix_creates_link() {
+    let client = test_client(catalog_with_trace_items()).await;
+    let mappings = r#"[{"excel_column":"requirement_code","target_field":"requirement_reference_code"},{"excel_column":"verification_code","target_field":"verification_reference_code"}]"#;
+    let (ct, body) = csv_commit_body(MATRIX_CSV, "matrix", mappings, "[]");
+    let response = client
+        .post("/api/projects/1/imports/excel")
+        .private_cookie(session_cookie(&client, 1))
+        .header(ct)
+        .body(body)
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Ok);
+    let json: Value = response.into_json().await.expect("json");
+    assert_eq!(json["imported_count"], 1);
+    assert_eq!(json["success"], true);
+
+    let listed = client
+        .get("/api/projects/1/matrix")
+        .private_cookie(session_cookie(&client, 1))
+        .dispatch()
+        .await;
+    assert_eq!(listed.status(), Status::Ok);
+    let links: Vec<Value> = listed.into_json().await.expect("matrix");
+    assert_eq!(links.len(), 1);
+    assert_eq!(links[0]["req_id"], 10);
+    assert_eq!(links[0]["verification_id"], 20);
+}
+
+#[rocket::async_test]
+async fn commit_matrix_reports_missing_requirement_code() {
+    let client = test_client(catalog_with_trace_items()).await;
+    let csv = "requirement_code,verification_code\nREQ-MISSING,TEST-PWR-001\n";
+    let mappings = r#"[{"excel_column":"requirement_code","target_field":"requirement_reference_code"},{"excel_column":"verification_code","target_field":"verification_reference_code"}]"#;
+    let (ct, body) = csv_commit_body(csv, "matrix", mappings, "[]");
+    let response = client
+        .post("/api/projects/1/imports/excel")
+        .private_cookie(session_cookie(&client, 1))
+        .header(ct)
+        .body(body)
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Ok);
+    let json: Value = response.into_json().await.expect("json");
+    assert_eq!(json["imported_count"], 0);
+    assert_eq!(json["success"], false);
+    let errors = json["errors"].as_array().unwrap();
+    assert!(errors
+        .iter()
+        .any(|e| e.as_str().unwrap().contains("REQ-MISSING")));
+}
+
+#[rocket::async_test]
+async fn commit_matrix_reports_missing_verification_code() {
+    let client = test_client(catalog_with_trace_items()).await;
+    let csv = "requirement_code,verification_code\nREQ-PWR-001,TEST-MISSING\n";
+    let mappings = r#"[{"excel_column":"requirement_code","target_field":"requirement_reference_code"},{"excel_column":"verification_code","target_field":"verification_reference_code"}]"#;
+    let (ct, body) = csv_commit_body(csv, "matrix", mappings, "[]");
+    let response = client
+        .post("/api/projects/1/imports/excel")
+        .private_cookie(session_cookie(&client, 1))
+        .header(ct)
+        .body(body)
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Ok);
+    let json: Value = response.into_json().await.expect("json");
+    assert_eq!(json["imported_count"], 0);
+    assert!(json["errors"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|e| e.as_str().unwrap().contains("TEST-MISSING")));
+}
+
+#[rocket::async_test]
+async fn commit_matrix_forbids_viewer() {
+    let client = test_client(catalog_with_trace_items()).await;
+    let mappings = r#"[{"excel_column":"requirement_code","target_field":"requirement_reference_code"},{"excel_column":"verification_code","target_field":"verification_reference_code"}]"#;
+    let (ct, body) = csv_commit_body(MATRIX_CSV, "matrix", mappings, "[]");
+    let response = client
+        .post("/api/projects/1/imports/excel")
+        .private_cookie(session_cookie(&client, 2))
+        .header(ct)
+        .body(body)
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn commit_matrix_skips_existing_link() {
+    let mut repo = catalog_with_trace_items();
+    repo.matrices.push(MatrixLink {
+        req_id: 10,
+        verification_id: 20,
+        creation_date: timestamp(),
+        project_id: 1,
+        suspect: false,
+        suspect_at: None,
+        suspect_reason: None,
+        cleared_by: None,
+        cleared_at: None,
+        triggering_version_id: None,
+        triggering_user_id: None,
+    });
+    let client = test_client(repo).await;
+    let mappings = r#"[{"excel_column":"requirement_code","target_field":"requirement_reference_code"},{"excel_column":"verification_code","target_field":"verification_reference_code"}]"#;
+    let (ct, body) = csv_commit_body(MATRIX_CSV, "matrix", mappings, "[]");
+    let response = client
+        .post("/api/projects/1/imports/excel")
+        .private_cookie(session_cookie(&client, 1))
+        .header(ct)
+        .body(body)
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Ok);
+    let json: Value = response.into_json().await.expect("json");
+    assert_eq!(json["imported_count"], 0);
+    assert_eq!(json["success"], true);
 }

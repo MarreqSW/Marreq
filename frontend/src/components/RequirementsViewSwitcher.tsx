@@ -15,6 +15,14 @@ export default function RequirementsViewSwitcher() {
   const listActive = onReqSection && listView;
   const graphActive = onGraph;
 
+  const requirementsUrl = (mode: 'table' | 'list') => {
+    const next = new URLSearchParams(loc.search);
+    if (mode === 'list') next.set('view', 'list');
+    else next.delete('view');
+    const query = next.toString();
+    return `${basePath}/requirements${query ? `?${query}` : ''}`;
+  };
+
   const seg =
     'flex items-center gap-2 px-4 py-1.5 text-xs font-bold rounded-md transition-colors';
   const inactive =
@@ -24,14 +32,16 @@ export default function RequirementsViewSwitcher() {
   return (
     <div className="flex p-1 bg-stitch-surface rounded-lg gap-1 border border-stitch-border">
       <NavLink
-        to={`${basePath}/requirements`}
+        to={requirementsUrl('table')}
+        aria-current={tableActive ? 'page' : undefined}
         className={() => `${seg} ${tableActive ? active : inactive}`}
       >
         <span className="material-symbols-outlined text-sm">table_rows</span>
         Table
       </NavLink>
       <NavLink
-        to={`${basePath}/requirements?view=list`}
+        to={requirementsUrl('list')}
+        aria-current={listActive ? 'page' : undefined}
         className={() => `${seg} ${listActive ? active : inactive}`}
       >
         <span className="material-symbols-outlined text-sm">view_list</span>
@@ -39,6 +49,7 @@ export default function RequirementsViewSwitcher() {
       </NavLink>
       <NavLink
         to={`${basePath}/traceability`}
+        aria-current={graphActive ? 'page' : undefined}
         className={() => `${seg} ${graphActive ? active : inactive}`}
       >
         <span className="material-symbols-outlined text-sm">hub</span>

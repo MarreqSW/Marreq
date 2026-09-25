@@ -7,6 +7,7 @@ import { preventEditNavigationIfUnconfirmed } from '@/utils/confirmEditApprovedR
 import { Pagination } from '@/components/table/Pagination';
 import { CsvDownloadButton, ExcelDownloadButton } from '@/components/table/CsvDownloadButton';
 import SavedViewsToolbar from '@/components/SavedViewsToolbar';
+import RequirementReviewCard from '@/components/RequirementReviewCard';
 import {
   getMyPermissions,
   getSavedView,
@@ -610,6 +611,7 @@ export default function RequirementsTable({
             <span className="material-symbols-outlined text-sm">filter_list</span>
             <span>Status:</span>
             <select
+              aria-label="Filter by status"
               value={statusFilter === 'all' ? 'all' : String(statusFilter)}
               onChange={(e) => {
                 const v = e.target.value;
@@ -628,6 +630,7 @@ export default function RequirementsTable({
           <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
             <span>Category:</span>
             <select
+              aria-label="Filter by category"
               value={categoryFilter === 'all' ? 'all' : String(categoryFilter)}
               onChange={(e) => {
                 const v = e.target.value;
@@ -646,6 +649,7 @@ export default function RequirementsTable({
           <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
             <span>Approval:</span>
             <select
+              aria-label="Filter by approval"
               value={approvalFilter}
               onChange={(e) => setApprovalFilter(e.target.value)}
               className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-none cursor-pointer"
@@ -659,6 +663,7 @@ export default function RequirementsTable({
           <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
             <span>Sort:</span>
             <select
+              aria-label="Sort requirements"
               value={sortColumn ?? ''}
               onChange={(e) => {
                 const v = e.target.value;
@@ -685,40 +690,42 @@ export default function RequirementsTable({
               {sortDir === 'asc' ? '↑' : '↓'}
             </button>
           </div>
-          <details className="relative">
-            <summary className="list-none cursor-pointer text-xs text-stitch-accent font-bold flex items-center gap-1">
-              <span className="material-symbols-outlined text-sm">view_column</span>
-              Columns
-            </summary>
-            <div className="absolute z-20 mt-2 left-0 min-w-[160px] rounded-lg border border-stitch-border bg-stitch-surface p-2 shadow-stitch space-y-1">
-              {(
-                [
-                  ['key', 'Key'],
-                  ['title', 'Title'],
-                  ['category', 'Category'],
-                  ['parents', 'Parents'],
-                  ['status', 'Status'],
-                  ['approval', 'Approval'],
-                  ['verification', 'Verification'],
-                  ['modified', 'Modified'],
-                  ['author', 'Author'],
-                  ['actions', 'Actions'],
-                ] as const
-              ).map(([id, label]) => (
-                <label
-                  key={id}
-                  className="flex items-center gap-2 text-xs text-stitch-fg/90 px-1 py-0.5"
-                >
-                  <input
-                    type="checkbox"
-                    checked={colVisible(id)}
-                    onChange={() => toggleColumn(id)}
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
-          </details>
+          {viewMode === 'table' ? (
+            <details className="relative">
+              <summary className="list-none cursor-pointer text-xs text-stitch-accent font-bold flex items-center gap-1">
+                <span className="material-symbols-outlined text-sm">view_column</span>
+                Columns
+              </summary>
+              <div className="absolute z-20 mt-2 left-0 min-w-[160px] rounded-lg border border-stitch-border bg-stitch-surface p-2 shadow-stitch space-y-1">
+                {(
+                  [
+                    ['key', 'Key'],
+                    ['title', 'Title'],
+                    ['category', 'Category'],
+                    ['parents', 'Parents'],
+                    ['status', 'Status'],
+                    ['approval', 'Approval'],
+                    ['verification', 'Verification'],
+                    ['modified', 'Modified'],
+                    ['author', 'Author'],
+                    ['actions', 'Actions'],
+                  ] as const
+                ).map(([id, label]) => (
+                  <label
+                    key={id}
+                    className="flex items-center gap-2 text-xs text-stitch-fg/90 px-1 py-0.5"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={colVisible(id)}
+                      onChange={() => toggleColumn(id)}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </div>
+            </details>
+          ) : null}
           <div className="hidden sm:block h-4 w-px bg-stitch-border mx-1" />
           <button
             type="button"
@@ -745,294 +752,27 @@ export default function RequirementsTable({
       ) : null}
 
       {viewMode === 'list' ? (
-        <ul className="space-y-3">
-          {pageRows.map((req) => {
-            const st = statusById.get(req.status_id);
-            const statusTitle = st?.title ?? `Status #${req.status_id}`;
-            const methodIds = req.verification_method_ids ?? [];
-            const parentIds = parentRequirementIdsForDisplay(req);
-            const busy = savingId === req.id;
-            return (
-              <li
-                key={req.id}
-                className="rounded-xl border border-stitch-border bg-stitch-surface p-4 shadow-stitch hover:bg-white/[0.03] transition-colors"
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0 flex-1 space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-mono text-sm text-stitch-accent font-semibold">
-                        {req.reference_code || `#${req.id}`}
-                      </span>
-                      {editCell?.reqId === req.id && editCell.kind === 'status' && canEditStatus && !busy ? (
-                        <div ref={inlineEditRef} className="min-w-[160px]">
-                          <select
-                            className={cellSelect}
-                            value={req.status_id}
-                            onChange={(e) => {
-                              const v = Number(e.target.value);
-                              setRequirements((prev) =>
-                                prev.map((r) => (r.id === req.id ? { ...r, status_id: v } : r)),
-                              );
-                              void saveReq(req.id, { status_id: v });
-                              closeCellEdit();
-                            }}
-                          >
-                            {statusOptions.map((s) => (
-                              <option key={s.id} value={s.id} className="bg-stitch-surface">
-                                {s.title}
-                              </option>
-                            ))}
-                            {!statusOptions.some((s) => s.id === req.status_id) && (
-                              <option value={req.status_id} className="bg-stitch-surface">
-                                Status #{req.status_id}
-                              </option>
-                            )}
-                          </select>
-                        </div>
-                      ) : canEditStatus && !busy ? (
-                        <button
-                          type="button"
-                          title="Click to edit status"
-                          className="inline-flex"
-                          onClick={() => setEditCell({ reqId: req.id, kind: 'status' })}
-                        >
-                          <StatusBadge title={statusTitle} tagColor={st?.tag_color} />
-                        </button>
-                      ) : (
-                        <StatusBadge title={statusTitle} tagColor={st?.tag_color} />
-                      )}
-                      <span className="text-[10px] font-bold uppercase text-stitch-muted border border-stitch-border rounded px-1.5 py-0.5">
-                        {approvalLabel(req.approval_state)}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">Title</p>
-                      {editCell?.reqId === req.id && editCell.kind === 'title' && canEdit && !busy ? (
-                        <div ref={inlineEditRef}>
-                          <input
-                            className={cellInput}
-                            value={req.title}
-                            onChange={(e) => {
-                              const v = e.target.value;
-                              setRequirements((prev) =>
-                                prev.map((r) => (r.id === req.id ? { ...r, title: v } : r)),
-                              );
-                            }}
-                            onBlur={(e) => {
-                              const v = e.target.value.trim();
-                              const b = baselineRef.current.get(req.id);
-                              if (b && v === b.title) {
-                                closeCellEdit();
-                                return;
-                              }
-                              void saveReq(req.id, { title: v });
-                              closeCellEdit();
-                            }}
-                          />
-                        </div>
-                      ) : canEdit && !busy ? (
-                        <button
-                          type="button"
-                          title="Click to edit title"
-                          className={`${displayCellBtn} text-left`}
-                          onClick={() => setEditCell({ reqId: req.id, kind: 'title' })}
-                        >
-                          {req.title.trim() ? req.title : '—'}
-                        </button>
-                      ) : (
-                        <p className="text-sm text-stitch-fg/90">{req.title.trim() ? req.title : '—'}</p>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">Category</p>
-                        {editCell?.reqId === req.id && editCell.kind === 'category' && canEdit && !busy ? (
-                          <div ref={inlineEditRef}>
-                            <select
-                              className={cellSelect}
-                              value={req.category_id}
-                              onChange={(e) => {
-                                const v = Number(e.target.value);
-                                setRequirements((prev) =>
-                                  prev.map((r) => (r.id === req.id ? { ...r, category_id: v } : r)),
-                                );
-                                void saveReq(req.id, { category_id: v });
-                                closeCellEdit();
-                              }}
-                            >
-                              {categories.map((c) => (
-                                <option key={c.id} value={c.id} className="bg-stitch-surface">
-                                  {c.title}
-                                </option>
-                              ))}
-                              {!categories.some((c) => c.id === req.category_id) && (
-                                <option value={req.category_id} className="bg-stitch-surface">
-                                  Category #{req.category_id}
-                                </option>
-                              )}
-                            </select>
-                          </div>
-                        ) : canEdit && !busy ? (
-                          <button
-                            type="button"
-                            className={displayCellBtn}
-                            onClick={() => setEditCell({ reqId: req.id, kind: 'category' })}
-                          >
-                            {categoryById.get(req.category_id) ?? `Category #${req.category_id}`}
-                          </button>
-                        ) : (
-                          <span className="text-stitch-fg/90">
-                            {categoryById.get(req.category_id) ?? `Category #${req.category_id}`}
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">
-                          Parents
-                        </p>
-                        {parentIds.length === 0 ? (
-                          <span className="text-stitch-muted">—</span>
-                        ) : (
-                          <ul className="space-y-1 list-none m-0 p-0">
-                            {parentIds.map((parentId) => (
-                              <li key={parentId}>
-                                <Link
-                                  to={`${basePath}/requirements/${parentId}`}
-                                  className="text-stitch-accent hover:underline block font-mono text-xs"
-                                  title={reqTitleById.get(parentId) ?? undefined}
-                                >
-                                  {reqKeyById.get(parentId) ?? `REQ #${parentId}`}
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                      </div>
-                      <div className="sm:col-span-2">
-                        <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">Verification</p>
-                        {editCell?.reqId === req.id &&
-                        editCell.kind === 'verification_methods' &&
-                        canEdit &&
-                        !busy ? (
-                          <div ref={inlineEditRef} className="space-y-2">
-                            <select
-                              multiple
-                              size={Math.min(8, Math.max(3, verificationMethods.length || 3))}
-                              className={`${cellInput} min-h-[72px]`}
-                              value={methodIds.map(String)}
-                              aria-label="Verification methods"
-                              onChange={(e) => {
-                                const sel = [...e.target.selectedOptions].map((o) => Number(o.value));
-                                setRequirements((prev) =>
-                                  prev.map((r) =>
-                                    r.id === req.id ? { ...r, verification_method_ids: sel } : r,
-                                  ),
-                                );
-                                void saveReq(req.id, { verification_method_ids: sel });
-                              }}
-                            >
-                              {verificationMethods.map((m) => (
-                                <option key={m.id} value={m.id} className="bg-stitch-surface">
-                                  {m.title}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              type="button"
-                              className="text-[10px] font-bold uppercase tracking-wider text-stitch-accent hover:underline"
-                              onClick={closeCellEdit}
-                            >
-                              Done
-                            </button>
-                          </div>
-                        ) : canEdit && !busy ? (
-                          <button
-                            type="button"
-                            className={displayCellBtn}
-                            onClick={() => setEditCell({ reqId: req.id, kind: 'verification_methods' })}
-                          >
-                            {verificationMethodsText(methodIds, verificationMethods)}
-                          </button>
-                        ) : (
-                          <span className="text-stitch-fg/90">
-                            {verificationMethodsText(methodIds, verificationMethods)}
-                          </span>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">Modified</p>
-                        <span className="font-mono text-stitch-muted">{formatModified(req.update_date)}</span>
-                      </div>
-                      <div>
-                        <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">Author</p>
-                        {editCell?.reqId === req.id && editCell.kind === 'author' && canEdit && !busy ? (
-                          <div ref={inlineEditRef}>
-                            <select
-                              className={cellSelect}
-                              value={req.author_id}
-                              onChange={(e) => {
-                                const v = Number(e.target.value);
-                                setRequirements((prev) =>
-                                  prev.map((r) => (r.id === req.id ? { ...r, author_id: v } : r)),
-                                );
-                                void saveReq(req.id, { author_id: v });
-                                closeCellEdit();
-                              }}
-                            >
-                              {memberUserIds.map((id) => (
-                                <option key={id} value={id} className="bg-stitch-surface">
-                                  {userLabel(id)}
-                                </option>
-                              ))}
-                              {!memberUserIds.includes(req.author_id) && (
-                                <option value={req.author_id} className="bg-stitch-surface">
-                                  {userLabel(req.author_id)}
-                                </option>
-                              )}
-                            </select>
-                          </div>
-                        ) : canEdit && !busy ? (
-                          <button type="button" className={displayCellBtn} onClick={() => setEditCell({ reqId: req.id, kind: 'author' })}>
-                            {userLabel(req.author_id)}
-                          </button>
-                        ) : (
-                          <span className="text-stitch-fg/90">{userLabel(req.author_id)}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0 border-t sm:border-t-0 sm:border-l border-stitch-border/40 pt-3 sm:pt-0 sm:pl-3">
-                    <Link
-                      to={`${basePath}/requirements/${req.id}`}
-                      className="p-1.5 text-stitch-muted hover:text-stitch-accent"
-                      title="View"
-                    >
-                      <span className="material-symbols-outlined text-lg">visibility</span>
-                    </Link>
-                    <Link
-                      to={`${basePath}/requirements/${req.id}/edit`}
-                      onClick={(event) =>
-                        preventEditNavigationIfUnconfirmed(event, req.approval_state, req.id)
-                      }
-                      className="p-1.5 text-stitch-muted hover:text-stitch-accent"
-                      title="Edit"
-                    >
-                      <span className="material-symbols-outlined text-lg">edit</span>
-                    </Link>
-                    {canEdit ? (
-                      <Link
-                        to={`${basePath}/requirements/new?from=${req.id}`}
-                        className="p-1.5 text-stitch-muted hover:text-stitch-accent"
-                        title="Duplicate"
-                      >
-                        <span className="material-symbols-outlined text-lg">content_copy</span>
-                      </Link>
-                    ) : null}
-                  </div>
-                </div>
-              </li>
-            );
-          })}
+        <ul aria-label="Requirements for review" className="space-y-3">
+          {pageRows.map((req) => (
+            <li key={req.id}>
+              <RequirementReviewCard
+                requirement={req}
+                basePath={basePath}
+                status={statusById.get(req.status_id)}
+                category={categoryById.get(req.category_id) ?? `Category #${req.category_id}`}
+                author={userLabel(req.author_id)}
+                verificationMethods={verificationMethods}
+                requirementKeyById={reqKeyById}
+                requirementTitleById={reqTitleById}
+                canEdit={canEdit}
+              />
+            </li>
+          ))}
+          {filtered.length === 0 ? (
+            <li className="rounded-xl border border-stitch-border bg-stitch-surface p-8 text-center text-sm text-stitch-muted">
+              No requirements match filters.
+            </li>
+          ) : null}
         </ul>
       ) : (
         <div className="bg-stitch-surface overflow-x-auto rounded-xl border border-stitch-border shadow-stitch">
@@ -1428,6 +1168,7 @@ export default function RequirementsTable({
           <div className="flex items-center gap-2 text-xs text-stitch-muted">
             <span>Show rows:</span>
             <select
+              aria-label="Requirements per page"
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
               className="bg-stitch-elevated border border-stitch-border rounded text-xs py-1 px-2 text-stitch-fg focus:ring-1 focus:ring-stitch-accent outline-none"

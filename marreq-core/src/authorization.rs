@@ -53,6 +53,10 @@ where
 
 /// Require the user to be a designated project reviewer, or a site admin when
 /// the project has no explicit reviewer pool yet.
+///
+/// `project_reviewers` is the sole authorization source for status and approval
+/// gates. Role capabilities such as `Permission::ApproveVersions` do not grant
+/// these transitions by themselves.
 pub fn require_project_reviewer<R>(
     repo: &R,
     user: &User,
@@ -61,7 +65,6 @@ pub fn require_project_reviewer<R>(
 where
     R: ProjectMembersRepository + ProjectReviewersRepository,
 {
-    require_project_permission(repo, user, project_id, Permission::ApproveVersions)?;
     let reviewer_ids = repo.list_project_reviewer_ids(project_id)?;
     if reviewer_ids.is_empty() {
         if user.is_admin {
@@ -250,6 +253,31 @@ mod tests {
 
         repo.project_reviewers.insert(10, vec![7]);
         assert!(require_project_reviewer(&repo, &user, 10).is_ok());
+    }
+
+    #[test]
+    fn author_in_reviewer_pool_may_change_review_gates() {
+        let user = user(7, false);
+        let mut repo = DieselRepoMock::default();
+        repo.project_members
+            .push(project_member(10, 7, crate::permissions::ROLE_AUTHOR));
+        repo.project_reviewers.insert(10, vec![7]);
+
+        assert!(require_project_reviewer(&repo, &user, 10).is_ok());
+    }
+
+    #[test]
+    fn reviewer_role_outside_pool_cannot_change_review_gates() {
+        let user = user(7, false);
+        let mut repo = DieselRepoMock::default();
+        repo.project_members
+            .push(project_member(10, 7, crate::permissions::ROLE_REVIEWER));
+        repo.project_reviewers.insert(10, vec![8]);
+
+        assert!(matches!(
+            require_project_reviewer(&repo, &user, 10),
+            Err(AuthorizationError::Forbidden)
+        ));
     }
 
     #[test]

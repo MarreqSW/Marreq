@@ -17,6 +17,11 @@ use std::collections::BTreeSet;
 pub enum Permission {
     ViewRequirements,
     EditRequirements,
+    /// Role capability retained for UI/compatibility surfaces.
+    ///
+    /// Status and version-approval transitions are authorized solely by
+    /// membership in `project_reviewers` (see `may_change_review_gates` /
+    /// `require_project_reviewer`), not by this permission alone.
     ApproveVersions,
     ManageCustomFields,
     ManageProjectConfiguration,
@@ -81,9 +86,6 @@ fn user_is_project_reviewer<R>(repo: &R, user: &User, project_id: i32) -> bool
 where
     R: ProjectMembersRepository + ProjectReviewersRepository,
 {
-    if !has_permission(repo, user, project_id, Permission::ApproveVersions) {
-        return false;
-    }
     let Ok(ids) = repo.list_project_reviewer_ids(project_id) else {
         return false;
     };
@@ -95,8 +97,10 @@ where
         .unwrap_or(false)
 }
 
-/// Whether the user may change requirement/verification status and version approval
-/// (member of the project's reviewer list, or site admin when that list is still empty).
+/// Whether the user may change requirement/verification status and version approval.
+///
+/// Canonical source: `project_reviewers` membership, or site admin when that
+/// list is still empty. Project role capabilities are not consulted.
 pub fn may_change_review_gates<R>(repo: &R, user: &User, project_id: i32) -> bool
 where
     R: ProjectMembersRepository + ProjectReviewersRepository,
@@ -311,5 +315,63 @@ mod tests {
             GroupPermission::ManageGroupMembers
         ));
         assert!(!group_role_has_permission(99, GroupPermission::ViewGroup));
+    }
+
+    #[test]
+    fn author_in_reviewer_pool_is_project_reviewer_without_approve_capability() {
+        use crate::models::ProjectMember;
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
+
+        let mut actor = DieselRepoMock::make_user(7, "tester", "");
+        actor.is_admin = false;
+        let mut repo = DieselRepoMock::default();
+        repo.project_members.push(ProjectMember {
+            project_id: 10,
+            user_id: 7,
+            role: ROLE_AUTHOR,
+            created_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+            updated_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        });
+        repo.project_reviewers.insert(10, vec![7]);
+
+        let perms = effective_permissions(&repo, &actor, 10);
+        assert!(perms.is_project_reviewer);
+        assert!(!perms.approve_versions);
+        assert!(may_change_review_gates(&repo, &actor, 10));
+    }
+
+    #[test]
+    fn reviewer_role_outside_pool_is_not_project_reviewer() {
+        use crate::models::ProjectMember;
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
+
+        let mut actor = DieselRepoMock::make_user(7, "tester", "");
+        actor.is_admin = false;
+        let mut repo = DieselRepoMock::default();
+        repo.project_members.push(ProjectMember {
+            project_id: 10,
+            user_id: 7,
+            role: ROLE_REVIEWER,
+            created_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+            updated_at: chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+                .unwrap()
+                .and_hms_opt(0, 0, 0)
+                .unwrap(),
+        });
+        repo.project_reviewers.insert(10, vec![8]);
+
+        let perms = effective_permissions(&repo, &actor, 10);
+        assert!(!perms.is_project_reviewer);
+        assert!(perms.approve_versions);
+        assert!(!may_change_review_gates(&repo, &actor, 10));
     }
 }

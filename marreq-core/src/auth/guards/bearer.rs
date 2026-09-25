@@ -41,6 +41,51 @@ fn hash_token(token: &str) -> String {
         .collect()
 }
 
+/// Return whether the request carries a Bearer credential that is currently
+/// valid. CSRF protection uses this before exempting unsafe requests; header
+/// shape alone is not authentication.
+pub async fn request_has_valid_bearer(request: &Request<'_>) -> bool {
+    let Some(token) = request
+        .headers()
+        .get_one("Authorization")
+        .and_then(|header| header.strip_prefix("Bearer "))
+        .map(str::trim)
+        .filter(|token| !token.is_empty())
+    else {
+        return false;
+    };
+    let Some(state) = request.rocket().state::<AppState>().cloned() else {
+        return false;
+    };
+    let token_hash = hash_token(token);
+    let api_token = rocket::tokio::task::spawn_blocking({
+        let state = state.clone();
+        move || state.try_repo_read()?.get_user_by_token_hash(&token_hash)
+    })
+    .await;
+    match api_token {
+        Ok(Ok(_)) => true,
+        Ok(Err(RepoError::NotFound)) => {
+            let resource = mcp_public_resource().trim_end_matches('/').to_owned();
+            state
+                .try_repo_read()
+                .ok()
+                .and_then(|repo| {
+                    crate::auth::delegated::validate_access(
+                        &*repo,
+                        token,
+                        &resource,
+                        None,
+                        chrono::Utc::now().naive_utc(),
+                    )
+                    .ok()
+                })
+                .is_some()
+        }
+        _ => false,
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum AuthenticationSource {
     Session,

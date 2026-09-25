@@ -27,8 +27,8 @@
 //!
 //! ## Exemptions
 //!
-//! * Requests that carry `Authorization: Bearer …` are using API-token auth
-//!   and are **not** CSRF-vulnerable, so they are unconditionally forwarded.
+//! * Requests with a successfully authenticated Bearer credential are not
+//!   CSRF-vulnerable and are forwarded without cookie CSRF validation.
 //! * Safe methods (`GET`, `HEAD`, `OPTIONS`) are never checked.
 //!
 //! ## Rejection mechanism
@@ -219,13 +219,9 @@ impl Fairing for CsrfFairing {
             return;
         }
 
-        // --- Exemption: Bearer API-token auth is not CSRF-vulnerable ---
-        if req
-            .headers()
-            .get_one("Authorization")
-            .map(|h| h.starts_with("Bearer "))
-            .unwrap_or(false)
-        {
+        // Header shape is attacker-controlled. Only a credential that is
+        // valid now may bypass session-cookie CSRF validation.
+        if crate::auth::guards::request_has_valid_bearer(req).await {
             return;
         }
 

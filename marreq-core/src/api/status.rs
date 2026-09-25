@@ -7,17 +7,37 @@ use crate::services::StatusService;
 
 #[get("/status")]
 pub async fn list_requirement_statuses(
+    user: ApiUser,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<RequirementStatus>>> {
     let service = StatusService::new(state.inner());
-    let statuses = service.list_requirement_statuses()?;
+    let mut statuses = service.list_requirement_statuses()?;
+    let repo = state.repo_read();
+    statuses.retain(|status| {
+        crate::permissions::has_permission(
+            &*repo,
+            user.user(),
+            status.project_id,
+            Permission::ViewRequirements,
+        )
+    });
     Ok(Json(statuses))
 }
 
 #[get("/status/<id>")]
-pub async fn get_requirement_status(id: i32, state: &State<AppState>) -> ApiResult<Json<Value>> {
+pub async fn get_requirement_status(
+    user: ApiUser,
+    id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<Value>> {
     let service = StatusService::new(state.inner());
     let status = service.get_requirement_status(id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        status.project_id,
+        Permission::ViewRequirements,
+    )?;
 
     Ok(Json(json!({
         "id": status.id,
@@ -32,29 +52,62 @@ pub async fn get_requirement_status(id: i32, state: &State<AppState>) -> ApiResu
 
 #[put("/status/<id>", data = "<payload>")]
 pub async fn update_requirement_status(
+    user: ApiUser,
     id: i32,
     state: &State<AppState>,
     payload: Json<NewRequirementStatus>,
 ) -> ApiResult<Value> {
     let service = StatusService::new(state.inner());
-    service.update_requirement_status(id, &payload.into_inner())?;
+    let current = service.get_requirement_status(id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        current.project_id,
+        Permission::ManageProjectConfiguration,
+    )?;
+    let payload = payload.into_inner();
+    if payload.project_id != current.project_id {
+        return Err(ApiError::UnprocessableEntity(
+            "requirement status project cannot be changed".into(),
+        ));
+    }
+    service.update_requirement_status(id, &payload)?;
     Ok(json!({ "status": "ok" }))
 }
 
 #[delete("/status/<id>")]
-pub async fn delete_requirement_status(id: i32, state: &State<AppState>) -> ApiResult<Status> {
+pub async fn delete_requirement_status(
+    user: ApiUser,
+    id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Status> {
     let service = StatusService::new(state.inner());
+    let status = service.get_requirement_status(id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        status.project_id,
+        Permission::ManageProjectConfiguration,
+    )?;
     service.delete_requirement_status(id)?;
     Ok(Status::NoContent)
 }
 
 #[post("/status", data = "<payload>")]
 pub async fn create_requirement_status(
+    user: ApiUser,
     state: &State<AppState>,
     payload: Json<NewRequirementStatus>,
 ) -> ApiResult<(Status, Value)> {
     let service = StatusService::new(state.inner());
-    let id = service.create_requirement_status(payload.into_inner())?;
+    let payload = payload.into_inner();
+    require_project_permission(
+        state,
+        user.user(),
+        payload.project_id,
+        Permission::ManageProjectConfiguration,
+    )?;
+    let id = service.create_requirement_status(payload)?;
 
     Ok((Status::Created, json!({ "status": "ok", "id": id })))
 }
@@ -63,6 +116,7 @@ pub async fn create_requirement_status(
 mod tests {
     use super::*;
     use crate::app::AppState;
+    use crate::auth::session::test_session_cookie_for;
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use rocket::http::ContentType;
     use rocket::local::asynchronous::Client;
@@ -72,10 +126,18 @@ mod tests {
 
     type TestState = AppState<CacheRepository<DieselRepoMock>>;
 
-    fn state_from_repo(repo: DieselRepoMock) -> TestState {
+    fn state_from_repo(mut repo: DieselRepoMock) -> TestState {
+        let mut admin = DieselRepoMock::make_user(1, "admin", "");
+        admin.is_admin = true;
+        repo.users.insert(1, admin);
         AppState {
             repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
         }
+    }
+
+    fn admin_cookie(client: &Client) -> rocket::http::Cookie<'static> {
+        let state = client.rocket().state::<TestState>().unwrap();
+        test_session_cookie_for(state, 1)
     }
 
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
@@ -111,7 +173,11 @@ mod tests {
         repo.requirement_statuses = statuses;
 
         let client = client_with_repo(repo).await;
-        let response = client.get("/api/status").dispatch().await;
+        let response = client
+            .get("/api/status")
+            .private_cookie(admin_cookie(&client))
+            .dispatch()
+            .await;
         assert_eq!(response.status(), Status::Ok);
         let items: Vec<RequirementStatus> = response.into_json().await.unwrap();
         assert_eq!(items.len(), 1);
@@ -135,7 +201,11 @@ mod tests {
         );
 
         let client = client_with_repo(repo).await;
-        let response = client.get("/api/status/5").dispatch().await;
+        let response = client
+            .get("/api/status/5")
+            .private_cookie(admin_cookie(&client))
+            .dispatch()
+            .await;
         assert_eq!(response.status(), Status::Ok);
         let value: Value = response.into_json().await.unwrap();
         assert_eq!(value.get("title"), Some(&Value::from("Approved")));
@@ -148,6 +218,7 @@ mod tests {
         let response = client
             .post("/api/status")
             .header(ContentType::JSON)
+            .private_cookie(admin_cookie(&client))
             .body(
                 json!({
                     "title": "In Review",

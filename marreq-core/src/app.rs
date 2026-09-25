@@ -57,7 +57,7 @@ pub struct MyDbConn(rocket_sync_db_pools::diesel::PgConnection);
 
 pub fn build_with(
     mode: &'static dyn crate::deployment::DeploymentMode,
-    extra_routes: Vec<rocket::Route>,
+    extra_routes: Vec<(crate::api::RoutePolicy, rocket::Route)>,
     extra_fairings: Vec<std::sync::Arc<dyn rocket::fairing::Fairing>>,
 ) -> Rocket<Build> {
     let auth_config = crate::auth::AuthConfig::from_env(mode.name()).unwrap_or_else(|error| {
@@ -67,10 +67,40 @@ pub fn build_with(
     build_with_auth(mode, auth_config, extra_routes, extra_fairings)
 }
 
+/// Policy-classified routes grouped by the mount base `build_with_auth` uses.
+#[derive(Debug)]
+pub struct DeclaredMounts {
+    /// Mounted at `/api`.
+    pub api: Vec<(crate::api::RoutePolicy, rocket::Route)>,
+    /// Mounted at `/` (root handlers + OAuth/well-known).
+    pub root: Vec<(crate::api::RoutePolicy, rocket::Route)>,
+}
+
+/// Assemble the exact route providers that `build_with_auth` mounts.
+pub fn declared_mounts(
+    extra_routes: Vec<(crate::api::RoutePolicy, rocket::Route)>,
+) -> DeclaredMounts {
+    let mut api = crate::api::routes_with_policies();
+    api.extend(extra_routes);
+    let mut root = crate::api::root_routes_with_policies();
+    root.extend(crate::api::oauth::routes_with_policies());
+    DeclaredMounts { api, root }
+}
+
+/// Flat declared route-policy inventory for the routes `build_with_auth` mounts.
+pub fn declared_route_inventory(
+    extra_routes: Vec<(crate::api::RoutePolicy, rocket::Route)>,
+) -> Vec<(crate::api::RoutePolicy, rocket::Route)> {
+    let mounts = declared_mounts(extra_routes);
+    let mut declared = mounts.api;
+    declared.extend(mounts.root);
+    declared
+}
+
 pub fn build_with_auth(
     mode: &'static dyn crate::deployment::DeploymentMode,
     auth_config: crate::auth::AuthConfig,
-    extra_routes: Vec<rocket::Route>,
+    extra_routes: Vec<(crate::api::RoutePolicy, rocket::Route)>,
     extra_fairings: Vec<std::sync::Arc<dyn rocket::fairing::Fairing>>,
 ) -> Rocket<Build> {
     // Register the mode into the OnceLock so `deployment::current()` works
@@ -100,8 +130,17 @@ pub fn build_with_auth(
         repo_guard.cache().start_cache_maintenance();
     }
 
-    let mut api_routes = crate::api::routes();
-    api_routes.extend(extra_routes);
+    let mounts = declared_mounts(extra_routes);
+    let api_routes = mounts
+        .api
+        .into_iter()
+        .map(|(_, route)| route)
+        .collect::<Vec<_>>();
+    let root_routes = mounts
+        .root
+        .into_iter()
+        .map(|(_, route)| route)
+        .collect::<Vec<_>>();
 
     let mut rocket = rocket::build()
         .manage(AppState { repo })
@@ -109,15 +148,8 @@ pub fn build_with_auth(
         .manage(mode)
         .manage(crate::auth::rate_limiter::LoginRateLimiter::new())
         .manage(crate::api::oauth::OAuthRegistrationRateLimiter::new())
-        .mount(
-            "/",
-            routes![
-                crate::fairings::csrf_denied,
-                crate::routes::api_info::root_index,
-            ],
-        )
+        .mount("/", root_routes)
         .mount("/api", api_routes)
-        .mount("/", crate::api::oauth::routes())
         .register(
             "/",
             catchers![
@@ -154,4 +186,72 @@ fn default_inner_repo() -> Result<DieselRepo, Box<dyn std::error::Error>> {
 #[cfg(any(test, feature = "test-helpers"))]
 fn default_inner_repo() -> DieselRepoMock {
     DieselRepoMock::default()
+}
+
+#[cfg(test)]
+mod policy_inventory_tests {
+    use super::*;
+    use crate::api::RoutePolicy;
+    use crate::deployment::install_test_server_mode;
+    use rocket::http::Method;
+    use std::collections::BTreeSet;
+
+    fn route_key(method: Method, uri: &str) -> String {
+        format!("{method} {uri}")
+    }
+
+    fn join_mount(base: &str, uri: &str) -> String {
+        if base == "/" {
+            return uri.to_string();
+        }
+        let base = base.trim_end_matches('/');
+        if uri == "/" {
+            return base.to_string();
+        }
+        format!("{base}{uri}")
+    }
+
+    #[test]
+    fn every_mounted_route_has_exactly_one_declared_policy() {
+        install_test_server_mode();
+        let mounts = declared_mounts(vec![]);
+        let mut declared_keys = BTreeSet::new();
+        for (policy, route) in &mounts.api {
+            assert!(route.name.is_some(), "route missing name under {policy:?}");
+            let key = route_key(route.method, &join_mount("/api", &route.uri.to_string()));
+            assert!(
+                declared_keys.insert(key.clone()),
+                "duplicate policy declaration for {key}"
+            );
+        }
+        for (policy, route) in &mounts.root {
+            assert!(route.name.is_some(), "route missing name under {policy:?}");
+            let key = route_key(route.method, &join_mount("/", &route.uri.to_string()));
+            assert!(
+                declared_keys.insert(key.clone()),
+                "duplicate policy declaration for {key}"
+            );
+        }
+
+        let rocket = build_with(crate::deployment::current(), vec![], vec![]);
+        let mut mounted_keys = BTreeSet::new();
+        for route in rocket.routes() {
+            let key = route_key(route.method, &route.uri.to_string());
+            assert!(
+                mounted_keys.insert(key.clone()),
+                "duplicate mounted route for {key}"
+            );
+        }
+
+        assert_eq!(
+            declared_keys, mounted_keys,
+            "declared route-policy inventory must match the Rocket route table"
+        );
+        assert!(
+            declared_route_inventory(vec![]).iter().any(|(p, r)| {
+                *p == RoutePolicy::Authenticated && r.name.as_deref() == Some("grants")
+            }),
+            "oauth grants must be present in the policy inventory"
+        );
+    }
 }

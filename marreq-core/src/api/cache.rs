@@ -8,6 +8,7 @@ use crate::repository::errors::RepoError;
 
 #[get("/cache/stats")]
 pub async fn stats(
+    _admin: AdminOnly,
     state: &State<AppState>,
 ) -> ApiResult<Json<crate::repository::cache::stats::CacheStats>> {
     let stats = state
@@ -18,7 +19,7 @@ pub async fn stats(
 }
 
 #[post("/cache/clear")]
-pub async fn clear(state: &State<AppState>) -> ApiResult<Json<Value>> {
+pub async fn clear(_admin: AdminOnly, state: &State<AppState>) -> ApiResult<Json<Value>> {
     state
         .repo
         .async_write(|repo| {
@@ -33,7 +34,7 @@ pub async fn clear(state: &State<AppState>) -> ApiResult<Json<Value>> {
 }
 
 #[post("/cache/cleanup")]
-pub async fn cleanup(state: &State<AppState>) -> ApiResult<Json<Value>> {
+pub async fn cleanup(_admin: AdminOnly, state: &State<AppState>) -> ApiResult<Json<Value>> {
     let cleaned = state
         .repo
         .async_write(|repo| Ok::<_, RepoError>(repo.cache().cleanup()))
@@ -46,7 +47,7 @@ pub async fn cleanup(state: &State<AppState>) -> ApiResult<Json<Value>> {
 }
 
 #[get("/cache/performance")]
-pub async fn performance(state: &State<AppState>) -> ApiResult<Json<Value>> {
+pub async fn performance(_admin: AdminOnly, state: &State<AppState>) -> ApiResult<Json<Value>> {
     let performance = state
         .repo
         .async_read(|repo| Ok::<_, RepoError>(repo.cache().get_performance()))
@@ -55,7 +56,7 @@ pub async fn performance(state: &State<AppState>) -> ApiResult<Json<Value>> {
 }
 
 #[get("/cache/recommendations")]
-pub async fn recommendations(state: &State<AppState>) -> ApiResult<Json<Value>> {
+pub async fn recommendations(_admin: AdminOnly, state: &State<AppState>) -> ApiResult<Json<Value>> {
     let recommendations = state
         .repo
         .async_read(|repo| Ok::<_, RepoError>(repo.cache().get_recommendations()))
@@ -64,7 +65,7 @@ pub async fn recommendations(state: &State<AppState>) -> ApiResult<Json<Value>> 
 }
 
 #[post("/cache/reset-counters")]
-pub async fn reset_counters(state: &State<AppState>) -> ApiResult<Json<Value>> {
+pub async fn reset_counters(_admin: AdminOnly, state: &State<AppState>) -> ApiResult<Json<Value>> {
     state
         .repo
         .async_write(|repo| {
@@ -91,6 +92,7 @@ pub async fn health(state: &State<AppState>) -> ApiResult<Json<Value>> {
 mod tests {
     use super::*;
     use crate::app::AppState;
+    use crate::auth::session::test_session_cookie_for;
     use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use rocket::http::ContentType;
     use rocket::local::asynchronous::Client;
@@ -102,10 +104,15 @@ mod tests {
     fn test_state() -> TestState {
         AppState {
             repo: Arc::new(RwLock::new(CacheRepository::new(
-                DieselRepoMock::default(),
+                DieselRepoMock::default().with_admin_user(),
                 0,
             ))),
         }
+    }
+
+    fn admin_cookie(client: &Client) -> rocket::http::Cookie<'static> {
+        let state = client.rocket().state::<TestState>().unwrap();
+        test_session_cookie_for(state, 1)
     }
 
     async fn test_client() -> Client {
@@ -127,7 +134,11 @@ mod tests {
     #[rocket::async_test]
     async fn stats_returns_default_values() {
         let client = test_client().await;
-        let response = client.get("/api/cache/stats").dispatch().await;
+        let response = client
+            .get("/api/cache/stats")
+            .private_cookie(admin_cookie(&client))
+            .dispatch()
+            .await;
         assert_eq!(response.status(), Status::Ok);
         let stats = response.into_json::<Value>().await.unwrap();
         assert!(stats.get("hits").is_some());
@@ -139,6 +150,7 @@ mod tests {
         let response = client
             .post("/api/cache/clear")
             .header(ContentType::JSON)
+            .private_cookie(admin_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);
@@ -155,6 +167,7 @@ mod tests {
         let response = client
             .post("/api/cache/cleanup")
             .header(ContentType::JSON)
+            .private_cookie(admin_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);
@@ -168,6 +181,7 @@ mod tests {
         let response = client
             .post("/api/cache/reset-counters")
             .header(ContentType::JSON)
+            .private_cookie(admin_cookie(&client))
             .dispatch()
             .await;
         assert_eq!(response.status(), Status::Ok);
@@ -183,7 +197,11 @@ mod tests {
     #[rocket::async_test]
     async fn performance_and_health_endpoints_work() {
         let client = test_client().await;
-        let performance = client.get("/api/cache/performance").dispatch().await;
+        let performance = client
+            .get("/api/cache/performance")
+            .private_cookie(admin_cookie(&client))
+            .dispatch()
+            .await;
         assert_eq!(performance.status(), Status::Ok);
         assert!(performance.into_json::<Value>().await.unwrap().is_object());
 

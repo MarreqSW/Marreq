@@ -1001,8 +1001,10 @@ async fn patch_status_forbidden_for_site_admin_not_in_project_reviewer_pool() {
 }
 
 #[rocket::async_test]
-async fn patch_status_ok_for_user_in_project_reviewer_pool() {
+async fn patch_status_ok_for_author_in_project_reviewer_pool() {
     let mut repo = base_repo();
+    // Author (user 3, role 3) has no ApproveVersions role capability, but is
+    // an explicit project reviewer — that alone must authorize the transition.
     repo.project_reviewers.insert(PROJECT_ID, vec![3]);
     insert_requirement_with_version_for_gates(&mut repo);
 
@@ -1017,6 +1019,26 @@ async fn patch_status_ok_for_user_in_project_reviewer_pool() {
         .await;
 
     assert_eq!(response.status(), Status::Ok);
+}
+
+#[rocket::async_test]
+async fn patch_status_forbidden_for_reviewer_role_outside_pool() {
+    let mut repo = base_repo();
+    repo.project_reviewers.insert(PROJECT_ID, vec![3]);
+    insert_requirement_with_version_for_gates(&mut repo);
+
+    let client = test_client(repo).await;
+
+    // User 2 has Reviewer role (ApproveVersions) but is not in the pool.
+    let response = client
+        .patch(format!("/api/projects/{PROJECT_ID}/requirements/1"))
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 2))
+        .body(json!({ "status_id": 2 }).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Forbidden);
 }
 
 #[rocket::async_test]
@@ -1062,7 +1084,7 @@ async fn set_version_approval_forbidden_for_site_admin_not_in_reviewer_pool() {
 }
 
 #[rocket::async_test]
-async fn set_version_approval_ok_for_user_in_reviewer_pool() {
+async fn set_version_approval_ok_for_author_in_reviewer_pool() {
     let mut repo = base_repo();
     repo.project_reviewers.insert(PROJECT_ID, vec![3]);
     insert_requirement_with_version_for_gates(&mut repo);
@@ -1144,7 +1166,7 @@ async fn verification_field_status_forbidden_when_user_not_in_reviewer_pool() {
 }
 
 #[rocket::async_test]
-async fn verification_field_status_ok_for_user_in_reviewer_pool() {
+async fn verification_field_status_ok_for_author_in_reviewer_pool() {
     let mut repo = base_repo();
     repo.project_reviewers.insert(PROJECT_ID, vec![3]);
     test_support::add_verification_statuses_and_row(&mut repo, PROJECT_ID);

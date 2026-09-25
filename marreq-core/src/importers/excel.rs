@@ -553,7 +553,7 @@ impl ExcelImporter {
                 context.project_id,
                 status_id,
             )
-            .map_err(|e| anyhow!("{}", e.message()))?;
+            .map_err(|e| anyhow!("{e}"))?;
         }
 
         let parent_links = match req_data.get("parent_id") {
@@ -634,7 +634,7 @@ impl ExcelImporter {
                 context.project_id,
                 status_id,
             )
-            .map_err(|e| anyhow!("{}", e.message()))?;
+            .map_err(|e| anyhow!("{e}"))?;
         }
 
         let parent_id = match test_data.get("parent_id") {

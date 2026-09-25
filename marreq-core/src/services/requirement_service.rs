@@ -11,11 +11,13 @@
 //! embedding generation on create/update operations.
 
 use crate::app::{AppState, DieselCachedRepo};
+use crate::authorization::AuthorizationError;
 use crate::logger::Loggable;
 use crate::models::{
     CustomFieldValueInput, EntityType, NewRequirement, NewRequirementVersionLink, Requirement,
     RequirementVersion, RequirementVersionLink, User, Verification,
 };
+use crate::permissions::Permission;
 use crate::repository::errors::RepoError;
 use crate::repository::{
     CustomFieldRepository, LookupRepository, MatrixRepository, RequirementVersionLinksRepository,
@@ -82,6 +84,19 @@ impl<'a> RequirementService<'a> {
     /// Create a new service instance bound to the provided application state.
     pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
         Self { state }
+    }
+
+    fn require_write_access(&self, actor: &User, project_id: i32) -> Result<(), RepoError> {
+        crate::authorization::require_project_permission(
+            &*self.repo_read(),
+            actor,
+            project_id,
+            Permission::EditRequirements,
+        )
+        .map_err(|error| match error {
+            AuthorizationError::Forbidden => RepoError::Unauthorized,
+            AuthorizationError::Repository(error) => error,
+        })
     }
 
     /// Retrieve all requirements (with custom fields attached).
@@ -540,6 +555,7 @@ impl<'a> RequirementService<'a> {
         parent_links: Option<Vec<(i32, String, Option<String>)>>,
         mcp_idempotency_identity: Option<&str>,
     ) -> Result<i32, RepoError> {
+        self.require_write_access(actor, payload.project_id)?;
         self.prepare_payload(&mut payload)?;
 
         let project_id = payload.project_id;
@@ -583,10 +599,15 @@ impl<'a> RequirementService<'a> {
         custom_fields: Option<&[CustomFieldValueInput]>,
         parent_links: Option<Vec<(i32, String, Option<String>)>>,
     ) -> Result<Requirement, RepoError> {
+        let before = self.get_by_id(id)?;
+        self.require_write_access(actor, before.project_id)?;
+        if payload.project_id != before.project_id {
+            return Err(RepoError::CrossProjectViolation(
+                "requirement project cannot be changed".into(),
+            ));
+        }
         self.prepare_payload(&mut payload)?;
         payload.id = Some(id);
-
-        let before = self.get_by_id(id)?;
         let before_verification_ids = self.get_verification_method_ids(id)?;
 
         let parent_link_rows =
@@ -641,6 +662,8 @@ impl<'a> RequirementService<'a> {
 
     /// Delete an requirement entry and log the removal.
     pub fn delete(&self, actor: &User, id: i32) -> Result<Requirement, RepoError> {
+        let existing = self.get_by_id(id)?;
+        self.require_write_access(actor, existing.project_id)?;
         let removed = {
             let mut repo = self.repo_write();
             repo.delete_requirement(id)?
@@ -772,7 +795,105 @@ mod tests {
     }
 
     fn actor() -> User {
-        DieselRepoMock::make_user(1, "actor", "")
+        let mut actor = DieselRepoMock::make_user(1, "actor", "");
+        actor.is_admin = true;
+        actor
+    }
+
+    #[test]
+    fn delete_rejects_actor_without_project_access() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(1, requirement(1, 10, "REQ-1"));
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+        let unauthorized = DieselRepoMock::make_user(9, "outsider", "");
+
+        assert!(matches!(
+            service.delete(&unauthorized, 1),
+            Err(RepoError::Unauthorized)
+        ));
+        assert!(service.get_by_id(1).is_ok());
+    }
+
+    #[test]
+    fn create_rejects_actor_without_project_access() {
+        let repo = DieselRepoMock::default();
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+        let unauthorized = DieselRepoMock::make_user(9, "outsider", "");
+
+        assert!(matches!(
+            service.create(&unauthorized, new_payload(), &[1], None, None),
+            Err(RepoError::Unauthorized)
+        ));
+    }
+
+    #[test]
+    fn update_rejects_actor_without_project_access() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(1, requirement(1, 10, "REQ-1"));
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+        let unauthorized = DieselRepoMock::make_user(9, "outsider", "");
+        let mut payload = new_payload();
+        payload.project_id = 10;
+
+        assert!(matches!(
+            service.update(&unauthorized, 1, payload, &[1], None, None),
+            Err(RepoError::Unauthorized)
+        ));
+    }
+
+    #[test]
+    fn mutations_allow_project_member_with_edit_permission() {
+        use crate::models::ProjectMember;
+        use crate::permissions::ROLE_AUTHOR;
+
+        let mut repo = DieselRepoMock::default();
+        repo.project_members.push(ProjectMember {
+            project_id: 10,
+            user_id: 5,
+            role: ROLE_AUTHOR,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+        repo.requirements.insert(1, requirement(1, 10, "REQ-1"));
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+        let member = DieselRepoMock::make_user(5, "author", "");
+
+        let mut create_payload = new_payload();
+        create_payload.project_id = 10;
+        create_payload.reference_code = "REQ-NEW".into();
+        let id = service
+            .create(&member, create_payload, &[1], None, None)
+            .expect("author may create");
+
+        let mut update_payload = new_payload();
+        update_payload.project_id = 10;
+        update_payload.title = "Updated".into();
+        update_payload.reference_code = "REQ-1".into();
+        let updated = service
+            .update(&member, 1, update_payload, &[1], None, None)
+            .expect("author may update");
+        assert_eq!(updated.title, "Updated");
+
+        service.delete(&member, id).expect("author may delete");
+    }
+
+    #[test]
+    fn update_rejects_project_reassignment() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(1, requirement(1, 10, "REQ-1"));
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+        let mut payload = new_payload();
+        payload.project_id = 99;
+
+        assert!(matches!(
+            service.update(&actor(), 1, payload, &[1], None, None),
+            Err(RepoError::CrossProjectViolation(_))
+        ));
     }
 
     fn requirement(id: i32, project_id: i32, reference: &str) -> Requirement {

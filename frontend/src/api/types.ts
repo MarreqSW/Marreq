@@ -403,6 +403,7 @@ export interface EffectivePermissions {
   /** May change requirement/verification status and version approval (project reviewer pool). */
   is_project_reviewer: boolean;
   manage_custom_fields: boolean;
+  manage_project_configuration?: boolean;
   manage_project_members: boolean;
 }
 

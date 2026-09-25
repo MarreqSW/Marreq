@@ -573,9 +573,18 @@ fn build_requirement_list_rows(
 }
 
 #[get("/requirements")]
-pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Requirement>>> {
+pub async fn list(user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Requirement>>> {
     let service = RequirementService::new(state.inner());
-    let requirements = service.list_all()?;
+    let mut requirements = service.list_all()?;
+    let repo = state.repo_read();
+    requirements.retain(|requirement| {
+        crate::permissions::has_permission(
+            &*repo,
+            user.user(),
+            requirement.project_id,
+            Permission::ViewRequirements,
+        )
+    });
     Ok(Json(requirements))
 }
 
@@ -601,9 +610,15 @@ pub async fn list_by_project(
 }
 
 #[get("/requirements/<id>")]
-pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<Requirement>> {
+pub async fn get(user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<Requirement>> {
     let service = RequirementService::new(state.inner());
     let requirement = service.get_by_id(id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        requirement.project_id,
+        Permission::ViewRequirements,
+    )?;
     Ok(Json(requirement))
 }
 
@@ -650,11 +665,18 @@ pub async fn get_by_project(
 /// List all versions for a requirement (newest first).
 #[get("/requirements/<id>/versions")]
 pub async fn list_versions(
-    _user: ApiUser,
+    user: ApiUser,
     id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<RequirementVersion>>> {
     let service = RequirementService::new(state.inner());
+    let requirement = service.get_by_id(id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        requirement.project_id,
+        Permission::ViewRequirements,
+    )?;
     let versions = service.list_versions(id)?;
     Ok(Json(versions))
 }
@@ -685,12 +707,19 @@ pub async fn list_versions_by_project(
 /// Get a single requirement version by id (version must belong to the given requirement).
 #[get("/requirements/<req_id>/versions/<version_id>")]
 pub async fn get_version(
-    _user: ApiUser,
+    user: ApiUser,
     req_id: i32,
     version_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementVersionDetail>> {
     let service = RequirementService::new(state.inner());
+    let requirement = service.get_by_id(req_id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        requirement.project_id,
+        Permission::ViewRequirements,
+    )?;
     let version = service.get_version_by_id(version_id)?;
     if version.requirement_id != req_id {
         return Err(ApiError::NotFound(
@@ -732,12 +761,18 @@ pub async fn get_version_by_project(
 /// List tests linked to the requirement that are currently marked suspect (impacted by requirement changes).
 #[get("/requirements/<id>/impacted_tests")]
 pub async fn get_impacted_tests(
-    _user: ApiUser,
+    user: ApiUser,
     id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<Verification>>> {
     let service = RequirementService::new(state.inner());
-    let _requirement = service.get_by_id(id)?;
+    let requirement = service.get_by_id(id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        requirement.project_id,
+        Permission::ViewRequirements,
+    )?;
     let verifications = service.get_impacted_verifications(id)?;
     Ok(Json(verifications))
 }
@@ -836,6 +871,13 @@ pub async fn create(
 #[delete("/requirements/<id>")]
 pub async fn delete(user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Status> {
     let service = RequirementService::new(state.inner());
+    let requirement = service.get_by_id(id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        requirement.project_id,
+        Permission::EditRequirements,
+    )?;
     service.delete(user.user(), id)?;
     Ok(Status::NoContent)
 }

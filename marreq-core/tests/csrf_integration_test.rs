@@ -9,7 +9,7 @@
 //! * Rejects cross-origin requests from authenticated sessions.
 //! * Accepts same-origin requests (`Origin` header matches allowlist).
 //! * Accepts requests carrying a valid `X-CSRF-Token` header (AJAX pattern).
-//! * Never blocks Bearer-authenticated requests (API-token path).
+//! * Exempts only successfully authenticated Bearer requests.
 //! * Never blocks safe HTTP methods (`GET`, `HEAD`, `OPTIONS`).
 //! * Protects unauthenticated state-changing endpoints (`POST /login`).
 
@@ -22,6 +22,7 @@ use marreq_core::fairings::CsrfFairing;
 use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
 use rocket::http::{ContentType, Cookie, Header, Status};
 use rocket::local::asynchronous::Client;
+use sha2::{Digest, Sha256};
 use std::sync::{Arc, RwLock};
 
 // ---------------------------------------------------------------------------
@@ -31,6 +32,7 @@ use std::sync::{Arc, RwLock};
 const TEST_ALLOWED_ORIGIN: &str = "http://test.local";
 const EVIL_ORIGIN: &str = "http://evil.example.com";
 const TOKEN: &str = "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890";
+const API_TOKEN: &str = "valid-api-token";
 
 /// Minimal POST handler used as a proxy for any real state-changing endpoint.
 #[post("/protected")]
@@ -49,6 +51,10 @@ async fn test_client() -> Client {
     let mut repo = DieselRepoMock::default();
     repo.users
         .insert(1, DieselRepoMock::make_user(1, "alice", "password"));
+    repo.api_tokens.insert(
+        format!("{:x}", Sha256::digest(API_TOKEN.as_bytes())),
+        (1, None),
+    );
     let state = AppState {
         repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
     };
@@ -209,7 +215,7 @@ async fn bearer_auth_post_without_origin_is_allowed() {
     let response = client
         .post("/protected")
         .header(ContentType::JSON)
-        .header(Header::new("Authorization", "Bearer some-api-token"))
+        .header(Header::new("Authorization", format!("Bearer {API_TOKEN}")))
         .body("{}")
         .dispatch()
         .await;
@@ -224,12 +230,27 @@ async fn bearer_auth_post_with_evil_origin_is_allowed() {
     let response = client
         .post("/protected")
         .header(ContentType::JSON)
-        .header(Header::new("Authorization", "Bearer some-api-token"))
+        .header(Header::new("Authorization", format!("Bearer {API_TOKEN}")))
         .header(Header::new("Origin", EVIL_ORIGIN))
         .body("{}")
         .dispatch()
         .await;
     assert_eq!(response.status(), Status::Ok);
+}
+
+#[rocket::async_test]
+async fn invalid_bearer_does_not_bypass_session_csrf() {
+    let client = test_client().await;
+    let response = client
+        .post("/protected")
+        .header(ContentType::JSON)
+        .header(Header::new("Authorization", "Bearer attacker-controlled"))
+        .private_cookie(session_cookie(&client))
+        .body("{}")
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Forbidden);
 }
 
 // ---------------------------------------------------------------------------

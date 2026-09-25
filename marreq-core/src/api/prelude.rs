@@ -21,6 +21,7 @@ pub fn require_project_permission(
 ) -> ApiResult<()> {
     let repo = state.repo_read();
     crate::authorization::require_project_permission(&*repo, user, project_id, permission)
+        .map_err(ApiError::from)
 }
 
 pub fn require_project_reviewer(
@@ -29,7 +30,7 @@ pub fn require_project_reviewer(
     project_id: i32,
 ) -> ApiResult<()> {
     let repo = state.repo_read();
-    crate::authorization::require_project_reviewer(&*repo, user, project_id)
+    crate::authorization::require_project_reviewer(&*repo, user, project_id).map_err(ApiError::from)
 }
 
 pub fn require_project_reviewer_unless_requirement_create_status_is_draft_like(
@@ -42,6 +43,7 @@ pub fn require_project_reviewer_unless_requirement_create_status_is_draft_like(
     crate::authorization::require_project_reviewer_unless_requirement_create_status_is_draft_like(
         &*repo, user, project_id, status_id,
     )
+    .map_err(ApiError::from)
 }
 
 pub fn require_project_reviewer_unless_verification_create_status_is_initial(
@@ -54,6 +56,7 @@ pub fn require_project_reviewer_unless_verification_create_status_is_initial(
     crate::authorization::require_project_reviewer_unless_verification_create_status_is_initial(
         &*repo, user, project_id, status_id,
     )
+    .map_err(ApiError::from)
 }
 
 pub fn require_group_permission(
@@ -64,4 +67,5 @@ pub fn require_group_permission(
 ) -> ApiResult<()> {
     let repo = state.repo_read();
     crate::authorization::require_group_permission(&*repo, user, group_id, permission)
+        .map_err(ApiError::from)
 }

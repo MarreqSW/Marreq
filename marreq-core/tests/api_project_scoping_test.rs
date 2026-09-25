@@ -17,6 +17,7 @@ use marreq_core::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 
 mod test_support {
     use super::*;
@@ -209,11 +210,203 @@ mod test_support {
             },
         );
 
+        // Project 3 — no memberships for user 2 / user 3 (inaccessible fixture).
+        repo.projects.insert(
+            3,
+            Project {
+                id: 3,
+                name: "Project 3".into(),
+                description: Some("Forbidden project".into()),
+                creation_date: Some(timestamp()),
+                update_date: Some(timestamp()),
+                status: ProjectStatus::Active,
+                owner_id: Some(1),
+                slug: "project-3".into(),
+                group_id: None,
+            },
+        );
+        repo.project_members.push(ProjectMember {
+            project_id: 3,
+            user_id: 1,
+            role: 1,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+        repo.categories.insert(
+            3,
+            Category {
+                id: 3,
+                title: "Category 3".into(),
+                description: "".into(),
+                tag: "CAT3".into(),
+                project_id: 3,
+            },
+        );
+        repo.applicability.insert(
+            3,
+            Applicability {
+                id: 3,
+                title: "All".into(),
+                description: "".into(),
+                tag: "ALL".into(),
+                project_id: 3,
+            },
+        );
+        repo.requirement_statuses.insert(
+            3,
+            RequirementStatus {
+                id: 3,
+                title: "Draft".into(),
+                description: "".into(),
+                tag: "D".into(),
+                project_id: 3,
+                is_system: false,
+                tag_color: None,
+            },
+        );
+        repo.verification_statuses.insert(
+            3,
+            VerificationStatus {
+                id: 3,
+                title: "Not run".into(),
+                description: "".into(),
+                tag: "NR".into(),
+                project_id: 3,
+                is_system: false,
+                tag_color: None,
+            },
+        );
+
         repo
+    }
+
+    pub fn requirement(id: i32, project_id: i32) -> Requirement {
+        Requirement {
+            id,
+            current_version_id: None,
+            same_as_current: None,
+            title: format!("Requirement {id}"),
+            description: "Description".into(),
+            reference_code: format!("REQ-{id:03}"),
+            category_id: 1,
+            applicability_id: 1,
+            status_id: 1,
+            author_id: 1,
+            reviewer_id: 1,
+            parent_id: None,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            justification: None,
+            project_id,
+            approval_state: "draft".into(),
+            approved_by: None,
+            approved_at: None,
+            custom_fields: None,
+        }
+    }
+
+    pub fn verification(id: i32, project_id: i32) -> Verification {
+        Verification {
+            id,
+            name: format!("Verification {id}"),
+            description: "Description".into(),
+            reference_code: format!("VER-{id:03}"),
+            source: "manual".into(),
+            status_id: 1,
+            parent_id: None,
+            project_id,
+            verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
+        }
     }
 }
 
 use test_support::*;
+
+#[rocket::async_test]
+async fn scoped_api_token_is_denied_after_membership_removal() {
+    use marreq_core::permissions::ROLE_AUTHOR;
+    use marreq_core::repository::ProjectMembersRepository;
+
+    let token = "revoked-membership-token";
+    let token_hash = format!("{:x}", Sha256::digest(token.as_bytes()));
+    let mut repo = base_repo();
+    // User 3 starts as a member of project 1 so the scoped token is initially valid.
+    repo.project_members.push(ProjectMember {
+        project_id: 1,
+        user_id: 3,
+        role: ROLE_AUTHOR,
+        created_at: timestamp(),
+        updated_at: timestamp(),
+    });
+    let repo = repo.with_api_token(&token_hash, 3, Some(1));
+    let client = test_client(repo).await;
+    let bearer = || rocket::http::Header::new("Authorization", format!("Bearer {token}"));
+
+    let allowed = client
+        .get("/api/projects/1/requirements")
+        .header(bearer())
+        .dispatch()
+        .await;
+    assert_eq!(allowed.status(), Status::Ok);
+
+    // Warm the membership cache, then remove via the repository path so
+    // CacheRepository invalidation is required for the subsequent denial.
+    {
+        let state = client
+            .rocket()
+            .state::<TestAppState>()
+            .expect("managed app state");
+        let mut write = state.repo.write().expect("repo lock");
+        let _ = write.get_projects_for_user(3).expect("membership");
+        write
+            .remove_project_member(1, 3)
+            .expect("remove membership");
+    }
+
+    let denied = client
+        .get("/api/projects/1/requirements")
+        .header(bearer())
+        .dispatch()
+        .await;
+    assert_eq!(denied.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn legacy_requirement_subresources_use_the_requirement_project() {
+    let mut repo = base_repo();
+    repo.requirements.insert(1, requirement(1, 1));
+    let client = test_client(repo).await;
+    let cookie = || session_cookie(&client, 3);
+
+    for path in [
+        "/api/requirements/1/versions",
+        "/api/requirements/1/impacted_tests",
+        "/api/requirements/1/comments",
+    ] {
+        let response = client.get(path).private_cookie(cookie()).dispatch().await;
+        assert_eq!(response.status(), Status::Forbidden, "path: {path}");
+    }
+}
+
+#[rocket::async_test]
+async fn legacy_verification_delete_uses_the_verification_project() {
+    let mut repo = base_repo();
+    repo.verifications.insert(1, verification(1, 1));
+    let client = test_client(repo).await;
+
+    let response = client
+        .delete("/api/verifications/1")
+        .private_cookie(session_cookie(&client, 3))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Forbidden);
+}
 
 // ============================================================================
 // Requirements API - Project Scoping Tests
@@ -307,6 +500,34 @@ async fn list_requirements_returns_only_user_projects() {
         },
     );
 
+    // Requirement in project 3 — user 2 has no access
+    repo.requirements.insert(
+        4,
+        Requirement {
+            id: 4,
+            current_version_id: None,
+            same_as_current: None,
+            title: "Req Forbidden".into(),
+            description: "Description".into(),
+            reference_code: "REQ-004".into(),
+            category_id: 3,
+            applicability_id: 3,
+            status_id: 3,
+            author_id: 1,
+            reviewer_id: 1,
+            parent_id: None,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: Some(timestamp()),
+            justification: None,
+            project_id: 3,
+            approval_state: "draft".to_string(),
+            approved_by: None,
+            approved_at: None,
+            custom_fields: None,
+        },
+    );
+
     let client = test_client(repo).await;
 
     // User 2 should see requirements from projects 1 and 2
@@ -319,17 +540,15 @@ async fn list_requirements_returns_only_user_projects() {
     assert_eq!(response.status(), Status::Ok);
     let requirements: Vec<Value> = response.into_json().await.expect("json");
 
-    // Note: The API doesn't filter by project membership
-    // It returns all requirements the user has access to (which is all if authenticated)
     let req_ids: Vec<i32> = requirements
         .iter()
         .map(|r| r["id"].as_i64().unwrap() as i32)
         .collect();
 
-    // API returns all requirements, not filtered by project membership
     assert!(req_ids.contains(&1));
     assert!(req_ids.contains(&2));
-    assert!(req_ids.contains(&3)); // API doesn't filter by project
+    assert!(req_ids.contains(&3));
+    assert!(!req_ids.contains(&4));
 }
 
 #[rocket::async_test]
@@ -373,11 +592,7 @@ async fn get_requirement_from_unauthorized_project_returns_forbidden() {
         .dispatch()
         .await;
 
-    // Note: The API doesn't currently enforce project membership checks
-    // It only requires authentication, so this will succeed if the resource exists
-    // or return 404 if it doesn't
-    let status = response.status();
-    assert!(status == Status::Ok || status == Status::NotFound);
+    assert_eq!(response.status(), Status::Forbidden);
 }
 
 #[rocket::async_test]
@@ -411,7 +626,7 @@ async fn create_requirement_forbidden_when_user_not_project_member() {
 }
 
 #[rocket::async_test]
-async fn delete_requirement_works_for_any_authenticated_user() {
+async fn delete_requirement_from_unauthorized_project_is_forbidden() {
     let mut repo = base_repo();
 
     repo.requirements.insert(
@@ -443,15 +658,13 @@ async fn delete_requirement_works_for_any_authenticated_user() {
 
     let client = test_client(repo).await;
 
-    // User 3 is not a member of project 1, but API allows deletion
     let response = client
         .delete("/api/requirements/1")
         .private_cookie(session_cookie(&client, 3))
         .dispatch()
         .await;
 
-    // API doesn't check project membership, so this succeeds
-    assert_eq!(response.status(), Status::NoContent);
+    assert_eq!(response.status(), Status::Forbidden);
 }
 
 // ============================================================================
@@ -519,6 +732,25 @@ async fn list_tests_returns_only_user_projects() {
         },
     );
 
+    repo.verifications.insert(
+        4,
+        Verification {
+            id: 4,
+            name: "Test Forbidden".into(),
+            description: "Description".into(),
+            reference_code: "TEST-004".into(),
+            source: "manual".into(),
+            status_id: 3,
+            parent_id: None,
+            project_id: 3,
+            verification_method_id: None,
+            author_id: 1,
+            reviewer_id: 1,
+            status_set_by: None,
+            status_set_at: None,
+        },
+    );
+
     let client = test_client(repo).await;
 
     // User 2 should see tests from projects 1 and 2
@@ -536,14 +768,14 @@ async fn list_tests_returns_only_user_projects() {
         .map(|t| t["id"].as_i64().unwrap() as i32)
         .collect();
 
-    // API returns all tests, not filtered by project membership
     assert!(test_ids.contains(&1));
     assert!(test_ids.contains(&2));
     assert!(test_ids.contains(&3));
+    assert!(!test_ids.contains(&4));
 }
 
 #[rocket::async_test]
-async fn get_test_works_for_any_authenticated_user() {
+async fn get_test_from_unauthorized_project_is_forbidden() {
     let mut repo = base_repo();
 
     repo.verifications.insert(
@@ -567,15 +799,13 @@ async fn get_test_works_for_any_authenticated_user() {
 
     let client = test_client(repo).await;
 
-    // User 3 is not a member of project 1, but API allows access
     let response = client
         .get("/api/verifications/1")
         .private_cookie(session_cookie(&client, 3))
         .dispatch()
         .await;
 
-    // API doesn't check project membership, so this succeeds
-    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.status(), Status::Forbidden);
 }
 
 // ============================================================================
@@ -604,29 +834,27 @@ async fn list_categories_returns_only_user_projects() {
 
     assert!(cat_ids.contains(&1));
     assert!(cat_ids.contains(&2));
+    assert!(!cat_ids.contains(&3));
 }
 
 #[rocket::async_test]
-async fn get_category_works_for_any_authenticated_user() {
+async fn get_category_from_unauthorized_project_is_forbidden() {
     let repo = base_repo();
     let client = test_client(repo).await;
 
-    // User 3 is not a member of project 1, but API allows access
     let response = client
         .get("/api/categories/1")
         .private_cookie(session_cookie(&client, 3))
         .dispatch()
         .await;
 
-    // API doesn't check project membership, so this succeeds
-    assert_eq!(response.status(), Status::Ok);
+    assert_eq!(response.status(), Status::Forbidden);
 }
 
 #[rocket::async_test]
-async fn create_category_works_for_any_authenticated_user() {
+async fn create_category_in_unauthorized_project_is_forbidden() {
     let client = test_client(base_repo()).await;
 
-    // User 3 tries to create category in project 1 (not a member)
     let payload = json!({
         "title": "New Category",
         "description": "Description",
@@ -642,9 +870,7 @@ async fn create_category_works_for_any_authenticated_user() {
         .dispatch()
         .await;
 
-    // API doesn't check project membership, so this succeeds
-    let status = response.status();
-    assert!(status == Status::Ok || status == Status::Created);
+    assert_eq!(response.status(), Status::Forbidden);
 }
 
 // ============================================================================
@@ -673,22 +899,159 @@ async fn list_applicability_returns_only_user_projects() {
 
     assert!(app_ids.contains(&1));
     assert!(app_ids.contains(&2));
+    assert!(!app_ids.contains(&3));
 }
 
 #[rocket::async_test]
-async fn get_applicability_works_for_any_authenticated_user() {
+async fn get_applicability_from_unauthorized_project_is_forbidden() {
     let repo = base_repo();
     let client = test_client(repo).await;
 
-    // User 3 is not a member of project 1, but API allows access
     let response = client
         .get("/api/applicability/1")
         .private_cookie(session_cookie(&client, 3))
         .dispatch()
         .await;
 
-    // API doesn't check project membership, so this succeeds
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+// ============================================================================
+// Status / Matrix global collection filtering
+// ============================================================================
+
+#[rocket::async_test]
+async fn list_requirement_statuses_returns_only_user_projects() {
+    let mut repo = base_repo();
+    repo.requirement_statuses.insert(
+        2,
+        RequirementStatus {
+            id: 2,
+            title: "Draft".into(),
+            description: "".into(),
+            tag: "D".into(),
+            project_id: 2,
+            is_system: false,
+            tag_color: None,
+        },
+    );
+    let client = test_client(repo).await;
+
+    let response = client
+        .get("/api/status")
+        .private_cookie(session_cookie(&client, 2))
+        .dispatch()
+        .await;
+
     assert_eq!(response.status(), Status::Ok);
+    let statuses: Vec<Value> = response.into_json().await.expect("json");
+    let ids: Vec<i32> = statuses
+        .iter()
+        .map(|s| s["id"].as_i64().unwrap() as i32)
+        .collect();
+
+    assert!(ids.contains(&1));
+    assert!(ids.contains(&2));
+    assert!(!ids.contains(&3));
+}
+
+#[rocket::async_test]
+async fn list_verification_statuses_returns_only_user_projects() {
+    let mut repo = base_repo();
+    repo.verification_statuses.insert(
+        1,
+        VerificationStatus {
+            id: 1,
+            title: "Not run".into(),
+            description: "".into(),
+            tag: "NR".into(),
+            project_id: 1,
+            is_system: false,
+            tag_color: None,
+        },
+    );
+    repo.verification_statuses.insert(
+        2,
+        VerificationStatus {
+            id: 2,
+            title: "Not run".into(),
+            description: "".into(),
+            tag: "NR".into(),
+            project_id: 2,
+            is_system: false,
+            tag_color: None,
+        },
+    );
+    let client = test_client(repo).await;
+
+    let response = client
+        .get("/api/verification-status")
+        .private_cookie(session_cookie(&client, 2))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let statuses: Vec<Value> = response.into_json().await.expect("json");
+    let ids: Vec<i32> = statuses
+        .iter()
+        .map(|s| s["id"].as_i64().unwrap() as i32)
+        .collect();
+
+    assert!(ids.contains(&1));
+    assert!(ids.contains(&2));
+    assert!(!ids.contains(&3));
+}
+
+#[rocket::async_test]
+async fn list_matrix_returns_only_user_projects() {
+    let mut repo = base_repo();
+    repo.requirements.insert(1, requirement(1, 1));
+    repo.requirements.insert(2, requirement(2, 3));
+    repo.verifications.insert(1, verification(1, 1));
+    repo.verifications.insert(2, verification(2, 3));
+    repo.matrices.push(MatrixLink {
+        req_id: 1,
+        verification_id: 1,
+        creation_date: timestamp(),
+        project_id: 1,
+        suspect: false,
+        suspect_at: None,
+        suspect_reason: None,
+        cleared_by: None,
+        cleared_at: None,
+        triggering_version_id: None,
+        triggering_user_id: None,
+    });
+    repo.matrices.push(MatrixLink {
+        req_id: 2,
+        verification_id: 2,
+        creation_date: timestamp(),
+        project_id: 3,
+        suspect: false,
+        suspect_at: None,
+        suspect_reason: None,
+        cleared_by: None,
+        cleared_at: None,
+        triggering_version_id: None,
+        triggering_user_id: None,
+    });
+    let client = test_client(repo).await;
+
+    let response = client
+        .get("/api/matrix")
+        .private_cookie(session_cookie(&client, 2))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let entries: Vec<Value> = response.into_json().await.expect("json");
+    let project_ids: Vec<i32> = entries
+        .iter()
+        .map(|e| e["project_id"].as_i64().unwrap() as i32)
+        .collect();
+
+    assert!(project_ids.contains(&1));
+    assert!(!project_ids.contains(&3));
 }
 
 // ============================================================================

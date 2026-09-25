@@ -21,7 +21,7 @@ pub fn login_user<R: Repository>(
     user_agent: Option<String>,
     ip_addr: Option<String>,
 ) -> Result<User, AuthError> {
-    let user = authenticate_user(&*repo, &login_form.username, login_form.password.trim())?;
+    let user = authenticate_user(&*repo, &login_form.username, &login_form.password)?;
 
     complete_login(repo, user, "password", cookies, user_agent, ip_addr)
 }
@@ -74,13 +74,18 @@ pub fn complete_login<R: Repository>(
     Ok(user)
 }
 
+/// Canonical account identifier used by credential lookup and rate limiting.
+pub fn canonicalize_username(username: &str) -> String {
+    username.trim().to_lowercase()
+}
+
 fn authenticate_user<R: Repository>(
     repo: &R,
     username: &str,
     password: &str,
 ) -> Result<User, AuthError> {
     // Normalise before lookup so "Alice" and "alice" resolve to the same account.
-    let username_normalised = username.trim().to_lowercase();
+    let username_normalised = canonicalize_username(username);
     let user_opt = repo
         .get_user_by_username(&username_normalised)
         .map_err(|e| AuthError::Db(e.to_string()))?;
@@ -116,6 +121,23 @@ mod tests {
         assert!(got.is_ok());
         let user = got.unwrap();
         assert_eq!(user.username, "alice");
+    }
+
+    #[test]
+    fn password_whitespace_is_preserved() {
+        let pwd = hash_password("  secret  ").unwrap();
+        let repo = DieselRepoMock::with_users([DieselRepoMock::make_user(1, "alice", &pwd)]);
+
+        assert!(authenticate_user(&repo, "alice", "  secret  ").is_ok());
+        assert!(matches!(
+            authenticate_user(&repo, "alice", "secret"),
+            Err(AuthError::InvalidCredentials)
+        ));
+    }
+
+    #[test]
+    fn username_canonicalization_matches_lookup_identity() {
+        assert_eq!(canonicalize_username("  Alice  "), "alice");
     }
 
     #[test]

@@ -10,6 +10,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(readFileSync(path.resolve(__dirname, 'package.json'), 'utf-8')) as {
   version: string;
 };
+// Release version from the `marreq-frontend-v*` tag (via MARREQ_VERSION), else package.json.
+const frontendVersion = (process.env.MARREQ_VERSION || pkg.version).replace(/^v/, '');
 const compatibility = JSON.parse(
   readFileSync(path.resolve(__dirname, 'compatibility.json'), 'utf-8'),
 ) as {
@@ -20,7 +22,7 @@ const compatibility = JSON.parse(
 export default defineConfig({
   plugins: [react()],
   define: {
-    __FRONTEND_VERSION__: JSON.stringify(pkg.version),
+    __FRONTEND_VERSION__: JSON.stringify(frontendVersion),
     __REQUIRES_BACKEND_MIN__: JSON.stringify(compatibility.requires_backend_min),
     __REQUIRES_BACKEND_MAX__: JSON.stringify(compatibility.requires_backend_max),
     __FRONTEND_GIT_SHA__: JSON.stringify(process.env.MARREQ_GIT_SHA ?? 'unknown'),

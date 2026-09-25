@@ -63,7 +63,10 @@ mod tests {
         let res = client.get("/api/meta/build").dispatch();
         assert_eq!(res.status().code, 200);
         let body: serde_json::Value = res.into_json().expect("json");
-        assert_eq!(body["backend_version"], crate::build_info::BACKEND_VERSION);
+        assert_eq!(
+            body["backend_version"],
+            crate::build_info::backend_version()
+        );
         assert!(body["frontend_compatibility"]["min_version"].is_string());
         assert!(body["frontend_compatibility"]["max_version"].is_string());
         assert_eq!(body["deployment_mode"], "server");

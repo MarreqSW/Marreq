@@ -2,9 +2,10 @@
 FROM rust:1-bookworm AS builder
 
 ARG MARREQ_BIN=marreq-server
-ARG MARREQ_VERSION=0.1.0
+ARG MARREQ_VERSION=
 ARG MARREQ_GIT_SHA=unknown
 ENV MARREQ_GIT_SHA=${MARREQ_GIT_SHA}
+ENV MARREQ_VERSION=${MARREQ_VERSION}
 
 # Native deps for libxlsxwriter-sys (build from source) and bindgen (libclang)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -43,7 +44,7 @@ COPY marreq-core/scripts ./marreq-core/scripts
 COPY marreq-server/src ./marreq-server/src
 COPY marreq-cloud/src ./marreq-cloud/src
 
-# Build the selected binary (MARREQ_GIT_SHA baked via option_env!)
+# Build the selected binary (MARREQ_VERSION / MARREQ_GIT_SHA baked via option_env!)
 RUN touch marreq-core/src/lib.rs marreq-server/src/main.rs marreq-cloud/src/main.rs && \
     cargo build --release -p ${MARREQ_BIN}
 
@@ -51,9 +52,9 @@ RUN touch marreq-core/src/lib.rs marreq-server/src/main.rs marreq-cloud/src/main
 FROM debian:bookworm-slim
 
 ARG MARREQ_BIN=marreq-server
-ARG MARREQ_VERSION=0.1.0
+ARG MARREQ_VERSION=
 ARG MARREQ_GIT_SHA=unknown
-LABEL org.opencontainers.image.version="${MARREQ_VERSION}" \
+LABEL org.opencontainers.image.version="${MARREQ_VERSION:-dev}" \
       org.opencontainers.image.revision="${MARREQ_GIT_SHA}"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \

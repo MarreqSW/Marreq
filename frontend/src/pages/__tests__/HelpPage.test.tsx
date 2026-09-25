@@ -5,6 +5,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import HelpPage from '../HelpPage';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import * as apiClient from '@/api/client';
+import { resetBuildInfoCache } from '@/hooks/useBuildInfo';
 
 vi.mock('@/api/client');
 
@@ -26,7 +27,7 @@ vi.mock('react-router-dom', async () => {
 
 const compatibleBuild = {
   backend_version: '0.1.0',
-  backend_git_sha: 'abc',
+  backend_git_sha: '56c09392abcdef',
   deployment_mode: 'server',
   frontend_compatibility: { min_version: '0.1.0', max_version: '0.1.99' },
 };
@@ -34,6 +35,7 @@ const compatibleBuild = {
 describe('HelpPage', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    resetBuildInfoCache();
     vi.mocked(apiClient.getBuildInfo).mockResolvedValue(compatibleBuild);
   });
 
@@ -75,5 +77,6 @@ describe('HelpPage', () => {
       expect(screen.getByTestId('help-compatible')).toHaveTextContent('yes'),
     );
     expect(screen.getByTestId('help-build-info')).toHaveTextContent(/0\.1\.0/);
+    expect(screen.getByTestId('help-build-info')).toHaveTextContent('(56c0939)');
   });
 });

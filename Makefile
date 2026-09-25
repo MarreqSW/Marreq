@@ -27,11 +27,13 @@ lint:           ## Clippy the workspace.
 clean:          ## cargo clean.
 	cargo clean
 
-docker-server:  ## Build the Docker image for marreq-server.
-	docker build -f docker/Dockerfile --build-arg MARREQ_BIN=marreq-server -t marreq:server .
+docker-server:  ## Build the Docker image for marreq-server (optional MARREQ_VERSION=X.Y.Z).
+	docker build -f docker/Dockerfile --build-arg MARREQ_BIN=marreq-server \
+		--build-arg MARREQ_VERSION=$(MARREQ_VERSION) --build-arg MARREQ_GIT_SHA=$$(git rev-parse HEAD) -t marreq:server .
 
-docker-cloud:   ## Build the Docker image for marreq-cloud.
-	docker build -f docker/Dockerfile --build-arg MARREQ_BIN=marreq-cloud -t marreq:cloud .
+docker-cloud:   ## Build the Docker image for marreq-cloud (optional MARREQ_VERSION=X.Y.Z).
+	docker build -f docker/Dockerfile --build-arg MARREQ_BIN=marreq-cloud \
+		--build-arg MARREQ_VERSION=$(MARREQ_VERSION) --build-arg MARREQ_GIT_SHA=$$(git rev-parse HEAD) -t marreq:cloud .
 
 compose-server: ## Bring up the self-hosted Docker stack (db, ollama, marreq-server, frontend, adminer).
 	docker compose -f docker/docker-compose.yml up -d

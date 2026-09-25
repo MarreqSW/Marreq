@@ -181,6 +181,21 @@ pub async fn clear_suspect(
     body: Json<ClearSuspectRequest>,
 ) -> ApiResult<Json<serde_json::Value>> {
     let payload = body.into_inner();
+    let repo = state.repo_read();
+    let requirement = repo.get_requirement_by_id(payload.req_id)?;
+    let verification = repo.get_verification_by_id(payload.verification_id)?;
+    drop(repo);
+    if requirement.project_id != verification.project_id {
+        return Err(ApiError::NotFound(
+            "traceability link not in project".into(),
+        ));
+    }
+    require_project_permission(
+        state,
+        user.user(),
+        requirement.project_id,
+        Permission::EditRequirements,
+    )?;
     let service = MatrixService::new(state.inner());
     let updated = service.clear_suspect(user.user(), payload.req_id, payload.verification_id)?;
     Ok(Json(serde_json::json!({
@@ -328,12 +343,30 @@ mod tests {
 
     #[rocket::async_test]
     async fn clear_suspect_returns_ok_and_cleared_true_when_link_was_suspect() {
-        let mut repo = DieselRepoMock::default().with_admin_user();
+        let mut repo = repo_with_project_and_requirement();
+        repo.verifications.insert(
+            2,
+            Verification {
+                id: 2,
+                name: "V2".into(),
+                description: "D2".into(),
+                source: "manual".into(),
+                status_id: 1,
+                reference_code: "VER-2".into(),
+                parent_id: None,
+                project_id: PROJECT_ID,
+                verification_method_id: None,
+                author_id: ADMIN_ID,
+                reviewer_id: ADMIN_ID,
+                status_set_by: None,
+                status_set_at: None,
+            },
+        );
         repo.matrices.push(MatrixLink {
             req_id: 1,
             verification_id: 2,
             creation_date: epoch(),
-            project_id: 7,
+            project_id: PROJECT_ID,
             suspect: true,
             suspect_at: Some(epoch()),
             suspect_reason: Some("Requirement updated".into()),
@@ -359,12 +392,31 @@ mod tests {
 
     #[rocket::async_test]
     async fn clear_suspect_returns_ok_and_cleared_false_when_link_missing() {
-        let client = client_with_repo(DieselRepoMock::default().with_admin_user()).await;
+        let mut repo = repo_with_project_and_requirement();
+        repo.verifications.insert(
+            2,
+            Verification {
+                id: 2,
+                name: "V2".into(),
+                description: "D2".into(),
+                source: "manual".into(),
+                status_id: 1,
+                reference_code: "VER-2".into(),
+                parent_id: None,
+                project_id: PROJECT_ID,
+                verification_method_id: None,
+                author_id: ADMIN_ID,
+                reviewer_id: ADMIN_ID,
+                status_set_by: None,
+                status_set_at: None,
+            },
+        );
+        let client = client_with_repo(repo).await;
         let response = client
             .post("/api/traceability/clear_suspect")
             .header(ContentType::JSON)
             .private_cookie(auth_cookie(&client))
-            .body(r#"{"req_id":99,"verification_id":99}"#)
+            .body(r#"{"req_id":1,"verification_id":2}"#)
             .dispatch()
             .await;
 

@@ -211,7 +211,7 @@ mod tests {
             status_id: status,
             reference_code: format!("TEST-{id}"),
             parent_id: Some(parent),
-            project_id: 99,
+            project_id: 1,
             verification_method_id: None,
             author_id: 1,
             reviewer_id: 1,
@@ -507,7 +507,7 @@ mod tests {
             source: "automated".into(),
             status_id: 1,
             parent_id: None,
-            project_id: 99,
+            project_id: 1,
             verification_method_id: None,
             author_id: 1,
             reviewer_id: 1,
@@ -525,7 +525,8 @@ mod tests {
         let state = state_with_repo(repo);
         let service = DecoratedTestService::new(&state);
 
-        let actor = DieselRepoMock::make_user(1, "actor", "");
+        let mut actor = DieselRepoMock::make_user(1, "actor", "");
+        actor.is_admin = true;
         let deleted = service.delete(&actor, 1).unwrap();
         assert_eq!(deleted.id, 1);
     }

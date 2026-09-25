@@ -94,6 +94,17 @@ impl From<RepoError> for ApiError {
     }
 }
 
+impl From<crate::authorization::AuthorizationError> for ApiError {
+    fn from(value: crate::authorization::AuthorizationError) -> Self {
+        match value {
+            crate::authorization::AuthorizationError::Forbidden => {
+                ApiError::Forbidden("permission denied".into())
+            }
+            crate::authorization::AuthorizationError::Repository(error) => error.into(),
+        }
+    }
+}
+
 impl From<Box<dyn std::error::Error>> for ApiError {
     fn from(value: Box<dyn std::error::Error>) -> Self {
         ApiError::Internal(value.to_string())

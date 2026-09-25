@@ -128,13 +128,12 @@ impl<'r> FromRequest<'r> for ProjectAccessOrBearer {
         let token_scope = auth.token_project_scope();
         let user = auth.into_api_user().into_parts().0;
 
-        if let Some(scope) = token_scope {
-            if scope != project_id {
-                return Outcome::Error((Status::Forbidden, ()));
-            }
-            return Outcome::Success(ProjectAccessOrBearer(ProjectAccess { user, project_id }));
+        if token_scope.is_some_and(|scope| scope != project_id) {
+            return Outcome::Error((Status::Forbidden, ()));
         }
 
+        // A token's project scope narrows where it may be used; it never
+        // replaces the owning user's current project membership.
         match session_user_has_project_access(&state, &user, project_id) {
             Ok(true) => Outcome::Success(ProjectAccessOrBearer(ProjectAccess { user, project_id })),
             Ok(false) => Outcome::Error((Status::Forbidden, ())),
@@ -170,12 +169,15 @@ fn authorize_scoped(
     auth: ApiUserOrBearer,
     project_id: i32,
 ) -> Result<ProjectScopedAuth, Status> {
-    if let Some(scope) = auth.token_project_scope() {
-        if scope != project_id {
-            return Err(Status::Forbidden);
-        }
-        return Ok(ProjectScopedAuth { auth, project_id });
+    if auth
+        .token_project_scope()
+        .is_some_and(|scope| scope != project_id)
+    {
+        return Err(Status::Forbidden);
     }
+    // Project-scoped API tokens are constraints, not durable grants. This
+    // membership check also revokes their effective access immediately when
+    // the owner is removed from the project.
     match session_user_has_project_access(state, auth.user(), project_id) {
         Ok(true) => Ok(ProjectScopedAuth { auth, project_id }),
         Ok(false) => Err(Status::Forbidden),

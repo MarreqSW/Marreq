@@ -637,32 +637,25 @@ async fn users_delete_requires_authentication() {
 // ============================================================================
 
 #[rocket::async_test]
-async fn status_list_does_not_require_authentication() {
-    // Status endpoint doesn't require auth based on the code
+async fn status_list_requires_authentication() {
     let client = test_client(base_repo()).await;
 
     let response = client.get("/api/status").dispatch().await;
 
-    // Status endpoint is public, should work without auth
-    let status = response.status();
-    assert!(status == Status::Ok || status == Status::InternalServerError);
+    assert_eq!(response.status(), Status::Unauthorized);
 }
 
 #[rocket::async_test]
-async fn status_get_does_not_require_authentication() {
+async fn status_get_requires_authentication() {
     let client = test_client(base_repo()).await;
 
     let response = client.get("/api/status/1").dispatch().await;
 
-    // Status endpoint is public
-    let status = response.status();
-    assert!(
-        status == Status::Ok || status == Status::NotFound || status == Status::InternalServerError
-    );
+    assert_eq!(response.status(), Status::Unauthorized);
 }
 
 #[rocket::async_test]
-async fn status_create_does_not_require_authentication() {
+async fn status_create_requires_authentication() {
     let client = test_client(base_repo()).await;
 
     let payload = json!({
@@ -679,9 +672,7 @@ async fn status_create_does_not_require_authentication() {
         .dispatch()
         .await;
 
-    // Status endpoint is public
-    let status = response.status();
-    assert!(status == Status::Created || status == Status::InternalServerError);
+    assert_eq!(response.status(), Status::Unauthorized);
 }
 
 // ============================================================================
@@ -689,15 +680,12 @@ async fn status_create_does_not_require_authentication() {
 // ============================================================================
 
 #[rocket::async_test]
-async fn matrix_list_does_not_require_authentication() {
-    // Matrix endpoint doesn't require auth based on the code
+async fn matrix_list_requires_authentication() {
     let client = test_client(base_repo()).await;
 
     let response = client.get("/api/matrix").dispatch().await;
 
-    // Matrix endpoint is public, may return error if DB connection fails
-    let status = response.status();
-    assert!(status == Status::Ok || status == Status::InternalServerError);
+    assert_eq!(response.status(), Status::Unauthorized);
 }
 
 // ============================================================================
@@ -705,18 +693,16 @@ async fn matrix_list_does_not_require_authentication() {
 // ============================================================================
 
 #[rocket::async_test]
-async fn cache_stats_does_not_require_authentication() {
-    // Cache endpoints don't require auth based on the code
+async fn cache_stats_requires_admin_authentication() {
     let client = test_client(base_repo()).await;
 
     let response = client.get("/api/cache/stats").dispatch().await;
 
-    let status = response.status();
-    assert!(status == Status::Ok || status == Status::InternalServerError);
+    assert_eq!(response.status(), Status::Unauthorized);
 }
 
 #[rocket::async_test]
-async fn cache_clear_does_not_require_authentication() {
+async fn cache_clear_requires_admin_authentication() {
     let client = test_client(base_repo()).await;
 
     let response = client
@@ -725,8 +711,7 @@ async fn cache_clear_does_not_require_authentication() {
         .dispatch()
         .await;
 
-    let status = response.status();
-    assert!(status == Status::Ok || status == Status::InternalServerError);
+    assert_eq!(response.status(), Status::Unauthorized);
 }
 
 // ============================================================================

@@ -6,16 +6,31 @@ use crate::models::{Category, NewCategory};
 use crate::services::CategoryService;
 
 #[get("/categories")]
-pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Category>>> {
+pub async fn list(user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Category>>> {
     let service = CategoryService::new(state.inner());
-    let categories = service.list_all()?;
+    let mut categories = service.list_all()?;
+    let repo = state.repo_read();
+    categories.retain(|category| {
+        crate::permissions::has_permission(
+            &*repo,
+            user.user(),
+            category.project_id,
+            Permission::ViewRequirements,
+        )
+    });
     Ok(Json(categories))
 }
 
 #[get("/categories/<id>")]
-pub async fn get(_user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<Category>> {
+pub async fn get(user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<Category>> {
     let service = CategoryService::new(state.inner());
     let category = service.get_by_id(id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        category.project_id,
+        Permission::ViewRequirements,
+    )?;
     Ok(Json(category))
 }
 
@@ -25,6 +40,12 @@ pub async fn create(
     state: &State<AppState>,
     payload: Json<NewCategory>,
 ) -> ApiResult<Value> {
+    require_project_permission(
+        state,
+        user.user(),
+        payload.project_id,
+        Permission::ManageProjectConfiguration,
+    )?;
     let service = CategoryService::new(state.inner());
     let id = service.create(user.user(), payload.into_inner())?;
 
@@ -39,7 +60,20 @@ pub async fn update(
     payload: Json<NewCategory>,
 ) -> ApiResult<Value> {
     let service = CategoryService::new(state.inner());
-    service.update(user.user(), id, payload.into_inner())?;
+    let current = service.get_by_id(id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        current.project_id,
+        Permission::ManageProjectConfiguration,
+    )?;
+    let payload = payload.into_inner();
+    if payload.project_id != current.project_id {
+        return Err(ApiError::UnprocessableEntity(
+            "category project cannot be changed".into(),
+        ));
+    }
+    service.update(user.user(), id, payload)?;
 
     Ok(json!({
         "status": "ok",
@@ -50,6 +84,13 @@ pub async fn update(
 #[delete("/categories/<id>")]
 pub async fn delete(user: ApiUser, state: &State<AppState>, id: i32) -> ApiResult<Status> {
     let service = CategoryService::new(state.inner());
+    let category = service.get_by_id(id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        category.project_id,
+        Permission::ManageProjectConfiguration,
+    )?;
     service.delete(user.user(), id)?;
 
     Ok(Status::NoContent)

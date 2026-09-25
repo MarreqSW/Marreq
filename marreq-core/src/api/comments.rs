@@ -9,7 +9,7 @@ use crate::api::prelude::*;
 use crate::auth::guards::{ProjectRequirementsRead, ProjectRequirementsWrite};
 use crate::config;
 use crate::models::{EntityType, NewLog, RequirementComment};
-use crate::repository::{LogRepository, ProjectMembersRepository};
+use crate::repository::LogRepository;
 use crate::services::{CommentService, RequirementService, UserService};
 
 /// Comment as returned by API (includes author display name).
@@ -179,17 +179,13 @@ pub async fn list(
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<CommentResponse>>> {
     let requirement = RequirementService::new(state.inner()).get_by_id(requirement_id)?;
-    let members = state
-        .repo_read()
-        .get_members_by_project(requirement.project_id)
-        .map_err(ApiError::from)?;
     let u = _user.user();
-    let can_access = u.is_admin || members.iter().any(|m| m.user_id == u.id);
-    if !can_access {
-        return Err(ApiError::Forbidden(
-            "not a member of this requirement's project".into(),
-        ));
-    }
+    require_project_permission(
+        state,
+        u,
+        requirement.project_id,
+        Permission::ViewRequirements,
+    )?;
     let comments = CommentService::new(state.inner()).list_comments(requirement_id, version_id)?;
     let user_service = UserService::new(state.inner());
     let responses: Vec<CommentResponse> = comments
@@ -212,17 +208,13 @@ pub async fn create(
     payload: Json<CreateCommentRequest>,
 ) -> ApiResult<(Status, Json<CommentResponse>)> {
     let requirement = RequirementService::new(state.inner()).get_by_id(requirement_id)?;
-    let members = state
-        .repo_read()
-        .get_members_by_project(requirement.project_id)
-        .map_err(ApiError::from)?;
     let u = user.user();
-    let can_access = u.is_admin || members.iter().any(|m| m.user_id == u.id);
-    if !can_access {
-        return Err(ApiError::Forbidden(
-            "not a member of this requirement's project".into(),
-        ));
-    }
+    require_project_permission(
+        state,
+        u,
+        requirement.project_id,
+        Permission::EditRequirements,
+    )?;
     if let Some(version_id) = payload.requirement_version_id {
         let version = RequirementService::new(state.inner())
             .get_version_by_id(version_id)

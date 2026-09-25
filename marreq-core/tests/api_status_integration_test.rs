@@ -12,13 +12,14 @@
 //! - Verifying default seeded statuses
 
 use marreq_core::models::*;
-use rocket::http::{ContentType, Status};
+use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::{json, Value};
 
 mod test_support {
     use super::*;
     use marreq_core::app::AppState;
+    use marreq_core::auth::session::test_session_cookie_for;
     use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
     use std::sync::{Arc, RwLock};
 
@@ -41,8 +42,19 @@ mod test_support {
         Client::tracked(rocket).await.expect("rocket instance")
     }
 
+    pub fn admin_session_cookie(client: &Client) -> Cookie<'static> {
+        let state = client
+            .rocket()
+            .state::<TestAppState>()
+            .expect("managed app state");
+        test_session_cookie_for(state, 1)
+    }
+
     pub fn base_repo() -> DieselRepoMock {
         let mut repo = DieselRepoMock::default();
+        let mut admin = DieselRepoMock::make_user(1, "admin", "password");
+        admin.is_admin = true;
+        repo.users.insert(admin.id, admin);
 
         // Add some default statuses
         repo.requirement_statuses.insert(
@@ -85,7 +97,11 @@ use test_support::*;
 async fn get_status_returns_all_statuses() {
     let client = test_client(base_repo()).await;
 
-    let response = client.get("/api/status").dispatch().await;
+    let response = client
+        .get("/api/status")
+        .private_cookie(admin_session_cookie(&client))
+        .dispatch()
+        .await;
 
     assert_eq!(response.status(), Status::Ok);
     let statuses: Vec<Value> = response.into_json().await.expect("json");
@@ -108,7 +124,11 @@ async fn get_status_returns_all_statuses() {
 async fn get_status_by_id_returns_correct_status() {
     let client = test_client(base_repo()).await;
 
-    let response = client.get("/api/status/1").dispatch().await;
+    let response = client
+        .get("/api/status/1")
+        .private_cookie(admin_session_cookie(&client))
+        .dispatch()
+        .await;
 
     assert_eq!(response.status(), Status::Ok);
     let status: Value = response.into_json().await.expect("json");
@@ -121,7 +141,11 @@ async fn get_status_by_id_returns_correct_status() {
 async fn get_status_with_nonexistent_id_returns_404() {
     let client = test_client(base_repo()).await;
 
-    let response = client.get("/api/status/999").dispatch().await;
+    let response = client
+        .get("/api/status/999")
+        .private_cookie(admin_session_cookie(&client))
+        .dispatch()
+        .await;
 
     assert_eq!(response.status(), Status::NotFound);
 }
@@ -144,6 +168,7 @@ async fn post_status_creates_new_status() {
     let response = client
         .post("/api/status")
         .header(ContentType::JSON)
+        .private_cookie(admin_session_cookie(&client))
         .body(new_status.to_string())
         .dispatch()
         .await;
@@ -166,6 +191,7 @@ async fn post_status_with_missing_fields_returns_error() {
     let response = client
         .post("/api/status")
         .header(ContentType::JSON)
+        .private_cookie(admin_session_cookie(&client))
         .body(invalid_json.to_string())
         .dispatch()
         .await;

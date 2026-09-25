@@ -20,9 +20,18 @@ pub struct VerificationMatrixPutBody {
 }
 
 #[get("/matrix")]
-pub async fn list(state: &State<AppState>) -> ApiResult<Json<Vec<MatrixLink>>> {
+pub async fn list(user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<MatrixLink>>> {
     let service = MatrixService::new(state.inner());
-    let entries = service.list_all()?;
+    let mut entries = service.list_all()?;
+    let repo = state.repo_read();
+    entries.retain(|entry| {
+        crate::permissions::has_permission(
+            &*repo,
+            user.user(),
+            entry.project_id,
+            Permission::ViewRequirements,
+        )
+    });
     Ok(Json(entries))
 }
 
@@ -167,7 +176,10 @@ mod tests {
         }
     }
 
-    async fn client_with_routes(repo: DieselRepoMock, mount_list_by_project: bool) -> Client {
+    async fn client_with_routes(mut repo: DieselRepoMock, mount_list_by_project: bool) -> Client {
+        let mut admin = DieselRepoMock::make_user(ADMIN_ID, "admin", "");
+        admin.is_admin = true;
+        repo.users.insert(ADMIN_ID, admin);
         let state = test_state(repo);
         let rocket = rocket::build().manage(state).mount(
             "/api",
@@ -183,7 +195,11 @@ mod tests {
     #[rocket::async_test]
     async fn list_returns_empty_without_data() {
         let client = client_with_routes(DieselRepoMock::default(), false).await;
-        let response = client.get("/api/matrix").dispatch().await;
+        let response = client
+            .get("/api/matrix")
+            .private_cookie(auth_cookie_for(&client, ADMIN_ID))
+            .dispatch()
+            .await;
         assert_eq!(response.status(), Status::Ok);
         let body = response.into_string().await.unwrap();
         assert_eq!(body, "[]");
@@ -220,7 +236,11 @@ mod tests {
             triggering_user_id: None,
         });
         let client = client_with_routes(repo, false).await;
-        let response = client.get("/api/matrix").dispatch().await;
+        let response = client
+            .get("/api/matrix")
+            .private_cookie(auth_cookie_for(&client, ADMIN_ID))
+            .dispatch()
+            .await;
         assert_eq!(response.status(), Status::Ok);
         let body: Vec<MatrixLink> = response.into_json().await.unwrap();
         assert_eq!(body.len(), 1);

@@ -810,7 +810,8 @@ mod tests {
         let state = state_with_repo(repo);
         let service = DecoratedRequirementService::new(&state);
 
-        let actor = DieselRepoMock::make_user(1, "actor", "");
+        let mut actor = DieselRepoMock::make_user(1, "actor", "");
+        actor.is_admin = true;
         let deleted = service.delete(&actor, 1).unwrap();
         assert_eq!(deleted.id, 1);
     }

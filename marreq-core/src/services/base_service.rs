@@ -32,6 +32,7 @@ where
     R: ProjectMembersRepository,
 {
     crate::authorization::require_project_permission(repo, user, project_id, permission)
+        .map_err(ApiError::from)
 }
 
 /// Validate that a user may access an entity belonging to `entity_project_id` (at least view).
@@ -40,4 +41,5 @@ where
     R: ProjectMembersRepository,
 {
     crate::authorization::validate_entity_access(repo, user, entity_project_id)
+        .map_err(ApiError::from)
 }

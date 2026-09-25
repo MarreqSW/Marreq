@@ -18,9 +18,18 @@ pub struct FieldUpdateRequest {
 }
 
 #[get("/verifications")]
-pub async fn list(_user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Verification>>> {
+pub async fn list(user: ApiUser, state: &State<AppState>) -> ApiResult<Json<Vec<Verification>>> {
     let service = VerificationService::new(state.inner());
-    let verifications = service.list_all()?;
+    let mut verifications = service.list_all()?;
+    let repo = state.repo_read();
+    verifications.retain(|verification| {
+        crate::permissions::has_permission(
+            &*repo,
+            user.user(),
+            verification.project_id,
+            Permission::ViewRequirements,
+        )
+    });
     Ok(Json(verifications))
 }
 
@@ -62,13 +71,15 @@ pub async fn get_by_project(
 }
 
 #[get("/verifications/<id>")]
-pub async fn get(
-    _user: ApiUser,
-    id: i32,
-    state: &State<AppState>,
-) -> ApiResult<Json<Verification>> {
+pub async fn get(user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Json<Verification>> {
     let service = VerificationService::new(state.inner());
     let verification = service.get_by_id(id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        verification.project_id,
+        Permission::ViewRequirements,
+    )?;
     Ok(Json(verification))
 }
 
@@ -209,6 +220,13 @@ pub async fn update_by_project(
 #[delete("/verifications/<id>")]
 pub async fn delete(user: ApiUser, id: i32, state: &State<AppState>) -> ApiResult<Status> {
     let service = VerificationService::new(state.inner());
+    let verification = service.get_by_id(id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        verification.project_id,
+        Permission::EditRequirements,
+    )?;
     service.delete(user.user(), id)?;
     Ok(Status::NoContent)
 }

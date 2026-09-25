@@ -19,6 +19,7 @@ pub enum Permission {
     EditRequirements,
     ApproveVersions,
     ManageCustomFields,
+    ManageProjectConfiguration,
     ManageProjectMembers,
 }
 
@@ -48,6 +49,7 @@ fn permissions_for_role(role: i32) -> BTreeSet<Permission> {
             EditRequirements,
             ApproveVersions,
             ManageCustomFields,
+            ManageProjectConfiguration,
             ManageProjectMembers,
         ]
         .into_iter()
@@ -71,13 +73,17 @@ pub struct EffectivePermissions {
     /// True when the user may change requirement / verification status and version approval for this project.
     pub is_project_reviewer: bool,
     pub manage_custom_fields: bool,
+    pub manage_project_configuration: bool,
     pub manage_project_members: bool,
 }
 
 fn user_is_project_reviewer<R>(repo: &R, user: &User, project_id: i32) -> bool
 where
-    R: ProjectReviewersRepository,
+    R: ProjectMembersRepository + ProjectReviewersRepository,
 {
+    if !has_permission(repo, user, project_id, Permission::ApproveVersions) {
+        return false;
+    }
     let Ok(ids) = repo.list_project_reviewer_ids(project_id) else {
         return false;
     };
@@ -93,7 +99,7 @@ where
 /// (member of the project's reviewer list, or site admin when that list is still empty).
 pub fn may_change_review_gates<R>(repo: &R, user: &User, project_id: i32) -> bool
 where
-    R: ProjectReviewersRepository,
+    R: ProjectMembersRepository + ProjectReviewersRepository,
 {
     user_is_project_reviewer(repo, user, project_id)
 }
@@ -111,6 +117,12 @@ where
         approve_versions: has_permission(repo, user, project_id, ApproveVersions),
         is_project_reviewer,
         manage_custom_fields: has_permission(repo, user, project_id, ManageCustomFields),
+        manage_project_configuration: has_permission(
+            repo,
+            user,
+            project_id,
+            ManageProjectConfiguration,
+        ),
         manage_project_members: has_permission(repo, user, project_id, ManageProjectMembers),
     }
 }
@@ -226,8 +238,9 @@ mod tests {
         assert!(perms.contains(&Permission::EditRequirements));
         assert!(perms.contains(&Permission::ApproveVersions));
         assert!(perms.contains(&Permission::ManageCustomFields));
+        assert!(perms.contains(&Permission::ManageProjectConfiguration));
         assert!(perms.contains(&Permission::ManageProjectMembers));
-        assert_eq!(perms.len(), 5);
+        assert_eq!(perms.len(), 6);
     }
 
     #[test]
@@ -237,6 +250,7 @@ mod tests {
         assert!(perms.contains(&Permission::EditRequirements));
         assert!(perms.contains(&Permission::ApproveVersions));
         assert!(!perms.contains(&Permission::ManageCustomFields));
+        assert!(!perms.contains(&Permission::ManageProjectConfiguration));
         assert!(!perms.contains(&Permission::ManageProjectMembers));
     }
 
@@ -247,6 +261,7 @@ mod tests {
         assert!(perms.contains(&Permission::EditRequirements));
         assert!(!perms.contains(&Permission::ApproveVersions));
         assert!(!perms.contains(&Permission::ManageCustomFields));
+        assert!(!perms.contains(&Permission::ManageProjectConfiguration));
         assert!(!perms.contains(&Permission::ManageProjectMembers));
     }
 
@@ -257,6 +272,7 @@ mod tests {
         assert!(!perms.contains(&Permission::EditRequirements));
         assert!(!perms.contains(&Permission::ApproveVersions));
         assert!(!perms.contains(&Permission::ManageCustomFields));
+        assert!(!perms.contains(&Permission::ManageProjectConfiguration));
         assert!(!perms.contains(&Permission::ManageProjectMembers));
     }
 

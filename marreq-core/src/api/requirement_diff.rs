@@ -12,12 +12,19 @@ use crate::services::{RequirementDiffService, RequirementService};
 /// Both version IDs must belong to the given requirement.
 #[get("/requirements/<req_id>/versions/<v1>/diff/<v2>")]
 pub async fn diff_versions(
-    _user: ApiUser,
+    user: ApiUser,
     req_id: i32,
     v1: i32,
     v2: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementDiff>> {
+    let requirement = RequirementService::new(state.inner()).get_by_id(req_id)?;
+    require_project_permission(
+        state,
+        user.user(),
+        requirement.project_id,
+        Permission::ViewRequirements,
+    )?;
     let service = RequirementDiffService::new(state.inner());
     let diff = service.diff_versions(req_id, v1, v2)?;
     Ok(Json(diff))

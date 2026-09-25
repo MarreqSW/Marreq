@@ -13,7 +13,6 @@
 
 use marreq_core::auth::session::SESSION_COOKIE;
 use marreq_core::models::*;
-use marreq_core::repository::diesel_repo_mock::DieselRepoMock;
 use marreq_core::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
@@ -171,15 +170,12 @@ use test_support::*;
 // ============================================================================
 
 #[rocket::async_test]
-async fn get_matrix_does_not_require_authentication() {
-    // Matrix endpoint is public (no authentication required)
+async fn get_matrix_requires_authentication() {
     let client = test_client(base_repo()).await;
 
     let response = client.get("/api/matrix").dispatch().await;
 
-    // May return InternalServerError if database connection fails (expected with mock)
-    let status = response.status();
-    assert!(status == Status::Ok || status == Status::InternalServerError);
+    assert_eq!(response.status(), Status::Unauthorized);
 }
 
 #[rocket::async_test]
@@ -202,8 +198,7 @@ async fn get_matrix_with_valid_session_returns_ok() {
 }
 
 #[rocket::async_test]
-async fn get_matrix_with_invalid_session_still_works() {
-    // Matrix endpoint is public, so invalid session doesn't matter
+async fn get_matrix_with_invalid_session_is_unauthorized() {
     let client = test_client(base_repo()).await;
 
     let mut invalid_cookie = Cookie::new(SESSION_COOKIE, "999");
@@ -215,9 +210,7 @@ async fn get_matrix_with_invalid_session_still_works() {
         .dispatch()
         .await;
 
-    // Should still work (or return InternalServerError if DB fails)
-    let status = response.status();
-    assert!(status == Status::Ok || status == Status::InternalServerError);
+    assert_eq!(response.status(), Status::Unauthorized);
 }
 
 // ============================================================================
@@ -257,7 +250,7 @@ async fn get_matrix_returns_json_array() {
 
 #[rocket::async_test]
 async fn get_matrix_handles_database_errors_gracefully() {
-    let repo = DieselRepoMock::default(); // Empty repo might cause connection issues
+    let repo = base_repo();
     let client = test_client(repo).await;
 
     let response = client

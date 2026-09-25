@@ -11,11 +11,13 @@
 //! embedding generation on create/update operations.
 
 use crate::app::{AppState, DieselCachedRepo};
+use crate::authorization::AuthorizationError;
 use crate::logger::Loggable;
 use crate::models::{
     CustomFieldValueInput, EntityType, NewRequirement, NewRequirementVersionLink, Requirement,
     RequirementVersion, RequirementVersionLink, User, Verification,
 };
+use crate::permissions::Permission;
 use crate::repository::errors::RepoError;
 use crate::repository::{
     CustomFieldRepository, LookupRepository, MatrixRepository, RequirementVersionLinksRepository,
@@ -82,6 +84,19 @@ impl<'a> RequirementService<'a> {
     /// Create a new service instance bound to the provided application state.
     pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
         Self { state }
+    }
+
+    fn require_write_access(&self, actor: &User, project_id: i32) -> Result<(), RepoError> {
+        crate::authorization::require_project_permission(
+            &*self.repo_read(),
+            actor,
+            project_id,
+            Permission::EditRequirements,
+        )
+        .map_err(|error| match error {
+            AuthorizationError::Forbidden => RepoError::Unauthorized,
+            AuthorizationError::Repository(error) => error,
+        })
     }
 
     /// Retrieve all requirements (with custom fields attached).
@@ -583,10 +598,14 @@ impl<'a> RequirementService<'a> {
         custom_fields: Option<&[CustomFieldValueInput]>,
         parent_links: Option<Vec<(i32, String, Option<String>)>>,
     ) -> Result<Requirement, RepoError> {
+        let before = self.get_by_id(id)?;
+        if payload.project_id != before.project_id {
+            return Err(RepoError::CrossProjectViolation(
+                "requirement project cannot be changed".into(),
+            ));
+        }
         self.prepare_payload(&mut payload)?;
         payload.id = Some(id);
-
-        let before = self.get_by_id(id)?;
         let before_verification_ids = self.get_verification_method_ids(id)?;
 
         let parent_link_rows =
@@ -641,6 +660,8 @@ impl<'a> RequirementService<'a> {
 
     /// Delete an requirement entry and log the removal.
     pub fn delete(&self, actor: &User, id: i32) -> Result<Requirement, RepoError> {
+        let existing = self.get_by_id(id)?;
+        self.require_write_access(actor, existing.project_id)?;
         let removed = {
             let mut repo = self.repo_write();
             repo.delete_requirement(id)?
@@ -772,7 +793,24 @@ mod tests {
     }
 
     fn actor() -> User {
-        DieselRepoMock::make_user(1, "actor", "")
+        let mut actor = DieselRepoMock::make_user(1, "actor", "");
+        actor.is_admin = true;
+        actor
+    }
+
+    #[test]
+    fn delete_rejects_actor_without_project_access() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(1, requirement(1, 10, "REQ-1"));
+        let state = state_with_repo(repo);
+        let service = RequirementService::new(&state);
+        let unauthorized = DieselRepoMock::make_user(9, "outsider", "");
+
+        assert!(matches!(
+            service.delete(&unauthorized, 1),
+            Err(RepoError::Unauthorized)
+        ));
+        assert!(service.get_by_id(1).is_ok());
     }
 
     fn requirement(id: i32, project_id: i32, reference: &str) -> Requirement {

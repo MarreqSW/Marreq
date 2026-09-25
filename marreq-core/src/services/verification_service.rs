@@ -7,7 +7,9 @@
 //! validation, caching, and audit logging.
 
 use crate::app::{AppState, DieselCachedRepo};
+use crate::authorization::AuthorizationError;
 use crate::models::{NewVerification, User, Verification};
+use crate::permissions::Permission;
 use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
 use crate::repository::VerificationsRepository;
@@ -22,6 +24,19 @@ impl<'a> VerificationService<'a> {
     /// Create a new service instance bound to the provided state.
     pub fn new(state: &'a AppState<DieselCachedRepo>) -> Self {
         Self { state }
+    }
+
+    fn require_write_access(&self, actor: &User, project_id: i32) -> Result<(), RepoError> {
+        crate::authorization::require_project_permission(
+            &*self.state.repo_read(),
+            actor,
+            project_id,
+            Permission::EditRequirements,
+        )
+        .map_err(|error| match error {
+            AuthorizationError::Forbidden => RepoError::Unauthorized,
+            AuthorizationError::Repository(error) => error,
+        })
     }
 
     /// Retrieve all Verification entries.
@@ -132,6 +147,11 @@ impl<'a> VerificationService<'a> {
         mut updated_verification: NewVerification,
     ) -> Result<Verification, RepoError> {
         let before = self.get_by_id(id)?;
+        if updated_verification.project_id != before.project_id {
+            return Err(RepoError::CrossProjectViolation(
+                "verification project cannot be changed".into(),
+            ));
+        }
 
         updated_verification.id = Some(id);
         {
@@ -149,6 +169,8 @@ impl<'a> VerificationService<'a> {
 
     /// Delete a verification entry and log the removal.
     pub fn delete(&self, user: &User, id: i32) -> Result<Verification, RepoError> {
+        let existing = self.get_by_id(id)?;
+        self.require_write_access(user, existing.project_id)?;
         let deleted = {
             let mut repo = self.state.repo_write();
             repo.delete_verification(id)?
@@ -179,7 +201,24 @@ mod tests {
     }
 
     fn actor() -> User {
-        DieselRepoMock::make_user(1, "actor", "")
+        let mut actor = DieselRepoMock::make_user(1, "actor", "");
+        actor.is_admin = true;
+        actor
+    }
+
+    #[test]
+    fn delete_rejects_actor_without_project_access() {
+        let mut repo = DieselRepoMock::default();
+        repo.verifications.insert(1, verification(1, 10, "VER-1"));
+        let state = state_with_repo(repo);
+        let service = VerificationService::new(&state);
+        let unauthorized = DieselRepoMock::make_user(9, "outsider", "");
+
+        assert!(matches!(
+            service.delete(&unauthorized, 1),
+            Err(RepoError::Unauthorized)
+        ));
+        assert!(service.get_by_id(1).is_ok());
     }
 
     fn verification(id: i32, project_id: i32, reference: &str) -> Verification {
@@ -237,14 +276,14 @@ mod tests {
         let state = state_with_repo(repo);
         let service = VerificationService::new(&state);
 
-        let mut payload = new_payload(5);
+        let mut payload = new_payload(3);
         payload.name = "Updated".into();
         payload.description = "New".into();
 
         let updated = service.update(&actor(), 1, payload).unwrap();
         assert_eq!(updated.name, "Updated");
         assert_eq!(updated.description, "New");
-        assert_eq!(updated.project_id, 5);
+        assert_eq!(updated.project_id, 3);
     }
 
     #[test]

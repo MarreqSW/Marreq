@@ -57,6 +57,31 @@ export async function fetchJson<T>(
   return parseJson<T>(res);
 }
 
+/** Filename from a `Content-Disposition: attachment; filename="…"` header, if any. */
+export function filenameFromDisposition(header: string | null): string | null {
+  const match = header?.match(/filename="?([^";]+)"?/i);
+  return match ? match[1] : null;
+}
+
+/** Like {@link fetchBlob}, but also returns the server-suggested filename. */
+export async function fetchDownload(
+  path: string,
+  init: RequestInit = {},
+): Promise<{ blob: Blob; filename: string | null }> {
+  const res = await fetch(path, {
+    credentials: 'same-origin',
+    ...init,
+    headers: {
+      ...init.headers,
+    },
+  });
+  if (!res.ok) throw apiErrorFrom(res, await res.text());
+  return {
+    blob: await res.blob(),
+    filename: filenameFromDisposition(res.headers.get('Content-Disposition')),
+  };
+}
+
 /** Fetches a binary response (file download). Errors use the same messages as fetchJson. */
 export async function fetchBlob(path: string, init: RequestInit = {}): Promise<Blob> {
   const res = await fetch(path, {

@@ -241,6 +241,10 @@ docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq -c
 ## Backup and Restore
 
 ### Create Backup
+
+From the SPA (self-hosted, administrators): **Admin → Backup** → **Download backup** downloads `marreq-backup_<timestamp>.sql.gz`. The server runs `pg_dump` against `DATABASE_URL` (the Docker image ships `postgresql-client`; set `MARREQ_PG_DUMP` to use another binary).
+
+From a shell:
 ```bash
 ./marreq-core/scripts/db_backup.sh
 # Saves to ./backups/marreq_<timestamp>.sql.gz

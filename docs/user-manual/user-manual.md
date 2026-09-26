@@ -86,7 +86,7 @@ The top navigation bar includes:
 | **Members**               | Project members                                                                                                      |
 | **Baselines**             | Project baselines                                                                                                    |
 | **Quick Actions** (admin) | Shortcuts: New Project, New Requirement/Verification/Category/Applicability/Verification Method/Verification Status, New User, Import File/ReqIF |
-| **Admin** (admin)         | Dashboard, User Management, Database Backup, Import, System Logs, Log Analytics                                      |
+| **Admin** (admin)         | User directory, System logs, Backup                                                                                  |
 
 In the top-right:
 
@@ -579,10 +579,18 @@ In deployments where users **self-register** (hosted cloud mode), **New user** i
 
 ### 13.3 Database Backup
 
-- **Admin → Database Backup**.
-- URL: `/-/admin/backup`.
+- **Backup** in the project sidebar (or the **Backup** button on the User directory).
+- URL: `/<project-slug>/admin/backup`.
 
-Generate a backup file; download or save as configured.
+**Download backup** runs `pg_dump` on the server and downloads the whole database (all projects, users, and audit logs) as gzipped SQL named `marreq-backup_<YYYYMMDD>_<HHMMSS>.sql.gz`. Nothing is stored on the server. Large databases can take a few minutes; keep the page open. The file contains password hashes and all project data, so store it securely. Each download (or failure) is recorded in **System logs** as an `EXPORT` entry.
+
+To restore, load the file into an **empty** database with `psql` from PostgreSQL 15 or newer:
+
+```bash
+gunzip -c marreq-backup_YYYYMMDD_HHMMSS.sql.gz | psql "$DATABASE_URL"
+```
+
+Available on self-hosted (`marreq-server`) installations only. In the hosted cloud mode the page explains that backups are managed by the hosting operator.
 
 ### 13.4 Cache (if exposed)
 

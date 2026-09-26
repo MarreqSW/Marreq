@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { ApiError, fetchJson, JSON_HEADERS } from '../transport';
+import { ApiError, fetchDownload, fetchJson, filenameFromDisposition, JSON_HEADERS } from '../transport';
 
 describe('JSON_HEADERS', () => {
   it('sets application/json content type', () => {
@@ -119,5 +119,55 @@ describe('fetchJson', () => {
     );
 
     await expect(fetchJson('/api/crash')).rejects.toThrow('boom');
+  });
+});
+
+describe('fetchDownload', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('returns the blob and the Content-Disposition filename', async () => {
+    const blob = new Blob(['dump']);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        headers: new Headers({
+          'Content-Disposition': 'attachment; filename="marreq-backup_20260926_101500.sql.gz"',
+        }),
+        blob: async () => blob,
+      }),
+    );
+
+    const res = await fetchDownload('/api/admin/backup', { method: 'POST' });
+    expect(res.blob).toBe(blob);
+    expect(res.filename).toBe('marreq-backup_20260926_101500.sql.gz');
+  });
+
+  it('throws ApiError on failure', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 410,
+        statusText: 'Gone',
+        text: async () => JSON.stringify({ message: 'Database backup is not available' }),
+      }),
+    );
+
+    const err = await fetchDownload('/api/admin/backup').catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(410);
+  });
+});
+
+describe('filenameFromDisposition', () => {
+  it('parses quoted and unquoted filenames', () => {
+    expect(filenameFromDisposition('attachment; filename="a.sql.gz"')).toBe('a.sql.gz');
+    expect(filenameFromDisposition('attachment; filename=b.json')).toBe('b.json');
+    expect(filenameFromDisposition(null)).toBeNull();
   });
 });

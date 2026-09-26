@@ -1,5 +1,5 @@
 import type { AdminLogListParams, AdminLogListResponse } from './types';
-import { fetchBlob, fetchJson, JSON_HEADERS } from './transport';
+import { fetchBlob, fetchDownload, fetchJson, JSON_HEADERS } from './transport';
 import { triggerDownload } from '@/utils/tableUtils';
 
 function logsQuery(params: AdminLogListParams): string {
@@ -43,4 +43,18 @@ export async function cleanupAdminLogs(
     headers: { ...JSON_HEADERS, 'X-CSRF-Token': csrfToken },
     body: JSON.stringify({ days }),
   });
+}
+
+/**
+ * Runs a whole-database backup on the server (admin only, self-hosted) and saves the
+ * gzipped SQL dump. Resolves with the downloaded filename.
+ */
+export async function downloadDatabaseBackup(csrfToken: string): Promise<string> {
+  const { blob, filename } = await fetchDownload('/api/admin/backup', {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrfToken },
+  });
+  const name = filename ?? 'marreq-backup.sql.gz';
+  triggerDownload(blob, name);
+  return name;
 }

@@ -245,6 +245,7 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         users::set_password,
         users::delete,
         logs::list,
+        logs::stats,
         logs::export_json,
         logs::cleanup,
         backup::create,

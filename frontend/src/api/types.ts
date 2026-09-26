@@ -479,6 +479,29 @@ export interface AdminLogListParams {
   offset?: number;
 }
 
+/** Query for `GET /api/admin/logs/stats` (admin only). */
+export interface AdminLogStatsParams {
+  since?: string;
+  until?: string;
+  project_id?: number;
+  entity_type?: string;
+  action_type?: string;
+  user_id?: number;
+  top?: number;
+}
+
+/** Audit-log activity summary; `by_day` is zero-filled, one entry per UTC day. */
+export interface AdminLogStats {
+  since: string;
+  until: string;
+  total: number;
+  /** Distinct users with at least one event (not capped like `by_user`). */
+  active_users: number;
+  by_day: { day: string; count: number }[];
+  by_action: { action_type: string; count: number }[];
+  by_user: { user_id: number; username: string; count: number }[];
+}
+
 export interface Baseline {
   id: number;
   project_id: number;

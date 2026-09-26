@@ -111,12 +111,13 @@ HTTP status matches the error class (400, 401, 403, 404, 409, 410, 422, 500).
 
 ## Admin audit logs
 
-Instance-wide (not project-scoped). All three routes require a **global administrator**; other authenticated users receive **403**.
+Instance-wide (not project-scoped). All four routes require a **global administrator**; other authenticated users receive **403**.
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/admin/logs` | JSON `{ items, total, limit, offset }`. Query: `entity_type`, `entity_id`, `user_id`, `action_type`, `project_id`, `since`, `until` (RFC 3339 or `YYYY-MM-DD[THH:MM]`), `limit` (default 50, max 100), `offset`. Each item matches entity activity (`log_id`, `user_id`, `username`, `action_type`, `summary`, `description`, `created_at`, `changes`) plus `entity_type`, `entity_id`, `project_id`. Newest first. |
 | `GET` | `/api/admin/logs/export.json` | Same filters; `limit` default/max 10000. JSON attachment `audit-logs.json`. Records an `EXPORT` audit row. |
+| `GET` | `/api/admin/logs/stats` | Activity summary. Query: `since`, `until` (same formats as the list; default: the last 30 UTC days ending now; at most 366 days, **400** otherwise or when `since > until`), `entity_type`, `action_type`, `user_id`, `project_id`, `top` (default 10, max 50). Response `{ since, until, total, active_users, by_day: [{ day, count }], by_action: [{ action_type, count }], by_user: [{ user_id, username, count }] }`. `by_day` has one zero-filled entry per UTC day; `by_action` / `by_user` are sorted by count and capped at `top`; `active_users` is not capped. |
 | `POST` | `/api/admin/logs/cleanup` | JSON `{ "days": n }` with `n >= 1`. Response `{ "deleted": <count> }`. Removes rows older than `n` days. |
 
 ## Admin database backup

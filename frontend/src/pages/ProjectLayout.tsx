@@ -256,6 +256,11 @@ export default function ProjectLayout() {
               label: 'System logs',
             })}
             {sideLink({
+              to: `${basePath}/admin/logs/analytics`,
+              icon: 'monitoring',
+              label: 'Log analytics',
+            })}
+            {sideLink({
               to: `${basePath}/admin/backup`,
               icon: 'backup',
               label: 'Backup',

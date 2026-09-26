@@ -1542,6 +1542,14 @@ impl<R: LogRepository> LogRepository for CacheRepository<R> {
     fn cleanup_logs(&mut self, days: i64) -> Result<usize, RepoError> {
         self.inner.cleanup_logs(days)
     }
+
+    fn get_log_stats(
+        &self,
+        query: &crate::repository::LogListQuery,
+        top: i64,
+    ) -> Result<crate::repository::LogStats, RepoError> {
+        self.inner.get_log_stats(query, top)
+    }
 }
 
 impl<R: RequirementCommentsRepository> RequirementCommentsRepository for CacheRepository<R> {

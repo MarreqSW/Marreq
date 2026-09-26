@@ -606,10 +606,16 @@ Browse audit logs (entity type, entity ID, user, action, timestamp). You can fil
 
 ### 13.6 Log Analytics
 
-- **Admin → Log Analytics**.
-- URL: `/log_analytics`.
+- **Log analytics** in the project sidebar (or **Analytics** on the System logs page).
+- URL: `/<project-slug>/admin/logs/analytics`.
 
-Analytics views over log data (if implemented).
+A summary of instance-wide activity from the audit log, for the last **7**, **30** (default), or **90** days:
+
+- **Events**, **Average per day**, **Active users** (distinct users with at least one event), and **Busiest day**.
+- **Events per day**: one bar per day; hover or focus a bar for the exact count, or use **Show as table**.
+- **Top actions** and **Top users** (ten each): click an entry to open **System logs** filtered to that action or user for the same period.
+
+Days are calendar days in **UTC**. Available to administrators only.
 
 ---
 

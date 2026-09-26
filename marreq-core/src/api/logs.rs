@@ -10,12 +10,18 @@ use rocket::Responder;
 
 use crate::api::prelude::*;
 use crate::repository::LogListQuery;
-use crate::services::log_service::{change_summary, log_change_details, ChangeDetail, LogService};
+use crate::services::log_service::{
+    change_summary, log_change_details, ChangeDetail, LogService, LogStatsResponse,
+};
 
 const LIST_LIMIT_DEFAULT: i64 = 50;
 const LIST_LIMIT_CAP: i64 = 100;
 const EXPORT_LIMIT_DEFAULT: i64 = 10_000;
 const EXPORT_LIMIT_CAP: i64 = 10_000;
+const STATS_DEFAULT_DAYS: i64 = 30;
+const STATS_MAX_DAYS: i64 = 366;
+const STATS_TOP_DEFAULT: i64 = 10;
+const STATS_TOP_CAP: i64 = 50;
 
 #[derive(Debug, Serialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
@@ -53,6 +59,18 @@ pub struct LogsQueryParams {
     until: Option<String>,
     limit: Option<i64>,
     offset: Option<i64>,
+}
+
+/// Filters for `GET /api/admin/logs/stats` (the list filters minus paging, plus `top`).
+#[derive(FromForm, Default)]
+pub struct LogStatsParams {
+    entity_type: Option<String>,
+    user_id: Option<i32>,
+    action_type: Option<String>,
+    project_id: Option<i32>,
+    since: Option<String>,
+    until: Option<String>,
+    top: Option<i64>,
 }
 
 #[derive(Deserialize)]
@@ -184,6 +202,49 @@ pub async fn list(
         limit,
         offset,
     }))
+}
+
+/// `GET /api/admin/logs/stats` — activity summary over the audit log (administrators only).
+///
+/// Defaults to the last 30 UTC days ending now. Returns the total, a zero-filled
+/// per-day series, and the top action types and users (`top`, default 10, max 50).
+#[get("/admin/logs/stats?<q..>")]
+pub async fn stats(
+    _admin: AdminOnly,
+    state: &State<AppState>,
+    q: LogStatsParams,
+) -> ApiResult<Json<LogStatsResponse>> {
+    let until = match blank_to_none(q.until.clone()) {
+        Some(s) => parse_datetime(&s)?,
+        None => chrono::Utc::now().naive_utc(),
+    };
+    let since = match blank_to_none(q.since.clone()) {
+        Some(s) => parse_datetime(&s)?,
+        None => (until.date() - chrono::Duration::days(STATS_DEFAULT_DAYS - 1))
+            .and_hms_opt(0, 0, 0)
+            .expect("midnight is valid"),
+    };
+    if since > until {
+        return Err(ApiError::BadRequest("since must not be after until".into()));
+    }
+    if until - since > chrono::Duration::days(STATS_MAX_DAYS) {
+        return Err(ApiError::BadRequest(format!(
+            "range too long; at most {STATS_MAX_DAYS} days"
+        )));
+    }
+
+    let filters = LogListQuery {
+        entity_type: blank_to_none(q.entity_type.clone()),
+        user_id: q.user_id,
+        action_type: blank_to_none(q.action_type.clone()),
+        project_id: q.project_id,
+        ..Default::default()
+    };
+    let top = clamp_limit(q.top, STATS_TOP_DEFAULT, STATS_TOP_CAP);
+    let body = LogService::new(state.inner())
+        .stats(filters, since, until, top)
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    Ok(Json(body))
 }
 
 /// `GET /api/admin/logs/export.json` — JSON download of matching logs (administrators only).
@@ -320,7 +381,7 @@ mod tests {
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
         let rocket = rocket::build()
             .manage(state_from_repo(repo))
-            .mount("/api", routes![list, export_json, cleanup]);
+            .mount("/api", routes![list, export_json, cleanup, stats]);
         Client::tracked(rocket).await.unwrap()
     }
 
@@ -427,5 +488,125 @@ mod tests {
         assert_eq!(response.status(), Status::Ok);
         let body: serde_json::Value = response.into_json().await.unwrap();
         assert_eq!(body["deleted"], 2);
+    }
+
+    fn at(day: u32, hour: u32) -> NaiveDateTime {
+        NaiveDate::from_ymd_opt(2026, 9, day)
+            .unwrap()
+            .and_hms_opt(hour, 0, 0)
+            .unwrap()
+    }
+
+    fn repo_with_activity() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default().with_admin_user();
+        repo.users.insert(
+            NON_ADMIN_ID,
+            DieselRepoMock::make_user(NON_ADMIN_ID, "bob", "hash"),
+        );
+        let rows = [
+            (1, 9, ADMIN_ID, "UPDATE", Some(1)),
+            (1, 23, ADMIN_ID, "UPDATE", Some(1)),
+            (2, 8, NON_ADMIN_ID, "CREATE", Some(2)),
+            (4, 10, ADMIN_ID, "LOGIN", None),
+            (4, 11, NON_ADMIN_ID, "UPDATE", Some(1)),
+        ];
+        for (i, (day, hour, user, action, project)) in rows.into_iter().enumerate() {
+            let mut log = sample_log(i as i32 + 1, user, "REQUIREMENT", action);
+            log.created_at = at(day, hour);
+            log.project_id = project;
+            repo.logs.push(log);
+        }
+        repo
+    }
+
+    async fn get_stats<'c>(
+        client: &'c Client,
+        query: &str,
+    ) -> rocket::local::asynchronous::LocalResponse<'c> {
+        client
+            .get(format!("/api/admin/logs/stats?{query}"))
+            .private_cookie(auth_cookie(client, ADMIN_ID))
+            .dispatch()
+            .await
+    }
+
+    #[rocket::async_test]
+    async fn stats_summarises_activity() {
+        let client = client_with_repo(repo_with_activity()).await;
+        let response = get_stats(&client, "since=2026-09-01&until=2026-09-04T23:59:59").await;
+        assert_eq!(response.status(), Status::Ok);
+        let body: serde_json::Value = response.into_json().await.unwrap();
+
+        assert_eq!(body["total"], 5);
+        let per_day: Vec<i64> = body["by_day"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|d| d["count"].as_i64().unwrap())
+            .collect();
+        assert_eq!(per_day, vec![2, 1, 0, 2]);
+        assert_eq!(body["by_day"][0]["day"], "2026-09-01");
+        assert_eq!(body["by_action"][0]["action_type"], "UPDATE");
+        assert_eq!(body["by_action"][0]["count"], 3);
+        assert_eq!(body["by_user"][0]["username"], "admin");
+        assert_eq!(body["by_user"][0]["count"], 3);
+        assert_eq!(body["by_user"][1]["username"], "bob");
+    }
+
+    #[rocket::async_test]
+    async fn stats_applies_filters_and_top() {
+        let client = client_with_repo(repo_with_activity()).await;
+        let response = get_stats(
+            &client,
+            "since=2026-09-01&until=2026-09-04T23:59:59&project_id=1&top=1",
+        )
+        .await;
+        let body: serde_json::Value = response.into_json().await.unwrap();
+        assert_eq!(body["total"], 3);
+        assert_eq!(body["active_users"], 2, "not capped by top");
+        assert_eq!(body["by_action"].as_array().unwrap().len(), 1);
+        assert_eq!(body["by_user"].as_array().unwrap().len(), 1);
+
+        let response = get_stats(
+            &client,
+            "since=2026-09-01&until=2026-09-04T23:59:59&action_type=CREATE",
+        )
+        .await;
+        let body: serde_json::Value = response.into_json().await.unwrap();
+        assert_eq!(body["total"], 1);
+        assert_eq!(body["by_user"][0]["username"], "bob");
+    }
+
+    #[rocket::async_test]
+    async fn stats_defaults_to_last_30_days() {
+        let client = client_with_repo(repo_with_activity()).await;
+        let response = get_stats(&client, "").await;
+        assert_eq!(response.status(), Status::Ok);
+        let body: serde_json::Value = response.into_json().await.unwrap();
+        assert_eq!(body["by_day"].as_array().unwrap().len(), 30);
+    }
+
+    #[rocket::async_test]
+    async fn stats_rejects_bad_ranges() {
+        let client = client_with_repo(repo_with_activity()).await;
+        let reversed = get_stats(&client, "since=2026-09-04&until=2026-09-01").await;
+        assert_eq!(reversed.status(), Status::BadRequest);
+        let too_long = get_stats(&client, "since=2024-01-01&until=2026-01-01").await;
+        assert_eq!(too_long.status(), Status::BadRequest);
+        let garbage = get_stats(&client, "since=yesterday").await;
+        assert_eq!(garbage.status(), Status::BadRequest);
+    }
+
+    #[rocket::async_test]
+    async fn stats_requires_admin() {
+        let client = client_with_repo(repo_with_activity()).await;
+        let anonymous = client.get("/api/admin/logs/stats").dispatch().await;
+        assert_eq!(anonymous.status(), Status::Unauthorized);
+        let non_admin = client
+            .get("/api/admin/logs/stats")
+            .private_cookie(auth_cookie(&client, NON_ADMIN_ID))
+            .dispatch()
+            .await;
+        assert_eq!(non_admin.status(), Status::Forbidden);
     }
 }

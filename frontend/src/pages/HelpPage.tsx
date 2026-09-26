@@ -33,7 +33,7 @@ const blocks: { title: string; body: string }[] = [
   {
     title: 'Classic (legacy) UI',
     body:
-      'System logs are under Admin → System logs in the sidebar. Self-hosted administrators can download a database backup from Admin → Backup. Reports includes Excel (requirements, verifications, matrix grid, matrix links), PDF, and ReqIF downloads served by the API. Import ReqIF from the Import page.',
+      'System logs are under Admin → System logs in the sidebar; Log analytics summarises that activity (events per day, top actions, top users). Self-hosted administrators can download a database backup from Admin → Backup. Reports includes Excel (requirements, verifications, matrix grid, matrix links), PDF, and ReqIF downloads served by the API. Import ReqIF from the Import page.',
   },
 ];
 

@@ -1400,10 +1400,25 @@ logs</strong> with optional filename). <strong>Cleanup logs</strong> (if
 available) removes old entries.</p>
 <h3 id="log-analytics">13.6 Log Analytics</h3>
 <ul>
-<li><strong>Admin → Log Analytics</strong>.</li>
-<li>URL: <code>/log_analytics</code>.</li>
+<li><strong>Log analytics</strong> in the project sidebar (or
+<strong>Analytics</strong> on the System logs page).</li>
+<li>URL: <code>/&lt;project-slug&gt;/admin/logs/analytics</code>.</li>
 </ul>
-<p>Analytics views over log data (if implemented).</p>
+<p>A summary of instance-wide activity from the audit log, for the last
+<strong>7</strong>, <strong>30</strong> (default), or
+<strong>90</strong> days:</p>
+<ul>
+<li><strong>Events</strong>, <strong>Average per day</strong>,
+<strong>Active users</strong> (distinct users with at least one event),
+and <strong>Busiest day</strong>.</li>
+<li><strong>Events per day</strong>: one bar per day; hover or focus a
+bar for the exact count, or use <strong>Show as table</strong>.</li>
+<li><strong>Top actions</strong> and <strong>Top users</strong> (ten
+each): click an entry to open <strong>System logs</strong> filtered to
+that action or user for the same period.</li>
+</ul>
+<p>Days are calendar days in <strong>UTC</strong>. Available to
+administrators only.</p>
 <hr />
 <h2 id="tips-shortcuts">14. Tips &amp; Shortcuts</h2>
 <ul>

@@ -1,5 +1,5 @@
 import { Fragment, FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useOutletContext } from 'react-router-dom';
+import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   cleanupAdminLogs,
   downloadAdminLogsJson,
@@ -48,6 +48,9 @@ export default function SystemLogsPage() {
   const { projectId: pid, basePath } = useOutletContext<ProjectOutletContext>();
   const { dashboard, csrfToken } = useDashboard();
   const me = parseUser(dashboard?.user);
+  // Drill-down links (e.g. from Log analytics) may pre-set filters via the query string.
+  const [searchParams] = useSearchParams();
+  const initial = (key: string) => searchParams.get(key) ?? '';
 
   const [allowed, setAllowed] = useState<boolean | null>(null);
   const [items, setItems] = useState<AdminLogItem[]>([]);
@@ -62,12 +65,17 @@ export default function SystemLogsPage() {
 
   const [entityType, setEntityType] = useState('');
   const [entityId, setEntityId] = useState('');
-  const [userId, setUserId] = useState('');
-  const [actionType, setActionType] = useState('');
+  const [userId, setUserId] = useState(() => initial('user_id'));
+  const [actionType, setActionType] = useState(() => initial('action_type'));
   const [projectIdFilter, setProjectIdFilter] = useState('');
-  const [since, setSince] = useState('');
-  const [until, setUntil] = useState('');
-  const [applied, setApplied] = useState<AdminLogListParams>({});
+  const [since, setSince] = useState(() => initial('since'));
+  const [until, setUntil] = useState(() => initial('until'));
+  const [applied, setApplied] = useState<AdminLogListParams>(() => ({
+    user_id: optionalNumber(initial('user_id')),
+    action_type: optionalText(initial('action_type')),
+    since: optionalText(initial('since')),
+    until: optionalText(initial('until')),
+  }));
   const [catalogs, setCatalogs] = useState<CatalogLabelMaps>({
     requirementStatusById: new Map(),
     verificationStatusById: new Map(),
@@ -235,6 +243,12 @@ export default function SystemLogsPage() {
         title="System logs"
         subtitle="Instance-wide audit trail. The project in the URL is only for navigation."
       >
+        <Link
+          to={`${basePath}/admin/logs/analytics`}
+          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
+        >
+          Analytics
+        </Link>
         <Link
           to={`${basePath}/admin`}
           className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"

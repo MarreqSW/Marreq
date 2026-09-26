@@ -615,6 +615,23 @@ pub trait LogRepository {
     /// Filtered instance-wide audit log (newest first) plus total matching rows.
     fn get_logs_filtered(&self, query: &LogListQuery) -> Result<(Vec<Log>, i64), RepoError>;
     fn cleanup_logs(&mut self, days: i64) -> Result<usize, RepoError>;
+    /// Aggregate counts over the rows matching `query` (`limit`/`offset` are ignored):
+    /// total, per UTC day, and the `top` action types and users by count.
+    fn get_log_stats(&self, query: &LogListQuery, top: i64) -> Result<LogStats, RepoError>;
+}
+
+/// Aggregates returned by [`LogRepository::get_log_stats`].
+///
+/// `by_day` only contains days with at least one event, oldest first; `by_action`
+/// and `by_user` are sorted by count (descending), then key, and capped at `top`.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct LogStats {
+    pub total: i64,
+    /// Distinct users with at least one matching event (not capped by `top`).
+    pub active_users: i64,
+    pub by_day: Vec<(chrono::NaiveDate, i64)>,
+    pub by_action: Vec<(String, i64)>,
+    pub by_user: Vec<(i32, i64)>,
 }
 
 /// Filters for [`LogRepository::get_logs_filtered`]. Empty options are ignored.

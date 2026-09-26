@@ -21,6 +21,7 @@ import LegacyNamespaceProjectRedirect from '@/pages/LegacyNamespaceProjectRedire
 import ClassicRequirementShowRedirect from '@/pages/ClassicRequirementShowRedirect';
 import AdminPage from '@/pages/AdminPage';
 import SystemLogsPage from '@/pages/SystemLogsPage';
+import LogAnalyticsPage from '@/pages/LogAnalyticsPage';
 import CreateRequirementPage from '@/pages/CreateRequirementPage';
 import CreateVerificationPage from '@/pages/CreateVerificationPage';
 import DashboardPage from '@/pages/DashboardPage';
@@ -162,6 +163,7 @@ export default function App() {
           </Route>
           <Route path="help" element={<HelpPage />} />
           <Route path="admin/logs" element={<SystemLogsPage />} />
+          <Route path="admin/logs/analytics" element={<LogAnalyticsPage />} />
           <Route path="admin" element={<AdminPage />} />
         </Route>
         <Route

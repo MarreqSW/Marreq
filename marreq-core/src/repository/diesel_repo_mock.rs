@@ -3082,29 +3082,7 @@ impl LogRepository for DieselRepoMock {
         let mut logs: Vec<Log> = self
             .logs
             .iter()
-            .filter(|l| {
-                query
-                    .entity_type
-                    .as_ref()
-                    .map(|v| l.entity_type == *v)
-                    .unwrap_or(true)
-                    && query
-                        .entity_id
-                        .map(|id| l.entity_id == Some(id))
-                        .unwrap_or(true)
-                    && query.user_id.map(|id| l.user_id == id).unwrap_or(true)
-                    && query
-                        .action_type
-                        .as_ref()
-                        .map(|v| l.action_type == *v)
-                        .unwrap_or(true)
-                    && query
-                        .project_id
-                        .map(|id| l.project_id == Some(id))
-                        .unwrap_or(true)
-                    && query.since.map(|t| l.created_at >= t).unwrap_or(true)
-                    && query.until.map(|t| l.created_at <= t).unwrap_or(true)
-            })
+            .filter(|l| log_matches(l, query))
             .cloned()
             .collect();
         logs.sort_by(|a, b| {
@@ -3129,6 +3107,64 @@ impl LogRepository for DieselRepoMock {
         self.logs.retain(|l| l.created_at >= cutoff);
         Ok(before - self.logs.len())
     }
+
+    fn get_log_stats(
+        &self,
+        query: &crate::repository::LogListQuery,
+        top: i64,
+    ) -> Result<crate::repository::LogStats, RepoError> {
+        use std::collections::{BTreeMap, HashMap};
+
+        let matching: Vec<&Log> = self.logs.iter().filter(|l| log_matches(l, query)).collect();
+        let mut by_day: BTreeMap<chrono::NaiveDate, i64> = BTreeMap::new();
+        let mut by_action: HashMap<String, i64> = HashMap::new();
+        let mut by_user: HashMap<i32, i64> = HashMap::new();
+        for l in &matching {
+            *by_day.entry(l.created_at.date()).or_default() += 1;
+            *by_action.entry(l.action_type.clone()).or_default() += 1;
+            *by_user.entry(l.user_id).or_default() += 1;
+        }
+
+        fn ranked<K: Ord>(counts: HashMap<K, i64>, top: i64) -> Vec<(K, i64)> {
+            let mut v: Vec<(K, i64)> = counts.into_iter().collect();
+            v.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
+            v.truncate(top.max(0) as usize);
+            v
+        }
+
+        Ok(crate::repository::LogStats {
+            total: matching.len() as i64,
+            active_users: by_user.len() as i64,
+            by_day: by_day.into_iter().collect(),
+            by_action: ranked(by_action, top),
+            by_user: ranked(by_user, top),
+        })
+    }
+}
+
+/// In-memory equivalent of the Diesel `apply_log_filters`.
+fn log_matches(l: &Log, query: &crate::repository::LogListQuery) -> bool {
+    query
+        .entity_type
+        .as_ref()
+        .map(|v| l.entity_type == *v)
+        .unwrap_or(true)
+        && query
+            .entity_id
+            .map(|id| l.entity_id == Some(id))
+            .unwrap_or(true)
+        && query.user_id.map(|id| l.user_id == id).unwrap_or(true)
+        && query
+            .action_type
+            .as_ref()
+            .map(|v| l.action_type == *v)
+            .unwrap_or(true)
+        && query
+            .project_id
+            .map(|id| l.project_id == Some(id))
+            .unwrap_or(true)
+        && query.since.map(|t| l.created_at >= t).unwrap_or(true)
+        && query.until.map(|t| l.created_at <= t).unwrap_or(true)
 }
 
 impl RequirementCommentsRepository for DieselRepoMock {

@@ -68,7 +68,7 @@ const sampleRow = {
   project_id: 5,
 };
 
-function renderPage() {
+function renderPage(entry = '/space-project/admin/logs') {
   vi.mocked(useOutletContext).mockReturnValue({
     projectId: 5,
     basePath: '/space-project',
@@ -78,7 +78,7 @@ function renderPage() {
 
   return render(
     <ThemeProvider>
-      <MemoryRouter initialEntries={['/space-project/admin/logs']}>
+      <MemoryRouter initialEntries={[entry]}>
         <Routes>
           <Route path="/:projectSlug/admin/logs" element={<SystemLogsPage />} />
         </Routes>
@@ -135,6 +135,24 @@ describe('SystemLogsPage', () => {
         }),
       );
     });
+  });
+
+  it('pre-applies filters from the query string (Log analytics drill-down)', async () => {
+    renderPage('/space-project/admin/logs?since=2026-09-01T00%3A00&action_type=UPDATE&user_id=1');
+    await waitFor(() =>
+      expect(mocks.listAdminLogs).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action_type: 'UPDATE',
+          user_id: 1,
+          since: '2026-09-01T00:00',
+          offset: 0,
+        }),
+      ),
+    );
+    expect(screen.getByRole('link', { name: 'Analytics' })).toHaveAttribute(
+      'href',
+      '/space-project/admin/logs/analytics',
+    );
   });
 
   it('exports JSON and runs cleanup after confirm', async () => {

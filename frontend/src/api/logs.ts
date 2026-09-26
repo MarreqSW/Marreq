@@ -1,8 +1,13 @@
-import type { AdminLogListParams, AdminLogListResponse } from './types';
+import type {
+  AdminLogListParams,
+  AdminLogListResponse,
+  AdminLogStats,
+  AdminLogStatsParams,
+} from './types';
 import { fetchBlob, fetchJson, JSON_HEADERS } from './transport';
 import { triggerDownload } from '@/utils/tableUtils';
 
-function logsQuery(params: AdminLogListParams): string {
+function logsQuery(params: AdminLogListParams & { top?: number }): string {
   const q = new URLSearchParams();
   const set = (key: string, value: string | number | undefined) => {
     if (value === undefined || value === '') return;
@@ -17,6 +22,7 @@ function logsQuery(params: AdminLogListParams): string {
   set('until', params.until);
   set('limit', params.limit);
   set('offset', params.offset);
+  set('top', params.top);
   const s = q.toString();
   return s ? `?${s}` : '';
 }
@@ -43,4 +49,9 @@ export async function cleanupAdminLogs(
     headers: { ...JSON_HEADERS, 'X-CSRF-Token': csrfToken },
     body: JSON.stringify({ days }),
   });
+}
+
+/** Activity summary (events per day, top actions, top users) for site administrators. */
+export async function getAdminLogStats(params: AdminLogStatsParams = {}): Promise<AdminLogStats> {
+  return fetchJson<AdminLogStats>(`/api/admin/logs/stats${logsQuery(params)}`);
 }

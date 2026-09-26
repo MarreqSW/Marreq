@@ -447,12 +447,57 @@ pub struct LogWithUser {
     pub username: String,
 }
 
-/// Aggregate analytics for log activity.
+/// Events on one UTC day.
+#[derive(Debug, Serialize, PartialEq)]
+pub struct DayCount {
+    pub day: chrono::NaiveDate,
+    pub count: i64,
+}
+
+/// Events with one `action_type`.
+#[derive(Debug, Serialize, PartialEq)]
+pub struct ActionCount {
+    pub action_type: String,
+    pub count: i64,
+}
+
+/// Events recorded for one user.
+#[derive(Debug, Serialize, PartialEq)]
+pub struct UserCount {
+    pub user_id: i32,
+    pub username: String,
+    pub count: i64,
+}
+
+/// Audit-log activity summary for `GET /api/admin/logs/stats`.
 #[derive(Debug, Serialize)]
-pub struct LogAnalytics {
-    pub last_7_days: i64,
-    pub last_30_days: i64,
-    pub last_90_days: i64,
+pub struct LogStatsResponse {
+    pub since: chrono::NaiveDateTime,
+    pub until: chrono::NaiveDateTime,
+    pub total: i64,
+    /// Distinct users with at least one event in the range.
+    pub active_users: i64,
+    /// One entry per UTC day in `[since, until]`, zero-filled, oldest first.
+    pub by_day: Vec<DayCount>,
+    pub by_action: Vec<ActionCount>,
+    pub by_user: Vec<UserCount>,
+}
+
+/// Expand sparse per-day counts to one entry per day from `first` to `last` (inclusive).
+pub fn fill_days(
+    first: chrono::NaiveDate,
+    last: chrono::NaiveDate,
+    counts: &[(chrono::NaiveDate, i64)],
+) -> Vec<DayCount> {
+    let by_day: HashMap<chrono::NaiveDate, i64> = counts.iter().copied().collect();
+    first
+        .iter_days()
+        .take_while(|d| *d <= last)
+        .map(|day| DayCount {
+            day,
+            count: by_day.get(&day).copied().unwrap_or(0),
+        })
+        .collect()
 }
 
 /// Service providing higher level operations around audit logs.
@@ -561,31 +606,47 @@ impl<'a> LogService<'a> {
         Ok(count)
     }
 
-    /// Retrieve aggregated analytics for recent log activity.
-    pub fn analytics(&self) -> Result<LogAnalytics, LogServiceError> {
-        let logs = self.state.repo_read().get_logs_recent(10000)?;
-        let now = chrono::Utc::now().naive_utc();
-        let cutoff_7 = now - chrono::Duration::days(7);
-        let cutoff_30 = now - chrono::Duration::days(30);
-        let cutoff_90 = now - chrono::Duration::days(90);
+    /// Aggregate activity for the logs matching `query` between `since` and `until`.
+    ///
+    /// `query.since`/`query.until` are overwritten with the given bounds; `top`
+    /// caps the action and user rankings.
+    pub fn stats(
+        &self,
+        mut query: LogListQuery,
+        since: chrono::NaiveDateTime,
+        until: chrono::NaiveDateTime,
+        top: i64,
+    ) -> Result<LogStatsResponse, LogServiceError> {
+        query.since = Some(since);
+        query.until = Some(until);
+        let repo = self.state.repo_read();
+        let stats = repo.get_log_stats(&query, top)?;
 
-        let (mut last_7_days, mut last_30_days, mut last_90_days) = (0i64, 0i64, 0i64);
-        for log in &logs {
-            if log.created_at > cutoff_90 {
-                last_90_days += 1;
-                if log.created_at > cutoff_30 {
-                    last_30_days += 1;
-                    if log.created_at > cutoff_7 {
-                        last_7_days += 1;
-                    }
-                }
-            }
-        }
+        let by_user = stats
+            .by_user
+            .into_iter()
+            .map(|(user_id, count)| UserCount {
+                user_id,
+                username: repo
+                    .get_user_by_id(user_id)
+                    .map(|u| u.username)
+                    .unwrap_or_else(|_| format!("Unknown ({user_id})")),
+                count,
+            })
+            .collect();
 
-        Ok(LogAnalytics {
-            last_7_days,
-            last_30_days,
-            last_90_days,
+        Ok(LogStatsResponse {
+            since,
+            until,
+            total: stats.total,
+            active_users: stats.active_users,
+            by_day: fill_days(since.date(), until.date(), &stats.by_day),
+            by_action: stats
+                .by_action
+                .into_iter()
+                .map(|(action_type, count)| ActionCount { action_type, count })
+                .collect(),
+            by_user,
         })
     }
 
@@ -850,34 +911,67 @@ mod tests {
     }
 
     #[test]
-    fn analytics_computes_recent_counts() {
-        let mut repo = DieselRepoMock::default();
-        // Add some recent logs
-        for i in 1..=10 {
-            repo.logs.push(sample_log(i, 1));
-        }
-
-        let state = state_with_repo(repo);
-        let service = LogService::new(&state);
-
-        let analytics = service.analytics().unwrap();
-        assert!(analytics.last_7_days >= 0);
-        assert!(analytics.last_30_days >= 0);
-        assert!(analytics.last_90_days >= 0);
-        assert!(analytics.last_30_days >= analytics.last_7_days);
-        assert!(analytics.last_90_days >= analytics.last_30_days);
+    fn fill_days_zero_fills_the_range() {
+        let d = |s: &str| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap();
+        let filled = fill_days(
+            d("2026-09-01"),
+            d("2026-09-04"),
+            &[(d("2026-09-02"), 3), (d("2026-09-04"), 1)],
+        );
+        let counts: Vec<i64> = filled.iter().map(|c| c.count).collect();
+        assert_eq!(counts, vec![0, 3, 0, 1]);
+        assert_eq!(filled[0].day, d("2026-09-01"));
+        assert!(fill_days(d("2026-09-02"), d("2026-09-01"), &[]).is_empty());
     }
 
     #[test]
-    fn analytics_returns_zero_for_empty_logs() {
-        let repo = DieselRepoMock::default();
+    fn stats_ranks_actions_and_resolves_usernames() {
+        let mut repo = DieselRepoMock::default().with_admin_user();
+        let at = |day: u32| {
+            chrono::NaiveDate::from_ymd_opt(2026, 9, day)
+                .unwrap()
+                .and_hms_opt(12, 0, 0)
+                .unwrap()
+        };
+        for (i, (day, action, user)) in [
+            (1, "UPDATE", 1),
+            (1, "UPDATE", 1),
+            (3, "CREATE", 7),
+            (3, "UPDATE", 1),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let mut log = sample_log(i as i32 + 1, user);
+            log.action_type = action.into();
+            log.created_at = at(day);
+            repo.logs.push(log);
+        }
         let state = state_with_repo(repo);
         let service = LogService::new(&state);
 
-        let analytics = service.analytics().unwrap();
-        assert_eq!(analytics.last_7_days, 0);
-        assert_eq!(analytics.last_30_days, 0);
-        assert_eq!(analytics.last_90_days, 0);
+        let stats = service
+            .stats(LogListQuery::default(), at(1), at(4), 10)
+            .unwrap();
+        assert_eq!(stats.total, 4);
+        assert_eq!(stats.active_users, 2);
+        let per_day: Vec<i64> = stats.by_day.iter().map(|d| d.count).collect();
+        assert_eq!(per_day, vec![2, 0, 2, 0]);
+        assert_eq!(
+            stats.by_action,
+            vec![
+                ActionCount {
+                    action_type: "UPDATE".into(),
+                    count: 3
+                },
+                ActionCount {
+                    action_type: "CREATE".into(),
+                    count: 1
+                },
+            ]
+        );
+        assert_eq!(stats.by_user[0].username, "admin");
+        assert_eq!(stats.by_user[1].username, "Unknown (7)");
     }
 
     #[test]

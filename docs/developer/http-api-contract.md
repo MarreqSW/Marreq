@@ -107,7 +107,7 @@ Structured errors from `ApiError` responses:
 }
 ```
 
-HTTP status matches the error class (400, 401, 403, 404, 409, 422, 500).
+HTTP status matches the error class (400, 401, 403, 404, 409, 410, 422, 500).
 
 ## Admin audit logs
 
@@ -118,6 +118,19 @@ Instance-wide (not project-scoped). All three routes require a **global administ
 | `GET` | `/api/admin/logs` | JSON `{ items, total, limit, offset }`. Query: `entity_type`, `entity_id`, `user_id`, `action_type`, `project_id`, `since`, `until` (RFC 3339 or `YYYY-MM-DD[THH:MM]`), `limit` (default 50, max 100), `offset`. Each item matches entity activity (`log_id`, `user_id`, `username`, `action_type`, `summary`, `description`, `created_at`, `changes`) plus `entity_type`, `entity_id`, `project_id`. Newest first. |
 | `GET` | `/api/admin/logs/export.json` | Same filters; `limit` default/max 10000. JSON attachment `audit-logs.json`. Records an `EXPORT` audit row. |
 | `POST` | `/api/admin/logs/cleanup` | JSON `{ "days": n }` with `n >= 1`. Response `{ "deleted": <count> }`. Removes rows older than `n` days. |
+
+## User management
+
+Instance-wide. All routes require a **global administrator** (`users.is_admin`); other authenticated users receive **403**. Mutating routes need the CSRF header like any other SPA write.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/users` | JSON array of users (`id`, `username`, `name`, `email`, `creation_date`, `last_login`, `is_admin`, `email_verified`). Password hashes are never serialized. |
+| `GET` | `/api/users/{id}` | One user; **404** if unknown. |
+| `POST` | `/api/users` | JSON `{ username, name, email, password, is_admin }` (all required). Response `{ "status": "ok", "id": n }`. **400** for validation, password-policy, or (cloud) admin-promotion errors; **409** when the username/namespace is taken; **410** when the deployment only allows self-registration. |
+| `PUT` | `/api/users/{id}` | JSON `{ username, name, email, is_admin }`. Returns the updated user. Username and email are trimmed and lowercased. **400** when changing `is_admin` is disabled in this deployment mode or when an admin removes their own admin flag; **409** when it would leave no administrator or the username is taken. |
+| `PUT` | `/api/users/{id}/password` | JSON `{ new_password, confirm_password }`. **204** on success; the target user's sessions are revoked (unless it is the caller). **400** when the passwords differ or violate the password policy (message explains why). Recorded in the audit log without the password. |
+| `DELETE` | `/api/users/{id}` | **204** on success. **400** when deleting your own account; **409** for the last administrator or when other records (groups, baselines, saved views, requirements, …) still reference the user. |
 
 ## Full route list
 

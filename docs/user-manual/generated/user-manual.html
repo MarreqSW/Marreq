@@ -1270,14 +1270,32 @@ redirected to sign in.</p>
 cache, logs.</p>
 <h3 id="user-management">13.2 User Management</h3>
 <ul>
-<li><strong>Admin → User Management</strong>.</li>
-<li>URL: <code>/-/admin/users</code>.</li>
+<li><strong>Admin</strong> in the project sidebar.</li>
+<li>URL: <code>/&lt;project-slug&gt;/admin</code>.</li>
 </ul>
-<p>List all users. Create <strong>New User</strong>
-(<code>/user/new</code>), or open a user to view/edit
-(<code>/user/&lt;user_id&gt;/show</code>,
-<code>/user/&lt;user_id&gt;/edit</code>). You can set username, name,
-email, password, and admin flag.</p>
+<p>The <strong>User directory</strong> lists every account (username,
+name, email, admin flag). Row actions:</p>
+<ul>
+<li><strong>New user</strong> (header): username, full name, email,
+password (entered twice), and optionally <strong>Site
+administrator</strong>. Password-policy problems (too short, too common,
+contains your username or email, …) are shown in the form.</li>
+<li><strong>Edit</strong>: change username, name, email, and the
+<strong>Site administrator</strong> flag. You cannot remove your own
+administrator rights, and at least one administrator must remain.</li>
+<li><strong>Set password</strong>: choose a new password for the user
+without knowing the old one. The user is signed out of their other
+sessions.</li>
+<li><strong>Delete</strong>: asks for confirmation. You cannot delete
+your own account. A user who still owns or authored records (groups,
+baselines, saved views, requirements, …) cannot be deleted until those
+are reassigned.</li>
+</ul>
+<p>In deployments where users <strong>self-register</strong> (hosted
+cloud mode), <strong>New user</strong> is hidden and the <strong>Site
+administrator</strong> flag cannot be changed; the remaining actions
+work the same way. All changes are recorded in <strong>System
+logs</strong>.</p>
 <h3 id="database-backup">13.3 Database Backup</h3>
 <ul>
 <li><strong>Admin → Database Backup</strong>.</li>

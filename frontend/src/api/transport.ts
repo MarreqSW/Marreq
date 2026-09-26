@@ -12,18 +12,31 @@ function friendlyNonJsonError(status: number, text: string): string {
   return t || `Request failed (${status})`;
 }
 
+/** Error thrown for non-2xx API responses; keeps the HTTP status for callers that branch on it. */
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+function apiErrorFrom(res: Response, text: string): ApiError {
+  let msg = res.statusText;
+  try {
+    const j = JSON.parse(text) as { message?: string; error?: string };
+    msg = (j.message ?? j.error ?? text) || msg;
+  } catch {
+    msg = friendlyNonJsonError(res.status, text);
+  }
+  return new ApiError(res.status, msg);
+}
+
 async function parseJson<T>(res: Response): Promise<T> {
   const text = await res.text();
-  if (!res.ok) {
-    let msg = res.statusText;
-    try {
-      const j = JSON.parse(text) as { message?: string; error?: string };
-      msg = (j.message ?? j.error ?? text) || msg;
-    } catch {
-      msg = friendlyNonJsonError(res.status, text);
-    }
-    throw new Error(msg);
-  }
+  if (!res.ok) throw apiErrorFrom(res, text);
   if (!text) return undefined as T;
   return JSON.parse(text) as T;
 }
@@ -53,16 +66,6 @@ export async function fetchBlob(path: string, init: RequestInit = {}): Promise<B
       ...init.headers,
     },
   });
-  if (!res.ok) {
-    const text = await res.text();
-    let msg = res.statusText;
-    try {
-      const j = JSON.parse(text) as { message?: string; error?: string };
-      msg = (j.message ?? j.error ?? text) || msg;
-    } catch {
-      msg = friendlyNonJsonError(res.status, text);
-    }
-    throw new Error(msg);
-  }
+  if (!res.ok) throw apiErrorFrom(res, await res.text());
   return res.blob();
 }

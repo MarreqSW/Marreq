@@ -1,4 +1,4 @@
-export { fetchJson } from './transport';
+export { ApiError, fetchJson } from './transport';
 export * from './auth';
 export * from './publicAuth';
 export * from './dashboard';

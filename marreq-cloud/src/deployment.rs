@@ -24,6 +24,9 @@ impl DeploymentMode for Cloud {
     fn assigns_personal_workspace(&self) -> bool {
         true
     }
+    fn allows_database_backup(&self) -> bool {
+        false
+    }
 }
 
 pub static INSTANCE: Cloud = Cloud;

@@ -47,6 +47,13 @@ pub trait DeploymentMode: Send + Sync {
         // By default this mirrors `allows_admin_promotion`; cloud mode opts out.
         self.allows_admin_promotion()
     }
+
+    /// True when a site administrator may download a whole-database backup
+    /// (`POST /api/admin/backup`). False in cloud mode, where one dump would
+    /// contain every tenant's data.
+    fn allows_database_backup(&self) -> bool {
+        true
+    }
 }
 
 static CURRENT: OnceLock<&'static dyn DeploymentMode> = OnceLock::new();

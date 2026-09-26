@@ -143,6 +143,11 @@ export default function AdminPage() {
         <Link to={`${basePath}/admin/logs`} className={headerBtn}>
           System logs
         </Link>
+        {deployment?.allows_database_backup !== false ? (
+          <Link to={`${basePath}/admin/backup`} className={headerBtn}>
+            Backup
+          </Link>
+        ) : null}
         <button type="button" onClick={() => void load()} className={headerBtn}>
           Refresh
         </button>

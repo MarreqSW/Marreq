@@ -187,6 +187,8 @@ export interface DeploymentInfo {
   allows_admin_promotion: boolean;
   assigns_personal_workspace: boolean;
   allows_self_administered_user_creation: boolean;
+  /** False in cloud mode, where a whole-database dump would contain every tenant. */
+  allows_database_backup?: boolean;
 }
 
 export interface AuthProviderDiscovery {

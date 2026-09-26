@@ -4,6 +4,7 @@
 pub mod activity;
 pub mod applicability;
 pub mod auth;
+pub mod backup;
 pub mod baselines;
 pub mod cache;
 pub mod catalog;
@@ -247,6 +248,7 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         logs::stats,
         logs::export_json,
         logs::cleanup,
+        backup::create,
         cache::stats,
         cache::clear,
         cache::cleanup,

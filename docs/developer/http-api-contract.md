@@ -120,6 +120,14 @@ Instance-wide (not project-scoped). All four routes require a **global administr
 | `GET` | `/api/admin/logs/stats` | Activity summary. Query: `since`, `until` (same formats as the list; default: the last 30 UTC days ending now; at most 366 days, **400** otherwise or when `since > until`), `entity_type`, `action_type`, `user_id`, `project_id`, `top` (default 10, max 50). Response `{ since, until, total, active_users, by_day: [{ day, count }], by_action: [{ action_type, count }], by_user: [{ user_id, username, count }] }`. `by_day` has one zero-filled entry per UTC day; `by_action` / `by_user` are sorted by count and capped at `top`; `active_users` is not capped. |
 | `POST` | `/api/admin/logs/cleanup` | JSON `{ "days": n }` with `n >= 1`. Response `{ "deleted": <count> }`. Removes rows older than `n` days. |
 
+## Admin database backup
+
+Self-hosted only; requires a **global administrator**.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/admin/backup` | No body; needs the CSRF header. Runs `pg_dump --no-owner --no-privileges --compress=6` against `DATABASE_URL` and returns **200** with `Content-Type: application/gzip` and `Content-Disposition: attachment; filename="marreq-backup_<YYYYMMDD>_<HHMMSS>.sql.gz"` (gzipped plain SQL). **403** for non-admins; **410** when the deployment mode disallows backups (`allows_database_backup: false` in `GET /api/meta/deployment`, i.e. cloud); **500** with the `pg_dump` error summary if the dump fails. Success and failure are recorded as `EXPORT` audit rows. The `pg_dump` binary can be overridden with `MARREQ_PG_DUMP`. The Compose nginx allows up to 15 minutes for this route. |
+
 ## User management
 
 Instance-wide. All routes require a **global administrator** (`users.is_admin`); other authenticated users receive **403**. Mutating routes need the CSRF header like any other SPA write.

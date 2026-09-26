@@ -40,6 +40,7 @@ pub fn deployment_info() -> Json<serde_json::Value> {
         "allows_admin_promotion": mode.allows_admin_promotion(),
         "assigns_personal_workspace": mode.assigns_personal_workspace(),
         "allows_self_administered_user_creation": mode.allows_self_administered_user_creation(),
+        "allows_database_backup": mode.allows_database_backup(),
     }))
 }
 

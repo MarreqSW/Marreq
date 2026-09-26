@@ -4,7 +4,7 @@ import type {
   AdminLogStats,
   AdminLogStatsParams,
 } from './types';
-import { fetchBlob, fetchJson, JSON_HEADERS } from './transport';
+import { fetchBlob, fetchDownload, fetchJson, JSON_HEADERS } from './transport';
 import { triggerDownload } from '@/utils/tableUtils';
 
 function logsQuery(params: AdminLogListParams & { top?: number }): string {
@@ -54,4 +54,18 @@ export async function cleanupAdminLogs(
 /** Activity summary (events per day, top actions, top users) for site administrators. */
 export async function getAdminLogStats(params: AdminLogStatsParams = {}): Promise<AdminLogStats> {
   return fetchJson<AdminLogStats>(`/api/admin/logs/stats${logsQuery(params)}`);
+}
+
+/**
+ * Runs a whole-database backup on the server (admin only, self-hosted) and saves the
+ * gzipped SQL dump. Resolves with the downloaded filename.
+ */
+export async function downloadDatabaseBackup(csrfToken: string): Promise<string> {
+  const { blob, filename } = await fetchDownload('/api/admin/backup', {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrfToken },
+  });
+  const name = filename ?? 'marreq-backup.sql.gz';
+  triggerDownload(blob, name);
+  return name;
 }

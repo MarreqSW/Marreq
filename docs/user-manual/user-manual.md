@@ -565,10 +565,17 @@ Overview of system status and links to user management, backup, cache, logs.
 
 ### 13.2 User Management
 
-- **Admin → User Management**.
-- URL: `/-/admin/users`.
+- **Admin** in the project sidebar.
+- URL: `/<project-slug>/admin`.
 
-List all users. Create **New User** (`/user/new`), or open a user to view/edit (`/user/<user_id>/show`, `/user/<user_id>/edit`). You can set username, name, email, password, and admin flag.
+The **User directory** lists every account (username, name, email, admin flag). Row actions:
+
+- **New user** (header): username, full name, email, password (entered twice), and optionally **Site administrator**. Password-policy problems (too short, too common, contains your username or email, …) are shown in the form.
+- **Edit**: change username, name, email, and the **Site administrator** flag. You cannot remove your own administrator rights, and at least one administrator must remain.
+- **Set password**: choose a new password for the user without knowing the old one. The user is signed out of their other sessions.
+- **Delete**: asks for confirmation. You cannot delete your own account. A user who still owns or authored records (groups, baselines, saved views, requirements, …) cannot be deleted until those are reassigned.
+
+In deployments where users **self-register** (hosted cloud mode), **New user** is hidden and the **Site administrator** flag cannot be changed; the remaining actions work the same way. All changes are recorded in **System logs**.
 
 ### 13.3 Database Backup
 

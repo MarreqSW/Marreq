@@ -589,6 +589,19 @@ export interface User {
   email_verified?: boolean;
 }
 
+/** Body for `PUT /api/users/:id` (admin only). */
+export interface UserUpdateRequest {
+  username: string;
+  name: string;
+  email: string;
+  is_admin: boolean;
+}
+
+/** Body for `POST /api/users` (admin only); `is_admin` is required by the API. */
+export interface UserCreateRequest extends UserUpdateRequest {
+  password: string;
+}
+
 /** Single custom field value in PATCH body (matches `CustomFieldValueInput`). */
 export type CustomFieldPatchItem = { field_id: number; value: string | null };
 

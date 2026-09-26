@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fetchJson, JSON_HEADERS } from '../transport';
+import { ApiError, fetchJson, JSON_HEADERS } from '../transport';
 
 describe('JSON_HEADERS', () => {
   it('sets application/json content type', () => {
@@ -30,6 +30,25 @@ describe('fetchJson', () => {
       '/api/users/1',
       expect.objectContaining({ credentials: 'same-origin' }),
     );
+  });
+
+  it('throws ApiError carrying the HTTP status and API message', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 410,
+        statusText: 'Gone',
+        text: async () =>
+          JSON.stringify({ status: 410, error: 'Gone', message: 'users self-register' }),
+      }),
+    );
+
+    const err = await fetchJson('/api/users', { method: 'POST' }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect(err).toBeInstanceOf(Error);
+    expect((err as ApiError).status).toBe(410);
+    expect((err as ApiError).message).toBe('users self-register');
   });
 
   it('returns undefined for empty successful bodies', async () => {

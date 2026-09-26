@@ -397,3 +397,194 @@ async fn list_users_shows_admin_flag() {
         .expect("regular user");
     assert!(!regular.is_admin);
 }
+
+// ============================================================================
+// Update, password reset, and admin safety rules (issue #246)
+// ============================================================================
+
+fn update_json(username: &str, name: &str, email: &str, is_admin: bool) -> Value {
+    json!({ "username": username, "name": name, "email": email, "is_admin": is_admin })
+}
+
+fn stored_password_hash(client: &Client, user_id: i32) -> String {
+    use marreq_core::repository::UserRepository;
+    let state = client
+        .rocket()
+        .state::<TestAppState>()
+        .expect("managed app state");
+    let repo = state.repo.read().expect("repo lock");
+    repo.get_user_by_id(user_id)
+        .expect("user")
+        .password_hash
+        .expect("password hash")
+}
+
+#[rocket::async_test]
+async fn update_user_changes_profile_and_admin_flag() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .put("/api/users/2")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 1))
+        .body(update_json("  Guest ", "Guest User", "Guest@Demo.local", true).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Ok);
+    let user: User = response.into_json().await.expect("json");
+    assert_eq!(user.id, 2);
+    assert_eq!(user.username, "guest");
+    assert_eq!(user.name, "Guest User");
+    assert_eq!(user.email, "guest@demo.local");
+    assert!(user.is_admin);
+}
+
+#[rocket::async_test]
+async fn update_user_rejects_non_admin() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .put("/api/users/1")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 2))
+        .body(update_json("admin", "Admin", "admin@example.com", false).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn update_unknown_user_returns_404() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .put("/api/users/999")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 1))
+        .body(update_json("ghost", "Ghost", "ghost@example.com", false).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::NotFound);
+}
+
+#[rocket::async_test]
+async fn admin_cannot_remove_own_admin_flag() {
+    let mut repo = base_repo();
+    let mut second_admin = marreq_core::repository::diesel_repo_mock::DieselRepoMock::make_user(
+        3, "admin2", "password",
+    );
+    second_admin.is_admin = true;
+    repo.users.insert(3, second_admin);
+    let client = test_client(repo).await;
+
+    let response = client
+        .put("/api/users/1")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 1))
+        .body(update_json("admin", "Admin", "admin@example.com", false).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::BadRequest);
+    let body: Value = response.into_json().await.expect("json");
+    assert!(body["message"]
+        .as_str()
+        .unwrap()
+        .contains("your own administrator rights"));
+}
+
+#[rocket::async_test]
+async fn set_password_updates_hash() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .put("/api/users/2/password")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 1))
+        .body(
+            json!({ "new_password": "Patata!Orbit_314", "confirm_password": "Patata!Orbit_314" })
+                .to_string(),
+        )
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::NoContent);
+    let hash = stored_password_hash(&client, 2);
+    assert!(marreq_core::auth::password::verify_password("Patata!Orbit_314", &hash).unwrap());
+}
+
+#[rocket::async_test]
+async fn set_password_rejects_mismatch() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .put("/api/users/2/password")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 1))
+        .body(
+            json!({ "new_password": "Patata!Orbit_314", "confirm_password": "Different!Orbit_314" })
+                .to_string(),
+        )
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::BadRequest);
+    let body: Value = response.into_json().await.expect("json");
+    assert_eq!(body["message"], "New passwords do not match");
+}
+
+#[rocket::async_test]
+async fn set_password_reports_policy_violation() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .put("/api/users/2/password")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 1))
+        .body(json!({ "new_password": "short", "confirm_password": "short" }).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::BadRequest);
+    let body: Value = response.into_json().await.expect("json");
+    assert!(body["message"]
+        .as_str()
+        .unwrap()
+        .contains("at least 8 characters"));
+}
+
+#[rocket::async_test]
+async fn set_password_rejects_non_admin() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .put("/api/users/1/password")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 2))
+        .body(
+            json!({ "new_password": "Patata!Orbit_314", "confirm_password": "Patata!Orbit_314" })
+                .to_string(),
+        )
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::Forbidden);
+}
+
+#[rocket::async_test]
+async fn admin_cannot_delete_self() {
+    let client = test_client(base_repo()).await;
+
+    let response = client
+        .delete("/api/users/1")
+        .private_cookie(session_cookie(&client, 1))
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::BadRequest);
+    let body: Value = response.into_json().await.expect("json");
+    assert_eq!(body["message"], "You cannot delete your own account.");
+}

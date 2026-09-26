@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Marreq
 
 use crate::api::prelude::*;
-use crate::models::{User, UserCreateRequest};
+use crate::models::{AdminSetPasswordForm, UpdateUser, User, UserCreateRequest};
 use crate::services::UserService;
 
 /// `GET /api/users` — list all users. Restricted to administrators (ASVS V8.2.1).
@@ -37,6 +37,33 @@ pub async fn create(
     let id = service.create(&caller, payload.into_inner())?;
 
     Ok(json!({ "status": "ok", "id": id }))
+}
+
+/// `PUT /api/users/<id>` — update a user's profile and admin flag. Restricted to administrators.
+#[put("/users/<id>", data = "<payload>")]
+pub async fn update(
+    admin: AdminOnly,
+    id: i32,
+    state: &State<AppState>,
+    payload: Json<UpdateUser>,
+) -> ApiResult<Json<User>> {
+    let service = UserService::new(state.inner());
+    let user = service.admin_update(&admin, id, payload.into_inner())?;
+    Ok(Json(user))
+}
+
+/// `PUT /api/users/<id>/password` — set a user's password without the current one.
+/// Restricted to administrators; signs the target out of their other sessions.
+#[put("/users/<id>/password", data = "<payload>")]
+pub async fn set_password(
+    admin: AdminOnly,
+    id: i32,
+    state: &State<AppState>,
+    payload: Json<AdminSetPasswordForm>,
+) -> ApiResult<Status> {
+    let service = UserService::new(state.inner());
+    service.admin_set_password(&admin, id, &payload.new_password, &payload.confirm_password)?;
+    Ok(Status::NoContent)
 }
 
 /// `DELETE /api/users/<id>` — delete a user. Restricted to administrators (ASVS V8.2.1).

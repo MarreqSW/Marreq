@@ -4,14 +4,20 @@
 //! Service encapsulating user related operations.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::auth::password::hash_password;
+use crate::auth::errors::AuthError;
+use crate::auth::password::{admin_set_user_password, hash_password};
 use crate::auth::password_policy::{validate_password, PasswordContext};
-use crate::models::{NewUser, UpdateUser, User, UserCreateRequest};
+use crate::logger::{LogCtx, Logger};
+use crate::models::{ActionType, EntityType, NewUser, UpdateUser, User, UserCreateRequest};
 use crate::namespaces::{ensure_namespace_segment_available, NamespaceAvailabilityOptions};
 use crate::repository::errors::RepoError;
-use crate::repository::UserRepository;
+use crate::repository::{SessionRepository, UserRepository};
 use crate::services::AuditLog;
 use crate::validation::{sanitize_string, validate_user};
+use diesel::result::{DatabaseErrorKind, Error as DieselError};
+
+const LAST_ADMIN_MESSAGE: &str = "At least one administrator is required.";
+const USER_STILL_REFERENCED_MESSAGE: &str = "User still owns or authored records (groups, baselines, saved views, requirements, …); reassign them before deleting the user.";
 
 /// High level user operations backed by the shared [`AppState`].
 pub struct UserService<'a> {
@@ -102,10 +108,29 @@ impl<'a> UserService<'a> {
     }
 
     /// Delete a user entry and log the removal.
+    ///
+    /// Refuses to delete the actor's own account or the last administrator, and
+    /// reports rows that still reference the user as a conflict.
     pub fn delete(&self, actor: &User, id: i32) -> Result<User, RepoError> {
+        if actor.id == id {
+            return Err(RepoError::BadInput(
+                "You cannot delete your own account.".into(),
+            ));
+        }
+        let target = self.get_by_id(id)?;
+        if target.is_admin && self.admin_count()? <= 1 {
+            return Err(RepoError::Duplicate(LAST_ADMIN_MESSAGE.into()));
+        }
+
         let removed = {
             let mut repo = self.state.repo_write();
-            repo.delete_user(id)?
+            repo.delete_user(id).map_err(|err| match err {
+                RepoError::Db(DieselError::DatabaseError(
+                    DatabaseErrorKind::ForeignKeyViolation,
+                    _,
+                )) => RepoError::Duplicate(USER_STILL_REFERENCED_MESSAGE.into()),
+                other => other,
+            })?
         };
 
         self.audit_deleted(actor, &removed);
@@ -157,6 +182,112 @@ impl<'a> UserService<'a> {
         }
 
         Ok(updated)
+    }
+
+    /// Update another user's profile and admin flag on behalf of a site administrator.
+    ///
+    /// Changing the admin flag follows the deployment mode, and the last
+    /// administrator (or the actor themselves) cannot be demoted.
+    pub fn admin_update(
+        &self,
+        actor: &User,
+        id: i32,
+        payload: UpdateUser,
+    ) -> Result<User, RepoError> {
+        let current = self.get_by_id(id)?;
+        if payload.is_admin != current.is_admin {
+            if !crate::deployment::current().allows_admin_promotion() {
+                return Err(RepoError::BadInput(
+                    "admin promotion is disabled in this deployment mode".into(),
+                ));
+            }
+            if !payload.is_admin {
+                if actor.id == id {
+                    return Err(RepoError::BadInput(
+                        "You cannot remove your own administrator rights.".into(),
+                    ));
+                }
+                if self.admin_count()? <= 1 {
+                    return Err(RepoError::Duplicate(LAST_ADMIN_MESSAGE.into()));
+                }
+            }
+        }
+
+        self.update_without_password(
+            actor,
+            &UpdateUser {
+                id: Some(id),
+                ..payload
+            },
+        )?;
+        self.get_by_id(id)
+    }
+
+    /// Set another user's password as a site administrator (no current password).
+    ///
+    /// Signs the target out of every session unless they are the actor.
+    pub fn admin_set_password(
+        &self,
+        actor: &User,
+        id: i32,
+        new_password: &str,
+        confirm_password: &str,
+    ) -> Result<(), RepoError> {
+        if new_password != confirm_password {
+            return Err(RepoError::BadInput("New passwords do not match".into()));
+        }
+        let target = self.get_by_id(id)?;
+
+        {
+            let mut repo = self.state.repo_write();
+            admin_set_user_password(&mut *repo, id, new_password).map_err(|err| match err {
+                AuthError::PasswordPolicy(msg) => RepoError::BadInput(msg),
+                AuthError::Repo(err) => err,
+                other => RepoError::BadInput(other.to_string()),
+            })?;
+            if id != actor.id {
+                let _ = repo.delete_user_sessions(id);
+            }
+        }
+
+        self.audit_password_set(actor, &target);
+        Ok(())
+    }
+
+    fn admin_count(&self) -> Result<usize, RepoError> {
+        Ok(self
+            .state
+            .repo_read()
+            .get_users_all()?
+            .iter()
+            .filter(|u| u.is_admin)
+            .count())
+    }
+
+    fn audit_password_set(&self, actor: &User, target: &User) {
+        if let Ok(mut conn) = self.audit_conn() {
+            let ctx = LogCtx::new(actor.id);
+            if let Err(_err) = Logger::log_custom(
+                conn.as_mut(),
+                &ctx,
+                ActionType::Update,
+                EntityType::User,
+                Some(target.id),
+                None,
+                None,
+                None,
+                Some(format!(
+                    "Password set by administrator for {}",
+                    target.username
+                )),
+            ) {
+                #[cfg(debug_assertions)]
+                eprintln!(
+                    "audit: failed to log password set for user {}: {_err}",
+                    target.id
+                );
+            }
+        }
     }
 
     fn ensure_username_namespace_available(
@@ -748,5 +879,99 @@ mod tests {
 
         let result = service.create(&actor(), request);
         assert!(matches!(result, Err(RepoError::BadInput(_))));
+    }
+
+    fn admin_user(id: i32, username: &str) -> User {
+        let mut user = sample_user(id, username);
+        user.is_admin = true;
+        user
+    }
+
+    #[test]
+    fn admin_update_refuses_to_demote_last_admin() {
+        crate::deployment::install_test_server_mode();
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(1, admin_user(1, "root"));
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        let result = service.admin_update(
+            &actor(),
+            1,
+            UpdateUser {
+                id: None,
+                username: "root".into(),
+                name: "Root".into(),
+                email: "root@example.com".into(),
+                is_admin: false,
+            },
+        );
+        assert!(matches!(result, Err(RepoError::Duplicate(msg)) if msg == LAST_ADMIN_MESSAGE));
+        assert!(service.get_by_id(1).unwrap().is_admin);
+    }
+
+    #[test]
+    fn admin_update_refuses_self_demotion() {
+        crate::deployment::install_test_server_mode();
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(1, admin_user(1, "root"));
+        repo.users.insert(2, admin_user(2, "second"));
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+        let me = service.get_by_id(1).unwrap();
+
+        let result = service.admin_update(
+            &me,
+            1,
+            UpdateUser {
+                id: None,
+                username: "root".into(),
+                name: "Root".into(),
+                email: "root@example.com".into(),
+                is_admin: false,
+            },
+        );
+        assert!(matches!(result, Err(RepoError::BadInput(_))));
+    }
+
+    #[test]
+    fn delete_refuses_self_and_last_admin() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(1, admin_user(1, "root"));
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+        let me = service.get_by_id(1).unwrap();
+
+        assert!(matches!(
+            service.delete(&me, 1),
+            Err(RepoError::BadInput(_))
+        ));
+        assert!(matches!(
+            service.delete(&actor(), 1),
+            Err(RepoError::Duplicate(_))
+        ));
+        assert!(service.get_by_id(1).is_ok());
+    }
+
+    #[test]
+    fn admin_set_password_rejects_mismatch_and_policy() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(1, sample_user(1, "bob"));
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+
+        assert!(matches!(
+            service.admin_set_password(&actor(), 1, "Orbit!Delta_2026", "Other!Delta_2026"),
+            Err(RepoError::BadInput(msg)) if msg == "New passwords do not match"
+        ));
+        assert!(matches!(
+            service.admin_set_password(&actor(), 1, "short", "short"),
+            Err(RepoError::BadInput(_))
+        ));
+        service
+            .admin_set_password(&actor(), 1, "Orbit!Delta_2026", "Orbit!Delta_2026")
+            .unwrap();
+        let hash = service.get_by_id(1).unwrap().password_hash.unwrap();
+        assert!(crate::auth::password::verify_password("Orbit!Delta_2026", &hash).unwrap());
     }
 }

@@ -37,8 +37,12 @@ pub fn build_embedding_document(req: &DecoratedRequirement) -> String {
     }
 
     // Description (main content)
+    // (statement Markdown reduced to plain text so markup does not skew embeddings)
     if !req.description.is_empty() {
-        parts.push(format!("[DESC] {}", req.description));
+        parts.push(format!(
+            "[DESC] {}",
+            crate::rich_text::to_plain_text(&req.description)
+        ));
     }
 
     // Justification/rationale
@@ -174,6 +178,17 @@ mod tests {
         assert!(doc.contains("[VERIFICATION] Analysis"));
         assert!(doc.contains("[STATUS] Draft"));
         assert!(doc.contains("[PARENT] System Requirements"));
+    }
+
+    #[test]
+    fn build_document_strips_statement_markdown() {
+        let mut req = sample_requirement();
+        req.description =
+            "The EPS shall support **three** modes:\n1. Off\n2. [Safe](https://icd.test)".into();
+        let doc = build_embedding_document(&req);
+        assert!(doc.contains("[DESC] The EPS shall support three modes:\n1. Off\n2. Safe"));
+        assert!(!doc.contains("**"));
+        assert!(!doc.contains("https://icd.test"));
     }
 
     #[test]

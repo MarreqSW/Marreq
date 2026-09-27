@@ -8,6 +8,7 @@ use chrono::{SecondsFormat, Utc};
 use std::collections::{HashMap, HashSet};
 
 const REQIF_NS: &str = "http://www.omg.org/spec/ReqIF/20110401/reqif.xsd";
+const XHTML_NS: &str = "http://www.w3.org/1999/xhtml";
 
 fn escape_xml(s: &str) -> String {
     s.replace('&', "&amp;")
@@ -71,7 +72,10 @@ pub fn to_reqif(
     let mut out = String::new();
     out.push_str(r#"<?xml version="1.0" encoding="UTF-8"?>"#);
     out.push('\n');
-    out.push_str(&format!(r#"<REQ-IF xmlns="{}">"#, REQIF_NS));
+    out.push_str(&format!(
+        r#"<REQ-IF xmlns="{}" xmlns:xhtml="{}">"#,
+        REQIF_NS, XHTML_NS
+    ));
     out.push_str("\n  <THE-HEADER>");
     out.push_str("\n    <REQ-IF-HEADER IDENTIFIER=\"header-marreq\">");
     out.push_str("\n      <CREATION-TIME>");
@@ -92,10 +96,13 @@ pub fn to_reqif(
     out.push_str("\n  <CORE-CONTENT>");
     out.push_str("\n    <REQ-IF-CONTENT>");
 
-    // Datatype definitions (STRING)
+    // Datatype definitions (STRING; XHTML for the formatted statement)
     out.push_str("\n      <DATATYPES>");
     out.push_str(&format!(
         "\n        <DATATYPE-DEFINITION-STRING IDENTIFIER=\"dt-string\" LAST-CHANGE=\"{generated_at}\" LONG-NAME=\"String\" MAX-LENGTH=\"2000000\"/>"
+    ));
+    out.push_str(&format!(
+        "\n        <DATATYPE-DEFINITION-XHTML IDENTIFIER=\"dt-xhtml\" LAST-CHANGE=\"{generated_at}\" LONG-NAME=\"XHTML\"/>"
     ));
     out.push_str("\n      </DATATYPES>");
 
@@ -105,13 +112,24 @@ pub fn to_reqif(
         "\n        <SPEC-OBJECT-TYPE IDENTIFIER=\"sot-req\" LAST-CHANGE=\"{generated_at}\" LONG-NAME=\"Requirement\">"
     ));
     out.push_str("\n          <SPEC-ATTRIBUTES>");
-    for (id, name) in [
-        ("ad-identifier", "Identifier"),
-        ("ad-title", "Title"),
-        ("ad-statement", "Statement"),
-        ("ad-rationale", "Rationale"),
-        ("ad-remarks", "Remarks"),
-    ] {
+    for (id, name) in [("ad-identifier", "Identifier"), ("ad-title", "Title")] {
+        out.push_str(&format!(
+            "\n            <ATTRIBUTE-DEFINITION-STRING IDENTIFIER=\"{id}\" LAST-CHANGE=\"{generated_at}\" LONG-NAME=\"{name}\">"
+        ));
+        out.push_str(
+            "\n              <TYPE><DATATYPE-DEFINITION-STRING-REF>dt-string</DATATYPE-DEFINITION-STRING-REF></TYPE>",
+        );
+        out.push_str("\n            </ATTRIBUTE-DEFINITION-STRING>");
+    }
+    // Statement: Marreq statement Markdown exported as XHTML (see `rich_text`).
+    out.push_str(&format!(
+        "\n            <ATTRIBUTE-DEFINITION-XHTML IDENTIFIER=\"ad-statement\" LAST-CHANGE=\"{generated_at}\" LONG-NAME=\"Statement\">"
+    ));
+    out.push_str(
+        "\n              <TYPE><DATATYPE-DEFINITION-XHTML-REF>dt-xhtml</DATATYPE-DEFINITION-XHTML-REF></TYPE>",
+    );
+    out.push_str("\n            </ATTRIBUTE-DEFINITION-XHTML>");
+    for (id, name) in [("ad-rationale", "Rationale"), ("ad-remarks", "Remarks")] {
         out.push_str(&format!(
             "\n            <ATTRIBUTE-DEFINITION-STRING IDENTIFIER=\"{id}\" LAST-CHANGE=\"{generated_at}\" LONG-NAME=\"{name}\">"
         ));
@@ -145,7 +163,6 @@ pub fn to_reqif(
         for (value, definition) in [
             (&req.reference_code, "ad-identifier"),
             (&req.title, "ad-title"),
-            (&req.description, "ad-statement"),
         ] {
             out.push_str("\n            <ATTRIBUTE-VALUE-STRING THE-VALUE=\"");
             out.push_str(&escape_xml(value));
@@ -155,6 +172,9 @@ pub fn to_reqif(
                 "</ATTRIBUTE-DEFINITION-STRING-REF></DEFINITION></ATTRIBUTE-VALUE-STRING>",
             );
         }
+        out.push_str("\n            <ATTRIBUTE-VALUE-XHTML><DEFINITION><ATTRIBUTE-DEFINITION-XHTML-REF>ad-statement</ATTRIBUTE-DEFINITION-XHTML-REF></DEFINITION><THE-VALUE>");
+        out.push_str(&crate::rich_text::to_xhtml(&req.description));
+        out.push_str("</THE-VALUE></ATTRIBUTE-VALUE-XHTML>");
         if let Some(ref j) = req.justification {
             if !j.is_empty() {
                 out.push_str("\n            <ATTRIBUTE-VALUE-STRING THE-VALUE=\"");
@@ -323,5 +343,52 @@ mod tests {
         assert!(child_pos > parent_pos);
         assert!(!xml.contains(" TYPE=\"sot-req\""));
         assert!(!xml.contains(" DEFINITION=\"ad-"));
+    }
+
+    #[test]
+    fn statement_is_exported_as_xhtml_and_round_trips_markdown() {
+        let mut formatted = requirement(1, "Power modes", "REQ-PWR-001");
+        formatted.description =
+            "The EPS shall support **three** modes:\n1. Off\n2. Safe <3\n3. Nominal\n\nSee [ICD](https://icd.test/eps?x=1&y=2).".into();
+        let mut plain = requirement(2, "Plain", "REQ-PWR-002");
+        plain.title = "R&D \"lab\" <bench>".into();
+        let xml = to_reqif(
+            "Project",
+            &[formatted.clone(), plain],
+            &HashMap::new(),
+            None,
+        );
+
+        assert!(xml.contains("xmlns:xhtml=\"http://www.w3.org/1999/xhtml\""));
+        assert!(xml.contains("<DATATYPE-DEFINITION-XHTML IDENTIFIER=\"dt-xhtml\""));
+        assert!(xml.contains("<ATTRIBUTE-DEFINITION-XHTML IDENTIFIER=\"ad-statement\""));
+        assert!(xml.contains("<xhtml:ol><xhtml:li>Off</xhtml:li><xhtml:li>Safe &lt;3</xhtml:li>"));
+        assert!(!xml.contains("ATTRIBUTE-VALUE-STRING THE-VALUE=\"The EPS"));
+
+        let doc = crate::reqif::import::parse_reqif(xml.as_bytes()).expect("parse own export");
+        let statement = |id: &str| {
+            doc.objects
+                .iter()
+                .find(|o| o.id == id)
+                .and_then(|o| o.attributes.get("Statement"))
+                .cloned()
+                .unwrap_or_default()
+        };
+        // Same document; the importer puts a blank line between a paragraph and a list.
+        assert_eq!(
+            crate::rich_text::parse(&statement("so-1")),
+            crate::rich_text::parse(&formatted.description)
+        );
+        assert!(statement("so-1").contains("Safe <3"));
+        assert!(statement("so-1").contains("[ICD](https://icd.test/eps?x=1&y=2)"));
+        assert_eq!(statement("so-2"), "Plain body");
+        // STRING attribute values are unescaped on import.
+        let title = doc
+            .objects
+            .iter()
+            .find(|o| o.id == "so-2")
+            .and_then(|o| o.attributes.get("Title"))
+            .cloned();
+        assert_eq!(title.as_deref(), Some("R&D \"lab\" <bench>"));
     }
 }

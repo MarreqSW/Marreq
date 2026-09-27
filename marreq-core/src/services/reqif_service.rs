@@ -405,7 +405,12 @@ impl<'a> ReqIFService<'a> {
                 description = title.clone();
             }
             if description.len() > 2000 {
-                description.truncate(2000);
+                // The limit is in bytes; cut on a char boundary (a mid-char cut panics).
+                let mut cut = 2000;
+                while !description.is_char_boundary(cut) {
+                    cut -= 1;
+                }
+                description.truncate(cut);
                 warnings.push(format!(
                     "{}: description truncated to 2000 characters",
                     obj.id

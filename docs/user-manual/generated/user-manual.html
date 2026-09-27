@@ -708,7 +708,10 @@ Requirement</strong> when a project is selected).</li>
 <ul>
 <li><strong>Title</strong> (required)</li>
 <li><strong>Reference</strong> (optional; can be auto-generated)</li>
-<li><strong>Statement</strong> (required)</li>
+<li><strong>Statement</strong> (required; shown as
+<strong>Description</strong> on the form, with the same formatting
+toolbar and preview as in <a
+href="#44-editing-a-requirement">§4.4</a>)</li>
 <li><strong>Rationale</strong> (optional)</li>
 <li><strong>Category</strong>, <strong>Status</strong>,
 <strong>Verification methods</strong>, <strong>Applicability</strong>
@@ -732,9 +735,77 @@ verification, reviewer, parent, and custom fields as needed.</li>
 <li>Use <strong>Save</strong> to create a new version.
 <strong>Cancel</strong> returns to the detail view.</li>
 </ol>
-<p>The editor supports rich text (bold, italic, list, code, link) and a
-preview toggle for the statement. Autosave and “All changes saved” are
-shown in the header.</p>
+<h4 id="formatting-the-statement">Formatting the statement</h4>
+<p>The statement editor has a formatting toolbar and a <strong>Write /
+Preview</strong> toggle. Statements are stored as a small, documented
+Markdown subset, so they stay readable as plain text in exports:</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>You want</th>
+<th>Type (or use the toolbar)</th>
+<th>Shortcut</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Bold</strong></td>
+<td><code>**text**</code></td>
+<td>Ctrl/Cmd+B</td>
+</tr>
+<tr>
+<td><em>Italic</em></td>
+<td><code>*text*</code> or <code>_text_</code></td>
+<td>Ctrl/Cmd+I</td>
+</tr>
+<tr>
+<td><code>Code</code></td>
+<td><code>`text`</code></td>
+<td></td>
+</tr>
+<tr>
+<td>Link</td>
+<td><code>[label](https://example.com)</code> (only <code>http</code>,
+<code>https</code>, and <code>mailto</code> links)</td>
+<td>Ctrl/Cmd+K</td>
+</tr>
+<tr>
+<td>Bulleted list</td>
+<td>a line starting with <code>-</code> (or <code>*</code>)</td>
+<td></td>
+</tr>
+<tr>
+<td>Numbered list</td>
+<td>lines starting with <code>1.</code>, <code>2.</code>, … (the first
+number sets the start)</td>
+<td></td>
+</tr>
+<tr>
+<td>New paragraph</td>
+<td>a blank line (a single line break stays a line break)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Anything else, such as headings, tables, or HTML, is shown literally.
+Put <code>\</code> before <code>*</code>, <code>_</code>,
+<code>`</code>, <code>[</code> or <code>]</code> to show the character
+itself. <strong>Preview</strong> shows the statement exactly as it
+appears on the requirement page. The statement is limited to 2000 bytes
+including the formatting characters; the counter under the editor shows
+how much is used.</p>
+<p>Formatting is shown on the requirement page, and version snapshots
+and review cards show the text without markers. ReqIF export writes the
+statement as XHTML so other tools keep the formatting, and ReqIF import
+turns XHTML lists, emphasis, and links back into this format (see <a
+href="#94-exporting-reqif">§9.4</a> and <a
+href="#102-importing-reqif">§10.2</a>). Excel and JSON exports contain
+the Markdown source.</p>
 <h3 id="version-history-diff">4.5 Version History &amp; Diff</h3>
 <ul>
 <li>On the requirement detail page, the <strong>Changelog</strong>
@@ -755,8 +826,10 @@ to open that adjacent pair directly.</li>
 last approved</strong> beside the approval state before reviewing the
 current draft.</li>
 <li>The comparison dialog shows removed, added, and unchanged title,
-statement, and justification text. It also compares status, category,
-applicability, verification methods, and custom fields.</li>
+statement, and justification text (line by line; statements are compared
+as their Markdown source, so each list item is its own line). It also
+compares status, category, applicability, verification methods, and
+custom fields.</li>
 <li>At least two saved versions are required. Version comparison is
 read-only and is available to anyone who can view the project
 requirements.</li>
@@ -861,9 +934,9 @@ Exporting Verifications to Excel</a>).</li>
 <li>URL:
 <code>/&lt;project-slug&gt;/verifications/&lt;verification_id&gt;</code>.</li>
 </ul>
-<p>Shows: <strong>Name</strong>, <strong>Description</strong>,
-<strong>Source</strong> (e.g. test file or document reference),
-<strong>Status</strong>, <strong>Reference code</strong>,
+<p>Shows: <strong>Name</strong>, <strong>Description</strong> (with its
+formatting), <strong>Source</strong> (e.g. test file or document
+reference), <strong>Status</strong>, <strong>Reference code</strong>,
 <strong>Verification type</strong>, <strong>Parent verification</strong>
 (if part of a hierarchy), and <strong>which requirements this
 verification covers</strong> (traceability links). From here you can
@@ -899,7 +972,11 @@ Verification</strong>).</li>
 <strong>Source</strong> (e.g. path to test script or doc),
 <strong>Status</strong> (e.g. Pending, Not Run), <strong>Reference
 code</strong> (optional; e.g. TEST-PWR-001), and <strong>Parent
-verification</strong> (optional, for hierarchy).</li>
+verification</strong> (optional, for hierarchy). The description has the
+same formatting toolbar, <strong>Write / Preview</strong> toggle, and
+syntax as requirement statements (see <a
+href="#formatting-the-statement">Formatting the statement</a>), for
+example a numbered list of test steps.</li>
 <li>Save.</li>
 </ol>
 <p>After creation, link the verification to requirements in the <a

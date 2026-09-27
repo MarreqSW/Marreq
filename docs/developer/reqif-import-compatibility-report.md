@@ -42,7 +42,7 @@ PARTIAL.
 | string values | title/reference/description/status/justification where names map | Supported for mapped core fields |
 | integer/real/boolean/date values | parsed as strings | Partial; warned, usually discarded unless their attribute name maps to a core field |
 | enumeration values | enum labels joined as text | Partial; warned, not persisted as enum custom fields |
-| XHTML | text content flattened into description/core fields | Partial; formatting, tables, links and image structure are lost |
+| XHTML | converted to statement Markdown (paragraphs, lists, bold/italic/code, safe links, line breaks; table rows as lines) | Partial; tables, images and nesting are reduced to text |
 | `IDENTIFIER` | temporary import key; fallback Marreq reference generated when needed | Partial; original ReqIF ID is not persisted |
 | `LAST-CHANGE` | parsed on `SPEC-OBJECT` | Ignored with warning; Marreq creation time is used |
 | users/authors | import actor/default author and reviewer | ReqIF author metadata is not mapped |
@@ -224,8 +224,11 @@ Severity: HIGH
 Feature: XHTML and attachments
 
 Expected: preserve rich XHTML, tables, links, images and embedded files.  
-Actual: text is flattened; markup and attachments are not stored.  
-Impact: presentation and embedded evidence are lost. The importer now warns.
+Actual: paragraphs, lists, emphasis, code, safe links and line breaks are
+converted to statement Markdown (issue #256); tables are reduced to one line per
+row; images and embedded files are not stored.  
+Impact: tables, images and embedded evidence are still lost. The importer warns
+about embedded content.
 
 ### REQIF-IMP-006 — FIXED
 

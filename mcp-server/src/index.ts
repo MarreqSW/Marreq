@@ -9,6 +9,10 @@ import type { SessionContext } from "./context.js";
 import { MarreqAuthenticationError, MarreqClient } from "./client.js";
 import { loadTransportConfig, startRemoteServer } from "./remote.js";
 
+/** Requirement statements use "Marreq statement Markdown" (marreq-core/src/rich_text.rs). */
+const STATEMENT_FORMAT =
+  "Requirement statement in Marreq statement Markdown: paragraphs separated by a blank line, '- ' bulleted and '1. ' numbered lists, **bold**, *italic*, `code`, [label](https://...) links (http/https/mailto only). Max 2000 bytes including markup.";
+
 function jsonContent(data: unknown) {
   const text =
     typeof data === "string" ? data : JSON.stringify(data, null, 2);
@@ -613,7 +617,7 @@ export function createMarreqServer(ctx: SessionContext) {
           ...projectField,
           idempotency_key: operationKey,
           title: z.string(),
-          description: z.string(),
+          description: z.string().describe(STATEMENT_FORMAT),
           reference_code: z.string(),
           author_id: z.number(),
           reviewer_id: z.number(),
@@ -704,7 +708,7 @@ export function createMarreqServer(ctx: SessionContext) {
           requirement_id: z.string(),
           patch: z.object({
             title: z.string().optional(),
-            description: z.string().optional(),
+            description: z.string().describe(STATEMENT_FORMAT).optional(),
             status_id: z.number().optional(),
             verification_method_ids: z.array(z.number()).optional(),
             author_id: z.number().optional(),

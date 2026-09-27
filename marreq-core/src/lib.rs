@@ -31,6 +31,7 @@ pub mod namespaces;
 pub mod permissions;
 pub mod repository;
 pub mod reqif;
+pub mod rich_text;
 pub mod routes;
 pub mod saved_view_definition;
 pub mod schema;

@@ -51,6 +51,7 @@ import {
   isApprovedRequirement,
   markApprovedEditPrompted,
 } from '@/utils/confirmEditApprovedRequirement';
+import StatementEditor from '@/components/StatementEditor';
 
 function approvalLabel(state: string): string {
   return state.replace(/_/g, ' ').toUpperCase();
@@ -725,29 +726,17 @@ export default function EditRequirementPage() {
                 <h3 className="text-xs font-bold uppercase tracking-widest text-stitch-muted font-headline">
                   Requirement statement
                 </h3>
-                <div className="flex gap-1 opacity-40 pointer-events-none" aria-hidden>
-                  <button type="button" className="p-1.5 hover:bg-stitch-higher rounded transition-colors">
-                    <span className="material-symbols-outlined text-lg text-stitch-muted">format_bold</span>
-                  </button>
-                  <button type="button" className="p-1.5 hover:bg-stitch-higher rounded transition-colors">
-                    <span className="material-symbols-outlined text-lg text-stitch-muted">format_italic</span>
-                  </button>
-                  <button type="button" className="p-1.5 hover:bg-stitch-higher rounded transition-colors">
-                    <span className="material-symbols-outlined text-lg text-stitch-muted">format_list_bulleted</span>
-                  </button>
-                  <div className="w-px h-6 bg-stitch-border mx-1 self-center" />
-                  <button type="button" className="p-1.5 hover:bg-stitch-higher rounded transition-colors">
-                    <span className="material-symbols-outlined text-lg text-stitch-muted">link</span>
-                  </button>
-                </div>
               </div>
               <div className="p-6 md:p-8">
-                <textarea
-                  className="w-full min-h-[300px] text-sm leading-relaxed text-stitch-fg bg-transparent border-none focus:ring-0 rounded-md p-0 resize-y placeholder:text-stitch-muted"
-                  placeholder="Describe the requirement…"
+                <StatementEditor
+                  id="requirement-statement"
+                  ariaLabel="Requirement statement"
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={setDescription}
                   required
+                  placeholder="Describe the requirement…"
+                  minHeightClass="min-h-[300px]"
+                  textareaClassName="w-full text-sm leading-relaxed text-stitch-fg bg-transparent border-none focus:ring-0 rounded-md p-0 resize-y placeholder:text-stitch-muted"
                 />
               </div>
             </section>

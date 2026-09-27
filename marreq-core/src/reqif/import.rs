@@ -89,6 +89,10 @@ struct Parser {
     current_attr_long_name: Option<String>,
     capturing_the_value: bool,
     the_value_depth: i32,
+    /// The current attribute value is `ATTRIBUTE-VALUE-XHTML`.
+    current_value_is_xhtml: bool,
+    /// Converts the XHTML inside `THE-VALUE` to statement Markdown (issue #256).
+    xhtml: Option<crate::rich_text::MarkdownBuilder>,
     /// Innermost structural context (SOURCE, TARGET, OBJECT, DEFINITION, TYPE, ENUM).
     container: Option<String>,
     hierarchy: Vec<HierFrame>,
@@ -116,6 +120,8 @@ impl Parser {
             current_attr_long_name: None,
             capturing_the_value: false,
             the_value_depth: 0,
+            current_value_is_xhtml: false,
+            xhtml: None,
             container: None,
             hierarchy: Vec::new(),
             in_spec_object: false,
@@ -129,6 +135,16 @@ impl Parser {
     }
 
     fn start(&mut self, name: &str, e: &quick_xml::events::BytesStart<'_>) {
+        if self.capturing_the_value {
+            if let Some(builder) = self.xhtml.as_mut() {
+                builder.open(name, attr(e, "href").as_deref());
+                if name.eq_ignore_ascii_case("ol") {
+                    if let Some(start) = attr(e, "start").and_then(|v| v.trim().parse().ok()) {
+                        builder.set_list_start(start);
+                    }
+                }
+            }
+        }
         match name {
             "SPEC-OBJECT" => {
                 self.in_spec_object = true;
@@ -209,10 +225,14 @@ impl Parser {
                 self.current_def_id = attr(e, "DEFINITION");
                 self.current_value = attr(e, "THE-VALUE");
                 self.current_attr_long_name = None;
+                self.current_value_is_xhtml = n == "ATTRIBUTE-VALUE-XHTML";
             }
             "THE-VALUE" => {
                 self.capturing_the_value = true;
                 self.the_value_depth = 1;
+                if self.current_value_is_xhtml {
+                    self.xhtml = Some(crate::rich_text::MarkdownBuilder::new());
+                }
             }
             "SOURCE" | "TARGET" | "OBJECT" | "DEFINITION" | "TYPE" => {
                 self.container = Some(name.to_string());
@@ -242,6 +262,10 @@ impl Parser {
             return;
         }
         if self.capturing_the_value {
+            if let Some(builder) = self.xhtml.as_mut() {
+                builder.text(text);
+                return;
+            }
             match self.current_value.as_mut() {
                 Some(existing) => {
                     if !existing.is_empty() {
@@ -332,6 +356,8 @@ impl Parser {
         self.current_attr_long_name = None;
         self.capturing_the_value = false;
         self.the_value_depth = 0;
+        self.current_value_is_xhtml = false;
+        self.xhtml = None;
         let Some(obj) = self.current_object.as_mut() else {
             return;
         };
@@ -353,6 +379,14 @@ impl Parser {
             if name == "THE-VALUE" {
                 self.capturing_the_value = false;
                 self.the_value_depth = 0;
+                if let Some(builder) = self.xhtml.take() {
+                    let markdown = builder.finish();
+                    if !markdown.is_empty() {
+                        self.current_value = Some(markdown);
+                    }
+                }
+            } else if let Some(builder) = self.xhtml.as_mut() {
+                builder.close(name);
             }
             return;
         }
@@ -420,14 +454,26 @@ impl Parser {
 /// Parse ReqIF XML bytes into ParsedDocument.
 pub fn parse_reqif(xml: &[u8]) -> Result<ParsedDocument, String> {
     let mut reader = Reader::from_reader(Cursor::new(xml));
-    reader.config_mut().trim_text(true);
+    // Text is collected per run (text, CDATA and entity references between two
+    // tags) and trimmed as a whole, so `a &lt; b` keeps its spaces and entities.
+    reader.config_mut().trim_text(false);
 
     let mut parser = Parser::new();
     let mut buf = Vec::new();
     let mut root_name: Option<String> = None;
+    let mut text_run = String::new();
 
     loop {
-        match reader.read_event_into(&mut buf) {
+        let event = reader.read_event_into(&mut buf);
+        if !matches!(
+            event,
+            Ok(Event::Text(_)) | Ok(Event::CData(_)) | Ok(Event::GeneralRef(_))
+        ) && !text_run.is_empty()
+        {
+            let run = std::mem::take(&mut text_run);
+            parser.text(run.trim());
+        }
+        match event {
             Ok(Event::Start(e)) => {
                 parser.open_elements += 1;
                 let name = local_name(e.name());
@@ -448,12 +494,25 @@ pub fn parse_reqif(xml: &[u8]) -> Result<ParsedDocument, String> {
                 parser.end(&name);
             }
             Ok(Event::Text(e)) => {
-                let text = e.xml10_content().unwrap_or_default();
-                parser.text(text.trim());
+                text_run.push_str(&e.xml10_content().unwrap_or_default());
             }
             Ok(Event::CData(e)) => {
-                let text = String::from_utf8_lossy(e.as_ref());
-                parser.text(text.trim());
+                text_run.push_str(&String::from_utf8_lossy(e.as_ref()));
+            }
+            Ok(Event::GeneralRef(e)) => {
+                if let Ok(Some(c)) = e.resolve_char_ref() {
+                    text_run.push(c);
+                } else {
+                    let name = e.decode().unwrap_or_default();
+                    match quick_xml::escape::resolve_xml_entity(&name) {
+                        Some(resolved) => text_run.push_str(resolved),
+                        None => {
+                            text_run.push('&');
+                            text_run.push_str(&name);
+                            text_run.push(';');
+                        }
+                    }
+                }
             }
             Ok(Event::Eof) => {
                 if parser.open_elements != 0 {
@@ -477,7 +536,11 @@ fn attr(e: &quick_xml::events::BytesStart<'_>, key: &str) -> Option<String> {
     let key_bytes = key.as_bytes();
     for a in e.attributes().flatten() {
         if a.key.as_ref() == key_bytes || a.key.local_name().as_ref() == key_bytes {
-            return String::from_utf8(a.value.into_owned()).ok();
+            // Attribute values are XML-escaped (`&amp;`, `&quot;`, ...); unescape them.
+            return match a.unescape_value() {
+                Ok(v) => Some(v.into_owned()),
+                Err(_) => String::from_utf8(a.value.into_owned()).ok(),
+            };
         }
     }
     None

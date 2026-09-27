@@ -187,7 +187,7 @@ On the detail page you see:
 3. Fill in:
    - **Title** (required)
    - **Reference** (optional; can be auto-generated)
-   - **Statement** (required)
+   - **Statement** (required; shown as **Description** on the form, with the same formatting toolbar and preview as in [§4.4](#44-editing-a-requirement))
    - **Rationale** (optional)
    - **Category**, **Status**, **Verification methods**, **Applicability** (as configured for the project)
    - **Reviewer**, **Parent requirement** (optional)
@@ -204,7 +204,23 @@ You can optionally pass a parent or template via query parameters (`parent`, `te
 4. Change title, statement, rationale, category, status, applicability, verification, reviewer, parent, and custom fields as needed.
 5. Use **Save** to create a new version. **Cancel** returns to the detail view.
 
-The editor supports rich text (bold, italic, list, code, link) and a preview toggle for the statement. Autosave and “All changes saved” are shown in the header.
+#### Formatting the statement
+
+The statement editor has a formatting toolbar and a **Write / Preview** toggle. Statements are stored as a small, documented Markdown subset, so they stay readable as plain text in exports:
+
+| You want | Type (or use the toolbar) | Shortcut |
+| --- | --- | --- |
+| **Bold** | `**text**` | Ctrl/Cmd+B |
+| *Italic* | `*text*` or `_text_` | Ctrl/Cmd+I |
+| `Code` | `` `text` `` | |
+| Link | `[label](https://example.com)` (only `http`, `https`, and `mailto` links) | Ctrl/Cmd+K |
+| Bulleted list | a line starting with `- ` (or `* `) | |
+| Numbered list | lines starting with `1. `, `2. `, … (the first number sets the start) | |
+| New paragraph | a blank line (a single line break stays a line break) | |
+
+Anything else, such as headings, tables, or HTML, is shown literally. Put `\` before `*`, `_`, `` ` ``, `[` or `]` to show the character itself. **Preview** shows the statement exactly as it appears on the requirement page. The statement is limited to 2000 bytes including the formatting characters; the counter under the editor shows how much is used.
+
+Formatting is shown on the requirement page, and version snapshots and review cards show the text without markers. ReqIF export writes the statement as XHTML so other tools keep the formatting, and ReqIF import turns XHTML lists, emphasis, and links back into this format (see [§9.4](#94-exporting-reqif) and [§10.2](#102-importing-reqif)). Excel and JSON exports contain the Markdown source.
 
 ### 4.5 Version History & Diff
 
@@ -213,7 +229,7 @@ The editor supports rich text (bold, italic, list, code, link) and a preview tog
 - Select **Compare versions** to compare any two saved versions. The latest version and its predecessor are selected by default.
 - Use **Compare with previous** on a version-history row to open that adjacent pair directly.
 - When an older approved snapshot exists, use **Compare with last approved** beside the approval state before reviewing the current draft.
-- The comparison dialog shows removed, added, and unchanged title, statement, and justification text. It also compares status, category, applicability, verification methods, and custom fields.
+- The comparison dialog shows removed, added, and unchanged title, statement, and justification text (line by line; statements are compared as their Markdown source, so each list item is its own line). It also compares status, category, applicability, verification methods, and custom fields.
 - At least two saved versions are required. Version comparison is read-only and is available to anyone who can view the project requirements.
 
 ### 4.6 Comments

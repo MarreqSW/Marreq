@@ -22,15 +22,38 @@ known limitations.
 | --- | --- |
 | `reference_code` | requirement reference attribute |
 | `title` | title or summary attribute |
-| `description` | description text attribute |
+| `description` | `Statement` XHTML attribute on export (`ATTRIBUTE-VALUE-XHTML`); on import, the description/statement attribute (STRING or XHTML) |
 | requirement status | status attribute |
 | `justification` | justification attribute |
 | parent links | ReqIF relation entries |
 | comments | `Remarks` attribute on export |
 
+### Statement formatting (XHTML)
+
+Requirement statements are stored as "Marreq statement Markdown"
+(`marreq-core/src/rich_text.rs`, mirrored in `frontend/src/utils/statementMarkdown.ts`):
+paragraphs, `- ` bulleted and `1. ` numbered lists, `**bold**`, `*italic*`,
+`` `code` `` and `[label](url)` links (http/https/mailto only).
+
+- **Export** declares `xmlns:xhtml="http://www.w3.org/1999/xhtml"`, a
+  `DATATYPE-DEFINITION-XHTML` (`dt-xhtml`) and an `ATTRIBUTE-DEFINITION-XHTML`
+  `Statement` (`ad-statement`). Each value is
+  `<xhtml:div>` with `xhtml:p`, `ul`, `ol` (`start` when not 1), `li`,
+  `strong`, `em`, `code`, `a href` and `br`; all text is escaped. Identifier,
+  title, rationale and remarks stay STRING attributes.
+- **Import** converts XHTML back to the same Markdown instead of flattening it:
+  `p`/`div`/headings become paragraphs, `ul`/`ol`/`li` become list items,
+  `strong`/`b`, `em`/`i`, `code`/`tt`, `a` (safe `href` only) and `br` map to
+  their Markdown forms, table rows become separate lines, and other elements
+  keep their text. Marker characters in the source text are escaped. Entity
+  references (`&lt;`, `&amp;`, `&#8364;`, …) are resolved in element text and
+  attribute values.
+- The 2000-byte statement limit applies after conversion; longer imported
+  statements are truncated (at a character boundary) with a warning.
+
 Unmapped attributes, datatypes, object types, specification boundaries,
-original identifiers, XHTML formatting and attachments are not currently
-persisted. The import result reports these losses as warnings. ReqIFZ is not
+original identifiers, XHTML formatting beyond the subset above (tables,
+images, nesting) and attachments are not currently persisted. The import result reports these losses as warnings. ReqIFZ is not
 supported.
 
 The Rocket API exposes the same service:

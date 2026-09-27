@@ -45,6 +45,7 @@ import type {
   VerificationStatus,
 } from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
+import StatementText from '@/components/StatementText';
 
 function approvalLabel(state: string): string {
   return state.replace(/_/g, ' ').toUpperCase();
@@ -683,9 +684,10 @@ export default function ViewRequirementPage() {
               </h2>
             </div>
             <div className="p-6 md:p-8">
-              <div className="text-sm leading-relaxed text-stitch-fg whitespace-pre-wrap">
-                {view.description.trim() ? view.description : '—'}
-              </div>
+              <StatementText
+                source={view.description}
+                className="text-sm leading-relaxed text-stitch-fg"
+              />
             </div>
           </section>
 

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import type { Requirement, RequirementStatus, VerificationMethod } from '@/api/types';
 import { preventEditNavigationIfUnconfirmed } from '@/utils/confirmEditApprovedRequirement';
 import { StatusBadge } from './StatusBadge';
+import { statementToPlainText } from '@/utils/statementMarkdown';
 
 function approvalLabel(state: string): string {
   return state.replace(/_/g, ' ').toUpperCase();
@@ -52,7 +53,8 @@ export default function RequirementReviewCard({
 }) {
   const parentIds = parentRequirementIds(requirement);
   const statusTitle = status?.title ?? `Status #${requirement.status_id}`;
-  const statement = requirement.description.trim();
+  // One-line preview: statement Markdown reduced to plain text (no raw markers).
+  const statement = statementToPlainText(requirement.description).trim();
 
   return (
     <article

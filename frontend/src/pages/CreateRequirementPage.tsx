@@ -37,6 +37,7 @@ import {
   nextDuplicateReference,
 } from '@/utils/duplicateRequirement';
 import { duplicateSourceQueryId, parsePositiveQueryId } from '@/utils/createQueryParams';
+import StatementEditor from '@/components/StatementEditor';
 
 const selectClass =
   'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
@@ -436,16 +437,20 @@ export default function CreateRequirementPage() {
             />
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+            <label
+              htmlFor="requirement-statement"
+              className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1"
+            >
               Description
             </label>
-            <textarea
-              required
+            <StatementEditor
+              id="requirement-statement"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={6}
-              className={`${selectClass} min-h-[140px] resize-y`}
+              onChange={setDescription}
+              required
               placeholder="Requirement statement…"
+              minHeightClass="min-h-[140px]"
+              textareaClassName={`${selectClass} resize-y`}
             />
           </div>
           <div>

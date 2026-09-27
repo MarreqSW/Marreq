@@ -154,7 +154,7 @@ fn test_reqif_capella_import() {
     assert_eq!(
         desc.as_deref(),
         Some("Requirement-1"),
-        "XHTML text should be flattened into description"
+        "XHTML text should be imported into description"
     );
 }
 
@@ -385,6 +385,12 @@ fn test_reqif_formatted_xhtml_tables_links_and_images() {
     ] {
         assert!(text.contains(expected), "missing '{expected}' in '{text}'");
     }
+    // Links become Markdown links; table rows stay on their own lines.
+    assert!(
+        text.contains("[linked text](https://example.test)"),
+        "{text}"
+    );
+    assert!(text.contains("\nCell A Cell B"), "{text}");
     assert_eq!(doc.xhtml_value_count, 1);
     assert_eq!(doc.attachment_count, 1);
     assert!(doc

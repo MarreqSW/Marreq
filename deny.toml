@@ -1,0 +1,26 @@
+# cargo-deny configuration (issue #293). v1 checks security advisories only:
+#   cargo deny check advisories
+# Licenses, bans and sources can be enabled later.
+
+[graph]
+all-features = true
+
+[advisories]
+# RustSec advisory database.
+db-urls = ["https://github.com/rustsec/advisory-db"]
+# Fail on vulnerabilities; unmaintained/unsound crates are reported for the
+# workspace's own dependencies only.
+unmaintained = "workspace"
+yanked = "warn"
+# Advisories that cannot be fixed yet. Each entry needs a reason and a link to
+# the follow-up issue.
+ignore = [
+    # rsa (via openidconnect): Marvin timing attack on RSA *private-key*
+    # operations; no fixed release exists. Marreq only verifies RS256 ID-token
+    # signatures with providers' public keys, which the attack does not target.
+    { id = "RUSTSEC-2023-0071", reason = "openidconnect only uses rsa for public-key signature verification; no patched rsa release yet" },
+    # lopdf (via printpdf 0.9): stack overflow when *parsing* crafted PDFs.
+    # Marreq only generates PDFs and never loads user-supplied PDFs. Removed by
+    # the printpdf upgrade (follow-up of #293).
+    { id = "RUSTSEC-2026-0187", reason = "lopdf parsing is not reachable: printpdf is only used to generate PDFs" },
+]

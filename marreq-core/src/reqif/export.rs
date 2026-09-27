@@ -11,11 +11,16 @@ const REQIF_NS: &str = "http://www.omg.org/spec/ReqIF/20110401/reqif.xsd";
 const XHTML_NS: &str = "http://www.w3.org/1999/xhtml";
 
 fn escape_xml(s: &str) -> String {
+    // Line breaks and tabs are written as character references: XML normalizes
+    // raw whitespace inside attribute values (e.g. `THE-VALUE`) to spaces.
     s.replace('&', "&amp;")
         .replace('<', "&lt;")
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&apos;")
+        .replace('\r', "&#13;")
+        .replace('\n', "&#10;")
+        .replace('\t', "&#9;")
 }
 
 fn req_timestamp(req: &Requirement) -> String {
@@ -352,6 +357,7 @@ mod tests {
             "The EPS shall support **three** modes:\n1. Off\n2. Safe <3\n3. Nominal\n\nSee [ICD](https://icd.test/eps?x=1&y=2).".into();
         let mut plain = requirement(2, "Plain", "REQ-PWR-002");
         plain.title = "R&D \"lab\" <bench>".into();
+        plain.justification = Some("Line one\n\tLine two".into());
         let xml = to_reqif(
             "Project",
             &[formatted.clone(), plain],
@@ -390,5 +396,13 @@ mod tests {
             .and_then(|o| o.attributes.get("Title"))
             .cloned();
         assert_eq!(title.as_deref(), Some("R&D \"lab\" <bench>"));
+        // Line breaks in STRING values survive XML attribute normalization.
+        let rationale = doc
+            .objects
+            .iter()
+            .find(|o| o.id == "so-2")
+            .and_then(|o| o.attributes.get("Rationale"))
+            .cloned();
+        assert_eq!(rationale.as_deref(), Some("Line one\n\tLine two"));
     }
 }

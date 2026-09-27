@@ -19,8 +19,4 @@ ignore = [
     # operations; no fixed release exists. Marreq only verifies RS256 ID-token
     # signatures with providers' public keys, which the attack does not target.
     { id = "RUSTSEC-2023-0071", reason = "openidconnect only uses rsa for public-key signature verification; no patched rsa release yet" },
-    # lopdf (via printpdf 0.9): stack overflow when *parsing* crafted PDFs.
-    # Marreq only generates PDFs and never loads user-supplied PDFs. Removed by
-    # the printpdf upgrade (follow-up of #293).
-    { id = "RUSTSEC-2026-0187", reason = "lopdf parsing is not reachable: printpdf is only used to generate PDFs" },
 ]

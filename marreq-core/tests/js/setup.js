@@ -51,8 +51,10 @@ class LocalStorageMock {
   }
 }
 
-global.localStorage = new LocalStorageMock();
-global.sessionStorage = new LocalStorageMock();
+// vitest 5 exposes the environment's storage as getter-only globals, so a plain
+// assignment throws; `vi.stubGlobal` redefines the property instead.
+vi.stubGlobal('localStorage', new LocalStorageMock());
+vi.stubGlobal('sessionStorage', new LocalStorageMock());
 
 // Reset before each test
 beforeEach(() => {

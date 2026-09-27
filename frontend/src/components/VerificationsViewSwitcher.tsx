@@ -1,4 +1,4 @@
-import { NavLink, useLocation, useOutletContext } from 'react-router-dom';
+import { Link, useLocation, useOutletContext } from 'react-router-dom';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 export default function VerificationsViewSwitcher() {
@@ -12,6 +12,15 @@ export default function VerificationsViewSwitcher() {
   const tableActive = onVerSection && !listView;
   const listActive = onVerSection && listView;
 
+  // Keep the other query params (status / method filters) when switching views.
+  const verificationsUrl = (mode: 'table' | 'list') => {
+    const next = new URLSearchParams(loc.search);
+    if (mode === 'list') next.set('view', 'list');
+    else next.delete('view');
+    const query = next.toString();
+    return `${basePath}/verifications${query ? `?${query}` : ''}`;
+  };
+
   const seg =
     'flex items-center gap-2 px-4 py-1.5 text-xs font-bold rounded-md transition-colors';
   const inactive =
@@ -20,20 +29,22 @@ export default function VerificationsViewSwitcher() {
 
   return (
     <div className="flex p-1 bg-stitch-surface rounded-lg gap-1 border border-stitch-border">
-      <NavLink
-        to={`${basePath}/verifications`}
-        className={() => `${seg} ${tableActive ? active : inactive}`}
+      <Link
+        to={verificationsUrl('table')}
+        aria-current={tableActive ? 'page' : undefined}
+        className={`${seg} ${tableActive ? active : inactive}`}
       >
         <span className="material-symbols-outlined text-sm">table_rows</span>
         Table
-      </NavLink>
-      <NavLink
-        to={`${basePath}/verifications?view=list`}
-        className={() => `${seg} ${listActive ? active : inactive}`}
+      </Link>
+      <Link
+        to={verificationsUrl('list')}
+        aria-current={listActive ? 'page' : undefined}
+        className={`${seg} ${listActive ? active : inactive}`}
       >
         <span className="material-symbols-outlined text-sm">view_list</span>
         List
-      </NavLink>
+      </Link>
     </div>
   );
 }

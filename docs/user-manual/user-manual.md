@@ -250,21 +250,21 @@ Test management in Marreq covers creating and organizing verifications (test cas
 
 You can:
 
-- Switch between **Card** and **Table** view.
-- **Filter** by verification status, verification method, category, and **search** (e.g. by name or reference).
-- View **metrics** (e.g. total verifications, counts by status such as Passed/Failed/Pending).
-- **Paginate** through results (pagination controls appear at both top and bottom of the list).
+- Switch between **Table** and **List** (card) view. The view and the filters are kept in the URL, so switching views, reloading, or sharing the link keeps them.
+- See **status metrics** for the whole project above the list: the **Total**, one chip per verification status with its count (statuses with no verifications are dimmed; **Other** counts verifications whose status is not in the project's list), and a **Pass rate** ("X of Y passed") when the project has a status named *Passed*. Click a status chip to show only that status; click it again to clear the filter. The metrics always cover the whole project, not just the filtered rows.
+- **Filter** by **Status** and **Method** (including *No method*), and **search** with the header search box (reference, title, description, source, or parent). **Reset Filters** clears status and method.
+- **Paginate** through results (25, 50, or 100 rows per page; controls appear above and below the list when there is more than one page).
 - Click **New Verification** to create a verification (admin/appropriate role).
 - Click a verification to open its **Verification detail** page.
 
 ![Verifications list](screenshots/tests-list.png)
 
-- **Update verification status** inline in the list (e.g. set Pass/Fail after execution) when the UI offers it.
-- **Export verifications to Excel** from the verifications list or Reports (see [§9.3 Exporting Verifications to Excel](#93-exporting-verifications-to-excel)).
+- **Update verification status** inline (e.g. set Passed after a lab run): click the status in the table or list. Only **project reviewers** with edit rights can change the status; other editors can still edit the title, method, and source inline.
+- **Export** from the filter bar: **CSV** contains the rows currently shown (after filters and search); **Excel** contains every verification in the project (the same workbook as [§9.3 Exporting Verifications to Excel](#93-exporting-verifications-to-excel)).
 
 ### 5.2 Verification Detail Page
 
-- URL: `/<project-slug>/verifications/show/<verification_id>`.
+- URL: `/<project-slug>/verifications/<verification_id>`.
 
 Shows: **Name**, **Description**, **Source** (e.g. test file or document reference), **Status**, **Reference code**, **Verification type**, **Parent verification** (if part of a hierarchy), and **which requirements this verification covers** (traceability links). From here you can **Edit** the verification (name, description, source, status, reference, method, parent) or **update status** (e.g. after running the test). Status updates feed into the requirement **Verification** panel and into [Reports](#9-reports--export) (coverage, pass rate).
 
@@ -302,7 +302,7 @@ As tests are executed, update their status (e.g. Pass, Fail, Pending, In Progres
 - **Reports** and **Matrix** reflect current coverage and test results.
 - **Matrix** and **Reports** can be filtered by verification status (e.g. show only Failed).
 
-Update status from the **Verification detail** page (Edit or dedicated status control) or, when available, **inline from the verifications list** or from the matrix. Verification statuses are configured per project under [Verification statuses](#85-verification-statuses).
+Update status from the **Verification detail** page (Edit), **inline from the verifications list** (click the status; project reviewers only, see [§5.1](#51-verifications-list)), or from the matrix. Verification statuses are configured per project under [Verification statuses](#85-verification-statuses).
 
 ### 5.6 Verification Hierarchy
 

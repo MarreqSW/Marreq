@@ -15,6 +15,11 @@ export async function listVerifications(): Promise<Verification[]> {
   return fetchJson<Verification[]>('/api/verifications');
 }
 
+/** Verifications of one project (`ViewRequirements` on that project). */
+export async function listVerificationsByProject(projectId: number): Promise<Verification[]> {
+  return fetchJson<Verification[]>(`/api/projects/${projectId}/verifications`);
+}
+
 export async function listVerificationMethodsByProject(
   projectId: number,
 ): Promise<VerificationMethod[]> {

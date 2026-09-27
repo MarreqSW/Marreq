@@ -861,7 +861,10 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
             "{}\0{}\0{}\0{}\0{}",
             1, "oauth_grant:1", target, operation, key
         );
-        format!("{:x}", Sha256::digest(value.as_bytes()))
+        Sha256::digest(value.as_bytes())
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect::<String>()
     }
     let payload_hash = format!("{:<64}", "payload");
     for (operation, target, key, insert_sql) in [

@@ -667,7 +667,7 @@ mod tests {
             .to_string(),
         );
         let signing_input = format!("{header}.{claims}");
-        let signature = SigningKey::<sha2::Sha256>::new(private_key.clone())
+        let signature = SigningKey::<rsa::sha2::Sha256>::new(private_key.clone())
             .sign(signing_input.as_bytes())
             .to_bytes();
         format!(

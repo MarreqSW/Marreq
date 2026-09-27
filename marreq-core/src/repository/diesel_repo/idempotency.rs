@@ -24,7 +24,10 @@ struct RecoveredResponse {
 
 fn identity(user: i32, principal: &str, target: &str, op: &str, key: &str) -> String {
     let value = format!("{user}\0{principal}\0{target}\0{op}\0{key}");
-    format!("{:x}", Sha256::digest(value.as_bytes()))
+    Sha256::digest(value.as_bytes())
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 
 fn recover_response(

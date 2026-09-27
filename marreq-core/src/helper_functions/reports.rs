@@ -583,7 +583,28 @@ pub fn generate_requirements_pdf_report(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{collections::HashMap, vec};
+    use std::{collections::HashMap, io::Read, vec};
+
+    /// Concatenated content streams (Flate-compressed by printpdf) as text.
+    fn pdf_page_text(pdf: &[u8]) -> String {
+        let mut text = String::new();
+        let mut rest = pdf;
+        while let Some(start) = rest.windows(7).position(|w| w == b"stream\n") {
+            let body = &rest[start + 7..];
+            let Some(end) = body.windows(9).position(|w| w == b"endstream") else {
+                break;
+            };
+            let mut decoded = String::new();
+            if flate2::read::ZlibDecoder::new(&body[..end])
+                .read_to_string(&mut decoded)
+                .is_ok()
+            {
+                text.push_str(&decoded);
+            }
+            rest = &body[end..];
+        }
+        text
+    }
 
     #[test]
     fn test_generate_pdf_content() {
@@ -686,7 +707,6 @@ mod tests {
         })
         .unwrap();
 
-        let pdf_text = String::from_utf8_lossy(&pdf_bytes);
-        assert!(pdf_text.contains("Page 2"));
+        assert!(pdf_page_text(&pdf_bytes).contains("Page 2"));
     }
 }

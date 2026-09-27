@@ -57,7 +57,7 @@ pub struct ImportResult {
 }
 
 fn local_name(q: QName<'_>) -> String {
-    String::from_utf8_lossy(q.local_name().as_ref()).into_owned()
+    q.local_name().as_ref().to_owned()
 }
 
 fn is_attr_definition(name: &str) -> bool {
@@ -494,21 +494,21 @@ pub fn parse_reqif(xml: &[u8]) -> Result<ParsedDocument, String> {
                 parser.end(&name);
             }
             Ok(Event::Text(e)) => {
-                text_run.push_str(&e.xml10_content().unwrap_or_default());
+                text_run.push_str(&e.xml10_content());
             }
             Ok(Event::CData(e)) => {
-                text_run.push_str(&String::from_utf8_lossy(e.as_ref()));
+                text_run.push_str(e.as_ref());
             }
             Ok(Event::GeneralRef(e)) => {
                 if let Ok(Some(c)) = e.resolve_char_ref() {
                     text_run.push(c);
                 } else {
-                    let name = e.decode().unwrap_or_default();
-                    match quick_xml::escape::resolve_xml_entity(&name) {
+                    let name: &str = e.as_ref();
+                    match quick_xml::escape::resolve_xml_entity(name) {
                         Some(resolved) => text_run.push_str(resolved),
                         None => {
                             text_run.push('&');
-                            text_run.push_str(&name);
+                            text_run.push_str(name);
                             text_run.push(';');
                         }
                     }
@@ -533,13 +533,13 @@ pub fn parse_reqif(xml: &[u8]) -> Result<ParsedDocument, String> {
 }
 
 fn attr(e: &quick_xml::events::BytesStart<'_>, key: &str) -> Option<String> {
-    let key_bytes = key.as_bytes();
     for a in e.attributes().flatten() {
-        if a.key.as_ref() == key_bytes || a.key.local_name().as_ref() == key_bytes {
-            // Attribute values are XML-escaped (`&amp;`, `&quot;`, ...); unescape them.
-            return match a.unescape_value() {
+        if a.key.as_ref() == key || a.key.local_name().as_ref() == key {
+            // Attribute values are XML-escaped (`&amp;`, `&#10;`, ...) and, per the XML
+            // spec, raw whitespace in them is normalized to spaces.
+            return match a.normalized_value(quick_xml::XmlVersion::Implicit1_0) {
                 Ok(v) => Some(v.into_owned()),
-                Err(_) => String::from_utf8(a.value.into_owned()).ok(),
+                Err(_) => Some(a.value.into_owned()),
             };
         }
     }

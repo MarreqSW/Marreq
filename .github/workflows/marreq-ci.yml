@@ -28,6 +28,15 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+
+      - name: Audit Rust dependencies (RustSec advisories)
+        # Ignored advisories are documented in deny.toml.
+        run: cargo deny check advisories
+
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
 

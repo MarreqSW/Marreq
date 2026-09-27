@@ -531,17 +531,23 @@ If **no project reviewers** are configured, only **administrators** can change t
 
 ## 12. Profile & Account
 
-### 12.1 My Profile
+### 12.1 Account Settings
 
-- **User menu (top-right) → My Profile**.
-- URL: `/user/profile`.
+- **User menu (avatar, top-right) → Account settings**.
+- URL: `/account`.
 
-You see: full name, username, email, member since, last login. Click **Edit Profile** to change name and email (and any other editable profile fields). Success message is shown after update.
+The page has three sections: **Profile** (below), **Connected accounts** (sign-in with external providers such as company SSO; connect or disconnect, plus a **Change password** link when your account has a password), and **Connected applications** (apps you authorized through OAuth, with **Revoke**).
 
 ### 12.2 Edit Profile
 
-- URL: `/user/profile/edit`.
-- Update **Full name**, **Email** (and any other fields offered). Save.
+In **Account settings → Profile**:
+
+- **Username** is shown read-only. It is also your workspace path, so it cannot be changed here.
+- **Full name**: your display name (2–100 characters), shown in the header, as author/reviewer, and in logs.
+- **Email**: must be a valid address not used by another account. When you change it, enter your **Current password** to confirm. Accounts that only sign in with an external provider (no password) don't need one.
+- Click **Save profile**. "Profile updated." confirms the change, and the header shows the new name right away.
+
+On the hosted cloud service, where email addresses must be verified, the email field is read-only; contact your administrator to change it. Administrators can also edit any user from **Admin → User directory** (see [§13.2](#132-user-management)).
 
 ### 12.3 Change Password
 

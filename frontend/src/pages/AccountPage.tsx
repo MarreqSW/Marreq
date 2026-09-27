@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { disconnectIdentity, getAuthProviders, getConnectedApplications, getConnectedIdentities, getCsrfToken, revokeConnectedApplication, startIdentityLink } from '@/api/client';
-import type { AuthProviderDiscovery, ConnectedApplication, ConnectedIdentities } from '@/api/types';
+import { disconnectIdentity, getAuthProviders, getConnectedApplications, getConnectedIdentities, getCsrfToken, getDeploymentInfo, getMe, revokeConnectedApplication, startIdentityLink } from '@/api/client';
+import type { AuthProviderDiscovery, ConnectedApplication, ConnectedIdentities, DeploymentInfo, User } from '@/api/types';
 import AuthLayout from '@/components/AuthLayout';
 import { useDashboard } from '@/context/DashboardContext';
+import ProfileSection from '@/pages/account/ProfileSection';
 
 export default function AccountPage() {
-  const { csrfToken } = useDashboard();
+  const { csrfToken, refresh } = useDashboard();
+  const [me, setMe] = useState<User | null>(null);
+  const [deployment, setDeployment] = useState<DeploymentInfo | null>(null);
   const [providers, setProviders] = useState<AuthProviderDiscovery>({ password_enabled: true, external: [] });
   const [accounts, setAccounts] = useState<ConnectedIdentities | null>(null);
   const [applications, setApplications] = useState<ConnectedApplication[]>([]);
@@ -17,6 +20,10 @@ export default function AccountPage() {
     setProviders(available); setAccounts(connected); setApplications(delegated);
   };
   useEffect(() => { void reload().catch((reason) => setError(reason instanceof Error ? reason.message : 'Failed to load account')); }, []);
+  useEffect(() => {
+    void getMe().then(setMe).catch((reason) => setError(reason instanceof Error ? reason.message : 'Failed to load profile'));
+    void getDeploymentInfo().then(setDeployment).catch(() => setDeployment(null));
+  }, []);
 
   const token = async () => csrfToken ?? getCsrfToken();
   const connect = async (provider: string) => {
@@ -29,10 +36,17 @@ export default function AccountPage() {
     try { await revokeConnectedApplication(id, await token()); await reload(); } catch (reason) { setError(reason instanceof Error ? reason.message : 'Failed to revoke application'); }
   };
 
-  return <AuthLayout title="Account settings" subtitle="Manage the ways you sign in to Marreq" footer={<Link to="/" className="text-stitch-accent hover:underline">Back to home</Link>}>
+  return <AuthLayout title="Account settings" subtitle="Manage your profile and the ways you sign in to Marreq" footer={<Link to="/" className="text-stitch-accent hover:underline">Back to home</Link>}>
     <div className="space-y-4">
       {error && <div className="rounded-lg bg-red-500/10 border border-red-500/25 px-3 py-2 text-sm text-red-800 dark:text-red-200">{error}</div>}
-      <h2 className="text-sm font-semibold text-stitch-fg">Connected accounts</h2>
+      {me && <ProfileSection
+        user={me}
+        emailEditable={deployment?.requires_email_verification !== true}
+        passwordConfigured={accounts?.password_configured === true}
+        getCsrfToken={token}
+        onSaved={(updated) => { setMe(updated); void refresh(); }}
+      />}
+      <h2 className="pt-3 text-sm font-semibold text-stitch-fg">Connected accounts</h2>
       {providers.external.map((provider) => {
         const connected = accounts?.identities.find((identity) => identity.provider === provider.id);
         return <div key={provider.id} className="flex items-center justify-between rounded-lg border border-stitch-border px-3 py-3">

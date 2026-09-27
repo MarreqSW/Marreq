@@ -1039,3 +1039,104 @@ async fn change_password_updates_hash_and_revokes_session() {
         .await;
     assert_eq!(me.status(), Status::Unauthorized);
 }
+
+// ============================================================================
+// Self-service profile (PUT /api/auth/me, issue #251)
+// ============================================================================
+
+fn profile_repo() -> marreq_core::repository::diesel_repo_mock::DieselRepoMock {
+    let mut repo = base_repo();
+    let admin = repo.users.get_mut(&1).unwrap();
+    admin.email = "admin@example.com".into();
+    let user = repo.users.get_mut(&2).unwrap();
+    // "user" is a reserved namespace segment, which profile validation rejects.
+    user.username = "jdoe".into();
+    user.email = "user@example.com".into();
+    user.password_hash = Some(hash_password("Orbit!Delta_2026").unwrap());
+    repo
+}
+
+#[rocket::async_test]
+async fn update_me_requires_session() {
+    let client = test_client(profile_repo()).await;
+    let response = client
+        .put("/api/auth/me")
+        .header(ContentType::JSON)
+        .body(json!({ "name": "Someone", "email": "user@example.com" }).to_string())
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Unauthorized);
+}
+
+#[rocket::async_test]
+async fn update_me_changes_name_and_ignores_privileged_fields() {
+    let client = test_client(profile_repo()).await;
+    let response = client
+        .put("/api/auth/me")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 2))
+        .body(
+            json!({
+                "name": "Renamed User",
+                "email": "user@example.com",
+                "is_admin": true,
+                "username": "hijack"
+            })
+            .to_string(),
+        )
+        .dispatch()
+        .await;
+    assert_eq!(response.status(), Status::Ok);
+    let body: Value = response.into_json().await.unwrap();
+    assert_eq!(body["name"], "Renamed User");
+    assert_eq!(body["username"], "jdoe");
+    assert_eq!(body["is_admin"], false);
+}
+
+#[rocket::async_test]
+async fn update_me_email_change_checks_password_and_conflicts() {
+    let client = test_client(profile_repo()).await;
+    let put = |body: Value| {
+        let client = &client;
+        async move {
+            client
+                .put("/api/auth/me")
+                .header(ContentType::JSON)
+                .private_cookie(session_cookie(client, 2))
+                .body(body.to_string())
+                .dispatch()
+                .await
+        }
+    };
+
+    let wrong =
+        put(json!({ "name": "User", "email": "new@example.com", "current_password": "bad" })).await;
+    assert_eq!(wrong.status(), Status::BadRequest);
+    let body: Value = wrong.into_json().await.unwrap();
+    assert_eq!(body["message"], "Current password is incorrect");
+
+    let taken = put(json!({ "name": "User", "email": "admin@example.com", "current_password": "Orbit!Delta_2026" })).await;
+    assert_eq!(taken.status(), Status::Conflict);
+
+    let ok = put(json!({ "name": "User", "email": "New@Example.com", "current_password": "Orbit!Delta_2026" })).await;
+    assert_eq!(ok.status(), Status::Ok);
+    let body: Value = ok.into_json().await.unwrap();
+    assert_eq!(body["email"], "new@example.com");
+}
+
+#[rocket::async_test]
+async fn identities_report_password_configured_even_when_user_is_cached() {
+    let client = test_client(profile_repo()).await;
+    // Several requests: later ones resolve the session user from the cache,
+    // which does not keep `password_hash`.
+    for _ in 0..3 {
+        let response = client
+            .get("/api/auth/identities")
+            .private_cookie(session_cookie(&client, 2))
+            .dispatch()
+            .await;
+        assert_eq!(response.status(), Status::Ok);
+        let body: Value = response.into_json().await.unwrap();
+        assert_eq!(body["password_configured"], true);
+    }
+}

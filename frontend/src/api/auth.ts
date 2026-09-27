@@ -1,4 +1,4 @@
-import type { AuthProviderDiscovery, ChangePasswordBody, ConnectedApplication, ConnectedIdentities, DeploymentInfo } from './types';
+import type { AuthProviderDiscovery, ChangePasswordBody, ConnectedApplication, ConnectedIdentities, DeploymentInfo, ProfileUpdateRequest, User } from './types';
 import { fetchJson, JSON_HEADERS } from './transport';
 
 export async function getCsrfToken(): Promise<string> {
@@ -76,4 +76,21 @@ export async function getConnectedApplications(): Promise<ConnectedApplication[]
 
 export async function revokeConnectedApplication(grantId: number, csrfToken: string): Promise<void> {
   await fetchJson<void>(`/api/oauth/grants/${grantId}`, { method: 'DELETE', headers: { 'X-CSRF-Token': csrfToken } });
+}
+
+/** The signed-in user (`401` when not authenticated). */
+export async function getMe(): Promise<User> {
+  return fetchJson<User>('/api/auth/me');
+}
+
+/** Update the signed-in user's display name and email; returns the updated user. */
+export async function updateMyProfile(
+  body: ProfileUpdateRequest,
+  csrfToken: string,
+): Promise<User> {
+  return fetchJson<User>('/api/auth/me', {
+    method: 'PUT',
+    headers: { ...JSON_HEADERS, 'X-CSRF-Token': csrfToken },
+    body: JSON.stringify(body),
+  });
 }

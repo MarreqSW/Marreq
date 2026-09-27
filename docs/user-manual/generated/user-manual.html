@@ -374,7 +374,8 @@ id="toc-project-reviewers-workflow-gates">11.1 Project reviewers
 <li><a href="#profile-account" id="toc-profile-account">12. Profile
 &amp; Account</a>
 <ul>
-<li><a href="#my-profile" id="toc-my-profile">12.1 My Profile</a></li>
+<li><a href="#account-settings" id="toc-account-settings">12.1 Account
+Settings</a></li>
 <li><a href="#edit-profile" id="toc-edit-profile">12.2 Edit
 Profile</a></li>
 <li><a href="#change-password" id="toc-change-password">12.3 Change
@@ -1311,20 +1312,36 @@ not those gates unless they are in the reviewer list.</li>
 until at least one reviewer is added.</p>
 <hr />
 <h2 id="profile-account">12. Profile &amp; Account</h2>
-<h3 id="my-profile">12.1 My Profile</h3>
+<h3 id="account-settings">12.1 Account Settings</h3>
 <ul>
-<li><strong>User menu (top-right) → My Profile</strong>.</li>
-<li>URL: <code>/user/profile</code>.</li>
+<li><strong>User menu (avatar, top-right) → Account
+settings</strong>.</li>
+<li>URL: <code>/account</code>.</li>
 </ul>
-<p>You see: full name, username, email, member since, last login. Click
-<strong>Edit Profile</strong> to change name and email (and any other
-editable profile fields). Success message is shown after update.</p>
+<p>The page has three sections: <strong>Profile</strong> (below),
+<strong>Connected accounts</strong> (sign-in with external providers
+such as company SSO; connect or disconnect, plus a <strong>Change
+password</strong> link when your account has a password), and
+<strong>Connected applications</strong> (apps you authorized through
+OAuth, with <strong>Revoke</strong>).</p>
 <h3 id="edit-profile">12.2 Edit Profile</h3>
+<p>In <strong>Account settings → Profile</strong>:</p>
 <ul>
-<li>URL: <code>/user/profile/edit</code>.</li>
-<li>Update <strong>Full name</strong>, <strong>Email</strong> (and any
-other fields offered). Save.</li>
+<li><strong>Username</strong> is shown read-only. It is also your
+workspace path, so it cannot be changed here.</li>
+<li><strong>Full name</strong>: your display name (2–100 characters),
+shown in the header, as author/reviewer, and in logs.</li>
+<li><strong>Email</strong>: must be a valid address not used by another
+account. When you change it, enter your <strong>Current
+password</strong> to confirm. Accounts that only sign in with an
+external provider (no password) don’t need one.</li>
+<li>Click <strong>Save profile</strong>. “Profile updated.” confirms the
+change, and the header shows the new name right away.</li>
 </ul>
+<p>On the hosted cloud service, where email addresses must be verified,
+the email field is read-only; contact your administrator to change it.
+Administrators can also edit any user from <strong>Admin → User
+directory</strong> (see <a href="#132-user-management">§13.2</a>).</p>
 <h3 id="change-password">12.3 Change Password</h3>
 <ul>
 <li><strong>User menu (avatar, top-right) → Change password</strong>.

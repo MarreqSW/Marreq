@@ -614,6 +614,14 @@ export interface User {
   email_verified?: boolean;
 }
 
+/** Body for `PUT /api/auth/me`: the signed-in user's own name and email. */
+export interface ProfileUpdateRequest {
+  name: string;
+  email: string;
+  /** Required when the email changes and the account has a password. */
+  current_password?: string;
+}
+
 /** Body for `PUT /api/users/:id` (admin only). */
 export interface UserUpdateRequest {
   username: string;

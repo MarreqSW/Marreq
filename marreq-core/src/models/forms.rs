@@ -456,6 +456,18 @@ pub struct ChangePasswordForm {
     pub confirm_password: String,
 }
 
+/// Self-service profile change (`PUT /api/auth/me`). Username and admin flag are
+/// never taken from the client; `current_password` is required only when the
+/// email changes and the account has a password.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct ProfileUpdate {
+    pub name: String,
+    pub email: String,
+    #[serde(default)]
+    pub current_password: Option<String>,
+}
+
 /// Form used when an admin sets another user's password (no current password).
 #[derive(Serialize, Deserialize, FromForm)]
 #[serde(crate = "rocket::serde")]

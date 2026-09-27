@@ -91,6 +91,7 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         auth::auth_logout,
         auth::auth_change_password,
         auth::auth_me,
+        auth::auth_update_me,
         dashboard::dashboard_json,
         projects_session::list_for_session,
         projects_session::project_from_path,

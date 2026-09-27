@@ -5,10 +5,12 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::auth::errors::AuthError;
-use crate::auth::password::{admin_set_user_password, hash_password};
+use crate::auth::password::{admin_set_user_password, hash_password, verify_password};
 use crate::auth::password_policy::{validate_password, PasswordContext};
 use crate::logger::{LogCtx, Logger};
-use crate::models::{ActionType, EntityType, NewUser, UpdateUser, User, UserCreateRequest};
+use crate::models::{
+    ActionType, EntityType, NewUser, ProfileUpdate, UpdateUser, User, UserCreateRequest,
+};
 use crate::namespaces::{ensure_namespace_segment_available, NamespaceAvailabilityOptions};
 use crate::repository::errors::RepoError;
 use crate::repository::{SessionRepository, UserRepository};
@@ -221,6 +223,66 @@ impl<'a> UserService<'a> {
             },
         )?;
         self.get_by_id(id)
+    }
+
+    /// Let a user change their own display name and email (`PUT /api/auth/me`).
+    ///
+    /// Username and admin flag are pinned to the stored values. Changing the email
+    /// requires `email_changes_allowed` (false where emails must be verified) and,
+    /// when the account has a password, the correct `current_password`.
+    pub fn update_own_profile(
+        &self,
+        actor: &User,
+        change: ProfileUpdate,
+        email_changes_allowed: bool,
+    ) -> Result<User, RepoError> {
+        // Username lookup bypasses the cache, which drops `password_hash`.
+        let stored = self
+            .state
+            .repo_read()
+            .get_user_by_username(&actor.username)?
+            .ok_or(RepoError::NotFound)?;
+
+        let name = change.name.trim().to_string();
+        let email = change.email.trim().to_lowercase();
+        if email.is_empty() {
+            return Err(RepoError::BadInput("Email is required".into()));
+        }
+
+        if email != stored.email.trim().to_lowercase() {
+            if !email_changes_allowed {
+                return Err(RepoError::BadInput(
+                    "Email changes are not available in this deployment; contact your administrator."
+                        .into(),
+                ));
+            }
+            if let Some(hash) = stored.password_hash.as_deref() {
+                let password = change
+                    .current_password
+                    .as_deref()
+                    .filter(|p| !p.is_empty())
+                    .ok_or_else(|| {
+                        RepoError::BadInput(
+                            "Current password is required to change your email".into(),
+                        )
+                    })?;
+                if !verify_password(password, hash).unwrap_or(false) {
+                    return Err(RepoError::BadInput("Current password is incorrect".into()));
+                }
+            }
+        }
+
+        self.update_without_password(
+            &stored,
+            &UpdateUser {
+                id: Some(stored.id),
+                username: stored.username.clone(),
+                name,
+                email,
+                is_admin: stored.is_admin,
+            },
+        )?;
+        self.get_by_id(stored.id)
     }
 
     /// Set another user's password as a site administrator (no current password).
@@ -973,5 +1035,116 @@ mod tests {
             .unwrap();
         let hash = service.get_by_id(1).unwrap().password_hash.unwrap();
         assert!(crate::auth::password::verify_password("Orbit!Delta_2026", &hash).unwrap());
+    }
+
+    fn profile_repo() -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+        let mut me =
+            DieselRepoMock::make_user(5, "eng_jones", &hash_password("Orbit!Delta_2026").unwrap());
+        me.name = "Mike Jones".into();
+        me.email = "mike@example.com".into();
+        repo.users.insert(5, me);
+        let mut other = DieselRepoMock::make_user(6, "dr_smith", "hash");
+        other.email = "sarah@example.com".into();
+        repo.users.insert(6, other);
+        repo
+    }
+
+    fn profile(name: &str, email: &str, password: Option<&str>) -> ProfileUpdate {
+        ProfileUpdate {
+            name: name.into(),
+            email: email.into(),
+            current_password: password.map(str::to_string),
+        }
+    }
+
+    #[test]
+    fn update_own_profile_changes_name_without_password() {
+        let state = state_with_repo(profile_repo());
+        let service = UserService::new(&state);
+        let me = service.get_by_id(5).unwrap();
+
+        let updated = service
+            .update_own_profile(
+                &me,
+                profile("  Michael Jones ", "MIKE@example.com", None),
+                false,
+            )
+            .unwrap();
+        assert_eq!(updated.name, "Michael Jones");
+        assert_eq!(updated.email, "mike@example.com");
+        assert_eq!(updated.username, "eng_jones");
+        assert!(!updated.is_admin);
+    }
+
+    #[test]
+    fn update_own_profile_email_needs_current_password() {
+        let state = state_with_repo(profile_repo());
+        let service = UserService::new(&state);
+        let me = service.get_by_id(5).unwrap();
+
+        let missing =
+            service.update_own_profile(&me, profile("Mike Jones", "new@example.com", None), true);
+        assert!(matches!(missing, Err(RepoError::BadInput(msg)) if msg.contains("required")));
+        let wrong = service.update_own_profile(
+            &me,
+            profile("Mike Jones", "new@example.com", Some("nope")),
+            true,
+        );
+        assert!(
+            matches!(wrong, Err(RepoError::BadInput(msg)) if msg == "Current password is incorrect")
+        );
+
+        let ok = service
+            .update_own_profile(
+                &me,
+                profile("Mike Jones", "new@example.com", Some("Orbit!Delta_2026")),
+                true,
+            )
+            .unwrap();
+        assert_eq!(ok.email, "new@example.com");
+    }
+
+    #[test]
+    fn update_own_profile_sso_only_account_changes_email_without_password() {
+        let mut repo = profile_repo();
+        repo.users.get_mut(&5).unwrap().password_hash = None;
+        let state = state_with_repo(repo);
+        let service = UserService::new(&state);
+        let me = service.get_by_id(5).unwrap();
+
+        let ok = service
+            .update_own_profile(&me, profile("Mike Jones", "sso@example.com", None), true)
+            .unwrap();
+        assert_eq!(ok.email, "sso@example.com");
+    }
+
+    #[test]
+    fn update_own_profile_rejects_email_change_when_disallowed_and_bad_input() {
+        let state = state_with_repo(profile_repo());
+        let service = UserService::new(&state);
+        let me = service.get_by_id(5).unwrap();
+
+        let blocked = service.update_own_profile(
+            &me,
+            profile("Mike Jones", "new@example.com", Some("Orbit!Delta_2026")),
+            false,
+        );
+        assert!(matches!(blocked, Err(RepoError::BadInput(msg)) if msg.contains("not available")));
+        assert!(matches!(
+            service.update_own_profile(&me, profile("Mike Jones", "  ", None), true),
+            Err(RepoError::BadInput(_))
+        ));
+        assert!(matches!(
+            service.update_own_profile(&me, profile("M", "mike@example.com", None), true),
+            Err(RepoError::BadInput(_))
+        ));
+        let taken = service.update_own_profile(
+            &me,
+            profile("Mike Jones", "sarah@example.com", Some("Orbit!Delta_2026")),
+            true,
+        );
+        assert!(matches!(taken, Err(RepoError::Duplicate(_))));
+        assert_eq!(service.get_by_id(5).unwrap().email, "mike@example.com");
     }
 }

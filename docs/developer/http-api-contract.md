@@ -41,6 +41,7 @@ For **`POST /api/auth/login`** and **`POST /api/auth/logout`**, if the browser s
 | `POST` | `/api/auth/logout` | Clears session and CSRF. |
 | `POST` | `/api/auth/change-password` | JSON body: `{ "current_password", "new_password", "confirm_password" }`. Requires a session. On success, all sessions are revoked and cookies cleared. |
 | `GET` | `/api/auth/me` | Current user JSON; **401** if not authenticated (JSON body, not HTML). |
+| `PUT` | `/api/auth/me` | Update your own profile. JSON `{ "name", "email", "current_password"? }`; returns the updated user. Username and admin flag are never changed here (extra fields are ignored). `current_password` is required when the email changes and the account has a password. **400** for validation errors, a missing/incorrect password, or an email change where emails must be verified (`requires_email_verification`, cloud); **409** when the email is already used; **401** without a session. |
 | `GET` | `/api/auth/providers` | Enabled password/external methods; never includes client credentials. |
 | `GET` | `/api/auth/external/{provider}/start` | Begin Authorization Code + PKCE login. |
 | `GET` | `/api/auth/external/{provider}/callback` | Single-use provider callback. |

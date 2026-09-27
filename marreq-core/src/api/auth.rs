@@ -19,7 +19,7 @@ use crate::auth::password::change_user_password;
 use crate::auth::rate_limiter::LoginRateLimiter;
 use crate::auth::session::clear_session_cookie;
 use crate::auth::AuthError;
-use crate::models::forms::{ChangePasswordForm, LoginForm};
+use crate::models::forms::{ChangePasswordForm, LoginForm, ProfileUpdate};
 use crate::repository::errors::RepoError;
 
 #[derive(FromForm)]
@@ -276,8 +276,13 @@ pub fn auth_identities(
     let identities = repo.get_identities_for_user(user.id)?.into_iter().map(|identity| json!({
         "id": identity.id, "provider": identity.provider_key, "created_at": identity.created_at, "last_login_at": identity.last_login_at,
     })).collect::<Vec<_>>();
+    // The session user may come from the cache, which drops `password_hash`;
+    // the username lookup always reads storage.
+    let password_configured =
+        crate::repository::UserRepository::get_user_by_username(&*repo, &user.username)?
+            .is_some_and(|stored| stored.password_hash.is_some());
     Ok(Json(
-        json!({ "password_configured": user.password_hash.is_some(), "identities": identities }),
+        json!({ "password_configured": password_configured, "identities": identities }),
     ))
 }
 
@@ -373,4 +378,26 @@ pub fn auth_me(opt: OptionalSessionUser) -> ApiResult<Json<crate::models::User>>
         .0
         .ok_or_else(|| ApiError::Unauthorized("not authenticated".into()))?;
     Ok(Json(user))
+}
+
+/// `PUT /api/auth/me` — update the signed-in user's display name and email.
+///
+/// Username and admin flag cannot be changed here. Email changes need the current
+/// password (when the account has one) and are refused where emails must be verified.
+#[put("/auth/me", data = "<body>", format = "json")]
+pub fn auth_update_me(
+    opt: OptionalSessionUser,
+    body: Json<ProfileUpdate>,
+    state: &State<AppState>,
+) -> ApiResult<Json<crate::models::User>> {
+    let user = opt
+        .0
+        .ok_or_else(|| ApiError::Unauthorized("not authenticated".into()))?;
+    let email_changes_allowed = !crate::deployment::current().requires_email_verification();
+    let updated = crate::services::UserService::new(state.inner()).update_own_profile(
+        &user,
+        body.into_inner(),
+        email_changes_allowed,
+    )?;
+    Ok(Json(updated))
 }

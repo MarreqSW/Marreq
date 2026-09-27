@@ -1,5 +1,5 @@
 # Build SPA (Vite); JS/CSS live under frontend/static (Vite alias @static).
-FROM node:20-bookworm AS build
+FROM node:22-bookworm AS build
 ARG MARREQ_VERSION=
 ARG MARREQ_GIT_SHA=unknown
 ENV MARREQ_GIT_SHA=${MARREQ_GIT_SHA}

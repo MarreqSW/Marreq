@@ -20,6 +20,9 @@
     "backend:cloud": "cargo run -p marreq-cloud",
     "backend:test": "cargo test --workspace"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mariusmm/Marreq.git"

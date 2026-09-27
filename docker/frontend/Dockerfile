@@ -5,8 +5,10 @@ ARG MARREQ_GIT_SHA=unknown
 ENV MARREQ_GIT_SHA=${MARREQ_GIT_SHA}
 ENV MARREQ_VERSION=${MARREQ_VERSION}
 WORKDIR /build/frontend
-COPY frontend/package.json ./
-RUN npm install
+# Install exactly what the lockfile pins (same as CI); a lockfile-less
+# `npm install` re-resolves every build and hit an npm 10 resolver crash.
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
 RUN npm run build
 

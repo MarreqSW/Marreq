@@ -7,6 +7,9 @@ import { z } from "zod";
 import { contextAllowsReadExtended, loadContext } from "./context.js";
 import { MarreqAuthenticationError, MarreqClient } from "./client.js";
 import { loadTransportConfig, startRemoteServer } from "./remote.js";
+/** Requirement statements and verification descriptions use "Marreq statement Markdown" (marreq-core/src/rich_text.rs). */
+const DESCRIPTION_FORMAT = "Verification description in Marreq statement Markdown: paragraphs separated by a blank line, '- ' bulleted and '1. ' numbered lists, **bold**, *italic*, `code`, [label](https://...) links (http/https/mailto only). Max 2000 bytes including markup.";
+const STATEMENT_FORMAT = "Requirement statement in Marreq statement Markdown: paragraphs separated by a blank line, '- ' bulleted and '1. ' numbered lists, **bold**, *italic*, `code`, [label](https://...) links (http/https/mailto only). Max 2000 bytes including markup.";
 function jsonContent(data) {
     const text = typeof data === "string" ? data : JSON.stringify(data, null, 2);
     return { type: "text", text };
@@ -367,7 +370,7 @@ export function createMarreqServer(ctx) {
                 ...projectField,
                 idempotency_key: operationKey,
                 title: z.string(),
-                description: z.string(),
+                description: z.string().describe(STATEMENT_FORMAT),
                 reference_code: z.string(),
                 author_id: z.number(),
                 reviewer_id: z.number(),
@@ -401,7 +404,7 @@ export function createMarreqServer(ctx) {
         const verificationInput = z.object({
             reference_code: z.string(),
             name: z.string(),
-            description: z.string(),
+            description: z.string().describe(DESCRIPTION_FORMAT),
             source: z.string(),
             status_id: z.number().int().positive(),
             parent_id: z.number().int().positive().nullable().optional(),
@@ -434,7 +437,7 @@ export function createMarreqServer(ctx) {
                 requirement_id: z.string(),
                 patch: z.object({
                     title: z.string().optional(),
-                    description: z.string().optional(),
+                    description: z.string().describe(STATEMENT_FORMAT).optional(),
                     status_id: z.number().optional(),
                     verification_method_ids: z.array(z.number()).optional(),
                     author_id: z.number().optional(),

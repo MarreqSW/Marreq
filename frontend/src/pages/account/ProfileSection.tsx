@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { updateMyProfile } from '@/api/client';
 import type { User } from '@/api/types';
 import { useFormSubmit } from '@/hooks/useFormSubmit';
@@ -30,7 +30,13 @@ export default function ProfileSection({
   const [currentPassword, setCurrentPassword] = useState('');
   const [saved, setSaved] = useState(false);
 
+  // Resync the fields when a different user object arrives (e.g. after saving),
+  // but not on mount: the initial state already comes from `user`, and a mount-time
+  // reset would overwrite anything typed before the effect runs.
+  const syncedUser = useRef(user);
   useEffect(() => {
+    if (syncedUser.current === user) return;
+    syncedUser.current = user;
     setName(user.name);
     setEmail(user.email);
   }, [user]);

@@ -59,7 +59,7 @@ export default function DailyBarChart({ data, label }: DailyBarChartProps) {
                 aria-label={text}
                 title={text}
                 data-testid="daily-bar"
-                className="group relative flex h-full min-w-0 flex-1 items-end justify-center focus:outline-none"
+                className="group relative flex h-full min-w-0 flex-1 items-end justify-center focus:outline-hidden"
                 onMouseEnter={() => setActive(i)}
                 onFocus={() => setActive(i)}
                 onBlur={() => setActive(null)}

@@ -265,7 +265,7 @@ export default function GroupViewPage() {
                             <span className="text-xs text-stitch-muted">{u.username}</span>
                           )}
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-stitch-muted bg-stitch-elevated px-2 py-0.5 rounded border border-stitch-border">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-stitch-muted bg-stitch-elevated px-2 py-0.5 rounded-sm border border-stitch-border">
                           {ROLE_LABELS[m.role] ?? m.role_label}
                         </span>
                       </li>

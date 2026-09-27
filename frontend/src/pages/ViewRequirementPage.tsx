@@ -489,7 +489,7 @@ export default function ViewRequirementPage() {
                 onClick={(event) =>
                   preventEditNavigationIfUnconfirmed(event, detail.approval_state, rid)
                 }
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gradient-to-br from-[#000666] to-[#1a237e] text-white text-[10px] font-bold uppercase tracking-wider shadow-lg hover:opacity-95 transition-opacity"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-linear-to-br from-primary to-primary-container text-white text-[10px] font-bold uppercase tracking-wider shadow-lg hover:opacity-95 transition-opacity"
               >
                 <span className="material-symbols-outlined text-sm">edit</span>
                 Edit
@@ -521,10 +521,10 @@ export default function ViewRequirementPage() {
         <div className="lg:col-span-8 space-y-8">
           <section className="bg-stitch-surface p-6 md:p-8 rounded-xl border border-stitch-border shadow-stitch">
             <div className="flex flex-wrap items-center gap-3 mb-4">
-              <span className="font-mono text-xs font-bold text-stitch-muted bg-stitch-elevated px-2 py-1 rounded border border-stitch-border">
+              <span className="font-mono text-xs font-bold text-stitch-muted bg-stitch-elevated px-2 py-1 rounded-sm border border-stitch-border">
                 {detail.reference_code || `#${detail.id}`}
               </span>
-              <span className="text-xs font-medium text-stitch-accent-dim bg-stitch-elevated px-2 py-1 rounded border border-stitch-border uppercase tracking-wide">
+              <span className="text-xs font-medium text-stitch-accent-dim bg-stitch-elevated px-2 py-1 rounded-sm border border-stitch-border uppercase tracking-wide">
                 {approvalLabel(view.approval_state)}
               </span>
               {view.approved_at ? (
@@ -941,12 +941,12 @@ export default function ViewRequirementPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <Link
                           to={snapshotHref}
-                          className="font-mono text-xs font-bold text-stitch-accent bg-stitch-elevated px-2 py-0.5 rounded border border-stitch-border hover:border-stitch-accent/50"
+                          className="font-mono text-xs font-bold text-stitch-accent bg-stitch-elevated px-2 py-0.5 rounded-sm border border-stitch-border hover:border-stitch-accent/50"
                         >
                           v{revNum}
                         </Link>
                         {isLatest ? (
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-sm">
                             Latest
                           </span>
                         ) : null}

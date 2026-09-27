@@ -182,7 +182,7 @@ export default function BaselinesPage() {
               </tr>
             ) : (
               rows.map((b) => (
-                <tr key={b.id} className="hover:bg-white/[0.03]">
+                <tr key={b.id} className="hover:bg-white/3">
                   <td className="px-4 py-3 text-stitch-fg font-medium">{b.name}</td>
                   <td className="px-4 py-3 text-stitch-muted text-xs">
                     {b.source_saved_view_id != null ? `#${b.source_saved_view_id}` : '—'}

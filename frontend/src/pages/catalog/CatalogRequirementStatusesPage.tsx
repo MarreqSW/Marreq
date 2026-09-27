@@ -251,12 +251,12 @@ export default function CatalogRequirementStatusesPage() {
                   </td>
                   <td className="px-3 py-2 align-top text-xs text-stitch-muted">
                     {c.is_system ? (
-                      <span className="border border-stitch-border rounded px-1.5 py-0.5">System</span>
+                      <span className="border border-stitch-border rounded-sm px-1.5 py-0.5">System</span>
                     ) : (
                       '—'
                     )}
                   </td>
-                  <td className="px-3 py-2 align-top space-y-1">
+                  <td className="px-3 py-2 align-top">
                     <button
                       type="button"
                       disabled={ro}
@@ -268,7 +268,7 @@ export default function CatalogRequirementStatusesPage() {
                     <button
                       type="button"
                       disabled={ro || c.is_system}
-                      className={btnDanger}
+                      className={`mt-1 ${btnDanger}`}
                       onClick={() => void removeRow(c.id)}
                     >
                       Delete

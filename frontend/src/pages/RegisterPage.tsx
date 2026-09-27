@@ -51,7 +51,7 @@ export default function RegisterPage() {
             <input
               id="username"
               autoComplete="username"
-              className="w-full rounded-lg border border-stitch-border bg-stitch-elevated px-3 py-2 text-sm text-stitch-fg focus:outline-none focus:ring-2 focus:ring-stitch-accent/50"
+              className="w-full rounded-lg border border-stitch-border bg-stitch-elevated px-3 py-2 text-sm text-stitch-fg focus:outline-hidden focus:ring-2 focus:ring-stitch-accent/50"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               required
@@ -64,7 +64,7 @@ export default function RegisterPage() {
             <input
               id="name"
               autoComplete="name"
-              className="w-full rounded-lg border border-stitch-border bg-stitch-elevated px-3 py-2 text-sm text-stitch-fg focus:outline-none focus:ring-2 focus:ring-stitch-accent/50"
+              className="w-full rounded-lg border border-stitch-border bg-stitch-elevated px-3 py-2 text-sm text-stitch-fg focus:outline-hidden focus:ring-2 focus:ring-stitch-accent/50"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
@@ -78,7 +78,7 @@ export default function RegisterPage() {
               id="email"
               type="email"
               autoComplete="email"
-              className="w-full rounded-lg border border-stitch-border bg-stitch-elevated px-3 py-2 text-sm text-stitch-fg focus:outline-none focus:ring-2 focus:ring-stitch-accent/50"
+              className="w-full rounded-lg border border-stitch-border bg-stitch-elevated px-3 py-2 text-sm text-stitch-fg focus:outline-hidden focus:ring-2 focus:ring-stitch-accent/50"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -92,7 +92,7 @@ export default function RegisterPage() {
               id="password"
               type="password"
               autoComplete="new-password"
-              className="w-full rounded-lg border border-stitch-border bg-stitch-elevated px-3 py-2 text-sm text-stitch-fg focus:outline-none focus:ring-2 focus:ring-stitch-accent/50"
+              className="w-full rounded-lg border border-stitch-border bg-stitch-elevated px-3 py-2 text-sm text-stitch-fg focus:outline-hidden focus:ring-2 focus:ring-stitch-accent/50"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -101,7 +101,7 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-lg bg-gradient-to-br from-[#000666] to-[#1a237e] text-white font-semibold py-2.5 text-sm hover:opacity-95 disabled:opacity-60"
+            className="w-full rounded-lg bg-linear-to-br from-primary to-primary-container text-white font-semibold py-2.5 text-sm hover:opacity-95 disabled:opacity-60"
           >
             {submitting ? 'Creating account…' : 'Create account'}
           </button>

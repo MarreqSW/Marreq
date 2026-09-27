@@ -61,7 +61,7 @@ export default function VerificationStatusMetrics({
       : null;
 
   const chip =
-    'flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-stitch-accent';
+    'flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-stitch-accent';
 
   return (
     <section
@@ -76,7 +76,7 @@ export default function VerificationStatusMetrics({
       </div>
 
       {passRate !== null ? (
-        <div className="pr-4 mr-1 border-r border-stitch-border flex flex-col justify-center min-w-[9rem]">
+        <div className="pr-4 mr-1 border-r border-stitch-border flex flex-col justify-center min-w-36">
           <p className="text-[10px] font-bold text-stitch-muted uppercase tracking-widest">
             Pass rate
           </p>

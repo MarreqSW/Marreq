@@ -105,7 +105,7 @@ export default function GroupMembersPage() {
   }
 
   const selectClass =
-    'text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-1.5 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
+    'text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-1.5 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-hidden transition-colors';
 
   if (loading) {
     return (
@@ -204,7 +204,7 @@ export default function GroupMembersPage() {
                 type="button"
                 disabled={addBusy || !addUserId}
                 onClick={() => void handleAddMember()}
-                className="bg-gradient-to-br from-[#000666] to-[#1a237e] text-white px-4 py-2 rounded-md text-xs font-bold uppercase tracking-widest shadow-lg disabled:opacity-50 hover:opacity-95 transition-opacity"
+                className="bg-linear-to-br from-primary to-primary-container text-white px-4 py-2 rounded-md text-xs font-bold uppercase tracking-widest shadow-lg disabled:opacity-50 hover:opacity-95 transition-opacity"
               >
                 {addBusy ? 'Adding…' : 'Add'}
               </button>

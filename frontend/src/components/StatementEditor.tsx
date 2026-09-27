@@ -125,7 +125,7 @@ export default function StatementEditor({
               disabled={preview || disabled}
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => run(a)}
-              className="p-1 rounded text-stitch-muted hover:bg-stitch-higher hover:text-stitch-fg disabled:opacity-40 disabled:hover:bg-transparent"
+              className="p-1 rounded-sm text-stitch-muted hover:bg-stitch-higher hover:text-stitch-fg disabled:opacity-40 disabled:hover:bg-transparent"
             >
               <span className="material-symbols-outlined text-lg" aria-hidden="true">
                 {a.icon}

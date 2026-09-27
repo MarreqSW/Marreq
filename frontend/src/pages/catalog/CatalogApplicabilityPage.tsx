@@ -211,7 +211,7 @@ export default function CatalogApplicabilityPage() {
                     }
                   />
                 </td>
-                <td className="px-3 py-2 align-top space-y-1">
+                <td className="px-3 py-2 align-top">
                   <button
                     type="button"
                     disabled={!canEdit || busy}
@@ -223,7 +223,7 @@ export default function CatalogApplicabilityPage() {
                   <button
                     type="button"
                     disabled={!canEdit || busy}
-                    className={btnDanger}
+                    className={`mt-1 ${btnDanger}`}
                     onClick={() => void removeRow(c.id)}
                   >
                     Delete

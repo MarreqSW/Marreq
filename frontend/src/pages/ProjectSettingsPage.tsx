@@ -25,7 +25,7 @@ function PermPill({ label, on }: { label: string; on: boolean }) {
       className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border ${
         on
           ? 'bg-emerald-500/15 text-emerald-900 dark:text-emerald-200 border-emerald-600/35 dark:border-emerald-500/30'
-          : 'bg-stitch-elevated/80 dark:bg-white/[0.05] text-stitch-muted border-stitch-border'
+          : 'bg-stitch-elevated/80 dark:bg-white/5 text-stitch-muted border-stitch-border'
       }`}
     >
       {label}
@@ -310,7 +310,7 @@ export default function ProjectSettingsPage() {
             </thead>
             <tbody className="divide-y divide-stitch-border">
               {members.map((m) => (
-                <tr key={m.user_id} className="hover:bg-white/[0.03]">
+                <tr key={m.user_id} className="hover:bg-white/3">
                   <td className="px-4 py-3 text-stitch-fg">{userLabel(m.user_id)}</td>
                   <td className="px-4 py-3">
                     {canManage ? (
@@ -379,14 +379,14 @@ export default function ProjectSettingsPage() {
               members.map((m) => (
                 <li
                   key={m.user_id}
-                  className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-white/[0.03]"
+                  className="px-4 py-3 flex items-center justify-between gap-3 hover:bg-white/3"
                 >
                   <span className="text-stitch-fg">{userLabel(m.user_id)}</span>
                   <div className="flex items-center gap-2 text-xs text-stitch-muted shrink-0">
                     <input
                       id={`project-reviewer-${m.user_id}`}
                       type="checkbox"
-                      className="rounded border-stitch-border cursor-pointer"
+                      className="rounded-sm border-stitch-border cursor-pointer"
                       checked={reviewerDraft.has(m.user_id)}
                       disabled={!canManage || reviewerBusy}
                       onChange={(e) => toggleReviewerDraft(m.user_id, e.target.checked)}
@@ -453,7 +453,7 @@ export default function ProjectSettingsPage() {
                 </tr>
               ) : (
                 fields.map((f) => (
-                  <tr key={f.id} className="hover:bg-white/[0.03]">
+                  <tr key={f.id} className="hover:bg-white/3">
                     <td className="px-4 py-3 text-stitch-fg font-medium">{f.label}</td>
                     <td className="px-4 py-3 text-stitch-muted font-mono text-xs">{f.field_type}</td>
                     <td className="px-4 py-3 text-stitch-muted tabular-nums">{f.sort_order}</td>
@@ -477,7 +477,7 @@ export default function ProjectSettingsPage() {
               type="checkbox"
               checked={notifInApp}
               disabled={notifBusy}
-              className="h-4 w-4 rounded border-stitch-border bg-stitch-bg text-stitch-accent focus:ring-stitch-accent"
+              className="h-4 w-4 rounded-sm border-stitch-border bg-stitch-bg text-stitch-accent focus:ring-stitch-accent"
               onChange={async (e) => {
                 const checked = e.target.checked;
                 setNotifInApp(checked);
@@ -502,7 +502,7 @@ export default function ProjectSettingsPage() {
               type="checkbox"
               checked={notifEmail}
               disabled={notifBusy}
-              className="h-4 w-4 rounded border-stitch-border bg-stitch-bg text-stitch-accent focus:ring-stitch-accent"
+              className="h-4 w-4 rounded-sm border-stitch-border bg-stitch-bg text-stitch-accent focus:ring-stitch-accent"
               onChange={async (e) => {
                 const checked = e.target.checked;
                 setNotifEmail(checked);

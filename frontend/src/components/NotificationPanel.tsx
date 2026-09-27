@@ -106,14 +106,14 @@ export default function NotificationPanel() {
       >
         <span className="material-symbols-outlined text-xl">notifications</span>
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+          <span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-96 max-h-[28rem] overflow-y-auto rounded-lg border border-stitch-border bg-stitch-bg shadow-xl z-50">
+        <div className="absolute right-0 top-full mt-2 w-96 max-h-112 overflow-y-auto rounded-lg border border-stitch-border bg-stitch-bg shadow-xl z-50">
           <div className="sticky top-0 flex items-center justify-between border-b border-stitch-border bg-stitch-bg px-4 py-3">
             <h3 className="text-sm font-semibold text-stitch-fg">Notifications</h3>
             {unreadCount > 0 && (

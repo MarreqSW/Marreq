@@ -255,7 +255,7 @@ export default function BaselineDetailPage() {
             </select>
           </label>
         </div>
-        <div className="max-h-[32rem] overflow-y-auto rounded-lg border border-stitch-border">
+        <div className="max-h-128 overflow-y-auto rounded-lg border border-stitch-border">
           <table className="w-full text-left text-xs">
             <thead className="sticky top-0 bg-stitch-elevated text-stitch-muted">
               <tr>
@@ -277,7 +277,7 @@ export default function BaselineDetailPage() {
                   snapshot.current_version_id != null &&
                   other.current_version_id !== snapshot.current_version_id;
                 return (
-                  <tr key={snapshot.id} className="hover:bg-white/[0.03]">
+                  <tr key={snapshot.id} className="hover:bg-white/3">
                     <td className="px-3 py-2 font-mono text-stitch-accent">
                       {snapshot.reference_code || `#${snapshot.id}`}
                     </td>
@@ -351,7 +351,7 @@ export default function BaselineDetailPage() {
         <p className="mb-4 mt-1 text-xs text-stitch-muted">
           Compare the verification captured by this baseline against its current definition and status.
         </p>
-        <div className="max-h-[28rem] overflow-y-auto rounded-lg border border-stitch-border">
+        <div className="max-h-112 overflow-y-auto rounded-lg border border-stitch-border">
           <table className="w-full text-left text-xs">
             <thead className="sticky top-0 bg-stitch-elevated text-stitch-muted">
               <tr>
@@ -374,7 +374,7 @@ export default function BaselineDetailPage() {
                     snapshot.parent_id !== current.parent_id ||
                     snapshot.verification_method_id !== current.verification_method_id);
                 return (
-                  <tr key={snapshot.verification_id} className="hover:bg-white/[0.03]">
+                  <tr key={snapshot.verification_id} className="hover:bg-white/3">
                     <td className="px-3 py-2 font-mono text-stitch-accent">
                       {snapshot.reference_code || `#${snapshot.verification_id}`}
                     </td>
@@ -449,7 +449,7 @@ export default function BaselineDetailPage() {
                 </tr>
               ) : (
                 traceSample.map((row, i) => (
-                  <tr key={i} className="hover:bg-white/[0.03]">
+                  <tr key={i} className="hover:bg-white/3">
                     <td className="px-3 py-2 font-mono text-stitch-accent">{row.requirement_id}</td>
                     <td className="px-3 py-2 font-mono text-stitch-muted">{row.verification_id}</td>
                     <td className="px-3 py-2">{row.suspect ? 'yes' : '—'}</td>

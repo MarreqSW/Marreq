@@ -34,7 +34,7 @@ export function RequirementFlowNode({ data }: NodeProps<ReqNodeData>) {
       <Handle
         type="target"
         position={Position.Left}
-        className="!bg-stitch-muted !w-2 !h-2 !border-stitch-border"
+        className="bg-stitch-muted! w-2! h-2! border-stitch-border!"
       />
       <div className="text-[10px] font-bold text-stitch-accent uppercase mb-1 tracking-tighter">
         {data.id}
@@ -46,7 +46,7 @@ export function RequirementFlowNode({ data }: NodeProps<ReqNodeData>) {
       <Handle
         type="source"
         position={Position.Right}
-        className="!bg-stitch-accent !w-2 !h-2 !border-0"
+        className="bg-stitch-accent! w-2! h-2! border-0!"
       />
     </div>
   );
@@ -67,14 +67,14 @@ export function VerificationFlowNode({ data }: NodeProps<VerNodeData>) {
       <Handle
         type="target"
         position={Position.Left}
-        className="!bg-stitch-accent/60 !w-2 !h-2"
+        className="bg-stitch-accent/60! w-2! h-2!"
       />
       <div className="text-[10px] font-mono text-stitch-muted">{data.ref}</div>
       <div className="text-xs font-medium text-white/95 leading-tight">{data.label}</div>
       <Handle
         type="source"
         position={Position.Right}
-        className="!bg-stitch-muted !w-2 !h-2"
+        className="bg-stitch-muted! w-2! h-2!"
       />
     </div>
   );

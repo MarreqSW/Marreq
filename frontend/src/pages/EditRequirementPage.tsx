@@ -496,7 +496,7 @@ export default function EditRequirementPage() {
   }, [statuses, statusId]);
 
   const selectStitch =
-    'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-lg px-3 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/30 outline-none transition-colors';
+    'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-lg px-3 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/30 outline-hidden transition-colors';
 
   if (loadError) {
     return (
@@ -539,14 +539,14 @@ export default function EditRequirementPage() {
         <div className="grid grid-cols-12 gap-8">
           {/* Main editor */}
           <div className="col-span-12 lg:col-span-8 space-y-8">
-            <section className="bg-stitch-surface p-6 md:p-8 rounded-xl shadow-sm border border-stitch-border">
+            <section className="bg-stitch-surface p-6 md:p-8 rounded-xl shadow-xs border border-stitch-border">
               <div className="flex flex-col gap-2 mb-6">
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="font-mono text-xs font-bold text-stitch-muted bg-stitch-higher px-2 py-1 rounded border border-stitch-border">
+                  <span className="font-mono text-xs font-bold text-stitch-muted bg-stitch-higher px-2 py-1 rounded-sm border border-stitch-border">
                     {detail.reference_code || `#${detail.id}`}
                   </span>
                   <div className="h-1 w-1 bg-stitch-border rounded-full" />
-                  <span className="text-xs font-medium text-stitch-accent-dim bg-stitch-higher px-2 py-1 rounded border border-stitch-border uppercase tracking-wide">
+                  <span className="text-xs font-medium text-stitch-accent-dim bg-stitch-higher px-2 py-1 rounded-sm border border-stitch-border uppercase tracking-wide">
                     {approvalLabel(detail.approval_state)}
                   </span>
                   {lastApprovedVersion && detail.current_version_id != null ? (
@@ -721,7 +721,7 @@ export default function EditRequirementPage() {
               </p>
             </section>
 
-            <section className="bg-stitch-surface rounded-xl shadow-sm border border-stitch-border overflow-hidden">
+            <section className="bg-stitch-surface rounded-xl shadow-xs border border-stitch-border overflow-hidden">
               <div className="flex items-center justify-between px-6 py-3 border-b border-stitch-border bg-stitch-elevated">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-stitch-muted font-headline">
                   Requirement statement
@@ -741,7 +741,7 @@ export default function EditRequirementPage() {
               </div>
             </section>
 
-            <section className="bg-stitch-surface rounded-xl shadow-sm border border-stitch-border overflow-hidden">
+            <section className="bg-stitch-surface rounded-xl shadow-xs border border-stitch-border overflow-hidden">
               <div className="px-6 py-3 border-b border-stitch-border bg-stitch-elevated">
                 <label
                   htmlFor="requirement-rationale"
@@ -764,7 +764,7 @@ export default function EditRequirementPage() {
 
           {/* Sidebar */}
           <aside className="col-span-12 lg:col-span-4 space-y-6">
-            <div className="bg-stitch-surface rounded-xl shadow-sm border border-stitch-border p-6">
+            <div className="bg-stitch-surface rounded-xl shadow-xs border border-stitch-border p-6">
               <div className="flex items-center gap-2 mb-6">
                 <span className="material-symbols-outlined text-stitch-accent text-xl">account_tree</span>
                 <h3 className="text-sm font-bold font-headline text-stitch-accent">Traceability matrix</h3>
@@ -862,7 +862,7 @@ export default function EditRequirementPage() {
                         type="button"
                         disabled={linkBusy || newParentId === '' || !(csrfToken ?? '').length}
                         onClick={() => void addParentLink()}
-                        className="w-full text-xs font-bold uppercase tracking-wider bg-gradient-to-br from-[#000666] to-[#1a237e] text-white py-2 rounded-lg shadow-sm hover:opacity-95 disabled:opacity-40 transition-opacity"
+                        className="w-full text-xs font-bold uppercase tracking-wider bg-linear-to-br from-primary to-primary-container text-white py-2 rounded-lg shadow-xs hover:opacity-95 disabled:opacity-40 transition-opacity"
                       >
                         {linkBusy ? 'Updating…' : 'Add upstream link'}
                       </button>
@@ -945,7 +945,7 @@ export default function EditRequirementPage() {
               </div>
             </div>
 
-            <div className="bg-stitch-surface rounded-xl shadow-sm border border-stitch-border flex flex-col max-h-[400px]">
+            <div className="bg-stitch-surface rounded-xl shadow-xs border border-stitch-border flex flex-col max-h-[400px]">
               <div className="px-6 py-4 border-b border-stitch-border flex items-center justify-between shrink-0">
                 <h3 className="text-sm font-bold font-headline text-stitch-accent">Change log &amp; discussion</h3>
               </div>
@@ -1018,7 +1018,7 @@ export default function EditRequirementPage() {
               </div>
             </div>
 
-            <div className="bg-stitch-surface rounded-xl shadow-sm border border-stitch-border p-6">
+            <div className="bg-stitch-surface rounded-xl shadow-xs border border-stitch-border p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-bold font-headline text-stitch-accent">Attachments</h3>
                 <span className="material-symbols-outlined text-stitch-muted" title="Not available in this UI">
@@ -1039,7 +1039,7 @@ export default function EditRequirementPage() {
         </div>
 
         {saveError && (
-          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 max-w-lg w-[calc(100%-2rem)] rounded-lg bg-red-500/15 border border-red-500/35 text-red-900 dark:text-red-100 text-sm px-4 py-2 shadow-lg z-[60]">
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 max-w-lg w-[calc(100%-2rem)] rounded-lg bg-red-500/15 border border-red-500/35 text-red-900 dark:text-red-100 text-sm px-4 py-2 shadow-lg z-60">
             {saveError}
           </div>
         )}
@@ -1048,7 +1048,7 @@ export default function EditRequirementPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              className="flex items-center gap-2 text-stitch-muted hover:text-red-600 dark:text-red-400 transition-colors text-xs font-bold uppercase tracking-wider px-3 py-2 rounded disabled:opacity-40"
+              className="flex items-center gap-2 text-stitch-muted hover:text-red-600 dark:text-red-400 transition-colors text-xs font-bold uppercase tracking-wider px-3 py-2 rounded-sm disabled:opacity-40"
               disabled={deleteBusy || !(csrfToken ?? '').length}
               onClick={() => void deleteRequirement()}
             >
@@ -1075,7 +1075,7 @@ export default function EditRequirementPage() {
             <button
               type="submit"
               disabled={saving || !dirty}
-              className="bg-gradient-to-br from-[#000666] to-[#1a237e] text-white px-8 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg shadow-stitch active:scale-[0.98] transition-all disabled:opacity-50"
+              className="bg-linear-to-br from-primary to-primary-container text-white px-8 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest shadow-lg shadow-stitch active:scale-[0.98] transition-all disabled:opacity-50"
             >
               {saving ? 'Saving…' : 'Save requirement'}
             </button>

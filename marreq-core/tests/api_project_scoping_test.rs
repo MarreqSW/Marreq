@@ -333,7 +333,10 @@ async fn scoped_api_token_is_denied_after_membership_removal() {
     use marreq_core::repository::ProjectMembersRepository;
 
     let token = "revoked-membership-token";
-    let token_hash = format!("{:x}", Sha256::digest(token.as_bytes()));
+    let token_hash = Sha256::digest(token.as_bytes())
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect::<String>();
     let mut repo = base_repo();
     // User 3 starts as a member of project 1 so the scoped token is initially valid.
     repo.project_members.push(ProjectMember {

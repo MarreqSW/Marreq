@@ -52,7 +52,10 @@ async fn test_client() -> Client {
     repo.users
         .insert(1, DieselRepoMock::make_user(1, "alice", "password"));
     repo.api_tokens.insert(
-        format!("{:x}", Sha256::digest(API_TOKEN.as_bytes())),
+        Sha256::digest(API_TOKEN.as_bytes())
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect::<String>(),
         (1, None),
     );
     let state = AppState {

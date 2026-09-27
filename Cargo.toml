@@ -16,7 +16,7 @@ authors = [
 # Feature sets declared here are the union of what the member crates need.
 [workspace.dependencies]
 anyhow = "1.0"
-argon2 = "0.5"
+argon2 = "0.6"
 base64 = "0.22"
 calamine = "0.36"
 chrono = { version = "0.4.44", features = ["serde"] }
@@ -37,7 +37,7 @@ rocket = { version = "0.5.1", default-features = false, features = ["json", "sec
 rocket_sync_db_pools = { version = "0.1.0", features = ["diesel_postgres_pool"] }
 serde = "1.0"
 serde_json = "1.0"
-sha2 = "0.10"
+sha2 = "0.11"
 similar = "2.7"
 thiserror = "2"
 time = "0.3"

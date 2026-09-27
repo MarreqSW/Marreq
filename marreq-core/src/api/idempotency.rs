@@ -17,7 +17,10 @@ pub fn operation_identity(
 ) -> Option<String> {
     key.0.as_deref().map(|key| {
         let value = format!("{user_id}\0{principal_key}\0{target_key}\0{operation}\0{key}");
-        format!("{:x}", Sha256::digest(value.as_bytes()))
+        Sha256::digest(value.as_bytes())
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect()
     })
 }
 
@@ -55,7 +58,10 @@ pub fn claim(
     };
     let encoded =
         serde_json::to_vec(payload).map_err(|_| ApiError::BadRequest("invalid payload".into()))?;
-    let hash = format!("{:x}", Sha256::digest(encoded));
+    let hash: String = Sha256::digest(encoded)
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
     match state.repo_write().claim_idempotency(
         user_id,
         principal_key,

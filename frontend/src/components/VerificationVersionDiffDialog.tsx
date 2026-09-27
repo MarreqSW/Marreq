@@ -161,7 +161,7 @@ export default function VerificationVersionDiffDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm md:p-8"
+      className="fixed inset-0 z-80 flex items-center justify-center bg-black/55 p-3 backdrop-blur-xs md:p-8"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}

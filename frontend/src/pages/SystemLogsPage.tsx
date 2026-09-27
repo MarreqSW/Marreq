@@ -391,7 +391,7 @@ export default function SystemLogsPage() {
                 items.map((row) => (
                   <Fragment key={row.log_id}>
                     <tr
-                      className="hover:bg-white/[0.03] cursor-pointer"
+                      className="hover:bg-white/3 cursor-pointer"
                       onClick={() =>
                         setExpanded((id) => (id === row.log_id ? null : row.log_id))
                       }

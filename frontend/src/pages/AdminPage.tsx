@@ -183,7 +183,7 @@ export default function AdminPage() {
           </thead>
           <tbody className="divide-y divide-stitch-border">
             {users.map((u) => (
-              <tr key={u.id} className="hover:bg-white/[0.03]">
+              <tr key={u.id} className="hover:bg-white/3">
                 <td className="px-4 py-3 font-mono text-stitch-accent">{u.username}</td>
                 <td className="px-4 py-3 text-stitch-fg">{u.name}</td>
                 <td className="px-4 py-3 text-stitch-muted text-xs">{u.email}</td>

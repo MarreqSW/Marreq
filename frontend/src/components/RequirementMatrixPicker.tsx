@@ -60,7 +60,7 @@ export function RequirementMatrixPicker({
         onChange={(e) => setQ(e.target.value)}
         disabled={disabled}
         placeholder="Filter by reference, title, or id…"
-        className="w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg placeholder:text-stitch-muted/60 focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none"
+        className="w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg placeholder:text-stitch-muted/60 focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-hidden"
       />
       <div className="max-h-56 overflow-y-auto rounded-md border border-stitch-border bg-stitch-elevated divide-y divide-stitch-border">
         {filtered.length === 0 ? (
@@ -69,12 +69,12 @@ export function RequirementMatrixPicker({
           filtered.map((r) => (
             <div
               key={r.id}
-              className="flex items-start gap-3 px-3 py-2 hover:bg-white/[0.04]"
+              className="flex items-start gap-3 px-3 py-2 hover:bg-white/4"
             >
               <input
                 type="checkbox"
                 id={`req-matrix-${r.id}`}
-                className="mt-1 rounded border-stitch-border text-stitch-accent"
+                className="mt-1 rounded-sm border-stitch-border text-stitch-accent"
                 checked={selectedSet.has(r.id)}
                 onChange={() => toggle(r.id)}
                 disabled={disabled}

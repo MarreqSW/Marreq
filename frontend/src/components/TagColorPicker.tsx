@@ -21,7 +21,7 @@ export default function TagColorPicker({
   const swatchValue = validHex ? raw : '#64748b';
 
   const defaultInp =
-    'marreq-catalog-field w-full min-w-0 text-sm bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg placeholder:text-stitch-muted focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none disabled:opacity-45';
+    'marreq-catalog-field w-full min-w-0 text-sm bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg placeholder:text-stitch-muted focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-hidden disabled:opacity-45';
 
   return (
     <div className={`flex items-center gap-2 ${className}`}>
@@ -29,7 +29,7 @@ export default function TagColorPicker({
         type="color"
         aria-label="Color"
         title="Pick color"
-        className="h-9 w-11 shrink-0 cursor-pointer rounded-md border border-stitch-border bg-stitch-elevated p-0 disabled:cursor-not-allowed disabled:opacity-45 [color-scheme:dark]"
+        className="h-9 w-11 shrink-0 cursor-pointer rounded-md border border-stitch-border bg-stitch-elevated p-0 disabled:cursor-not-allowed disabled:opacity-45 scheme-dark"
         value={swatchValue}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}

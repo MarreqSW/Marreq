@@ -169,7 +169,7 @@ export default function SavedViewsToolbar({
         disabled={loading || busy}
         value={selectedViewId ?? ''}
         onChange={(e) => onPick(e.target.value)}
-        className="min-w-[180px] bg-stitch-surface border border-stitch-border rounded text-xs py-1.5 px-2 text-stitch-fg outline-none focus:border-stitch-accent"
+        className="min-w-[180px] bg-stitch-surface border border-stitch-border rounded-sm text-xs py-1.5 px-2 text-stitch-fg outline-hidden focus:border-stitch-accent"
       >
         <option value="">None</option>
         {privateViews.length > 0 && (
@@ -194,7 +194,7 @@ export default function SavedViewsToolbar({
         )}
       </select>
       {selected?.locked ? (
-        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-200/90 border border-amber-500/30 rounded px-2 py-1">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-200/90 border border-amber-500/30 rounded-sm px-2 py-1">
           Used in baseline
         </span>
       ) : null}
@@ -239,7 +239,7 @@ export default function SavedViewsToolbar({
               required
               value={saveName}
               onChange={(e) => setSaveName(e.target.value)}
-              className="text-xs bg-stitch-surface border border-stitch-border rounded px-2 py-1.5 text-stitch-fg min-w-[160px]"
+              className="text-xs bg-stitch-surface border border-stitch-border rounded-sm px-2 py-1.5 text-stitch-fg min-w-[160px]"
               placeholder="e.g. Open items"
             />
           </div>
@@ -250,7 +250,7 @@ export default function SavedViewsToolbar({
             <select
               value={saveVisibility}
               onChange={(e) => setSaveVisibility(e.target.value as SavedViewVisibility)}
-              className="text-xs bg-stitch-surface border border-stitch-border rounded px-2 py-1.5 text-stitch-fg"
+              className="text-xs bg-stitch-surface border border-stitch-border rounded-sm px-2 py-1.5 text-stitch-fg"
             >
               <option value="private">Private</option>
               <option value="shared">Shared</option>
@@ -259,7 +259,7 @@ export default function SavedViewsToolbar({
           <button
             type="submit"
             disabled={busy || !saveName.trim()}
-            className="text-xs font-bold bg-stitch-accent text-white rounded px-3 py-1.5 disabled:opacity-40"
+            className="text-xs font-bold bg-stitch-accent text-white rounded-sm px-3 py-1.5 disabled:opacity-40"
           >
             Save
           </button>

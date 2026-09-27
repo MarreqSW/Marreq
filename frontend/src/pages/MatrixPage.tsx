@@ -36,7 +36,7 @@ const PAGE_SIZE = 40;
 
 /** Verification columns: wide enough for horizontal reference labels. */
 const VER_COL_CLASS =
-  'w-[4.75rem] min-w-[4.75rem] max-w-[5.5rem] box-border';
+  'w-19 min-w-19 max-w-22 box-border';
 
 const REQ_COL_DEFAULT_PX = 152;
 const REQ_COL_MIN_PX = 96;
@@ -618,7 +618,7 @@ export default function MatrixPage() {
               type="checkbox"
               checked={suspectOnly}
               onChange={(e) => setSuspectOnly(e.target.checked)}
-              className="rounded border-stitch-border text-stitch-accent"
+              className="rounded-sm border-stitch-border text-stitch-accent"
             />
             Suspect links only (rows &amp; columns filtered)
           </label>
@@ -790,7 +790,7 @@ export default function MatrixPage() {
                     type="button"
                     title="Sort rows by requirement reference. Click again to reverse."
                     onClick={onSortRequirementHeaderClick}
-                    className="w-full text-left flex items-center justify-between gap-1 pr-5 rounded-sm hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-stitch-accent/40 -ml-0.5 pl-0.5 py-0.5"
+                    className="w-full text-left flex items-center justify-between gap-1 pr-5 rounded-xs hover:bg-white/6 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-stitch-accent/40 -ml-0.5 pl-0.5 py-0.5"
                   >
                     <span className="block truncate">Requirement</span>
                     <span className="shrink-0 font-mono text-stitch-accent opacity-90" aria-hidden>
@@ -803,7 +803,7 @@ export default function MatrixPage() {
                     aria-label="Resize requirement column"
                     title="Drag to resize"
                     onMouseDown={onReqColResizeStart}
-                    className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize z-40 border-0 bg-transparent p-0 hover:bg-stitch-accent/25 active:bg-stitch-accent/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-stitch-accent/50 rounded-sm"
+                    className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize z-40 border-0 bg-transparent p-0 hover:bg-stitch-accent/25 active:bg-stitch-accent/40 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-stitch-accent/50 rounded-xs"
                   />
                 </th>
                 {displayVers.map((v) => {
@@ -819,7 +819,7 @@ export default function MatrixPage() {
                         type="button"
                         title={`${refLabel} — ${v.name}. Sort rows by this column; click again to reverse.`}
                         onClick={() => onSortVerificationHeaderClick(v.id)}
-                        className="flex flex-col items-center gap-0.5 w-full cursor-pointer hover:bg-white/[0.06] transition-colors border-0 bg-transparent rounded-md py-1 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-stitch-accent/50"
+                        className="flex flex-col items-center gap-0.5 w-full cursor-pointer hover:bg-white/6 transition-colors border-0 bg-transparent rounded-md py-1 outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-stitch-accent/50"
                       >
                         <span className="font-mono text-[9px] font-bold text-stitch-accent leading-snug text-center line-clamp-3 break-all w-full px-0.5">
                           {refLabel}
@@ -862,7 +862,7 @@ export default function MatrixPage() {
                 </tr>
               ) : (
                 reqSlice.map((r) => (
-                  <tr key={r.id} className="hover:bg-white/[0.02]">
+                  <tr key={r.id} className="hover:bg-white/2">
                     <th
                       scope="row"
                       style={reqColStyle}
@@ -875,7 +875,7 @@ export default function MatrixPage() {
                       >
                         {r.reference_code ?? `#${r.id}`}
                       </Link>
-                      <span className="text-[10px] text-stitch-muted line-clamp-2 font-normal break-words">
+                      <span className="text-[10px] text-stitch-muted line-clamp-2 font-normal wrap-break-word">
                         {r.title}
                       </span>
                     </th>
@@ -899,7 +899,7 @@ export default function MatrixPage() {
                         >
                           {link ? (
                             <div
-                              className="flex flex-col items-center gap-0.5 min-h-[2.25rem] justify-center"
+                              className="flex flex-col items-center gap-0.5 min-h-9 justify-center"
                               title={`${statusTitle}${link.suspect ? ' · Suspect (re-review)' : ''} · ${r.reference_code ?? r.id} ↔ ${v.reference_code ?? v.id}`}
                             >
                               <span className="flex items-center gap-0.5 leading-none">
@@ -963,7 +963,7 @@ export default function MatrixPage() {
               type="button"
               disabled={safePage <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1 rounded border border-stitch-border disabled:opacity-30"
+              className="px-3 py-1 rounded-sm border border-stitch-border disabled:opacity-30"
             >
               Prev
             </button>
@@ -971,7 +971,7 @@ export default function MatrixPage() {
               type="button"
               disabled={safePage >= pageCount}
               onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-              className="px-3 py-1 rounded border border-stitch-border disabled:opacity-30"
+              className="px-3 py-1 rounded-sm border border-stitch-border disabled:opacity-30"
             >
               Next
             </button>

@@ -249,7 +249,7 @@ export default function ViewVerificationPage() {
           {canEdit ? (
             <Link
               to={`${basePath}/verifications/${vid}/edit`}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-gradient-to-br from-[#000666] to-[#1a237e] text-white text-[10px] font-bold uppercase tracking-wider shadow-lg hover:opacity-95 transition-opacity"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-linear-to-br from-primary to-primary-container text-white text-[10px] font-bold uppercase tracking-wider shadow-lg hover:opacity-95 transition-opacity"
             >
               <span className="material-symbols-outlined text-sm">edit</span>
               Edit

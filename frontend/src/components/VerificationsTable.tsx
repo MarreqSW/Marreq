@@ -287,10 +287,10 @@ export default function VerificationsTable({
   );
 
   const cellInput =
-    'w-full min-w-[90px] max-w-[min(100%,280px)] text-xs bg-stitch-elevated border border-stitch-border rounded px-2 py-1.5 text-stitch-fg focus:border-stitch-accent outline-none disabled:opacity-50';
+    'w-full min-w-[90px] max-w-[min(100%,280px)] text-xs bg-stitch-elevated border border-stitch-border rounded-sm px-2 py-1.5 text-stitch-fg focus:border-stitch-accent outline-hidden disabled:opacity-50';
   const cellSelect = `${cellInput} cursor-pointer`;
   const displayCellBtn =
-    'w-full text-left text-xs text-stitch-fg/90 leading-snug rounded-md px-1.5 py-1 hover:bg-stitch-higher border border-transparent hover:border-stitch-border/40 transition-colors min-h-[1.75rem]';
+    'w-full text-left text-xs text-stitch-fg/90 leading-snug rounded-md px-1.5 py-1 hover:bg-stitch-higher border border-transparent hover:border-stitch-border/40 transition-colors min-h-7';
 
   if (loading) {
     return (
@@ -356,7 +356,7 @@ export default function VerificationsTable({
 
       <div className="bg-stitch-elevated p-4 rounded-xl border border-stitch-border flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2 md:gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded-sm text-xs text-stitch-muted">
             <span className="material-symbols-outlined text-sm">filter_list</span>
             <span>Status:</span>
             <select
@@ -366,7 +366,7 @@ export default function VerificationsTable({
                 setFilterParams({ status: val === 'all' ? null : val });
               }}
               aria-label="Filter by status"
-              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-none cursor-pointer"
+              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-hidden cursor-pointer"
             >
               <option value="all">All</option>
               {statusOptions.map((s) => (
@@ -376,7 +376,7 @@ export default function VerificationsTable({
               ))}
             </select>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded-sm text-xs text-stitch-muted">
             <span className="material-symbols-outlined text-sm">science</span>
             <span>Method:</span>
             <select
@@ -386,7 +386,7 @@ export default function VerificationsTable({
                 setFilterParams({ method: val === 'all' ? null : val });
               }}
               aria-label="Filter by verification method"
-              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-none cursor-pointer"
+              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-hidden cursor-pointer"
             >
               <option value="all">All</option>
               {methods.map((m) => (
@@ -463,7 +463,7 @@ export default function VerificationsTable({
             return (
               <li
                 key={v.id}
-                className="rounded-xl border border-stitch-border bg-stitch-surface p-4 shadow-stitch hover:bg-white/[0.03] transition-colors"
+                className="rounded-xl border border-stitch-border bg-stitch-surface p-4 shadow-stitch hover:bg-white/3 transition-colors"
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0 flex-1 space-y-3">
@@ -705,8 +705,8 @@ export default function VerificationsTable({
                     : methods.find((m) => m.id === v.verification_method_id)?.title ??
                       `ID ${v.verification_method_id}`;
                 return (
-                  <tr key={v.id} className="hover:bg-white/[0.03] transition-colors">
-                    <td className="px-2 py-2 align-top sticky left-0 z-[1] bg-stitch-surface border-r border-stitch-border/60 max-w-[min(140px,18vw)]">
+                  <tr key={v.id} className="hover:bg-white/3 transition-colors">
+                    <td className="px-2 py-2 align-top sticky left-0 z-1 bg-stitch-surface border-r border-stitch-border/60 max-w-[min(140px,18vw)]">
                       {editCell?.verId === v.id &&
                       editCell.kind === 'reference_code' &&
                       canEditFields &&
@@ -909,7 +909,7 @@ export default function VerificationsTable({
                         </span>
                       )}
                     </td>
-                    <td className="px-2 py-2 align-top sticky right-0 z-[1] bg-stitch-surface border-l border-stitch-border/60">
+                    <td className="px-2 py-2 align-top sticky right-0 z-1 bg-stitch-surface border-l border-stitch-border/60">
                       <div className="flex items-center gap-1">
                         <Link
                           to={`${basePath}/verifications/${v.id}`}
@@ -953,7 +953,7 @@ export default function VerificationsTable({
             <select
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
-              className="bg-stitch-elevated border border-stitch-border rounded text-xs py-1 px-2 text-stitch-fg focus:ring-1 focus:ring-stitch-accent outline-none"
+              className="bg-stitch-elevated border border-stitch-border rounded-sm text-xs py-1 px-2 text-stitch-fg focus:ring-1 focus:ring-stitch-accent outline-hidden"
             >
               <option value={25}>25</option>
               <option value={50}>50</option>

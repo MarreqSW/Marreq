@@ -580,11 +580,11 @@ export default function RequirementsTable({
   }
 
   const cellInput =
-    'w-full min-w-[90px] max-w-[min(100%,280px)] text-xs bg-stitch-elevated border border-stitch-border rounded px-2 py-1.5 text-stitch-fg focus:border-stitch-accent outline-none disabled:opacity-50';
+    'w-full min-w-[90px] max-w-[min(100%,280px)] text-xs bg-stitch-elevated border border-stitch-border rounded-sm px-2 py-1.5 text-stitch-fg focus:border-stitch-accent outline-hidden disabled:opacity-50';
   const cellSelect = `${cellInput} cursor-pointer`;
   /** Collapsed cell: click to open editor */
   const displayCellBtn =
-    'w-full text-left text-xs text-stitch-fg/90 leading-snug rounded-md px-1.5 py-1 hover:bg-stitch-higher border border-transparent hover:border-stitch-border/40 transition-colors min-h-[1.75rem]';
+    'w-full text-left text-xs text-stitch-fg/90 leading-snug rounded-md px-1.5 py-1 hover:bg-stitch-higher border border-transparent hover:border-stitch-border/40 transition-colors min-h-7';
   const closeCellEdit = () => setEditCell(null);
 
   return (
@@ -607,7 +607,7 @@ export default function RequirementsTable({
       {/* Filters bar — Image 2.html */}
       <div className="bg-stitch-elevated p-4 rounded-xl border border-stitch-border flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2 md:gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded-sm text-xs text-stitch-muted">
             <span className="material-symbols-outlined text-sm">filter_list</span>
             <span>Status:</span>
             <select
@@ -617,7 +617,7 @@ export default function RequirementsTable({
                 const v = e.target.value;
                 setStatusFilter(v === 'all' ? 'all' : Number(v));
               }}
-              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-none cursor-pointer"
+              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-hidden cursor-pointer"
             >
               <option value="all">All</option>
               {statusOptions.map((s) => (
@@ -627,7 +627,7 @@ export default function RequirementsTable({
               ))}
             </select>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded-sm text-xs text-stitch-muted">
             <span>Category:</span>
             <select
               aria-label="Filter by category"
@@ -636,7 +636,7 @@ export default function RequirementsTable({
                 const v = e.target.value;
                 setCategoryFilter(v === 'all' ? 'all' : Number(v));
               }}
-              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-none cursor-pointer"
+              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-hidden cursor-pointer"
             >
               <option value="all">All</option>
               {categories.map((c) => (
@@ -646,13 +646,13 @@ export default function RequirementsTable({
               ))}
             </select>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded-sm text-xs text-stitch-muted">
             <span>Approval:</span>
             <select
               aria-label="Filter by approval"
               value={approvalFilter}
               onChange={(e) => setApprovalFilter(e.target.value)}
-              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-none cursor-pointer"
+              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-hidden cursor-pointer"
             >
               <option value="all">All</option>
               <option value="draft">Draft</option>
@@ -660,7 +660,7 @@ export default function RequirementsTable({
               <option value="approved">Approved</option>
             </select>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded-sm text-xs text-stitch-muted">
             <span>Sort:</span>
             <select
               aria-label="Sort requirements"
@@ -669,7 +669,7 @@ export default function RequirementsTable({
                 const v = e.target.value;
                 setSortColumn(v ? (v as Exclude<RequirementsSortColumn, null>) : null);
               }}
-              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-none cursor-pointer"
+              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-hidden cursor-pointer"
             >
               <option value="">Default</option>
               <option value="key">Key</option>
@@ -837,9 +837,9 @@ export default function RequirementsTable({
                 const parentIds = parentRequirementIdsForDisplay(req);
                 const busy = savingId === req.id;
                 return (
-                  <tr key={req.id} className="hover:bg-white/[0.03] transition-colors">
+                  <tr key={req.id} className="hover:bg-white/3 transition-colors">
                     {colVisible('key') && (
-                      <td className="px-2 py-2 align-top sticky left-0 z-[1] bg-stitch-surface border-r border-stitch-border/60">
+                      <td className="px-2 py-2 align-top sticky left-0 z-1 bg-stitch-surface border-r border-stitch-border/60">
                       <span className="text-xs font-mono text-stitch-accent font-semibold whitespace-nowrap">
                         {req.reference_code || `REQ-${req.id}`}
                       </span>
@@ -1003,7 +1003,7 @@ export default function RequirementsTable({
                     )}
                     {colVisible('approval') && (
                       <td className="px-2 py-2 align-top">
-                      <span className="text-[10px] font-bold uppercase text-stitch-muted border border-stitch-border rounded px-1.5 py-1 inline-block max-w-[120px] truncate">
+                      <span className="text-[10px] font-bold uppercase text-stitch-muted border border-stitch-border rounded-sm px-1.5 py-1 inline-block max-w-[120px] truncate">
                         {approvalLabel(req.approval_state)}
                       </span>
                     </td>
@@ -1121,7 +1121,7 @@ export default function RequirementsTable({
                     </td>
                     )}
                     {colVisible('actions') && (
-                      <td className="px-2 py-2 align-top sticky right-0 z-[1] bg-stitch-surface border-l border-stitch-border/60">
+                      <td className="px-2 py-2 align-top sticky right-0 z-1 bg-stitch-surface border-l border-stitch-border/60">
                       <div className="flex items-center gap-1">
                         <Link
                           to={`${basePath}/requirements/${req.id}`}
@@ -1171,7 +1171,7 @@ export default function RequirementsTable({
               aria-label="Requirements per page"
               value={pageSize}
               onChange={(e) => setPageSize(Number(e.target.value))}
-              className="bg-stitch-elevated border border-stitch-border rounded text-xs py-1 px-2 text-stitch-fg focus:ring-1 focus:ring-stitch-accent outline-none"
+              className="bg-stitch-elevated border border-stitch-border rounded-sm text-xs py-1 px-2 text-stitch-fg focus:ring-1 focus:ring-stitch-accent outline-hidden"
             >
               <option value={25}>25</option>
               <option value={50}>50</option>

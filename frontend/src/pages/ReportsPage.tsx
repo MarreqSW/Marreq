@@ -485,7 +485,7 @@ export default function ReportsPage() {
                   </tr>
                 ) : (
                   report.requirements_without_tests.map((id) => (
-                    <tr key={id} className="hover:bg-white/[0.03]">
+                    <tr key={id} className="hover:bg-white/3">
                       <td className="px-4 py-2 font-mono text-stitch-accent">#{id}</td>
                       <td className="px-4 py-2 text-stitch-muted">{reqById.get(id) ?? '—'}</td>
                       <td className="px-4 py-2 text-right">
@@ -514,7 +514,7 @@ export default function ReportsPage() {
                   </tr>
                 ) : (
                   report.tests_without_requirements.map((id) => (
-                    <tr key={id} className="hover:bg-white/[0.03]">
+                    <tr key={id} className="hover:bg-white/3">
                       <td className="px-4 py-2 font-mono text-stitch-accent">#{id}</td>
                       <td className="px-4 py-2 text-stitch-muted">{verById.get(id) ?? '—'}</td>
                       <td className="px-4 py-2 text-right">
@@ -552,7 +552,7 @@ export default function ReportsPage() {
                   </tr>
                 ) : (
                   report.suspect_links.map((l, i) => (
-                    <tr key={`${l.req_id}-${l.verification_id}-${i}`} className="hover:bg-white/[0.03]">
+                    <tr key={`${l.req_id}-${l.verification_id}-${i}`} className="hover:bg-white/3">
                       <td className="px-4 py-2 font-mono text-stitch-accent">
                         {reqById.get(l.req_id) ?? `REQ #${l.req_id}`}
                       </td>
@@ -620,7 +620,7 @@ export default function ReportsPage() {
               <table className="w-full text-left text-sm">
                 <tbody className="divide-y divide-stitch-border">
                   {matrixAnalytics.reqOnlySuspectIds.map((id) => (
-                    <tr key={id} className="hover:bg-white/[0.03]">
+                    <tr key={id} className="hover:bg-white/3">
                       <td className="px-4 py-2 font-mono text-stitch-accent">{reqById.get(id) ?? `#${id}`}</td>
                       <td className="px-4 py-2 text-right">
                         <Link
@@ -657,7 +657,7 @@ export default function ReportsPage() {
                   </tr>
                 ) : (
                   matrixAnalytics.verHubs.map(({ verification_id, count }) => (
-                    <tr key={verification_id} className="hover:bg-white/[0.03]">
+                    <tr key={verification_id} className="hover:bg-white/3">
                       <td className="px-4 py-2 font-mono text-stitch-accent">
                         {verById.get(verification_id) ?? `#${verification_id}`}
                       </td>
@@ -715,7 +715,7 @@ export default function ReportsPage() {
                   </tr>
                 ) : (
                   matrixAnalytics.categoryStats.map((c) => (
-                    <tr key={c.categoryId} className="hover:bg-white/[0.03]">
+                    <tr key={c.categoryId} className="hover:bg-white/3">
                       <td className="px-4 py-2">{c.title}</td>
                       <td className="px-4 py-2 text-right tabular-nums">{c.withLink}</td>
                       <td className="px-4 py-2 text-right tabular-nums">{c.total}</td>
@@ -750,7 +750,7 @@ export default function ReportsPage() {
                 </thead>
                 <tbody className="divide-y divide-stitch-border">
                   {qualityReqs.map((row) => (
-                    <tr key={row.id} className="hover:bg-white/[0.03]">
+                    <tr key={row.id} className="hover:bg-white/3">
                       <td className="px-4 py-2 font-mono text-stitch-accent">{row.label}</td>
                       <td className="px-4 py-2 text-stitch-muted text-xs">{row.reasons.join(' · ')}</td>
                       <td className="px-4 py-2 text-right">
@@ -787,7 +787,7 @@ export default function ReportsPage() {
                 </thead>
                 <tbody className="divide-y divide-stitch-border">
                   {qualityVers.map((row) => (
-                    <tr key={row.id} className="hover:bg-white/[0.03]">
+                    <tr key={row.id} className="hover:bg-white/3">
                       <td className="px-4 py-2 font-mono text-stitch-accent">{row.label}</td>
                       <td className="px-4 py-2 text-stitch-muted text-xs">{row.reasons.join(' · ')}</td>
                       <td className="px-4 py-2 text-right">

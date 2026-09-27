@@ -59,7 +59,7 @@ export default function RequirementReviewCard({
   return (
     <article
       aria-labelledby={`requirement-${requirement.id}-title`}
-      className="group rounded-xl border border-stitch-border bg-stitch-surface shadow-stitch transition-colors hover:border-stitch-accent/30 hover:bg-white/[0.025]"
+      className="group rounded-xl border border-stitch-border bg-stitch-surface shadow-stitch transition-colors hover:border-stitch-accent/30 hover:bg-white/2.5"
     >
       <div className="p-4 sm:p-5">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -67,21 +67,21 @@ export default function RequirementReviewCard({
             <div className="mb-1.5 flex flex-wrap items-center gap-2">
               <Link
                 to={`${basePath}/requirements/${requirement.id}`}
-                className="font-mono text-xs font-bold tracking-wide text-stitch-accent hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stitch-accent"
+                className="font-mono text-xs font-bold tracking-wide text-stitch-accent hover:underline focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stitch-accent"
               >
                 {requirement.reference_code || `REQ-${requirement.id}`}
               </Link>
               <StatusBadge title={statusTitle} tagColor={status?.tag_color} />
-              <span className="rounded border border-stitch-border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-stitch-muted">
+              <span className="rounded-sm border border-stitch-border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-stitch-muted">
                 {approvalLabel(requirement.approval_state)}
               </span>
-              <span className="rounded bg-stitch-elevated px-2 py-0.5 text-[11px] font-medium text-stitch-fg/80">
+              <span className="rounded-sm bg-stitch-elevated px-2 py-0.5 text-[11px] font-medium text-stitch-fg/80">
                 {category}
               </span>
             </div>
             <h3
               id={`requirement-${requirement.id}-title`}
-              className="text-base font-bold leading-snug text-stitch-fg sm:text-lg"
+              className="text-base font-bold leading-snug text-stitch-fg sm:text-lg sm:leading-7"
             >
               {requirement.title.trim() || 'Untitled requirement'}
             </h3>
@@ -93,7 +93,7 @@ export default function RequirementReviewCard({
           >
             <Link
               to={`${basePath}/requirements/${requirement.id}`}
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold text-stitch-muted hover:bg-stitch-higher hover:text-stitch-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stitch-accent"
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold text-stitch-muted hover:bg-stitch-higher hover:text-stitch-accent focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stitch-accent"
             >
               <span aria-hidden="true" className="material-symbols-outlined text-base">
                 visibility
@@ -109,7 +109,7 @@ export default function RequirementReviewCard({
                   requirement.id,
                 )
               }
-              className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold text-stitch-muted hover:bg-stitch-higher hover:text-stitch-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stitch-accent"
+              className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold text-stitch-muted hover:bg-stitch-higher hover:text-stitch-accent focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stitch-accent"
             >
               <span aria-hidden="true" className="material-symbols-outlined text-base">
                 edit
@@ -120,7 +120,7 @@ export default function RequirementReviewCard({
               <Link
                 to={`${basePath}/requirements/new?from=${requirement.id}`}
                 aria-label={`Duplicate ${requirement.reference_code || requirement.title}`}
-                className="inline-flex rounded-md p-1.5 text-stitch-muted hover:bg-stitch-higher hover:text-stitch-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stitch-accent"
+                className="inline-flex rounded-md p-1.5 text-stitch-muted hover:bg-stitch-higher hover:text-stitch-accent focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-stitch-accent"
                 title="Duplicate"
               >
                 <span aria-hidden="true" className="material-symbols-outlined text-base">

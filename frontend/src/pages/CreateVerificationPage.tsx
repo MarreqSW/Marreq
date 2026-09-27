@@ -33,7 +33,7 @@ import { duplicateSourceQueryId, parsePositiveQueryId } from '@/utils/createQuer
 import StatementEditor from '@/components/StatementEditor';
 
 const selectClass =
-  'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
+  'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-hidden transition-colors';
 
 export default function CreateVerificationPage() {
   const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();

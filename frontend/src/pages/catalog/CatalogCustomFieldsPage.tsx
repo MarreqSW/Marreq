@@ -288,7 +288,7 @@ export default function CatalogCustomFieldsPage() {
                     <span className="text-stitch-muted text-xs">—</span>
                   )}
                 </td>
-                <td className="px-3 py-2 align-top space-y-1">
+                <td className="px-3 py-2 align-top">
                   <button
                     type="button"
                     disabled={!canEdit || busy}
@@ -300,7 +300,7 @@ export default function CatalogCustomFieldsPage() {
                   <button
                     type="button"
                     disabled={!canEdit || busy}
-                    className={btnDanger}
+                    className={`mt-1 ${btnDanger}`}
                     onClick={() => void removeRow(c.id)}
                   >
                     Delete

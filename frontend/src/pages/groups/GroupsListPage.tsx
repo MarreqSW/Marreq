@@ -47,7 +47,7 @@ export default function GroupsListPage() {
           </div>
           <Link
             to="/groups/new"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-gradient-to-br from-[#000666] to-[#1a237e] text-white text-sm font-semibold shadow-lg hover:opacity-95 transition-opacity"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-linear-to-br from-primary to-primary-container text-white text-sm font-semibold shadow-lg hover:opacity-95 transition-opacity"
           >
             <span className="material-symbols-outlined text-sm">add</span>
             New group
@@ -63,7 +63,7 @@ export default function GroupsListPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter groups…"
-            className="w-full pl-10 pr-4 py-2 bg-stitch-elevated border border-stitch-border rounded-md text-sm text-stitch-fg placeholder:text-stitch-muted focus:ring-1 focus:ring-stitch-accent focus:border-stitch-accent outline-none"
+            className="w-full pl-10 pr-4 py-2 bg-stitch-elevated border border-stitch-border rounded-md text-sm text-stitch-fg placeholder:text-stitch-muted focus:ring-1 focus:ring-stitch-accent focus:border-stitch-accent outline-hidden"
           />
         </div>
 

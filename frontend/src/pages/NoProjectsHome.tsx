@@ -33,7 +33,7 @@ export default function NoProjectsHome({ displayName }: NoProjectsHomeProps) {
         <div className="flex flex-col gap-3">
           <Link
             to="/projects/new"
-            className="w-full text-center rounded-lg bg-gradient-to-br from-[#000666] to-[#1a237e] text-white font-semibold py-2.5 text-sm hover:opacity-95"
+            className="w-full text-center rounded-lg bg-linear-to-br from-primary to-primary-container text-white font-semibold py-2.5 text-sm hover:opacity-95"
           >
             New project
           </Link>

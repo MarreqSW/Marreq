@@ -43,7 +43,7 @@ export default function ProjectBundleImportPage() {
   }
 
   const inputClass =
-    'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
+    'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-hidden transition-colors';
 
   return (
     <div className="min-h-screen bg-stitch-canvas text-stitch-fg">
@@ -116,7 +116,7 @@ export default function ProjectBundleImportPage() {
               <button
                 type="submit"
                 disabled={busy || !file || !csrfToken}
-                className="bg-gradient-to-br from-[#000666] to-[#1a237e] text-white px-4 py-2 rounded-md text-xs font-bold uppercase tracking-widest shadow-lg disabled:opacity-50 hover:opacity-95 transition-opacity"
+                className="bg-linear-to-br from-primary to-primary-container text-white px-4 py-2 rounded-md text-xs font-bold uppercase tracking-widest shadow-lg disabled:opacity-50 hover:opacity-95 transition-opacity"
               >
                 {busy ? 'Importing…' : 'Import bundle'}
               </button>

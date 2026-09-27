@@ -13,7 +13,7 @@ function renderInline(nodes: Inline[], keyPrefix: string): ReactNode[] {
         return (
           <code
             key={key}
-            className="rounded bg-stitch-elevated px-1 py-0.5 font-mono text-[0.9em] text-stitch-fg"
+            className="rounded-sm bg-stitch-elevated px-1 py-0.5 font-mono text-[0.9em] text-stitch-fg"
           >
             {n.text}
           </code>

@@ -181,12 +181,12 @@ export default function ProjectLayout() {
       {/* SideNavBar */}
       <aside
         className={`flex flex-col h-screen sticky top-0 shrink-0 border-r border-stitch-border bg-stitch-surface z-50 transition-[width] duration-200 ${
-          sidebarWide ? 'w-64' : 'w-[4.5rem]'
+          sidebarWide ? 'w-64' : 'w-18'
         }`}
       >
         <div className={`px-6 py-8 flex-1 min-h-0 overflow-y-auto ${!sidebarWide ? 'px-3' : ''}`}>
           <div className={`flex items-center gap-3 mb-8 ${!sidebarWide ? 'flex-col' : ''}`}>
-            <div className="w-8 h-8 bg-[#000666] rounded-lg flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-white text-sm">architecture</span>
             </div>
             {sidebarWide ? (
@@ -297,7 +297,7 @@ export default function ProjectLayout() {
           <button
             type="button"
             onClick={() => setSidebarWide((w) => !w)}
-            className={`mt-4 w-full py-2 bg-[#000666] text-white text-[10px] uppercase font-bold tracking-widest rounded-md hover:opacity-90 transition-opacity ${
+            className={`w-full py-2 bg-primary text-white text-[10px] uppercase font-bold tracking-widest rounded-md hover:opacity-90 transition-opacity ${
               !sidebarWide ? 'px-1' : ''
             }`}
             title={sidebarWide ? 'Collapse sidebar' : 'Expand sidebar'}
@@ -326,7 +326,7 @@ export default function ProjectLayout() {
                 {currentProject?.name ?? 'Project'}
               </h1>
               <select
-                className="text-stitch max-w-[160px] sm:max-w-[220px] border border-stitch-border rounded-md px-2 py-1.5 bg-stitch-elevated text-stitch-fg text-xs focus:outline-none focus:ring-1 focus:ring-stitch-accent/50"
+                className="text-stitch max-w-[160px] sm:max-w-[220px] border border-stitch-border rounded-md px-2 py-1.5 bg-stitch-elevated text-stitch-fg text-xs focus:outline-hidden focus:ring-1 focus:ring-stitch-accent/50"
                 value={pid}
                 onChange={(e) => {
                   const id = Number(e.target.value);
@@ -358,7 +358,7 @@ export default function ProjectLayout() {
                 value={globalSearch}
                 onChange={(e) => setGlobalSearch(e.target.value)}
                 placeholder="Global Search…"
-                className="w-full pl-10 pr-4 py-1.5 bg-stitch-elevated border border-stitch-border rounded-md text-sm text-stitch-fg placeholder:text-stitch-muted focus:ring-1 focus:ring-stitch-accent focus:border-stitch-accent outline-none"
+                className="w-full pl-10 pr-4 py-1.5 bg-stitch-elevated border border-stitch-border rounded-md text-sm text-stitch-fg placeholder:text-stitch-muted focus:ring-1 focus:ring-stitch-accent focus:border-stitch-accent outline-hidden"
               />
             </div>
           </div>
@@ -407,7 +407,7 @@ export default function ProjectLayout() {
                   to={primaryCreate.to}
                   title={primaryCreate.label}
                   onClick={() => setCreateMenuOpen(false)}
-                  className="bg-gradient-to-br from-[#000666] to-[#1a237e] text-white pl-4 pr-3 py-2 text-sm font-semibold flex items-center gap-2 hover:opacity-95 active:scale-[0.99] transition-transform"
+                  className="bg-linear-to-br from-primary to-primary-container text-white pl-4 pr-3 py-2 text-sm font-semibold flex items-center gap-2 hover:opacity-95 active:scale-[0.99] transition-transform"
                 >
                   <span className="material-symbols-outlined text-sm shrink-0">add</span>
                   <span className="hidden lg:inline whitespace-nowrap">{primaryCreate.label}</span>
@@ -422,7 +422,7 @@ export default function ProjectLayout() {
                   aria-haspopup="menu"
                   aria-label="Open create menu"
                   onClick={() => setCreateMenuOpen((o) => !o)}
-                  className="bg-gradient-to-br from-[#000666] to-[#1a237e] text-white px-2 py-2 border-l border-white/25 hover:opacity-95 flex items-center justify-center shrink-0"
+                  className="bg-linear-to-br from-primary to-primary-container text-white px-2 py-2 border-l border-white/25 hover:opacity-95 flex items-center justify-center shrink-0"
                 >
                   <span
                     className={`material-symbols-outlined text-xl transition-transform ${createMenuOpen ? 'rotate-180' : ''}`}
@@ -435,7 +435,7 @@ export default function ProjectLayout() {
               {createMenuOpen ? (
                 <div
                   role="menu"
-                  className="absolute right-0 top-[calc(100%+6px)] min-w-[220px] rounded-lg border border-stitch-border bg-stitch-surface shadow-stitch py-1 z-[60]"
+                  className="absolute right-0 top-[calc(100%+6px)] min-w-[220px] rounded-lg border border-stitch-border bg-stitch-surface shadow-stitch py-1 z-60"
                 >
                   {createMenuItems.map((item) => (
                     <Link
@@ -469,7 +469,7 @@ export default function ProjectLayout() {
               {userMenuOpen ? (
                 <div
                   role="menu"
-                  className="absolute right-0 top-[calc(100%+6px)] min-w-[180px] rounded-lg border border-stitch-border bg-stitch-surface shadow-stitch py-1 z-[60]"
+                  className="absolute right-0 top-[calc(100%+6px)] min-w-[180px] rounded-lg border border-stitch-border bg-stitch-surface shadow-stitch py-1 z-60"
                 >
                   <Link
                     role="menuitem"

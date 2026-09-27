@@ -15,7 +15,7 @@ type ProfileSectionProps = {
 
 const label = 'block text-xs font-semibold text-stitch-muted uppercase mb-1';
 const input =
-  'w-full rounded-lg border border-stitch-border bg-stitch-elevated px-3 py-2 text-sm text-stitch-fg focus:outline-none focus:ring-2 focus:ring-stitch-accent/50 read-only:opacity-70';
+  'w-full rounded-lg border border-stitch-border bg-stitch-elevated px-3 py-2 text-sm text-stitch-fg focus:outline-hidden focus:ring-2 focus:ring-stitch-accent/50 read-only:opacity-70';
 
 /** Display name and email editor for the signed-in user (username stays fixed). */
 export default function ProfileSection({
@@ -151,7 +151,7 @@ export default function ProfileSection({
       <button
         type="submit"
         disabled={submitting}
-        className="w-full rounded-lg bg-gradient-to-br from-[#000666] to-[#1a237e] text-white font-semibold py-2.5 text-sm hover:opacity-95 disabled:opacity-60"
+        className="w-full rounded-lg bg-linear-to-br from-primary to-primary-container text-white font-semibold py-2.5 text-sm hover:opacity-95 disabled:opacity-60"
       >
         {submitting ? 'Saving…' : 'Save profile'}
       </button>

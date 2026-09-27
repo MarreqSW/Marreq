@@ -7,7 +7,7 @@ export default function PriorityBadge({ value }: { value: string }) {
 
   if (isP1) {
     return (
-      <div className="inline-flex items-center gap-1 text-red-200 font-bold text-[10px] bg-red-500/20 px-2 py-1 rounded border border-red-500/25">
+      <div className="inline-flex items-center gap-1 text-red-200 font-bold text-[10px] bg-red-500/20 px-2 py-1 rounded-sm border border-red-500/25">
         <span className="material-symbols-outlined text-xs">priority_high</span>
         {v === '—' ? 'P1' : value}
       </div>
@@ -15,7 +15,7 @@ export default function PriorityBadge({ value }: { value: string }) {
   }
   if (isP3) {
     return (
-      <div className="inline-flex items-center gap-1 text-stitch-accent font-bold text-[10px] bg-stitch-accent/15 px-2 py-1 rounded border border-stitch-accent/25">
+      <div className="inline-flex items-center gap-1 text-stitch-accent font-bold text-[10px] bg-stitch-accent/15 px-2 py-1 rounded-sm border border-stitch-accent/25">
         <span className="material-symbols-outlined text-xs">low_priority</span>
         {v === '—' ? 'P3' : value}
       </div>
@@ -23,14 +23,14 @@ export default function PriorityBadge({ value }: { value: string }) {
   }
   if (isP2) {
     return (
-      <div className="inline-flex items-center gap-1 text-stitch-accent font-bold text-[10px] bg-stitch-accent/12 px-2 py-1 rounded border border-stitch-accent/20">
+      <div className="inline-flex items-center gap-1 text-stitch-accent font-bold text-[10px] bg-stitch-accent/12 px-2 py-1 rounded-sm border border-stitch-accent/20">
         <span className="material-symbols-outlined text-xs">keyboard_arrow_up</span>
         {v === '—' ? 'P2' : value}
       </div>
     );
   }
   return (
-    <span className="text-[10px] font-semibold text-stitch-muted px-2 py-1 rounded bg-white/[0.06]">
+    <span className="text-[10px] font-semibold text-stitch-muted px-2 py-1 rounded-sm bg-white/6">
       {value}
     </span>
   );

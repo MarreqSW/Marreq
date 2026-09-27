@@ -815,14 +815,25 @@ by</strong> section and verification pass/fail summary.</p>
 </ul>
 <p>You can:</p>
 <ul>
-<li>Switch between <strong>Card</strong> and <strong>Table</strong>
-view.</li>
-<li><strong>Filter</strong> by verification status, verification method,
-category, and <strong>search</strong> (e.g. by name or reference).</li>
-<li>View <strong>metrics</strong> (e.g. total verifications, counts by
-status such as Passed/Failed/Pending).</li>
-<li><strong>Paginate</strong> through results (pagination controls
-appear at both top and bottom of the list).</li>
+<li>Switch between <strong>Table</strong> and <strong>List</strong>
+(card) view. The view and the filters are kept in the URL, so switching
+views, reloading, or sharing the link keeps them.</li>
+<li>See <strong>status metrics</strong> for the whole project above the
+list: the <strong>Total</strong>, one chip per verification status with
+its count (statuses with no verifications are dimmed;
+<strong>Other</strong> counts verifications whose status is not in the
+project’s list), and a <strong>Pass rate</strong> (“X of Y passed”) when
+the project has a status named <em>Passed</em>. Click a status chip to
+show only that status; click it again to clear the filter. The metrics
+always cover the whole project, not just the filtered rows.</li>
+<li><strong>Filter</strong> by <strong>Status</strong> and
+<strong>Method</strong> (including <em>No method</em>), and
+<strong>search</strong> with the header search box (reference, title,
+description, source, or parent). <strong>Reset Filters</strong> clears
+status and method.</li>
+<li><strong>Paginate</strong> through results (25, 50, or 100 rows per
+page; controls appear above and below the list when there is more than
+one page).</li>
 <li>Click <strong>New Verification</strong> to create a verification
 (admin/appropriate role).</li>
 <li>Click a verification to open its <strong>Verification
@@ -833,17 +844,21 @@ detail</strong> page.</li>
 <figcaption aria-hidden="true">Verifications list</figcaption>
 </figure>
 <ul>
-<li><strong>Update verification status</strong> inline in the list
-(e.g. set Pass/Fail after execution) when the UI offers it.</li>
-<li><strong>Export verifications to Excel</strong> from the
-verifications list or Reports (see <a
-href="#93-exporting-verifications-to-excel">§9.3 Exporting Verifications
-to Excel</a>).</li>
+<li><strong>Update verification status</strong> inline (e.g. set Passed
+after a lab run): click the status in the table or list. Only
+<strong>project reviewers</strong> with edit rights can change the
+status; other editors can still edit the title, method, and source
+inline.</li>
+<li><strong>Export</strong> from the filter bar: <strong>CSV</strong>
+contains the rows currently shown (after filters and search);
+<strong>Excel</strong> contains every verification in the project (the
+same workbook as <a href="#93-exporting-verifications-to-excel">§9.3
+Exporting Verifications to Excel</a>).</li>
 </ul>
 <h3 id="verification-detail-page">5.2 Verification Detail Page</h3>
 <ul>
 <li>URL:
-<code>/&lt;project-slug&gt;/verifications/show/&lt;verification_id&gt;</code>.</li>
+<code>/&lt;project-slug&gt;/verifications/&lt;verification_id&gt;</code>.</li>
 </ul>
 <p>Shows: <strong>Name</strong>, <strong>Description</strong>,
 <strong>Source</strong> (e.g. test file or document reference),
@@ -913,9 +928,10 @@ coverage and test results.</li>
 by verification status (e.g. show only Failed).</li>
 </ul>
 <p>Update status from the <strong>Verification detail</strong> page
-(Edit or dedicated status control) or, when available, <strong>inline
-from the verifications list</strong> or from the matrix. Verification
-statuses are configured per project under <a
+(Edit), <strong>inline from the verifications list</strong> (click the
+status; project reviewers only, see <a
+href="#51-verifications-list">§5.1</a>), or from the matrix.
+Verification statuses are configured per project under <a
 href="#85-verification-statuses">Verification statuses</a>.</p>
 <h3 id="verification-hierarchy">5.6 Verification Hierarchy</h3>
 <p>Verifications can have a <strong>parent verification</strong> (e.g. a

@@ -1,13 +1,16 @@
 interface CsvDownloadButtonProps {
   onClick: () => void;
+  /** Tooltip; e.g. "Download CSV (filtered rows)". */
+  title?: string;
 }
 
-export function CsvDownloadButton({ onClick }: CsvDownloadButtonProps) {
+export function CsvDownloadButton({ onClick, title = 'Download CSV' }: CsvDownloadButtonProps) {
   return (
     <button
       type="button"
       onClick={onClick}
-      title="Download CSV"
+      title={title}
+      aria-label={title}
       className="p-2 text-stitch-muted hover:text-stitch-accent transition-colors"
     >
       <span className="material-symbols-outlined">file_download</span>

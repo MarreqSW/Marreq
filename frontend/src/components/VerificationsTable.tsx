@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import { escapeCsv, downloadCsv } from '@/utils/tableUtils';
 import { formatUserLabel } from '@/utils/userLabel';
@@ -11,7 +11,7 @@ import {
   listUsersOptional,
   listVerificationMethodsByProject,
   listVerificationStatuses,
-  listVerifications,
+  listVerificationsByProject,
   updateVerificationField,
   downloadVerificationsXlsx,
 } from '@/api/client';
@@ -24,6 +24,7 @@ import type {
   VerificationStatus,
 } from '@/api/types';
 import { StatusBadge } from '@/components/StatusBadge';
+import VerificationStatusMetrics from '@/components/VerificationStatusMetrics';
 
 type ViewMode = 'table' | 'list';
 
@@ -60,7 +61,34 @@ export default function VerificationsTable({
   const [editCell, setEditCell] = useState<VerificationTableEditCell | null>(null);
   const inlineEditRef = useRef<HTMLDivElement | null>(null);
 
-  const [statusFilter, setStatusFilter] = useState<'all' | number>('all');
+  // Filters live in the query string so metric chips, the view switcher, and reloads keep them.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const statusParam = Number(searchParams.get('status'));
+  const statusFilter: 'all' | number =
+    searchParams.get('status') && Number.isFinite(statusParam) ? statusParam : 'all';
+  const methodRaw = searchParams.get('method');
+  const methodFilter: 'all' | 'none' | number =
+    methodRaw === 'none'
+      ? 'none'
+      : methodRaw && Number.isFinite(Number(methodRaw))
+        ? Number(methodRaw)
+        : 'all';
+  const setFilterParams = useCallback(
+    (updates: Record<string, string | null>) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          for (const [key, value] of Object.entries(updates)) {
+            if (value) next.set(key, value);
+            else next.delete(key);
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
   const [pageSize, setPageSize] = useState(25);
   const [page, setPage] = useState(1);
 
@@ -70,14 +98,14 @@ export default function VerificationsTable({
     setErr(null);
     try {
       const [ver, st, m, p, u, mem] = await Promise.all([
-        listVerifications(),
+        listVerificationsByProject(projectId),
         listVerificationStatuses(),
         listVerificationMethodsByProject(projectId),
         getMyPermissions(projectId).catch(() => null),
         listUsersOptional(),
         listProjectMembers(projectId),
       ]);
-      setRows(ver.filter((v) => v.project_id === projectId));
+      setRows(ver);
       setStatuses(st);
       setMethods(m);
       setPerms(p);
@@ -110,6 +138,8 @@ export default function VerificationsTable({
   const filtered = useMemo(() => {
     return rows.filter((v) => {
       if (statusFilter !== 'all' && v.status_id !== statusFilter) return false;
+      if (methodFilter === 'none' && v.verification_method_id != null) return false;
+      if (typeof methodFilter === 'number' && v.verification_method_id !== methodFilter) return false;
       if (!q) return true;
       const parentRow = v.parent_id != null ? rows.find((x) => x.id === v.parent_id) : null;
       const parentBlob = parentRow
@@ -120,11 +150,11 @@ export default function VerificationsTable({
         .toLowerCase();
       return blob.includes(q);
     });
-  }, [rows, statusFilter, q]);
+  }, [rows, statusFilter, methodFilter, q]);
 
   useEffect(() => {
     setPage(1);
-  }, [statusFilter, q, pageSize]);
+  }, [statusFilter, methodFilter, q, pageSize]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, pageCount);
@@ -198,8 +228,8 @@ export default function VerificationsTable({
   );
 
   const resetFilters = useCallback(() => {
-    setStatusFilter('all');
-  }, []);
+    setFilterParams({ status: null, method: null });
+  }, [setFilterParams]);
 
   const exportCsv = useCallback(() => {
     const headers = [
@@ -317,6 +347,13 @@ export default function VerificationsTable({
         </div>
       ) : null}
 
+      <VerificationStatusMetrics
+        verifications={rows}
+        statuses={statusOptions}
+        activeStatusId={statusFilter === 'all' ? null : statusFilter}
+        onSelectStatus={(id) => setFilterParams({ status: id === null ? null : String(id) })}
+      />
+
       <div className="bg-stitch-elevated p-4 rounded-xl border border-stitch-border flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2 md:gap-3">
           <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
@@ -326,8 +363,9 @@ export default function VerificationsTable({
               value={statusFilter === 'all' ? 'all' : String(statusFilter)}
               onChange={(e) => {
                 const val = e.target.value;
-                setStatusFilter(val === 'all' ? 'all' : Number(val));
+                setFilterParams({ status: val === 'all' ? null : val });
               }}
+              aria-label="Filter by status"
               className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-none cursor-pointer"
             >
               <option value="all">All</option>
@@ -336,6 +374,27 @@ export default function VerificationsTable({
                   {s.title}
                 </option>
               ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-stitch-surface border border-stitch-border rounded text-xs text-stitch-muted">
+            <span className="material-symbols-outlined text-sm">science</span>
+            <span>Method:</span>
+            <select
+              value={methodFilter === 'all' ? 'all' : String(methodFilter)}
+              onChange={(e) => {
+                const val = e.target.value;
+                setFilterParams({ method: val === 'all' ? null : val });
+              }}
+              aria-label="Filter by verification method"
+              className="bg-transparent text-stitch-accent font-bold text-xs border-none outline-none cursor-pointer"
+            >
+              <option value="all">All</option>
+              {methods.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.title}
+                </option>
+              ))}
+              <option value="none">No method</option>
             </select>
           </div>
           <div className="hidden sm:block h-4 w-px bg-stitch-border mx-1" />
@@ -352,7 +411,7 @@ export default function VerificationsTable({
           <p className="text-[10px] text-stitch-muted font-mono">
             {filtered.length.toLocaleString()} Verifications found
           </p>
-          <CsvDownloadButton onClick={exportCsv} />
+          <CsvDownloadButton onClick={exportCsv} title="Download CSV (filtered rows)" />
           <ExcelDownloadButton onClick={exportXlsx} busy={exportingXlsx} />
         </div>
       </div>
@@ -361,6 +420,22 @@ export default function VerificationsTable({
         <p className="mb-4 text-xs text-red-300" role="alert">
           {exportErr}
         </p>
+      ) : null}
+
+      {pageCount > 1 ? (
+        <div
+          className="flex flex-wrap items-center justify-end gap-4"
+          data-testid="pagination-top"
+        >
+          <p className="text-xs text-stitch-muted font-medium">
+            Showing{' '}
+            <span className="text-stitch-fg font-bold">
+              {sliceStart + 1}-{Math.min(sliceStart + pageSize, filtered.length)}
+            </span>{' '}
+            of <span className="text-stitch-fg font-bold">{filtered.length}</span>
+          </p>
+          <Pagination page={safePage} pageCount={pageCount} onPageChange={setPage} />
+        </div>
       ) : null}
 
       {viewMode === 'list' ? (
@@ -468,12 +543,6 @@ export default function VerificationsTable({
                       )}
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">
-                          Category
-                        </p>
-                        <span className="text-stitch-muted">—</span>
-                      </div>
                       <div>
                         <p className="text-[10px] uppercase text-stitch-muted font-bold tracking-wider mb-1">
                           Parents

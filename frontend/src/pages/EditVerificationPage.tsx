@@ -35,6 +35,7 @@ import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
 import VerificationVersionDiffDialog from '@/components/VerificationVersionDiffDialog';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { formatUserLabel } from '@/utils/userLabel';
+import StatementEditor from '@/components/StatementEditor';
 
 const selectClass =
   'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-none transition-colors';
@@ -344,15 +345,19 @@ export default function EditVerificationPage() {
             />
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">
+            <label
+              htmlFor="verification-description"
+              className="block text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1"
+            >
               Description
             </label>
-            <textarea
-              required
+            <StatementEditor
+              id="verification-description"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={5}
-              className={`${selectClass} min-h-[120px] resize-y`}
+              onChange={setDescription}
+              required
+              minHeightClass="min-h-[120px]"
+              textareaClassName={`${selectClass} resize-y`}
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -29,6 +29,7 @@ import type {
   VerificationStatus,
 } from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
+import StatementText from '@/components/StatementText';
 
 function formatTs(iso: string): string {
   try {
@@ -301,8 +302,8 @@ export default function ViewVerificationPage() {
           ) : null}
           <div className="sm:col-span-2">
             <dt className="text-[10px] font-bold text-stitch-muted uppercase tracking-wider mb-1">Description</dt>
-            <dd className="text-stitch-fg whitespace-pre-wrap leading-relaxed">
-              {row.description.trim() ? row.description : '—'}
+            <dd className="text-stitch-fg leading-relaxed">
+              <StatementText source={row.description} />
             </dd>
           </div>
           <div>

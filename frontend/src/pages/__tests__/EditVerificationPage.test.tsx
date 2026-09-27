@@ -121,4 +121,35 @@ describe('EditVerificationPage method', () => {
     );
     expect(apiClient.putVerificationMatrix).not.toHaveBeenCalled();
   });
+
+  it('formats the description with the toolbar and saves the Markdown', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/space-project/verifications/42/edit']}>
+        <Routes>
+          <Route path="/space-project/verifications/:verificationId/edit" element={<EditVerificationPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const box = (await screen.findByLabelText('Description')) as HTMLTextAreaElement;
+    expect(box).toHaveValue('Measure 500W');
+    box.setSelectionRange(8, 12);
+    await user.click(screen.getByRole('button', { name: 'Bold' }));
+    expect(box).toHaveValue('Measure **500W**');
+
+    await user.click(screen.getByRole('tab', { name: 'Preview' }));
+    expect(screen.getByTestId('statement-preview').querySelector('strong')).toHaveTextContent('500W');
+
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+    await waitFor(() =>
+      expect(apiClient.updateVerificationField).toHaveBeenCalledWith(
+        5,
+        42,
+        'description',
+        'Measure **500W**',
+        'csrf-test',
+      ),
+    );
+  });
 });

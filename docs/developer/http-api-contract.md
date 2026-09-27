@@ -144,7 +144,7 @@ Instance-wide. All routes require a **global administrator** (`users.is_admin`);
 
 ## Requirement statement format
 
-`description` on requirements (create, update, `PATCH`, responses, exports) is **Marreq statement Markdown**: paragraphs separated by a blank line (a single newline is a line break), `- ` / `* ` bulleted and `1. ` numbered lists, `**bold**`, `*italic*` / `_italic_`, `` `code` ``, and `[label](url)` links with `http:`, `https:`, or `mailto:` URLs (others are kept as literal text); `\` escapes a marker character. It is stored and returned as source text; the SPA renders it without HTML (`frontend/src/utils/statementMarkdown.ts`), and ReqIF export converts it to XHTML (`marreq-core/src/rich_text.rs`). The 2000-byte limit counts the Markdown source.
+`description` on requirements and verifications (create, update, field updates, responses, exports) is **Marreq statement Markdown**: paragraphs separated by a blank line (a single newline is a line break), `- ` / `* ` bulleted and `1. ` numbered lists, `**bold**`, `*italic*` / `_italic_`, `` `code` ``, and `[label](url)` links with `http:`, `https:`, or `mailto:` URLs (others are kept as literal text); `\` escapes a marker character. It is stored and returned as source text; the SPA renders it without HTML (`frontend/src/utils/statementMarkdown.ts`), and ReqIF export converts it to XHTML (`marreq-core/src/rich_text.rs`). The 2000-byte limit counts the Markdown source.
 
 ## Full route list
 

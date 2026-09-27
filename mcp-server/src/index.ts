@@ -9,7 +9,9 @@ import type { SessionContext } from "./context.js";
 import { MarreqAuthenticationError, MarreqClient } from "./client.js";
 import { loadTransportConfig, startRemoteServer } from "./remote.js";
 
-/** Requirement statements use "Marreq statement Markdown" (marreq-core/src/rich_text.rs). */
+/** Requirement statements and verification descriptions use "Marreq statement Markdown" (marreq-core/src/rich_text.rs). */
+const DESCRIPTION_FORMAT =
+  "Verification description in Marreq statement Markdown: paragraphs separated by a blank line, '- ' bulleted and '1. ' numbered lists, **bold**, *italic*, `code`, [label](https://...) links (http/https/mailto only). Max 2000 bytes including markup.";
 const STATEMENT_FORMAT =
   "Requirement statement in Marreq statement Markdown: paragraphs separated by a blank line, '- ' bulleted and '1. ' numbered lists, **bold**, *italic*, `code`, [label](https://...) links (http/https/mailto only). Max 2000 bytes including markup.";
 
@@ -659,7 +661,7 @@ export function createMarreqServer(ctx: SessionContext) {
     const verificationInput = z.object({
       reference_code: z.string(),
       name: z.string(),
-      description: z.string(),
+      description: z.string().describe(DESCRIPTION_FORMAT),
       source: z.string(),
       status_id: z.number().int().positive(),
       parent_id: z.number().int().positive().nullable().optional(),

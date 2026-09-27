@@ -282,7 +282,7 @@ You can:
 
 - URL: `/<project-slug>/verifications/<verification_id>`.
 
-Shows: **Name**, **Description**, **Source** (e.g. test file or document reference), **Status**, **Reference code**, **Verification type**, **Parent verification** (if part of a hierarchy), and **which requirements this verification covers** (traceability links). From here you can **Edit** the verification (name, description, source, status, reference, method, parent) or **update status** (e.g. after running the test). Status updates feed into the requirement **Verification** panel and into [Reports](#9-reports--export) (coverage, pass rate).
+Shows: **Name**, **Description** (with its formatting), **Source** (e.g. test file or document reference), **Status**, **Reference code**, **Verification type**, **Parent verification** (if part of a hierarchy), and **which requirements this verification covers** (traceability links). From here you can **Edit** the verification (name, description, source, status, reference, method, parent) or **update status** (e.g. after running the test). Status updates feed into the requirement **Verification** panel and into [Reports](#9-reports--export) (coverage, pass rate).
 
 ### 5.2.1 Version history and diff
 
@@ -296,7 +296,7 @@ Shows: **Name**, **Description**, **Source** (e.g. test file or document referen
 
 1. From the project’s verifications list, click **New Verification** (or **Quick Actions → New Verification**).
 2. URL: `/<project-slug>/verifications/new`.
-3. Enter **Name**, **Description**, **Source** (e.g. path to test script or doc), **Status** (e.g. Pending, Not Run), **Reference code** (optional; e.g. TEST-PWR-001), and **Parent verification** (optional, for hierarchy).
+3. Enter **Name**, **Description**, **Source** (e.g. path to test script or doc), **Status** (e.g. Pending, Not Run), **Reference code** (optional; e.g. TEST-PWR-001), and **Parent verification** (optional, for hierarchy). The description has the same formatting toolbar, **Write / Preview** toggle, and syntax as requirement statements (see [Formatting the statement](#formatting-the-statement)), for example a numbered list of test steps.
 4. Save.
 
 After creation, link the verification to requirements in the [Traceability Matrix](#6-traceability-matrix).

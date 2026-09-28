@@ -126,6 +126,10 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Audit production dependencies
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Build frontend
         working-directory: frontend
         run: npm run build
@@ -164,6 +168,10 @@ jobs:
       - name: Install MCP dependencies
         working-directory: mcp-server
         run: npm ci
+
+      - name: Audit production dependencies
+        working-directory: mcp-server
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Build MCP server
         working-directory: mcp-server

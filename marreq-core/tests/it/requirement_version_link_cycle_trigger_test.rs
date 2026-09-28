@@ -1,7 +1,7 @@
 #[test]
 fn cycle_trigger_uses_check_violation_for_client_errors() {
     let migration = include_str!(
-        "../migrations/2026-06-15-000001_prevent_requirement_version_link_cycles/up.sql"
+        "../../migrations/2026-06-15-000001_prevent_requirement_version_link_cycles/up.sql"
     );
 
     assert!(
@@ -25,7 +25,7 @@ fn cycle_trigger_uses_check_violation_for_client_errors() {
 #[test]
 fn cycle_trigger_checks_target_ancestors_before_accepting_link() {
     let migration = include_str!(
-        "../migrations/2026-06-15-000001_prevent_requirement_version_link_cycles/up.sql"
+        "../../migrations/2026-06-15-000001_prevent_requirement_version_link_cycles/up.sql"
     );
 
     assert!(

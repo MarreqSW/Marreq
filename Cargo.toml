@@ -45,3 +45,12 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "proce
 urlencoding = "2.1"
 url = "2.5"
 xlsxwriter = "0.6.1"
+
+# Dev/test builds: keep file:line in backtraces but drop full debug info, and
+# skip it for dependencies. Test binaries shrink several-fold and link much
+# faster. Release builds are unaffected.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false

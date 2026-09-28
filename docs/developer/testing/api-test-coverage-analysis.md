@@ -87,7 +87,7 @@ The API error handling code supports these database errors, but we don't have te
   - Creating requirement without required fields
   - Creating user without required fields
 
-**Recommended Test File**: `tests/api_constraint_violation_test.rs`
+**Recommended Test File**: `marreq-core/tests/it/api_constraint_violation_test.rs`
 
 #### 2. PATCH Operation Edge Cases (MEDIUM PRIORITY)
 
@@ -108,7 +108,7 @@ Current PATCH tests are basic. Missing:
   - Two PATCH requests to same resource simultaneously
   - PATCH while resource is being deleted
 
-**Recommended**: Add to `tests/api_requirements_integration_test.rs`
+**Recommended**: Add to `marreq-core/tests/it/api_requirements_integration_test.rs`
 
 #### 3. Cache API Error Scenarios (LOW PRIORITY)
 
@@ -119,7 +119,7 @@ Current cache tests only cover success cases. Missing:
   - Cache operations during high load
   - Cache corruption scenarios
 
-**Recommended**: Add to `tests/api_cache_integration_test.rs`
+**Recommended**: Add to `marreq-core/tests/it/api_cache_integration_test.rs`
 
 #### 4. Response Format Consistency Tests (MEDIUM PRIORITY)
 
@@ -135,7 +135,7 @@ Need to verify all endpoints return consistent JSON structures:
   - All errors follow the same structure: `{"status": <code>, "error": <reason>, "message": <msg>}`
   - Consistent field names across all endpoints
 
-**Recommended**: Enhance `tests/api_error_consistency_test.rs`
+**Recommended**: Enhance `marreq-core/tests/it/api_error_consistency_test.rs`
 
 #### 5. Status API - Update/Delete Operations (N/A)
 
@@ -166,7 +166,7 @@ Test behavior when deleting resources that are referenced:
 - Delete project that has requirements/tests/categories
 - Delete user that is author/reviewer
 
-**Recommended**: Add to `tests/api_constraint_violation_test.rs`
+**Recommended**: Add to `marreq-core/tests/it/api_constraint_violation_test.rs`
 
 #### 9. Bulk Operations Tests (N/A)
 

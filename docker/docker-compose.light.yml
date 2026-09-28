@@ -13,14 +13,14 @@
 
 services:
   db:
-    image: pgvector/pgvector:pg15-trixie
+    image: pgvector/pgvector:pg17-trixie
     restart: always
     environment:
       POSTGRES_USER: 'rust'
       POSTGRES_PASSWORD: 'rust'
       POSTGRES_DB: 'marreq'
     volumes:
-      - pgdata:/var/lib/postgresql
+      - pgdata17:/var/lib/postgresql
     ports:
       - '127.0.0.1:5433:5432'
     healthcheck:
@@ -179,4 +179,6 @@ services:
       MARREQ_MCP_AUDIT_SECRET: ${MARREQ_MCP_AUDIT_SECRET:-development-only-mcp-audit-secret-change-me}
 
 volumes:
-  pgdata:
+  # PostgreSQL 17 data. The old PostgreSQL 15 volume (`pgdata`) is left untouched
+  # for rollback; see docs/developer/database-setup.md "Upgrading from PostgreSQL 15".
+  pgdata17:

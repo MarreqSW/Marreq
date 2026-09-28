@@ -606,7 +606,7 @@ In deployments where users **self-register** (hosted cloud mode), **New user** i
 
 **Download backup** runs `pg_dump` on the server and downloads the whole database (all projects, users, and audit logs) as gzipped SQL named `marreq-backup_<YYYYMMDD>_<HHMMSS>.sql.gz`. Nothing is stored on the server. Large databases can take a few minutes; keep the page open. The file contains password hashes and all project data, so store it securely. Each download (or failure) is recorded in **System logs** as an `EXPORT` entry.
 
-To restore, load the file into an **empty** database with `psql` from PostgreSQL 15 or newer:
+To restore, load the file into an **empty** database with `psql` from PostgreSQL 17 or newer:
 
 ```bash
 gunzip -c marreq-backup_YYYYMMDD_HHMMSS.sql.gz | psql "$DATABASE_URL"

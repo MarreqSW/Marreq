@@ -1,5 +1,5 @@
 # Build stage
-FROM rust:1-bookworm AS builder
+FROM rust:1-trixie AS builder
 
 ARG MARREQ_BIN=marreq-server
 ARG MARREQ_VERSION=
@@ -47,7 +47,7 @@ RUN touch marreq-core/src/lib.rs marreq-server/src/main.rs marreq-cloud/src/main
     cargo build --release -p ${MARREQ_BIN}
 
 # Runtime stage
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 ARG MARREQ_BIN=marreq-server
 ARG MARREQ_VERSION=
@@ -55,6 +55,8 @@ ARG MARREQ_GIT_SHA=unknown
 LABEL org.opencontainers.image.version="${MARREQ_VERSION:-dev}" \
       org.opencontainers.image.revision="${MARREQ_GIT_SHA}"
 
+# trixie's postgresql-client is 17, matching the pg17 database image, so the
+# in-app backup (pg_dump) writes dumps that the server can restore.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq5 \
     postgresql-client \

@@ -7,10 +7,10 @@ This document describes how to provision hosts and CI runners so you can build, 
 | Layer | Technology | Notes |
 |--------|------------|--------|
 | Backend | Rust (stable), Cargo workspace | Binaries: `marreq-server` (self-hosted), `marreq-cloud` (SaaS-style) |
-| Database | PostgreSQL **15** with **pgvector** | Compose uses `pgvector/pgvector:pg15-trixie` |
-| Frontend | Node.js **20**, npm | Matches GitHub Actions; SPA under `frontend/` |
+| Database | PostgreSQL **17** with **pgvector** | Compose uses `pgvector/pgvector:pg17-trixie`; upgrading from 15: see [database setup](docs/developer/database-setup.md#upgrading-from-postgresql-15) |
+| Frontend | Node.js **22**, npm | Matches GitHub Actions; SPA under `frontend/` |
 | Containers | Docker Engine + Compose plugin | Stack defined in `docker/docker-compose.yml` |
-| Native build deps | **clang** / **libclang** | Required for `xlsxwriter` (bindgen); CI installs `libclang-dev` on Ubuntu |
+| Native build deps | C toolchain, **pkg-config**, **libssl-dev**, **libpq-dev** | For the OpenSSL, libpq and aws-lc crates |
 | Migrations | **diesel_cli** (PostgreSQL) | Installed via `cargo install` |
 | Optional: embeddings | **Ollama** | Compose service or host install; see [docs/developer/ollama-setup.md](docs/developer/ollama-setup.md) |
 | Optional: MCP | Node **≥ 18** | Package in `mcp-server/` |
@@ -71,7 +71,7 @@ Edit `.env` for your environment: `DATABASE_URL`, `ROCKET_SECRET_KEY` (generate 
 ## 5. Database
 
 - **Docker (recommended for parity with compose):** host maps Postgres to **127.0.0.1:5433** by default (`DATABASE_URL=postgres://rust:rust@127.0.0.1:5433/marreq`).
-- **Managed Postgres:** provision PostgreSQL 15, enable **pgvector**, create database and user, set `DATABASE_URL` accordingly.
+- **Managed Postgres:** provision PostgreSQL 17, enable **pgvector**, create database and user, set `DATABASE_URL` accordingly.
 
 Initialize schema (migrations):
 

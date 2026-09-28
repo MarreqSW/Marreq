@@ -1,8 +1,9 @@
-import type { CSSProperties } from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useOutletContext } from 'react-router-dom';
+import { useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
   clearTraceabilitySuspect,
+  downloadMatrixXlsx,
+  listCategories,
   listMatrix,
   listRequirementVersionsByProject,
   listRequirementStatuses,
@@ -13,9 +14,17 @@ import {
 } from '@/api/client';
 import RequirementVersionDiffDialog from '@/components/RequirementVersionDiffDialog';
 import { StatusBadge } from '@/components/StatusBadge';
-import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
+import MatrixGrid, {
+  type MatrixCellItem,
+  type MatrixColItem,
+  type MatrixFocus,
+  type MatrixRowItem,
+} from '@/components/matrix/MatrixGrid';
+import MatrixSidePanel, { type GapItem, type SuspectItem } from '@/components/matrix/MatrixSidePanel';
+import { useDashboard } from '@/context/DashboardContext';
 import type {
+  Category,
   MatrixLink,
   Requirement,
   RequirementStatus,
@@ -31,16 +40,19 @@ import {
   statusSemanticGroup,
   type StatusSemanticGroup,
 } from '@/lib/verificationStatusSemantic';
+import {
+  groupRuns,
+  nextSort,
+  readMatrixParams,
+  toggleIn,
+  writeMatrixParams,
+  type MatrixParams,
+} from '@/utils/matrixView';
 
-const PAGE_SIZE = 40;
-
-/** Verification columns: wide enough for horizontal reference labels. */
-const VER_COL_CLASS =
-  'w-19 min-w-19 max-w-22 box-border';
-
-const REQ_COL_DEFAULT_PX = 152;
-const REQ_COL_MIN_PX = 96;
-const REQ_COL_MAX_PX = 520;
+const REQ_COL_DEFAULT_PX = 300;
+const REQ_COL_MIN_PX = 160;
+const REQ_COL_MAX_PX = 560;
+const UNCATEGORISED = 'Uncategorised';
 
 function reqColStorageKey(projectId: number) {
   return `reqman-matrix-req-col-w-${projectId}`;
@@ -50,14 +62,8 @@ function clampReqColW(n: number) {
   return Math.min(REQ_COL_MAX_PX, Math.max(REQ_COL_MIN_PX, Math.round(n)));
 }
 
-type MatrixSortColumn =
-  | { kind: 'requirement' }
-  | { kind: 'verification'; verId: number };
-
 function compareRefCode(a: Requirement, b: Requirement): number {
-  return (a.reference_code || '').localeCompare(b.reference_code || '', undefined, {
-    numeric: true,
-  });
+  return (a.reference_code || '').localeCompare(b.reference_code || '', undefined, { numeric: true });
 }
 
 /** Sort rows by one verification column: linked before unlinked, suspect before non-suspect among linked, then ref. */
@@ -77,10 +83,26 @@ function compareByVerificationColumn(
   return compareRefCode(a, b);
 }
 
+const chipOn = 'border-stitch-accent bg-stitch-accent/15 text-stitch-fg';
+const chipOff = 'border-stitch-border bg-stitch-elevated/50 text-stitch-muted hover:bg-stitch-higher hover:text-stitch-fg';
+const label = 'text-[10px] uppercase tracking-widest text-stitch-muted font-bold mr-1 shrink-0';
+const headerButton =
+  'text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher disabled:opacity-50';
+
+type Selection =
+  | ({ kind: 'suspect'; req: number; ver: number } | { kind: 'row'; req: number } | { kind: 'column'; ver: number }) & {
+      seq: number;
+    };
+
 export default function MatrixPage() {
   const { globalSearch, basePath, projectId } = useOutletContext<ProjectOutletContext>();
   const pid = projectId;
   const { csrfToken, dashboard } = useDashboard();
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const params = useMemo(() => readMatrixParams(searchParams), [searchParams]);
+  const update = (next: Partial<MatrixParams>) =>
+    setSearchParams(writeMatrixParams(searchParams, { ...params, ...next }), { replace: true });
 
   const [matrix, setMatrix] = useState<MatrixLink[]>([]);
   const [reqs, setReqs] = useState<Requirement[]>([]);
@@ -88,23 +110,17 @@ export default function MatrixPage() {
   const [statuses, setStatuses] = useState<VerificationStatus[]>([]);
   const [reqStatuses, setReqStatuses] = useState<RequirementStatus[]>([]);
   const [methods, setMethods] = useState<VerificationMethod[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
-  const [suspectOnly, setSuspectOnly] = useState(false);
-  const [statusGroups, setStatusGroups] = useState<Set<StatusSemanticGroup>>(new Set());
-  const [reqStatusFilter, setReqStatusFilter] = useState<Set<number>>(new Set());
-  const [verStatusFilter, setVerStatusFilter] = useState<Set<number>>(new Set());
   const [busyKey, setBusyKey] = useState<string | null>(null);
-  const [diffBusyKey, setDiffBusyKey] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const [diffRequirementId, setDiffRequirementId] = useState<number | null>(null);
   const [diffVersions, setDiffVersions] = useState<RequirementVersion[]>([]);
-  const [diffPair, setDiffPair] = useState<{
-    oldVersionId?: number;
-    newVersionId?: number;
-  } | null>(null);
-  const [sortColumn, setSortColumn] = useState<MatrixSortColumn>({ kind: 'requirement' });
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [diffPair, setDiffPair] = useState<{ oldVersionId?: number; newVersionId?: number } | null>(null);
+  const [selection, setSelection] = useState<Selection | null>(null);
+
+  // Resizable requirement column, remembered per project.
   const [reqColWidthPx, setReqColWidthPx] = useState(REQ_COL_DEFAULT_PX);
   const resizeDragRef = useRef<{ startX: number; startW: number } | null>(null);
   const reqColWidthRef = useRef(REQ_COL_DEFAULT_PX);
@@ -113,13 +129,8 @@ export default function MatrixPage() {
   useEffect(() => {
     if (!Number.isFinite(pid)) return;
     try {
-      const raw = localStorage.getItem(reqColStorageKey(pid));
-      const n = raw ? parseInt(raw, 10) : NaN;
-      if (Number.isFinite(n)) {
-        setReqColWidthPx(clampReqColW(n));
-      } else {
-        setReqColWidthPx(REQ_COL_DEFAULT_PX);
-      }
+      const n = parseInt(localStorage.getItem(reqColStorageKey(pid)) ?? '', 10);
+      setReqColWidthPx(Number.isFinite(n) ? clampReqColW(n) : REQ_COL_DEFAULT_PX);
     } catch {
       setReqColWidthPx(REQ_COL_DEFAULT_PX);
     }
@@ -138,12 +149,10 @@ export default function MatrixPage() {
       resizeDragRef.current = null;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      if (Number.isFinite(pid)) {
-        try {
-          localStorage.setItem(reqColStorageKey(pid), String(reqColWidthRef.current));
-        } catch {
-          /* ignore quota */
-        }
+      try {
+        localStorage.setItem(reqColStorageKey(pid), String(reqColWidthRef.current));
+      } catch {
+        /* ignore quota */
       }
     }
     window.addEventListener('mousemove', onMove);
@@ -162,28 +171,19 @@ export default function MatrixPage() {
     document.body.style.userSelect = 'none';
   }
 
-  const reqColStyle = useMemo(
-    (): CSSProperties => ({
-      width: reqColWidthPx,
-      minWidth: reqColWidthPx,
-      maxWidth: reqColWidthPx,
-      boxSizing: 'border-box',
-    }),
-    [reqColWidthPx],
-  );
-
   const load = useCallback(async () => {
     if (!Number.isFinite(pid)) return;
     setLoading(true);
     setErr(null);
     try {
-      const [mx, r, allV, st, rs, m] = await Promise.all([
+      const [mx, r, allV, st, rs, m, cats] = await Promise.all([
         listMatrix(pid),
         listRequirements(pid),
         listVerifications(),
         listVerificationStatuses(),
         listRequirementStatuses(),
         listVerificationMethodsByProject(pid),
+        listCategories(),
       ]);
       setMatrix(mx);
       setReqs(r);
@@ -191,6 +191,7 @@ export default function MatrixPage() {
       setStatuses(st);
       setReqStatuses(rs);
       setMethods(m);
+      setCategories(cats.filter((c) => c.project_id === pid));
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Failed to load matrix');
     } finally {
@@ -204,13 +205,11 @@ export default function MatrixPage() {
 
   const openSuspectDiff = useCallback(
     async (link: MatrixLink) => {
-      const key = `${link.req_id}-${link.verification_id}`;
-      setDiffBusyKey(key);
+      setBusyKey(`${link.req_id}-${link.verification_id}`);
       try {
         const versions = await listRequirementVersionsByProject(pid, link.req_id);
         const ordered = [...versions].sort(
-          (a, b) =>
-            new Date(a.created_at).getTime() - new Date(b.created_at).getTime() || a.id - b.id,
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime() || a.id - b.id,
         );
         const triggerIndex =
           link.triggering_version_id == null
@@ -222,121 +221,100 @@ export default function MatrixPage() {
         setDiffRequirementId(link.req_id);
         setDiffPair(
           olderIndex >= 0
-            ? {
-                oldVersionId: ordered[olderIndex].id,
-                newVersionId: ordered[newerIndex].id,
-              }
+            ? { oldVersionId: ordered[olderIndex]!.id, newVersionId: ordered[newerIndex]!.id }
             : null,
         );
       } catch (reason) {
         setErr(reason instanceof Error ? reason.message : 'Failed to load requirement versions');
       } finally {
-        setDiffBusyKey(null);
+        setBusyKey(null);
       }
     },
     [pid],
   );
 
+  async function onClearSuspect(m: MatrixLink) {
+    const token = csrfToken ?? '';
+    if (!token) return;
+    setBusyKey(`${m.req_id}-${m.verification_id}`);
+    try {
+      await clearTraceabilitySuspect(m.req_id, m.verification_id, token);
+      await load();
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function onExport() {
+    setExporting(true);
+    try {
+      await downloadMatrixXlsx(pid);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  }
+
   const reqById = useMemo(() => new Map(reqs.map((r) => [r.id, r])), [reqs]);
   const verById = useMemo(() => new Map(vers.map((v) => [v.id, v])), [vers]);
   const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses]);
+  const reqStatusById = useMemo(() => new Map(reqStatuses.map((s) => [s.id, s])), [reqStatuses]);
   const methodById = useMemo(() => new Map(methods.map((m) => [m.id, m])), [methods]);
+  const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c.title])), [categories]);
 
   const reqStatusOptions = useMemo(
-    () =>
-      [...reqStatuses]
-        .filter((s) => s.project_id === pid)
-        .sort((a, b) => a.title.localeCompare(b.title)),
+    () => reqStatuses.filter((s) => s.project_id === pid).sort((a, b) => a.title.localeCompare(b.title)),
     [reqStatuses, pid],
   );
-
   const verStatusOptions = useMemo(
-    () =>
-      [...statuses]
-        .filter((s) => s.project_id === pid)
-        .sort((a, b) => a.title.localeCompare(b.title)),
+    () => statuses.filter((s) => s.project_id === pid).sort((a, b) => a.title.localeCompare(b.title)),
     [statuses, pid],
   );
 
-  const linkByPair = useMemo(() => {
-    const m = new Map<string, MatrixLink>();
-    for (const x of matrix) {
-      m.set(`${x.req_id}-${x.verification_id}`, x);
-    }
-    return m;
-  }, [matrix]);
+  const linkByPair = useMemo(() => new Map(matrix.map((x) => [`${x.req_id}-${x.verification_id}`, x])), [matrix]);
 
   const q = globalSearch.trim().toLowerCase();
-  const statusGroupActive = statusGroups.size > 0;
-  const reqStatusFilterActive = reqStatusFilter.size > 0;
-  const verStatusFilterActive = verStatusFilter.size > 0;
-  const verColumnFilterActive = statusGroupActive || verStatusFilterActive;
+  const statusGroups = useMemo(() => new Set(params.statusGroups), [params.statusGroups]);
+  const reqStatusFilter = useMemo(() => new Set(params.reqStatusIds), [params.reqStatusIds]);
+  const verStatusFilter = useMemo(() => new Set(params.verStatusIds), [params.verStatusIds]);
+  const suspectOnly = params.suspectOnly;
 
-  const verStatusGroup = useCallback(
-    (verId: number): StatusSemanticGroup | null => {
-      const t = verById.get(verId);
-      if (!t) return null;
-      const st = statusById.get(t.status_id);
-      const title = st?.title ?? `Status #${t.status_id}`;
-      return statusSemanticGroup(title, st?.tag_color);
+  const verStatusTitle = useCallback(
+    (v: Verification | undefined) => {
+      if (!v) return 'Unknown';
+      return statusById.get(v.status_id)?.title ?? `Status #${v.status_id}`;
     },
-    [verById, statusById],
+    [statusById],
   );
 
   const verMatchesStatusGroup = useCallback(
     (verId: number) => {
-      if (!statusGroupActive) return true;
-      const g = verStatusGroup(verId);
-      return g != null && statusGroups.has(g);
+      if (statusGroups.size === 0) return true;
+      const v = verById.get(verId);
+      if (!v) return false;
+      return statusGroups.has(statusSemanticGroup(verStatusTitle(v), statusById.get(v.status_id)?.tag_color));
     },
-    [statusGroupActive, verStatusGroup, statusGroups],
-  );
-
-  const linkMatchesStatusGroup = useCallback(
-    (link: MatrixLink) => verMatchesStatusGroup(link.verification_id),
-    [verMatchesStatusGroup],
-  );
-
-  const verMatchesStatusFilter = useCallback(
-    (verId: number) => {
-      if (!verStatusFilterActive) return true;
-      const t = verById.get(verId);
-      return t != null && verStatusFilter.has(t.status_id);
-    },
-    [verStatusFilterActive, verById, verStatusFilter],
+    [statusGroups, verById, verStatusTitle, statusById],
   );
 
   const linkMatchesVerFilters = useCallback(
     (link: MatrixLink) => {
-      if (statusGroupActive && !linkMatchesStatusGroup(link)) return false;
-      if (verStatusFilterActive && !verMatchesStatusFilter(link.verification_id)) {
-        return false;
+      if (!verMatchesStatusGroup(link.verification_id)) return false;
+      if (verStatusFilter.size > 0) {
+        const v = verById.get(link.verification_id);
+        if (!v || !verStatusFilter.has(v.status_id)) return false;
       }
       return true;
     },
-    [
-      statusGroupActive,
-      linkMatchesStatusGroup,
-      verStatusFilterActive,
-      verMatchesStatusFilter,
-    ],
-  );
-
-  const reqMatchesStatusFilter = useCallback(
-    (reqId: number) => {
-      if (!reqStatusFilterActive) return true;
-      const r = reqById.get(reqId);
-      return r != null && reqStatusFilter.has(r.status_id);
-    },
-    [reqStatusFilterActive, reqById, reqStatusFilter],
+    [verMatchesStatusGroup, verStatusFilter, verById],
   );
 
   const reqMatches = useCallback(
     (reqId: number) => {
       const r = reqById.get(reqId);
       if (!r) return false;
-      const blob = [r.reference_code, r.title, String(r.id)].join(' ').toLowerCase();
-      return blob.includes(q);
+      return [r.reference_code, r.title, String(r.id)].join(' ').toLowerCase().includes(q);
     },
     [reqById, q],
   );
@@ -346,225 +324,185 @@ export default function MatrixPage() {
       const t = verById.get(verId);
       if (!t) return false;
       const st = statusById.get(t.status_id);
-      const meth =
-        t.verification_method_id != null ? methodById.get(t.verification_method_id) : undefined;
-      const blob = [
-        t.reference_code,
-        t.name,
-        st?.title,
-        st?.tag,
-        meth?.title,
-        String(t.id),
-      ]
+      const meth = t.verification_method_id != null ? methodById.get(t.verification_method_id) : undefined;
+      return [t.reference_code, t.name, st?.title, st?.tag, meth?.title, String(t.id)]
         .join(' ')
-        .toLowerCase();
-      return blob.includes(q);
+        .toLowerCase()
+        .includes(q);
     },
     [verById, statusById, methodById, q],
   );
 
-  const filteredReqs = useMemo(() => {
-    return reqs.filter((r) => {
-      if (reqStatusFilterActive && !reqStatusFilter.has(r.status_id)) return false;
-      if (suspectOnly) {
-        const hit = matrix.some((m) => m.req_id === r.id && m.suspect);
-        if (!hit) return false;
-      }
-      if (verColumnFilterActive) {
-        const hit = matrix.some(
-          (m) => m.req_id === r.id && linkMatchesVerFilters(m),
-        );
-        if (!hit) return false;
-      }
-      if (!q) return true;
-      if (reqMatches(r.id)) return true;
-      return matrix.some((m) => m.req_id === r.id && verMatches(m.verification_id));
-    });
-  }, [
-    reqs,
-    matrix,
-    reqStatusFilterActive,
-    reqStatusFilter,
-    suspectOnly,
-    verColumnFilterActive,
-    linkMatchesVerFilters,
-    q,
-    reqMatches,
-    verMatches,
-  ]);
+  const verColumnFilterActive = statusGroups.size > 0 || verStatusFilter.size > 0;
 
-  const sortedDisplayReqs = useMemo(() => {
-    const arr = [...filteredReqs];
-    const mult = sortDir === 'asc' ? 1 : -1;
-    if (sortColumn.kind === 'requirement') {
-      arr.sort((a, b) => mult * compareRefCode(a, b));
-      return arr;
-    }
-    arr.sort(
-      (a, b) =>
-        mult * compareByVerificationColumn(a, b, sortColumn.verId, linkByPair),
-    );
-    return arr;
-  }, [filteredReqs, sortColumn, sortDir, linkByPair]);
-
-  const displayVers = useMemo(() => {
-    const sorted = [...vers].sort((a, b) =>
-      (a.reference_code || '').localeCompare(b.reference_code || '', undefined, { numeric: true }),
-    );
-    return sorted.filter((v) => {
-      if (suspectOnly) {
-        const hit = matrix.some((m) => m.verification_id === v.id && m.suspect);
-        if (!hit) return false;
-      }
-      if (statusGroupActive && !verMatchesStatusGroup(v.id)) return false;
-      if (verStatusFilterActive && !verStatusFilter.has(v.status_id)) return false;
-      if (!q) return true;
-      if (verMatches(v.id)) return true;
-      return matrix.some((m) => m.verification_id === v.id && reqMatches(m.req_id));
-    });
-  }, [
-    vers,
-    matrix,
-    suspectOnly,
-    statusGroupActive,
-    verStatusFilterActive,
-    verStatusFilter,
-    verMatchesStatusGroup,
-    q,
-    verMatches,
-    reqMatches,
-  ]);
-
-  const pageCount = Math.max(1, Math.ceil(sortedDisplayReqs.length / PAGE_SIZE));
-  const safePage = Math.min(page, pageCount);
-  const reqSlice = sortedDisplayReqs.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE,
+  const filteredReqs = useMemo(
+    () =>
+      reqs.filter((r) => {
+        if (reqStatusFilter.size > 0 && !reqStatusFilter.has(r.status_id)) return false;
+        if (suspectOnly && !matrix.some((m) => m.req_id === r.id && m.suspect)) return false;
+        if (verColumnFilterActive && !matrix.some((m) => m.req_id === r.id && linkMatchesVerFilters(m))) return false;
+        if (!q) return true;
+        if (reqMatches(r.id)) return true;
+        return matrix.some((m) => m.req_id === r.id && verMatches(m.verification_id));
+      }),
+    [reqs, matrix, reqStatusFilter, suspectOnly, verColumnFilterActive, linkMatchesVerFilters, q, reqMatches, verMatches],
   );
 
-  useEffect(() => {
-    setPage(1);
-  }, [suspectOnly, statusGroups, reqStatusFilter, verStatusFilter, q, sortColumn, sortDir]);
+  const categoryOf = useCallback((r: Requirement) => categoryById.get(r.category_id) ?? UNCATEGORISED, [categoryById]);
 
-  function toggleStatusGroup(group: StatusSemanticGroup) {
-    setStatusGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(group)) next.delete(group);
-      else next.add(group);
-      return next;
-    });
-  }
-
-  function clearStatusGroups() {
-    setStatusGroups(new Set());
-  }
-
-  function toggleReqStatusFilter(statusId: number) {
-    setReqStatusFilter((prev) => {
-      const next = new Set(prev);
-      if (next.has(statusId)) next.delete(statusId);
-      else next.add(statusId);
-      return next;
-    });
-  }
-
-  function clearReqStatusFilter() {
-    setReqStatusFilter(new Set());
-  }
-
-  function toggleVerStatusFilter(statusId: number) {
-    setVerStatusFilter((prev) => {
-      const next = new Set(prev);
-      if (next.has(statusId)) next.delete(statusId);
-      else next.add(statusId);
-      return next;
-    });
-  }
-
-  function clearVerStatusFilter() {
-    setVerStatusFilter(new Set());
-  }
-
-  function onSortRequirementHeaderClick(e: React.MouseEvent) {
-    if ((e.target as HTMLElement).closest('[data-matrix-resize-handle]')) return;
-    setSortColumn((prev) => {
-      if (prev.kind === 'requirement') {
-        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-        return prev;
-      }
-      setSortDir('asc');
-      return { kind: 'requirement' };
-    });
-  }
-
-  function onSortVerificationHeaderClick(verId: number) {
-    setSortColumn((prev) => {
-      if (prev.kind === 'verification' && prev.verId === verId) {
-        setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-        return prev;
-      }
-      setSortDir('desc');
-      return { kind: 'verification', verId };
-    });
-  }
-
-  function sortIndicatorForRequirement(): string {
-    if (sortColumn.kind !== 'requirement') return '↕';
-    return sortDir === 'asc' ? '↑' : '↓';
-  }
-
-  function sortIndicatorForVer(verId: number): string {
-    if (sortColumn.kind !== 'verification' || sortColumn.verId !== verId) return '↕';
-    return sortDir === 'asc' ? '↑' : '↓';
-  }
-
-  const projectName =
-    dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
-
-  async function onClearSuspect(m: MatrixLink) {
-    const token = csrfToken ?? '';
-    if (!token) return;
-    const key = `${m.req_id}-${m.verification_id}`;
-    setBusyKey(key);
-    try {
-      await clearTraceabilitySuspect(m.req_id, m.verification_id, token);
-      await load();
-    } finally {
-      setBusyKey(null);
+  /** Rows: category blocks when sorted by requirement; flat when sorted by a verification column. */
+  const orderedReqs = useMemo(() => {
+    const arr = [...filteredReqs];
+    const mult = params.dir === 'asc' ? 1 : -1;
+    const sort = params.sort;
+    if (sort.kind === 'verification') {
+      arr.sort((a, b) => mult * compareByVerificationColumn(a, b, sort.verId, linkByPair));
+      return arr;
     }
-  }
+    const rank = (c: string) => (c === UNCATEGORISED ? 1 : 0);
+    arr.sort((a, b) => {
+      const ca = categoryOf(a);
+      const cb = categoryOf(b);
+      return rank(ca) - rank(cb) || ca.localeCompare(cb) || mult * compareRefCode(a, b);
+    });
+    return arr;
+  }, [filteredReqs, params.sort, params.dir, linkByPair, categoryOf]);
 
-  /** Roll-up: count linked cells by verification status (for legend). */
-  const statusRollup = useMemo(() => {
-    const counts = new Map<string, { n: number; tagColor: string | null }>();
+  const displayVers = useMemo(
+    () =>
+      [...vers]
+        .sort((a, b) => (a.reference_code || '').localeCompare(b.reference_code || '', undefined, { numeric: true }))
+        .filter((v) => {
+          if (suspectOnly && !matrix.some((m) => m.verification_id === v.id && m.suspect)) return false;
+          if (!verMatchesStatusGroup(v.id)) return false;
+          if (verStatusFilter.size > 0 && !verStatusFilter.has(v.status_id)) return false;
+          if (!q) return true;
+          if (verMatches(v.id)) return true;
+          return matrix.some((m) => m.verification_id === v.id && reqMatches(m.req_id));
+        }),
+    [vers, matrix, suspectOnly, verMatchesStatusGroup, verStatusFilter, q, verMatches, reqMatches],
+  );
+
+  const rowIndexById = useMemo(() => new Map(orderedReqs.map((r, i) => [r.id, i])), [orderedReqs]);
+  const colIndexById = useMemo(() => new Map(displayVers.map((v, j) => [v.id, j])), [displayVers]);
+
+  const rows: MatrixRowItem[] = useMemo(
+    () =>
+      orderedReqs.map((r) => ({
+        id: r.id,
+        code: r.reference_code || `#${r.id}`,
+        title: r.title,
+        category: categoryOf(r),
+        statusTitle: reqStatusById.get(r.status_id)?.title ?? `Status #${r.status_id}`,
+        approvalState: r.approval_state,
+      })),
+    [orderedReqs, categoryOf, reqStatusById],
+  );
+
+  const cols: MatrixColItem[] = useMemo(
+    () =>
+      displayVers.map((v) => ({
+        id: v.id,
+        code: v.reference_code || `#${v.id}`,
+        name: v.name,
+        statusTitle: verStatusTitle(v),
+        method: v.verification_method_id != null ? methodById.get(v.verification_method_id)?.title ?? null : null,
+      })),
+    [displayVers, verStatusTitle, methodById],
+  );
+
+  const cells: MatrixCellItem[] = useMemo(() => {
+    const out: MatrixCellItem[] = [];
     for (const link of matrix) {
+      const row = rowIndexById.get(link.req_id);
+      const col = colIndexById.get(link.verification_id);
+      if (row == null || col == null) continue;
       if (suspectOnly && !link.suspect) continue;
-      if (!reqMatchesStatusFilter(link.req_id)) continue;
-      if (!linkMatchesVerFilters(link)) continue;
-      if (q && !reqMatches(link.req_id) && !verMatches(link.verification_id)) continue;
-      const t = verById.get(link.verification_id);
-      const st = t ? statusById.get(t.status_id) : undefined;
-      const label = st?.title ?? (t ? `Status #${t.status_id}` : 'Unknown');
-      const prev = counts.get(label);
-      counts.set(label, {
-        n: (prev?.n ?? 0) + 1,
-        tagColor: st?.tag_color ?? prev?.tagColor ?? null,
+      const v = verById.get(link.verification_id);
+      const title = verStatusTitle(v);
+      const tag = v ? statusById.get(v.status_id)?.tag_color : undefined;
+      const hex = tag?.trim() ?? '';
+      out.push({
+        row,
+        col,
+        link,
+        statusTitle: title,
+        group: statusSemanticGroup(title, tag),
+        symbol: statusGlyph(title, tag).symbol,
+        hex: /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : null,
       });
     }
-    return [...counts.entries()].sort((a, b) => b[1].n - a[1].n);
-  }, [
-    matrix,
-    suspectOnly,
-    reqMatchesStatusFilter,
-    linkMatchesVerFilters,
-    q,
-    verById,
-    statusById,
-    reqMatches,
-    verMatches,
-  ]);
+    return out;
+  }, [matrix, rowIndexById, colIndexById, suspectOnly, verById, verStatusTitle, statusById]);
 
-  if (loading) {
+  const groups = useMemo(
+    () => (params.sort.kind === 'requirement' ? groupRuns(rows.map((r) => r.category)) : []),
+    [params.sort.kind, rows],
+  );
+
+  const suspects: SuspectItem[] = useMemo(
+    () =>
+      cells
+        .filter((c) => c.link.suspect)
+        .sort((a, b) => a.row - b.row || a.col - b.col)
+        .map((c) => ({ row: c.row, col: c.col, reqCode: rows[c.row]!.code, verCode: cols[c.col]!.code, link: c.link })),
+    [cells, rows, cols],
+  );
+
+  const linkedReqIds = useMemo(() => new Set(matrix.map((m) => m.req_id)), [matrix]);
+  const linkedVerIds = useMemo(() => new Set(matrix.map((m) => m.verification_id)), [matrix]);
+  const reqsWithoutVerification: GapItem[] = useMemo(
+    () => rows.flatMap((r, i) => (linkedReqIds.has(r.id) ? [] : [{ index: i, code: r.code, title: r.title }])),
+    [rows, linkedReqIds],
+  );
+  const versWithoutRequirement: GapItem[] = useMemo(
+    () => cols.flatMap((v, j) => (linkedVerIds.has(v.id) ? [] : [{ index: j, code: v.code, title: v.name }])),
+    [cols, linkedVerIds],
+  );
+
+  /** Roll-up: count visible linked cells by verification status. */
+  const statusRollup = useMemo(() => {
+    const counts = new Map<string, { n: number; tagColor: string | null }>();
+    for (const c of cells) {
+      const v = verById.get(c.link.verification_id);
+      const tag = v ? statusById.get(v.status_id)?.tag_color ?? null : null;
+      const prev = counts.get(c.statusTitle);
+      counts.set(c.statusTitle, { n: (prev?.n ?? 0) + 1, tagColor: tag ?? prev?.tagColor ?? null });
+    }
+    return [...counts.entries()].sort((a, b) => b[1].n - a[1].n);
+  }, [cells, verById, statusById]);
+
+  // Selection resolved against the current rows/columns (disappears if filtered out).
+  const selected = useMemo(() => {
+    if (!selection) return null;
+    if (selection.kind === 'suspect') {
+      const row = rowIndexById.get(selection.req);
+      const col = colIndexById.get(selection.ver);
+      return row != null && col != null ? { kind: 'suspect' as const, row, col } : null;
+    }
+    if (selection.kind === 'row') {
+      const row = rowIndexById.get(selection.req);
+      return row != null ? { kind: 'row' as const, row } : null;
+    }
+    const col = colIndexById.get(selection.ver);
+    return col != null ? { kind: 'column' as const, col } : null;
+  }, [selection, rowIndexById, colIndexById]);
+
+  const focus: MatrixFocus | null = useMemo(() => {
+    if (!selected || !selection) return null;
+    const key = `${selection.kind}-${selection.seq}`;
+    if (selected.kind === 'suspect')
+      return { key, kind: 'suspect', rows: [selected.row, selected.row], cols: [selected.col, selected.col] };
+    if (selected.kind === 'row') return { key, kind: 'row', rows: [selected.row, selected.row], cols: null };
+    return { key, kind: 'column', rows: null, cols: [selected.col, selected.col] };
+  }, [selected, selection]);
+
+  const seq = () => (selection?.seq ?? 0) + 1;
+  const toggleSelection = (next: Selection, isSame: boolean) => setSelection(isSame ? null : next);
+
+  const projectName = dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
+
+  if (loading && reqs.length === 0) {
     return (
       <div className="p-8 text-center text-stitch-muted text-sm border border-stitch-border rounded-xl bg-stitch-surface">
         Loading matrix…
@@ -572,412 +510,164 @@ export default function MatrixPage() {
     );
   }
 
-  if (err) {
-    return (
-      <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-200 text-sm">
-        {err}
-      </div>
-    );
-  }
-
-  const linkCount = matrix.filter((m) => {
-    if (suspectOnly && !m.suspect) return false;
-    if (!reqMatchesStatusFilter(m.req_id)) return false;
-    if (!linkMatchesVerFilters(m)) return false;
-    if (!q) return true;
-    return reqMatches(m.req_id) || verMatches(m.verification_id);
-  }).length;
+  const chip = (active: boolean, onClick: () => void, children: React.ReactNode, title: string) => (
+    <button
+      type="button"
+      aria-pressed={active}
+      title={title}
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-medium ${
+        active ? chipOn : chipOff
+      }`}
+    >
+      {children}
+    </button>
+  );
+  const clear = (onClick: () => void) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-[10px] font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-accent px-2 py-1"
+    >
+      Clear
+    </button>
+  );
 
   return (
-    <div>
+    <div className="space-y-4">
       <StitchPageHeader
         projectName={projectName}
         section="Matrix"
         title="Traceability matrix"
-        subtitle="Requirements in rows, verifications in columns. Click any column header to sort rows (↑↓). Symbols show link + test status; empty cells are not linked."
+        subtitle="Requirements in rows (grouped by category), verifications in columns. Symbols show the verification status of each link; click a verification code to sort rows by that column."
       >
-        <a
-          href={`${basePath}/matrix`}
-          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
-        >
-          Classic matrix
-        </a>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="text-xs font-bold uppercase tracking-wider text-stitch-muted border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
-        >
+        <button type="button" onClick={() => void onExport()} disabled={exporting} className={headerButton}>
+          {exporting ? 'Exporting…' : 'Export Excel'}
+        </button>
+        <button type="button" onClick={() => void load()} className={headerButton}>
           Refresh
         </button>
       </StitchPageHeader>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-        <div className="flex flex-col gap-3">
-          <label className="flex items-center gap-2 text-sm text-stitch-muted cursor-pointer">
-            <input
-              type="checkbox"
-              checked={suspectOnly}
-              onChange={(e) => setSuspectOnly(e.target.checked)}
-              className="rounded-sm border-stitch-border text-stitch-accent"
-            />
-            Suspect links only (rows &amp; columns filtered)
-          </label>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] uppercase tracking-widest text-stitch-muted font-bold shrink-0">
-              Status groups
-            </span>
-            {STATUS_GROUP_OPTIONS.map(({ id, label, symbol, symbolClass }) => {
-              const active = statusGroups.has(id);
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  aria-pressed={active}
-                  title={`${active ? 'Remove' : 'Show'} ${label}`}
-                  onClick={() => toggleStatusGroup(id)}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium border transition-colors ${
-                    active
-                      ? 'border-stitch-accent bg-stitch-accent/15 text-stitch-fg'
-                      : 'border-stitch-border bg-stitch-elevated/50 text-stitch-muted hover:bg-stitch-higher hover:text-stitch-fg'
-                  }`}
-                >
-                  <span className={`font-semibold ${symbolClass}`} aria-hidden>
-                    {symbol}
-                  </span>
-                  {label}
-                </button>
-              );
-            })}
-            {statusGroupActive ? (
-              <button
-                type="button"
-                onClick={clearStatusGroups}
-                className="text-[10px] font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-accent px-2 py-1"
-              >
-                Clear
-              </button>
-            ) : null}
-          </div>
-          {reqStatusOptions.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] uppercase tracking-widest text-stitch-muted font-bold shrink-0">
-                Requirement status
-              </span>
-              {reqStatusOptions.map((st) => {
-                const active = reqStatusFilter.has(st.id);
-                return (
-                  <button
-                    key={st.id}
-                    type="button"
-                    aria-pressed={active}
-                    title={`${active ? 'Remove' : 'Show'} requirements with status ${st.title}`}
-                    onClick={() => toggleReqStatusFilter(st.id)}
-                    className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors ${
-                      active
-                        ? 'border-stitch-accent bg-stitch-accent/15 text-stitch-fg'
-                        : 'border-stitch-border bg-stitch-elevated/50 text-stitch-muted hover:bg-stitch-higher hover:text-stitch-fg'
-                    }`}
-                  >
-                    <StatusBadge title={st.title} tagColor={st.tag_color} />
-                  </button>
-                );
-              })}
-              {reqStatusFilterActive ? (
-                <button
-                  type="button"
-                  onClick={clearReqStatusFilter}
-                  className="text-[10px] font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-accent px-2 py-1"
-                >
-                  Clear
-                </button>
-              ) : null}
-            </div>
-          ) : null}
-          {verStatusOptions.length > 0 ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] uppercase tracking-widest text-stitch-muted font-bold shrink-0">
-                Verification status
-              </span>
-              {verStatusOptions.map((st) => {
-                const active = verStatusFilter.has(st.id);
-                return (
-                  <button
-                    key={st.id}
-                    type="button"
-                    aria-pressed={active}
-                    title={`${active ? 'Remove' : 'Show'} verifications with status ${st.title}`}
-                    onClick={() => toggleVerStatusFilter(st.id)}
-                    className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium border transition-colors ${
-                      active
-                        ? 'border-stitch-accent bg-stitch-accent/15 text-stitch-fg'
-                        : 'border-stitch-border bg-stitch-elevated/50 text-stitch-muted hover:bg-stitch-higher hover:text-stitch-fg'
-                    }`}
-                  >
-                    <StatusBadge title={st.title} tagColor={st.tag_color} />
-                  </button>
-                );
-              })}
-              {verStatusFilterActive ? (
-                <button
-                  type="button"
-                  onClick={clearVerStatusFilter}
-                  className="text-[10px] font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-accent px-2 py-1"
-                >
-                  Clear
-                </button>
-              ) : null}
-            </div>
-          ) : null}
+      <div className="rounded-xl border border-stitch-border bg-stitch-surface p-4 space-y-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={label}>Links</span>
+          {chip(
+            suspectOnly,
+            () => update({ suspectOnly: !suspectOnly }),
+            <>
+              <span className="h-3 w-3 rounded-sm shadow-[inset_0_0_0_2px_var(--color-stitch-danger)]" aria-hidden />
+              Suspect only
+            </>,
+            'Show only suspect links (rows and columns filtered)',
+          )}
+          <span className={`${label} ml-3`}>Status groups</span>
+          {STATUS_GROUP_OPTIONS.map(({ id, label: text, symbol }) =>
+            chip(
+              statusGroups.has(id),
+              () => update({ statusGroups: toggleIn<StatusSemanticGroup>(params.statusGroups, id) }),
+              <>
+                <span className="font-semibold" aria-hidden>
+                  {symbol}
+                </span>
+                {text}
+              </>,
+              `${statusGroups.has(id) ? 'Remove' : 'Show'} ${text}`,
+            ),
+          )}
+          {statusGroups.size > 0 ? clear(() => update({ statusGroups: [] })) : null}
         </div>
-        <p className="text-[10px] text-stitch-muted font-mono">
-          {sortedDisplayReqs.length} req × {displayVers.length} test
-          {linkCount > 0 ? ` · ${linkCount} visible link${linkCount === 1 ? '' : 's'}` : ''}
+        {reqStatusOptions.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={label}>Requirement status</span>
+            {reqStatusOptions.map((st) =>
+              chip(
+                reqStatusFilter.has(st.id),
+                () => update({ reqStatusIds: toggleIn(params.reqStatusIds, st.id) }),
+                <StatusBadge title={st.title} tagColor={st.tag_color} />,
+                `${reqStatusFilter.has(st.id) ? 'Remove' : 'Show'} requirements with status ${st.title}`,
+              ),
+            )}
+            {reqStatusFilter.size > 0 ? clear(() => update({ reqStatusIds: [] })) : null}
+          </div>
+        ) : null}
+        {verStatusOptions.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={label}>Verification status</span>
+            {verStatusOptions.map((st) =>
+              chip(
+                verStatusFilter.has(st.id),
+                () => update({ verStatusIds: toggleIn(params.verStatusIds, st.id) }),
+                <StatusBadge title={st.title} tagColor={st.tag_color} />,
+                `${verStatusFilter.has(st.id) ? 'Remove' : 'Show'} verifications with status ${st.title}`,
+              ),
+            )}
+            {verStatusFilter.size > 0 ? clear(() => update({ verStatusIds: [] })) : null}
+          </div>
+        ) : null}
+        <p className="font-mono text-[11px] text-stitch-muted" data-testid="matrix-stats">
+          {rows.length} req × {cols.length} verifications · {cells.length} link{cells.length === 1 ? '' : 's'} ·{' '}
+          {suspects.length} suspect · {reqsWithoutVerification.length + versWithoutRequirement.length} coverage gap
+          {reqsWithoutVerification.length + versWithoutRequirement.length === 1 ? '' : 's'}
         </p>
       </div>
 
-      <div className="mb-4 rounded-xl border border-stitch-border bg-stitch-elevated/50 px-4 py-3 text-[11px] text-stitch-muted space-y-2">
-        <p className="font-bold text-[10px] uppercase tracking-widest text-stitch-fg/80">Symbols</p>
-        <div className="flex flex-wrap gap-x-4 gap-y-1">
-          <span>
-            <span className="text-emerald-400 font-semibold mr-1">✓</span> pass / complete
-          </span>
-          <span>
-            <span className="text-amber-300 font-semibold mr-1">✓</span> verified / accepted
-          </span>
-          <span>
-            <span className="text-amber-200 font-semibold mr-1">◐</span> pending / review
-          </span>
-          <span>
-            <span className="text-stitch-muted font-semibold mr-1">○</span> draft
-          </span>
-          <span>
-            <span className="text-red-300 font-semibold mr-1">✗</span> fail / reject
-          </span>
-          <span>
-            <span className="text-stitch-muted font-semibold mr-1">●</span> other (see tooltip)
-          </span>
-          <span>
-            <span className="text-amber-400 font-semibold mr-1">⚠</span> suspect link
-          </span>
+      {err ? (
+        <p role="alert" className="rounded-lg border border-stitch-danger/40 bg-stitch-danger/10 px-3 py-2 text-sm text-stitch-fg">
+          {err}
+        </p>
+      ) : null}
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px] items-start">
+        <div className="min-w-0 space-y-2">
+          <MatrixGrid
+            rows={rows}
+            cols={cols}
+            cells={cells}
+            groups={groups}
+            basePath={basePath}
+            sort={params.sort}
+            dir={params.dir}
+            onSortRequirement={() => update(nextSort(params, { kind: 'requirement' }))}
+            onSortVerification={(verId) => update(nextSort(params, { kind: 'verification', verId }))}
+            rowHeaderWidth={reqColWidthPx}
+            onResizeStart={onReqColResizeStart}
+            focus={focus}
+            onOpenRequirement={(id) => navigate(`${basePath}/requirements/${id}`)}
+          />
+          <p className="text-[11px] text-stitch-muted">
+            A symbol in row <b>i</b>, column <b>j</b>: requirement i is verified by verification j, with that
+            verification&apos;s status. Click a symbol to open the requirement; hover for details.
+          </p>
         </div>
+        <MatrixSidePanel
+          suspects={suspects}
+          reqsWithoutVerification={reqsWithoutVerification}
+          versWithoutRequirement={versWithoutRequirement}
+          rollup={statusRollup}
+          selected={selected}
+          onSelectSuspect={(row, col) =>
+            toggleSelection(
+              { kind: 'suspect', req: rows[row]!.id, ver: cols[col]!.id, seq: seq() },
+              selected?.kind === 'suspect' && selected.row === row && selected.col === col,
+            )
+          }
+          onSelectRow={(row) =>
+            toggleSelection({ kind: 'row', req: rows[row]!.id, seq: seq() }, selected?.kind === 'row' && selected.row === row)
+          }
+          onSelectColumn={(col) =>
+            toggleSelection(
+              { kind: 'column', ver: cols[col]!.id, seq: seq() },
+              selected?.kind === 'column' && selected.col === col,
+            )
+          }
+          onReview={(link) => void openSuspectDiff(link)}
+          onClear={(link) => void onClearSuspect(link)}
+          busyKey={busyKey}
+          canClear={Boolean(csrfToken)}
+        />
       </div>
 
-      {statusRollup.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-2">
-          <span className="text-[10px] uppercase tracking-widest text-stitch-muted font-bold">
-            Linked cells by status
-          </span>
-          {statusRollup.map(([label, { n, tagColor }]) => (
-            <span key={label} className="inline-flex items-center gap-1.5">
-              <StatusBadge title={label} tagColor={tagColor} />
-              <span className="text-xs text-stitch-muted tabular-nums">×{n}</span>
-            </span>
-          ))}
-        </div>
-      )}
-
-      <div className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch">
-        <div className="overflow-x-auto overflow-y-auto max-h-[min(70vh,720px)]">
-          <table className="w-max min-w-full text-left text-sm border-collapse">
-            <thead className="sticky top-0 z-20">
-              <tr className="border-b border-stitch-border bg-stitch-elevated">
-                <th
-                  scope="col"
-                  style={reqColStyle}
-                  className="sticky left-0 z-30 bg-stitch-elevated border-r border-stitch-border pl-2 pr-1 py-2 text-[10px] uppercase tracking-widest text-stitch-muted shadow-[2px_0_8px_rgba(0,0,0,0.12)] relative select-none"
-                >
-                  <button
-                    type="button"
-                    title="Sort rows by requirement reference. Click again to reverse."
-                    onClick={onSortRequirementHeaderClick}
-                    className="w-full text-left flex items-center justify-between gap-1 pr-5 rounded-xs hover:bg-white/6 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-stitch-accent/40 -ml-0.5 pl-0.5 py-0.5"
-                  >
-                    <span className="block truncate">Requirement</span>
-                    <span className="shrink-0 font-mono text-stitch-accent opacity-90" aria-hidden>
-                      {sortIndicatorForRequirement()}
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    data-matrix-resize-handle
-                    aria-label="Resize requirement column"
-                    title="Drag to resize"
-                    onMouseDown={onReqColResizeStart}
-                    className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize z-40 border-0 bg-transparent p-0 hover:bg-stitch-accent/25 active:bg-stitch-accent/40 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-stitch-accent/50 rounded-xs"
-                  />
-                </th>
-                {displayVers.map((v) => {
-                  const refLabel = v.reference_code || `#${v.id}`;
-                  return (
-                  <th
-                    key={v.id}
-                    scope="col"
-                    className={`align-top p-0 border-l border-stitch-border/60 select-none ${VER_COL_CLASS}`}
-                  >
-                    <div className="flex flex-col items-stretch gap-1 px-1 py-2">
-                      <button
-                        type="button"
-                        title={`${refLabel} — ${v.name}. Sort rows by this column; click again to reverse.`}
-                        onClick={() => onSortVerificationHeaderClick(v.id)}
-                        className="flex flex-col items-center gap-0.5 w-full cursor-pointer hover:bg-white/6 transition-colors border-0 bg-transparent rounded-md py-1 outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-stitch-accent/50"
-                      >
-                        <span className="font-mono text-[9px] font-bold text-stitch-accent leading-snug text-center line-clamp-3 break-all w-full px-0.5">
-                          {refLabel}
-                        </span>
-                        <span
-                          className="font-mono text-[9px] text-stitch-muted"
-                          aria-hidden
-                        >
-                          {sortIndicatorForVer(v.id)}
-                        </span>
-                      </button>
-                      <Link
-                        to={`${basePath}/verifications/${v.id}`}
-                        title={`Open ${refLabel}`}
-                        className="shrink-0 py-0.5 text-[8px] font-bold uppercase tracking-tighter text-center text-stitch-muted hover:text-stitch-accent border-t border-stitch-border/40"
-                      >
-                        View
-                      </Link>
-                    </div>
-                  </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-stitch-border/80">
-              {displayVers.length === 0 ? (
-                <tr>
-                  <td colSpan={1} className="px-4 py-10 text-center text-stitch-muted">
-                    No verifications match filters.
-                  </td>
-                </tr>
-              ) : reqSlice.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={displayVers.length + 1}
-                    className="px-4 py-10 text-center text-stitch-muted"
-                  >
-                    No requirements match filters.
-                  </td>
-                </tr>
-              ) : (
-                reqSlice.map((r) => (
-                  <tr key={r.id} className="hover:bg-white/2">
-                    <th
-                      scope="row"
-                      style={reqColStyle}
-                      className="sticky left-0 z-10 bg-stitch-surface border-r border-stitch-border pl-2 pr-2 py-2 text-left align-middle shadow-[2px_0_8px_rgba(0,0,0,0.08)] overflow-hidden"
-                    >
-                      <Link
-                        to={`${basePath}/requirements/${r.id}`}
-                        className="font-mono text-xs text-stitch-accent hover:underline block truncate"
-                        title={r.reference_code ?? undefined}
-                      >
-                        {r.reference_code ?? `#${r.id}`}
-                      </Link>
-                      <span className="text-[10px] text-stitch-muted line-clamp-2 font-normal wrap-break-word">
-                        {r.title}
-                      </span>
-                    </th>
-                    {displayVers.map((v) => {
-                      const link = linkByPair.get(`${r.id}-${v.id}`);
-                      const test = verById.get(v.id);
-                      const vst = test ? statusById.get(test.status_id) : undefined;
-                      const statusTitle = vst?.title ?? (test ? `Status #${test.status_id}` : '—');
-                      const { symbol, className } = statusGlyph(statusTitle, vst?.tag_color);
-                      const bkey = `${r.id}-${v.id}`;
-                      const hex = vst?.tag_color?.trim() ?? '';
-                      const dotStyle =
-                        symbol === '●' && /^#[0-9A-Fa-f]{6}$/.test(hex)
-                          ? { color: hex }
-                          : undefined;
-
-                      return (
-                        <td
-                          key={v.id}
-                          className={`border-l border-stitch-border/50 text-center align-middle p-1 ${VER_COL_CLASS}`}
-                        >
-                          {link ? (
-                            <div
-                              className="flex flex-col items-center gap-0.5 min-h-9 justify-center"
-                              title={`${statusTitle}${link.suspect ? ' · Suspect (re-review)' : ''} · ${r.reference_code ?? r.id} ↔ ${v.reference_code ?? v.id}`}
-                            >
-                              <span className="flex items-center gap-0.5 leading-none">
-                                {link.suspect ? (
-                                  <span className="text-amber-400 text-sm" aria-hidden>
-                                    ⚠
-                                  </span>
-                                ) : null}
-                                <span
-                                  className={`text-lg font-semibold ${className}`}
-                                  style={dotStyle}
-                                >
-                                  {symbol}
-                                </span>
-                              </span>
-                              {link.suspect ? (
-                                <span className="flex items-center gap-1">
-                                  <button
-                                    type="button"
-                                    disabled={diffBusyKey === bkey}
-                                    onClick={() => void openSuspectDiff(link)}
-                                    className="text-[9px] font-bold uppercase text-stitch-accent hover:underline disabled:opacity-40 leading-none"
-                                  >
-                                    {diffBusyKey === bkey ? '…' : 'review'}
-                                  </button>
-                                  <span className="text-stitch-border">·</span>
-                                  <button
-                                    type="button"
-                                    disabled={busyKey === bkey || !(csrfToken ?? '').length}
-                                    onClick={() => void onClearSuspect(link)}
-                                    className="text-[9px] font-bold uppercase text-stitch-accent hover:underline disabled:opacity-40 leading-none"
-                                  >
-                                    {busyKey === bkey ? '…' : 'clear'}
-                                  </button>
-                                </span>
-                              ) : null}
-                            </div>
-                          ) : (
-                            <span className="text-stitch-muted/40 text-xs select-none" title="Not linked">
-                              ·
-                            </span>
-                          )}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {pageCount > 1 && (
-        <div className="flex items-center justify-between mt-4 text-xs text-stitch-muted">
-          <span>
-            Requirements page {safePage} / {pageCount} ({reqSlice.length} rows)
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={safePage <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="px-3 py-1 rounded-sm border border-stitch-border disabled:opacity-30"
-            >
-              Prev
-            </button>
-            <button
-              type="button"
-              disabled={safePage >= pageCount}
-              onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-              className="px-3 py-1 rounded-sm border border-stitch-border disabled:opacity-30"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      )}
       {diffRequirementId != null ? (
         <RequirementVersionDiffDialog
           open

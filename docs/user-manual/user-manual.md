@@ -339,12 +339,19 @@ The traceability matrix is central to **test management** and coverage: it shows
 
 ### 6.2 Using the Matrix
 
-- **Table**: Rows and columns represent requirements and verifications (or the configured layout); cells indicate links.
-- **Filters**: Restrict by verification status, requirement status, category, applicability, search, suspect links.
-- **Sort** and **paginate** as available.
-- **Sticky headers** and **virtual scrolling** may be used for large matrices.
-- **Clear suspect**: For links marked “suspect” (e.g. after a requirement or test change), you can clear the suspect flag from the matrix (action/button or **Clear suspect** form); the system records user and timestamp.
-- **Review suspect change**: Select **Review** on a suspect link to compare the requirement version that triggered the flag with its preceding version before clearing it.
+The matrix uses the same layout as the dependency structure matrix (§6.4).
+
+- **Grid:** requirements are rows and verifications are columns. The header rows stay visible while you scroll in either direction. A symbol in a cell means the requirement is verified by that verification, and shows the verification's status: **✓** pass/complete, **✓** verified/accepted, **◐** pending/review, **○** draft, **✗** fail/reject, **●** other (in the status colour). Empty cells are not linked.
+- **Rows:** grouped by **category** (separated by a line, with the category name on the first row), in reference-code order. Click the corner header to reverse the order, and drag its right edge to resize the requirement column.
+- **Sort by a verification:** click a verification's code in the column header to list the requirements it verifies first (suspect links first among them). Click again to reverse. The **↗** below the code opens the verification.
+- **Hover** a requirement, a verification or a cell to see its details: title, category, status, approval state, link counts and, for suspect links, the reason and date.
+- **Filters:** *Suspect only*, *Status groups*, *Requirement status* and *Verification status* chips, plus the global search. Filters and sort are kept in the page URL, so a filtered view can be bookmarked or shared.
+- **Suspect links:** shown with a red frame. The side panel lists them.
+  - Click a suspect link in the panel to scroll the matrix to its cell.
+  - **Review** compares the requirement version that triggered the flag with its preceding version.
+  - **Clear** removes the flag; the system records the user and timestamp.
+- **Coverage gaps:** the side panel lists requirements without any verification and verifications without any requirement. Click one to scroll to its row or column.
+- **Linked cells by status** in the side panel counts the visible links per verification status.
 
 ### 6.3 Exporting the Matrix
 

@@ -1,7 +1,7 @@
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
 use chrono::{Duration, NaiveDateTime};
-use rand::RngCore;
+use rand::TryRng;
 use sha2::{Digest, Sha256};
 use url::Url;
 
@@ -72,7 +72,9 @@ pub struct DelegatedPrincipal {
 
 fn random_secret() -> String {
     let mut bytes = [0_u8; 32];
-    rand::rngs::OsRng.fill_bytes(&mut bytes);
+    rand::rngs::SysRng
+        .try_fill_bytes(&mut bytes)
+        .expect("OS random number generator unavailable");
     URL_SAFE_NO_PAD.encode(bytes)
 }
 

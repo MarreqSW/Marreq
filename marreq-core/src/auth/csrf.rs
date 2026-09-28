@@ -16,8 +16,8 @@
 //!    - the `X-CSRF-Token` header against the `csrf` cookie value, **or**
 //!    - the `Origin` / `Referer` header against the application's own origin.
 
-use rand::rngs::OsRng;
-use rand::RngCore;
+use rand::rngs::SysRng;
+use rand::TryRng;
 use rocket::http::{Cookie, CookieJar, SameSite};
 
 /// Name of the private CSRF cookie that stores the token.
@@ -30,7 +30,9 @@ pub const CSRF_HEADER: &str = "X-CSRF-Token";
 /// lowercase hex characters).
 pub fn generate_csrf_token() -> String {
     let mut bytes = [0u8; 32];
-    OsRng.fill_bytes(&mut bytes);
+    SysRng
+        .try_fill_bytes(&mut bytes)
+        .expect("OS random number generator unavailable");
     bytes.iter().map(|b| format!("{:02x}", b)).collect()
 }
 

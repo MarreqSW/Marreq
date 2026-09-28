@@ -599,7 +599,7 @@ mod tests {
         let issuer = format!("http://{address}");
         let server_issuer = issuer.clone();
         let token_nonce = token_nonce.to_owned();
-        let private_key = RsaPrivateKey::new(&mut rand::thread_rng(), 2048).unwrap();
+        let private_key = RsaPrivateKey::new(&mut rsa::rand_core::OsRng, 2048).unwrap();
         let public_key = RsaPublicKey::from(&private_key);
         let modulus = URL_SAFE_NO_PAD.encode(public_key.n().to_bytes_be());
         let exponent = URL_SAFE_NO_PAD.encode(public_key.e().to_bytes_be());

@@ -20,7 +20,7 @@
 
 use std::time::Instant;
 
-use rand::RngCore;
+use rand::Rng;
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::{Header, Status};
 use rocket::{Data, Request, Response};
@@ -100,7 +100,7 @@ impl Fairing for RequestLogFairing {
 /// requests in logs without pulling in the `uuid` crate.
 fn generate_request_id() -> String {
     let mut buf = [0u8; 8];
-    rand::thread_rng().fill_bytes(&mut buf);
+    rand::rng().fill_bytes(&mut buf);
     let mut s = String::with_capacity(16);
     for b in buf {
         s.push_str(&format!("{b:02x}"));

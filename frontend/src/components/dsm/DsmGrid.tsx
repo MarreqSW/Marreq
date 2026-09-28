@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { useMemo, useRef, useState, type MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import type { Dsm, DsmCell } from '@/api/types';
 import { buildCellMap, cellAtPoint, cellKey, linkTypeMeta, loopNumberByRequirement } from '@/utils/dsm';
+import { FloatingCard, centreScrollPosition, gridLinesStyle, useScrollToTarget, type GridLayout } from '@/components/grid/gridShared';
 
 /** Cell edge in px; the body is `n × CELL` square. */
 export const DSM_CELL = 26;
@@ -32,26 +33,21 @@ type Props = {
   onOpenRequirement: (requirementId: number) => void;
 };
 
+const LAYOUT: GridLayout = {
+  rowHeaderWidth: ROW_HEADER_W,
+  columnHeaderHeight: COL_HEADER_H,
+  cellWidth: DSM_CELL,
+  cellHeight: DSM_CELL,
+};
+
 /** Scroll offsets that centre `focus` in the part of the viewport not covered by the sticky headers. */
 export function focusScrollPosition(
   focus: Pick<DsmFocus, 'rows' | 'cols'>,
   viewport: { width: number; height: number },
 ): { left: number; top: number } {
-  const bodyWidth = Math.max(0, viewport.width - ROW_HEADER_W);
-  const bodyHeight = Math.max(0, viewport.height - COL_HEADER_H);
-  const centreX = ((focus.cols[0] + focus.cols[1] + 1) / 2) * DSM_CELL;
-  const centreY = ((focus.rows[0] + focus.rows[1] + 1) / 2) * DSM_CELL;
-  return {
-    left: Math.max(0, Math.round(centreX - bodyWidth / 2)),
-    top: Math.max(0, Math.round(centreY - bodyHeight / 2)),
-  };
+  return centreScrollPosition(focus, viewport, { left: 0, top: 0 }, LAYOUT);
 }
 
-/**
- * Sparse DSM rendering: grid lines are a CSS background, and only the
- * diagonal, marks, group frames and hover overlays are elements, so the DOM
- * grows with requirements + links rather than requirements².
- */
 export default function DsmGrid({ dsm, basePath, highlightIds, focus, onOpenRequirement }: Props) {
   const n = dsm.requirements.length;
   const size = n * DSM_CELL;
@@ -75,18 +71,7 @@ export default function DsmGrid({ dsm, basePath, highlightIds, focus, onOpenRequ
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Bring a newly selected problem into view: the page first, then the matrix itself.
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!focus || !el) return;
-    el.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
-    const { left, top } = focusScrollPosition(focus, { width: el.clientWidth, height: el.clientHeight });
-    if (typeof el.scrollTo === 'function') el.scrollTo({ left, top, behavior: 'smooth' });
-    else {
-      el.scrollLeft = left;
-      el.scrollTop = top;
-    }
-    // Only a new focus request (new key) re-centres the matrix, not every re-render.
-  }, [focus?.key]);
+  useScrollToTarget(scrollRef, focus, LAYOUT);
 
   const hoverCell: DsmCell | undefined = hover ? cellMap.get(cellKey(hover.row, hover.col)) : undefined;
 
@@ -116,11 +101,7 @@ export default function DsmGrid({ dsm, basePath, highlightIds, focus, onOpenRequ
     );
   }
 
-  const gridLines = {
-    backgroundImage:
-      'linear-gradient(to right, var(--color-stitch-border) 1px, transparent 1px), linear-gradient(to bottom, var(--color-stitch-border) 1px, transparent 1px)',
-    backgroundSize: `${DSM_CELL}px ${DSM_CELL}px`,
-  };
+  const gridLines = gridLinesStyle(DSM_CELL, DSM_CELL);
 
   return (
     <div
@@ -306,23 +287,6 @@ export default function DsmGrid({ dsm, basePath, highlightIds, focus, onOpenRequ
           <RequirementSummary dsm={dsm} index={headerHover.index} />
         </FloatingCard>
       ) : null}
-    </div>
-  );
-}
-
-/** Viewport-fixed card at the mouse, flipped left/up near the edges so it is never clipped. */
-function FloatingCard({ x, y, children }: { x: number; y: number; children: React.ReactNode }) {
-  const width = 300;
-  const estimatedHeight = 150;
-  const left = x + 16 + width > window.innerWidth ? Math.max(8, x - 16 - width) : x + 16;
-  const top = y + 16 + estimatedHeight > window.innerHeight ? Math.max(8, y - 16 - estimatedHeight) : y + 16;
-  return (
-    <div
-      role="tooltip"
-      className="fixed z-50 rounded-lg border border-stitch-border bg-stitch-surface p-3 text-xs shadow-stitch pointer-events-none"
-      style={{ left, top, width }}
-    >
-      {children}
     </div>
   );
 }

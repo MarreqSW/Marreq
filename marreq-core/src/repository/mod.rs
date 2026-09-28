@@ -695,6 +695,11 @@ pub trait RequirementVersionLinksRepository {
         &self,
         link_id: i32,
     ) -> Result<RequirementVersionLink, RepoError>;
+    /// Requirement id for each of the given version ids (unknown ids are omitted).
+    fn requirement_ids_for_versions(
+        &self,
+        version_ids: &[i32],
+    ) -> Result<std::collections::HashMap<i32, i32>, RepoError>;
 }
 
 pub trait NotificationRepository {

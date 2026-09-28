@@ -3358,6 +3358,20 @@ impl RequirementVersionLinksRepository for DieselRepoMock {
             .cloned()
             .ok_or(RepoError::NotFound)
     }
+
+    fn requirement_ids_for_versions(
+        &self,
+        version_ids: &[i32],
+    ) -> Result<std::collections::HashMap<i32, i32>, RepoError> {
+        Ok(version_ids
+            .iter()
+            .filter_map(|v| {
+                self.requirement_versions
+                    .get(v)
+                    .map(|rv| (*v, rv.requirement_id))
+            })
+            .collect())
+    }
 }
 
 impl super::NotificationRepository for DieselRepoMock {

@@ -295,6 +295,155 @@ pub fn verifications_workbook_with_repo<R: Repository>(
     Ok(workbook.save_to_buffer()?)
 }
 
+/// Short marker for a link type in DSM cells.
+fn dsm_link_letter(link_type: &str) -> &'static str {
+    match link_type {
+        "DERIVES_FROM" => "D",
+        "REFINES" => "R",
+        "DEPENDS_ON" => "P",
+        "SATISFIES" => "S",
+        "RELATES_TO" => "~",
+        _ => "?",
+    }
+}
+
+/// Dependency Structure Matrix workbook (issue #328): sheet "DSM" with the
+/// ordered matrix (row depends on column), plus "Loops" and "Legend".
+pub fn dsm_workbook(dsm: &crate::services::dsm_service::Dsm) -> Result<Vec<u8>, WorkbookError> {
+    use rust_xlsxwriter::{Color, Format, FormatAlign, FormatBorder};
+
+    const FIRST_COL: u16 = 4;
+    let header = Format::new()
+        .set_bold()
+        .set_background_color(Color::RGB(0xE2E5ED));
+    let col_header = header
+        .clone()
+        .set_rotation(90)
+        .set_align(FormatAlign::Center)
+        .set_font_color(Color::RGB(0x1A237E));
+    let diagonal = Format::new().set_background_color(Color::RGB(0x3C4043));
+    let mark = Format::new()
+        .set_bold()
+        .set_align(FormatAlign::Center)
+        .set_font_color(Color::RGB(0x1A237E));
+    let loop_mark = mark.clone().set_background_color(Color::RGB(0xFDE8C4));
+    let changed = mark
+        .clone()
+        .set_border(FormatBorder::Medium)
+        .set_border_color(Color::RGB(0xC5221F));
+    let changed_loop = changed.clone().set_background_color(Color::RGB(0xFDE8C4));
+    let group_band = Format::new().set_background_color(Color::RGB(0xF3F4F8));
+
+    let mut workbook = Workbook::new();
+    let sheet = workbook.add_worksheet().set_name("DSM")?;
+    sheet.write_string_with_format(0, 0, "#", &header)?;
+    sheet.write_string_with_format(0, 1, "Reference", &header)?;
+    sheet.write_string_with_format(0, 2, "Title", &header)?;
+    sheet.write_string_with_format(0, 3, "Group", &header)?;
+    sheet.set_row_height(0, 90)?;
+    sheet.set_column_width(0, 5)?;
+    sheet.set_column_width(1, 16)?;
+    sheet.set_column_width(2, 40)?;
+    sheet.set_column_width(3, 16)?;
+
+    let group_of = |index: usize| {
+        dsm.groups
+            .iter()
+            .position(|g| (g.start..=g.end).contains(&index))
+    };
+    for r in &dsm.requirements {
+        let row = r.index as u32 + 1;
+        let col = FIRST_COL + r.index as u16;
+        sheet.write_string_with_format(0, col, &r.reference_code, &col_header)?;
+        sheet.set_column_width(col, 3.5)?;
+        // Alternate bands in the row header make category blocks visible.
+        let band = group_of(r.index).is_some_and(|g| g % 2 == 1);
+        let label_format = if band { &group_band } else { &Format::new() };
+        sheet.write_number_with_format(row, 0, (r.index + 1) as f64, label_format)?;
+        sheet.write_string_with_format(row, 1, &r.reference_code, label_format)?;
+        sheet.write_string_with_format(row, 2, &r.title, label_format)?;
+        let group = group_of(r.index)
+            .map(|g| dsm.groups[g].label.clone())
+            .unwrap_or_else(|| r.category.clone());
+        sheet.write_string_with_format(row, 3, &group, label_format)?;
+        sheet.write_blank(row, col, &diagonal)?;
+    }
+    for cell in &dsm.cells {
+        let text: String = cell.link_types.iter().map(|t| dsm_link_letter(t)).collect();
+        let format = match (cell.upstream_changed, cell.in_loop) {
+            (true, true) => &changed_loop,
+            (true, false) => &changed,
+            (false, true) => &loop_mark,
+            (false, false) => &mark,
+        };
+        sheet.write_string_with_format(
+            cell.row as u32 + 1,
+            FIRST_COL + cell.col as u16,
+            &text,
+            format,
+        )?;
+    }
+    sheet.set_freeze_panes(1, FIRST_COL)?;
+
+    let code_of = |id: i32| {
+        dsm.requirements
+            .iter()
+            .find(|r| r.id == id)
+            .map(|r| r.reference_code.clone())
+            .unwrap_or_else(|| format!("#{id}"))
+    };
+    let loops = workbook.add_worksheet().set_name("Loops")?;
+    loops.write_string_with_format(0, 0, "Loop", &header)?;
+    loops.write_string_with_format(0, 1, "Requirements", &header)?;
+    loops.write_string_with_format(0, 2, "Cycle", &header)?;
+    loops.set_column_width(1, 14)?;
+    loops.set_column_width(2, 80)?;
+    for (i, l) in dsm.loops.iter().enumerate() {
+        let row = i as u32 + 1;
+        loops.write_number(row, 0, (i + 1) as f64)?;
+        loops.write_number(row, 1, l.requirement_ids.len() as f64)?;
+        let mut cycle: Vec<String> = l.path.iter().map(|id| code_of(*id)).collect();
+        if let Some(first) = cycle.first().cloned() {
+            cycle.push(first);
+        }
+        loops.write_string(row, 2, cycle.join(" → "))?;
+    }
+
+    let legend = workbook.add_worksheet().set_name("Legend")?;
+    legend.set_column_width(0, 14)?;
+    legend.set_column_width(1, 70)?;
+    let rows: [(&str, &str); 9] = [
+        (
+            "Row / column",
+            "A mark in row i, column j: requirement i's current version links to requirement j.",
+        ),
+        ("D", "Derives from"),
+        ("R", "Refines"),
+        ("P", "Depends on"),
+        ("S", "Satisfies"),
+        ("~", "Relates to"),
+        ("Dark cell", "Diagonal (the requirement itself)"),
+        (
+            "Amber cell",
+            "Both requirements are in the same dependency loop (see Loops)",
+        ),
+        (
+            "Red border",
+            "Upstream changed: the target was edited after the source was approved",
+        ),
+    ];
+    for (i, (k, v)) in rows.iter().enumerate() {
+        legend.write_string_with_format(i as u32, 0, *k, &header)?;
+        legend.write_string(i as u32, 1, *v)?;
+    }
+    legend.write_string(rows.len() as u32 + 1, 0, "Order")?;
+    legend.write_string(rows.len() as u32 + 1, 1, &dsm.order)?;
+    legend.write_string(rows.len() as u32 + 2, 0, "Link types")?;
+    legend.write_string(rows.len() as u32 + 2, 1, dsm.link_types.join(", "))?;
+
+    Ok(workbook.save_to_buffer()?)
+}
+
 #[cfg(test)]
 mod workbook_tests {
     use super::{

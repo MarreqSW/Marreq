@@ -1639,6 +1639,13 @@ impl<R: RequirementVersionLinksRepository> RequirementVersionLinksRepository
     ) -> Result<RequirementVersionLink, RepoError> {
         self.inner.get_requirement_version_link_by_id(link_id)
     }
+
+    fn requirement_ids_for_versions(
+        &self,
+        version_ids: &[i32],
+    ) -> Result<std::collections::HashMap<i32, i32>, RepoError> {
+        self.inner.requirement_ids_for_versions(version_ids)
+    }
 }
 
 impl<R: super::NotificationRepository> super::NotificationRepository for CacheRepository<R> {

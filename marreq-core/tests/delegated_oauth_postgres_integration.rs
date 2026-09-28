@@ -96,18 +96,22 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
     eprintln!(
         "running delegated_scope_rbac_revocation_and_downgrade_matrix against {database_url}"
     );
-    std::env::set_var("DATABASE_URL", &database_url);
-    // Rocket's sync pool fairing reads ROCKET_DATABASES / Rocket.toml, not DATABASE_URL alone.
-    std::env::set_var(
-        "ROCKET_DATABASES",
-        format!(r#"{{my_db={{url="{database_url}",pool_size=2}}}}"#),
-    );
-    std::env::set_var("MARREQ_PUBLIC_BASE_URL", "http://localhost:8080");
-    std::env::set_var("MARREQ_MCP_PUBLIC_URL", "http://localhost:8080/mcp/");
-    std::env::set_var(
-        "MARREQ_MCP_AUDIT_SECRET",
-        "integration-test-audit-secret-32-bytes",
-    );
+    // SAFETY: this is the only test in its binary and it runs before any Rocket
+    // instance, database connection or other thread that reads the environment exists.
+    unsafe {
+        std::env::set_var("DATABASE_URL", &database_url);
+        // Rocket's sync pool fairing reads ROCKET_DATABASES / Rocket.toml, not DATABASE_URL alone.
+        std::env::set_var(
+            "ROCKET_DATABASES",
+            format!(r#"{{my_db={{url="{database_url}",pool_size=2}}}}"#),
+        );
+        std::env::set_var("MARREQ_PUBLIC_BASE_URL", "http://localhost:8080");
+        std::env::set_var("MARREQ_MCP_PUBLIC_URL", "http://localhost:8080/mcp/");
+        std::env::set_var(
+            "MARREQ_MCP_AUDIT_SECRET",
+            "integration-test-audit-secret-32-bytes",
+        );
+    }
 
     let mut conn = PgConnection::establish(&database_url).expect("test PostgreSQL connection");
     conn.batch_execute(

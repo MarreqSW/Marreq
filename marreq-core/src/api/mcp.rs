@@ -286,12 +286,18 @@ mod tests {
     }
 
     async fn client_with_repo(repo: DieselRepoMock) -> Client {
-        std::env::set_var("MARREQ_MCP_AUDIT_SECRET", AUDIT_SECRET);
-        std::env::set_var(
+        // SAFETY: not strictly guaranteed. Other tests in this binary may run concurrently;
+        // std's env functions are synchronised with each other, so the remaining risk is a
+        // concurrent libc `getenv` from C code (e.g. libpq/OpenSSL), which these mock-repo
+        // tests do not use. Acceptable for test-only configuration.
+        unsafe {
+            std::env::set_var("MARREQ_MCP_AUDIT_SECRET", AUDIT_SECRET);
+            std::env::set_var(
             "DATABASE_URL",
             std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://unused".into()),
         );
-        std::env::set_var("MARREQ_MCP_PUBLIC_URL", "http://localhost:8080/mcp");
+            std::env::set_var("MARREQ_MCP_PUBLIC_URL", "http://localhost:8080/mcp");
+        }
         if let Ok(cfg) = crate::config::AppConfig::from_env() {
             crate::config::AppConfig::install(cfg);
         }

@@ -554,7 +554,7 @@ pub fn sanitize_string(input: &mut String) {
 
 /// Sanitize optional string input
 pub fn sanitize_optional_string(input: &mut Option<String>) {
-    if let Some(ref mut s) = input {
+    if let Some(s) = input {
         *s = s.trim().to_string();
         if s.is_empty() {
             *input = None;

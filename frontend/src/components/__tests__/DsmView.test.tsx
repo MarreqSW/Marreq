@@ -110,6 +110,33 @@ describe('DsmView', () => {
     expect(card).toHaveTextContent('REQ-2 → REQ-1');
     expect(card).toHaveTextContent('Derives from');
     expect(card).toHaveTextContent('Upstream changed');
+    // Both requirements are named, not just the target.
+    expect(card).toHaveTextContent('REQ-2: Battery');
+    expect(card).toHaveTextContent('REQ-1: Power budget');
+  });
+
+  it('shows the requirement title when hovering a row header', async () => {
+    renderView();
+    fireEvent.mouseEnter(await screen.findByTestId('dsm-row-2'), { clientX: 40, clientY: 300 });
+    const card = await screen.findByRole('tooltip');
+    expect(card).toHaveTextContent('REQ-3');
+    expect(card).toHaveTextContent('Heater');
+    expect(card).toHaveTextContent('Power · draft · parent REQ-1');
+    expect(card).toHaveTextContent('Depends on 1 · Used by 1');
+    fireEvent.mouseLeave(screen.getByTestId('dsm-row-2'));
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+  });
+
+  it('shows the requirement title when hovering a column header', async () => {
+    renderView();
+    const header = await screen.findByTestId('dsm-col-0');
+    expect(header).not.toHaveAttribute('title');
+    fireEvent.mouseEnter(header, { clientX: 400, clientY: 100 });
+    const card = await screen.findByRole('tooltip');
+    expect(card).toHaveTextContent('REQ-1');
+    expect(card).toHaveTextContent('Power budget');
+    expect(card).toHaveTextContent('Depends on 0 · Used by 1');
+    expect(header).toHaveClass('bg-stitch-accent/10');
   });
 
   it('opens the source requirement when a mark is clicked', async () => {

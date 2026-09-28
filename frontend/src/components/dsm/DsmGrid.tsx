@@ -32,6 +32,18 @@ export default function DsmGrid({ dsm, basePath, highlightIds, onOpenRequirement
   const cellMap = useMemo(() => buildCellMap(dsm.cells), [dsm.cells]);
   const loopOf = useMemo(() => loopNumberByRequirement(dsm.loops), [dsm.loops]);
   const [hover, setHover] = useState<{ row: number; col: number; x: number; y: number } | null>(null);
+  /** Requirement hovered in the row or column header. */
+  const [headerHover, setHeaderHover] = useState<{ index: number; axis: 'row' | 'col'; x: number; y: number } | null>(
+    null,
+  );
+  const hoveredRow = hover?.row ?? (headerHover?.axis === 'row' ? headerHover.index : undefined);
+  const hoveredCol = hover?.col ?? (headerHover?.axis === 'col' ? headerHover.index : undefined);
+
+  const headerHandlers = (index: number, axis: 'row' | 'col') => ({
+    onMouseEnter: (e: MouseEvent<HTMLElement>) => setHeaderHover({ index, axis, x: e.clientX, y: e.clientY }),
+    onMouseMove: (e: MouseEvent<HTMLElement>) => setHeaderHover({ index, axis, x: e.clientX, y: e.clientY }),
+    onMouseLeave: () => setHeaderHover(null),
+  });
 
   const groupStart = useMemo(() => new Map(dsm.groups.map((g) => [g.start, g.label])), [dsm.groups]);
 
@@ -93,11 +105,12 @@ export default function DsmGrid({ dsm, basePath, highlightIds, onOpenRequirement
           {dsm.requirements.map((r) => (
             <div
               key={r.id}
-              className={`absolute bottom-0 flex flex-col items-center justify-end ${
-                hover?.col === r.index ? 'bg-stitch-accent/10' : ''
+              data-testid={`dsm-col-${r.index}`}
+              className={`absolute bottom-0 flex flex-col items-center justify-end cursor-default ${
+                hoveredCol === r.index ? 'bg-stitch-accent/10' : ''
               }`}
               style={{ left: r.index * DSM_CELL, width: DSM_CELL, height: COL_HEADER_H }}
-              title={`${r.reference_code} — ${r.title}`}
+              {...headerHandlers(r.index, 'col')}
             >
               <span className="[writing-mode:vertical-rl] rotate-180 font-mono text-[10.5px] font-semibold text-stitch-accent whitespace-nowrap overflow-hidden max-h-[88px]">
                 {r.reference_code}
@@ -114,10 +127,12 @@ export default function DsmGrid({ dsm, basePath, highlightIds, onOpenRequirement
             return (
               <div
                 key={r.id}
+                data-testid={`dsm-row-${r.index}`}
                 className={`absolute left-0 right-0 flex items-center gap-2 px-2 border-b border-stitch-border/60 ${
-                  hover?.row === r.index ? 'bg-stitch-accent/10' : ''
+                  hoveredRow === r.index ? 'bg-stitch-accent/10' : ''
                 }`}
                 style={{ top: r.index * DSM_CELL, height: DSM_CELL, paddingLeft: 8 + Math.min(r.depth, 4) * 8 }}
+                {...headerHandlers(r.index, 'row')}
               >
                 <span className="w-6 shrink-0 text-right font-mono text-[10px] text-stitch-subtle">
                   {r.index + 1}
@@ -126,7 +141,6 @@ export default function DsmGrid({ dsm, basePath, highlightIds, onOpenRequirement
                   className={`h-2 w-2 shrink-0 rounded-full ${
                     APPROVAL_DOT[r.approval_state] ?? 'border border-stitch-muted'
                   }`}
-                  title={r.approval_state}
                   aria-label={r.approval_state}
                 />
                 <Link
@@ -135,7 +149,7 @@ export default function DsmGrid({ dsm, basePath, highlightIds, onOpenRequirement
                 >
                   {r.reference_code}
                 </Link>
-                <span className="truncate text-[11.5px] text-stitch-muted" title={r.title}>
+                <span className="truncate text-[11.5px] text-stitch-muted">
                   {r.title}
                 </span>
                 {label ? (
@@ -157,17 +171,17 @@ export default function DsmGrid({ dsm, basePath, highlightIds, onOpenRequirement
           onClick={onClick}
           data-testid="dsm-body"
         >
-          {hover ? (
-            <>
-              <div
-                className="absolute left-0 right-0 bg-stitch-accent/8 pointer-events-none"
-                style={{ top: hover.row * DSM_CELL, height: DSM_CELL }}
-              />
-              <div
-                className="absolute top-0 bottom-0 bg-stitch-accent/8 pointer-events-none"
-                style={{ left: hover.col * DSM_CELL, width: DSM_CELL }}
-              />
-            </>
+          {hoveredRow != null ? (
+            <div
+              className="absolute left-0 right-0 bg-stitch-accent/8 pointer-events-none"
+              style={{ top: hoveredRow * DSM_CELL, height: DSM_CELL }}
+            />
+          ) : null}
+          {hoveredCol != null ? (
+            <div
+              className="absolute top-0 bottom-0 bg-stitch-accent/8 pointer-events-none"
+              style={{ left: hoveredCol * DSM_CELL, width: DSM_CELL }}
+            />
           ) : null}
 
           {dsm.groups.map((g) => (
@@ -230,7 +244,50 @@ export default function DsmGrid({ dsm, basePath, highlightIds, onOpenRequirement
           ) : null}
         </div>
       </div>
+      {headerHover ? (
+        <FloatingCard x={headerHover.x} y={headerHover.y}>
+          <RequirementSummary dsm={dsm} index={headerHover.index} />
+        </FloatingCard>
+      ) : null}
     </div>
+  );
+}
+
+/** Viewport-fixed card at the mouse, flipped left/up near the edges so it is never clipped. */
+function FloatingCard({ x, y, children }: { x: number; y: number; children: React.ReactNode }) {
+  const width = 300;
+  const estimatedHeight = 150;
+  const left = x + 16 + width > window.innerWidth ? Math.max(8, x - 16 - width) : x + 16;
+  const top = y + 16 + estimatedHeight > window.innerHeight ? Math.max(8, y - 16 - estimatedHeight) : y + 16;
+  return (
+    <div
+      role="tooltip"
+      className="fixed z-50 rounded-lg border border-stitch-border bg-stitch-surface p-3 text-xs shadow-stitch pointer-events-none"
+      style={{ left, top, width }}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Code, title, category, approval state, parent and link counts of one requirement. */
+function RequirementSummary({ dsm, index }: { dsm: Dsm; index: number }) {
+  const r = dsm.requirements[index]!;
+  const parent = r.parent_id != null ? dsm.requirements.find((p) => p.id === r.parent_id) : undefined;
+  const dependsOn = dsm.cells.filter((c) => c.row === index).length;
+  const usedBy = dsm.cells.filter((c) => c.col === index).length;
+  return (
+    <>
+      <p className="font-mono font-bold text-stitch-accent">{r.reference_code}</p>
+      <p className="mt-1 font-semibold text-stitch-fg">{r.title}</p>
+      <p className="mt-1 text-stitch-muted">
+        {r.category} · {r.approval_state}
+        {parent ? ` · parent ${parent.reference_code}` : ''}
+      </p>
+      <p className="mt-1 text-stitch-muted">
+        Depends on {dependsOn} · Used by {usedBy}
+      </p>
+    </>
   );
 }
 
@@ -254,17 +311,8 @@ function HoverCard({
 }) {
   const source = dsm.requirements[row]!;
   const target = dsm.requirements[col]!;
-  // Fixed to the viewport so the scrolling matrix never clips it; flip left/up near the edges.
-  const width = 300;
-  const estimatedHeight = 150;
-  const left = x + 16 + width > window.innerWidth ? Math.max(8, x - 16 - width) : x + 16;
-  const top = y + 16 + estimatedHeight > window.innerHeight ? Math.max(8, y - 16 - estimatedHeight) : y + 16;
   return (
-    <div
-      role="tooltip"
-      className="fixed z-50 rounded-lg border border-stitch-border bg-stitch-surface p-3 text-xs shadow-stitch pointer-events-none"
-      style={{ left, top, width }}
-    >
+    <FloatingCard x={x} y={y}>
       {cell ? (
         <>
           <p className="font-mono font-bold text-stitch-accent">
@@ -274,7 +322,16 @@ function HoverCard({
             {cell.link_types.map((t) => linkTypeMeta(t).label).join(' · ')}
             {cell.link_ids.length > 1 ? ` (${cell.link_ids.length} links)` : ''}
           </p>
-          <p className="mt-1 text-stitch-muted truncate">{target.title}</p>
+          <dl className="mt-1.5 space-y-1">
+            <div>
+              <dt className="inline font-mono text-stitch-muted">{source.reference_code}: </dt>
+              <dd className="inline text-stitch-fg">{source.title}</dd>
+            </div>
+            <div>
+              <dt className="inline font-mono text-stitch-muted">{target.reference_code}: </dt>
+              <dd className="inline text-stitch-fg">{target.title}</dd>
+            </div>
+          </dl>
           {loopNumber ? (
             <p className="mt-1 text-amber-700 dark:text-amber-300 font-semibold">Part of loop {loopNumber}</p>
           ) : null}
@@ -285,14 +342,8 @@ function HoverCard({
           ) : null}
         </>
       ) : (
-        <>
-          <p className="font-mono font-bold text-stitch-accent">{source.reference_code}</p>
-          <p className="mt-1 text-stitch-fg">{source.title}</p>
-          <p className="mt-1 text-stitch-muted">
-            {source.category} · {source.approval_state}
-          </p>
-        </>
+        <RequirementSummary dsm={dsm} index={row} />
       )}
-    </div>
+    </FloatingCard>
   );
 }

@@ -7,11 +7,9 @@ ARG MARREQ_GIT_SHA=unknown
 ENV MARREQ_GIT_SHA=${MARREQ_GIT_SHA}
 ENV MARREQ_VERSION=${MARREQ_VERSION}
 
-# Native deps for libxlsxwriter-sys (build from source) and bindgen (libclang)
+# C toolchain for native crates (aws-lc-sys via rustls, openssl-sys, pq-sys)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    cmake \
-    libclang-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 

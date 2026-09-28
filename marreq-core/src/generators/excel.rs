@@ -4,49 +4,8 @@
 use crate::generators::GeneratorError as WorkbookError;
 use crate::helper_functions::decorators;
 use crate::repository::{DieselRepo, Repository};
+use rust_xlsxwriter::Workbook;
 use std::collections::{HashMap, HashSet};
-use std::fs;
-use std::path::PathBuf;
-
-/// Scratch file for xlsxwriter, which can only write to a path. The name is unique per
-/// process and call so concurrent exports of the same project cannot clobber each other,
-/// and the file is removed even when workbook generation fails part way through.
-struct TempWorkbook {
-    path: PathBuf,
-}
-
-impl TempWorkbook {
-    fn new(kind: &str, project_id: i32) -> Self {
-        let unique = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_nanos())
-            .unwrap_or(0);
-        let path = std::env::temp_dir().join(format!(
-            "marreq-{kind}-{project_id}-{}-{unique}.xlsx",
-            std::process::id()
-        ));
-        Self { path }
-    }
-
-    fn path_str(&self) -> Result<&str, WorkbookError> {
-        self.path.to_str().ok_or_else(|| {
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "invalid temp path",
-            )) as WorkbookError
-        })
-    }
-
-    fn read(&self) -> Result<Vec<u8>, WorkbookError> {
-        Ok(fs::read(&self.path)?)
-    }
-}
-
-impl Drop for TempWorkbook {
-    fn drop(&mut self) {
-        let _ = fs::remove_file(&self.path);
-    }
-}
 
 pub fn create_matrix_workbook(
     project_id: i32,
@@ -86,22 +45,21 @@ pub fn matrix_workbook_with_repo<R: Repository>(
     // Sort tests by ID
     decorated_tests.sort_by_key(|test| test.id);
 
-    let temp = TempWorkbook::new("matrix", project_id);
-    let workbook = xlsxwriter::Workbook::new(temp.path_str()?)?;
-    let mut sheet1 = workbook.add_worksheet(None)?;
+    let mut workbook = Workbook::new();
+    let sheet1 = workbook.add_worksheet();
 
     // Write headers
     // First column headers (requirement info)
-    sheet1.write_string(0, 0, "Title", None)?;
-    sheet1.write_string(0, 1, "Reference", None)?;
-    sheet1.write_string(0, 2, "Category", None)?;
-    sheet1.write_string(0, 3, "Status", None)?;
+    sheet1.write_string(0, 0, "Title")?;
+    sheet1.write_string(0, 1, "Reference")?;
+    sheet1.write_string(0, 2, "Category")?;
+    sheet1.write_string(0, 3, "Status")?;
 
     // Test headers starting from column 4
     for (col_idx, test) in decorated_tests.iter().enumerate() {
         let col = (col_idx + 4) as u16;
         let header = format!("Test #{} ({})", test.id, test.name);
-        sheet1.write_string(0, col, &header, None)?;
+        sheet1.write_string(0, col, &header)?;
     }
 
     // Write requirement rows
@@ -109,23 +67,22 @@ pub fn matrix_workbook_with_repo<R: Repository>(
         let row = (row_idx + 1) as u32;
 
         // Write requirement info
-        sheet1.write_string(row, 0, &req.title, None)?;
-        sheet1.write_string(row, 1, &req.reference_code, None)?;
-        sheet1.write_string(row, 2, &req.category_id, None)?;
-        sheet1.write_string(row, 3, &req.status_id, None)?;
+        sheet1.write_string(row, 0, &req.title)?;
+        sheet1.write_string(row, 1, &req.reference_code)?;
+        sheet1.write_string(row, 2, &req.category_id)?;
+        sheet1.write_string(row, 3, &req.status_id)?;
 
         // Mark the cell when this requirement is linked to this test
         for (col_idx, test) in decorated_tests.iter().enumerate() {
             let col = (col_idx + 4) as u16;
             if linked.contains(&(req.id, test.id)) {
-                sheet1.write_string(row, col, "Yes", None)?;
+                sheet1.write_string(row, col, "Yes")?;
             }
             // Leave cell empty if no link exists
         }
     }
 
-    workbook.close()?;
-    temp.read()
+    Ok(workbook.save_to_buffer()?)
 }
 
 /// Two-column workbook (requirement_code, verification_code) matching matrix-links import.
@@ -163,18 +120,16 @@ pub fn matrix_links_workbook_with_repo<R: Repository>(
     }
     rows.sort();
 
-    let temp = TempWorkbook::new("matrix-links", project_id);
-    let workbook = xlsxwriter::Workbook::new(temp.path_str()?)?;
-    let mut sheet = workbook.add_worksheet(None)?;
-    sheet.write_string(0, 0, "requirement_code", None)?;
-    sheet.write_string(0, 1, "verification_code", None)?;
+    let mut workbook = Workbook::new();
+    let sheet = workbook.add_worksheet();
+    sheet.write_string(0, 0, "requirement_code")?;
+    sheet.write_string(0, 1, "verification_code")?;
     for (idx, (req_code, ver_code)) in rows.iter().enumerate() {
         let row = (idx + 1) as u32;
-        sheet.write_string(row, 0, req_code, None)?;
-        sheet.write_string(row, 1, ver_code, None)?;
+        sheet.write_string(row, 0, req_code)?;
+        sheet.write_string(row, 1, ver_code)?;
     }
-    workbook.close()?;
-    temp.read()
+    Ok(workbook.save_to_buffer()?)
 }
 
 pub fn create_requirements_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -199,46 +154,45 @@ pub fn requirements_workbook_with_repo<R: Repository>(
     let decorated_requirements =
         decorators::decorate_requirements_with_repo(repo, all_requirements.clone());
 
-    let temp = TempWorkbook::new("requirements", pid);
-    let workbook = xlsxwriter::Workbook::new(temp.path_str()?)?;
-    let mut worksheet = workbook.add_worksheet(Some("Requirements"))?;
+    let mut workbook = Workbook::new();
+    let worksheet = workbook.add_worksheet().set_name("Requirements")?;
 
     let base_cols = 14u16;
     // Headers: standard columns then custom field labels
-    worksheet.write_string(0, 0, "ID", None)?;
-    worksheet.write_string(0, 1, "Title", None)?;
-    worksheet.write_string(0, 2, "Description", None)?;
-    worksheet.write_string(0, 3, "Reference", None)?;
-    worksheet.write_string(0, 4, "Category", None)?;
-    worksheet.write_string(0, 5, "Applicability", None)?;
-    worksheet.write_string(0, 6, "Status", None)?;
-    worksheet.write_string(0, 7, "Verification", None)?;
-    worksheet.write_string(0, 8, "Author", None)?;
-    worksheet.write_string(0, 9, "Reviewer", None)?;
-    worksheet.write_string(0, 10, "Creation Date", None)?;
-    worksheet.write_string(0, 11, "Update Date", None)?;
-    worksheet.write_string(0, 12, "Deadline Date", None)?;
-    worksheet.write_string(0, 13, "Justification", None)?;
+    worksheet.write_string(0, 0, "ID")?;
+    worksheet.write_string(0, 1, "Title")?;
+    worksheet.write_string(0, 2, "Description")?;
+    worksheet.write_string(0, 3, "Reference")?;
+    worksheet.write_string(0, 4, "Category")?;
+    worksheet.write_string(0, 5, "Applicability")?;
+    worksheet.write_string(0, 6, "Status")?;
+    worksheet.write_string(0, 7, "Verification")?;
+    worksheet.write_string(0, 8, "Author")?;
+    worksheet.write_string(0, 9, "Reviewer")?;
+    worksheet.write_string(0, 10, "Creation Date")?;
+    worksheet.write_string(0, 11, "Update Date")?;
+    worksheet.write_string(0, 12, "Deadline Date")?;
+    worksheet.write_string(0, 13, "Justification")?;
     for (col_off, def) in custom_defs.iter().enumerate() {
-        worksheet.write_string(0, base_cols + col_off as u16, &def.label, None)?;
+        worksheet.write_string(0, base_cols + col_off as u16, &def.label)?;
     }
 
     for (i, req) in decorated_requirements.iter().enumerate() {
         let row = (i + 1) as u32;
-        worksheet.write_number(row, 0, req.id as f64, None)?;
-        worksheet.write_string(row, 1, &req.title, None)?;
-        worksheet.write_string(row, 2, &req.description, None)?;
-        worksheet.write_string(row, 3, &req.reference_code, None)?;
-        worksheet.write_string(row, 4, &req.category_id, None)?;
-        worksheet.write_string(row, 5, &req.applicability_id, None)?;
-        worksheet.write_string(row, 6, &req.status_id, None)?;
-        worksheet.write_string(row, 7, &req.verification_method_id, None)?;
-        worksheet.write_string(row, 8, &req.author_id, None)?;
-        worksheet.write_string(row, 9, &req.reviewer_id, None)?;
-        worksheet.write_string(row, 10, &req.creation_date, None)?;
-        worksheet.write_string(row, 11, &req.update_date, None)?;
-        worksheet.write_string(row, 12, &req.deadline_date, None)?;
-        worksheet.write_string(row, 13, req.justification.as_deref().unwrap_or(""), None)?;
+        worksheet.write_number(row, 0, req.id as f64)?;
+        worksheet.write_string(row, 1, &req.title)?;
+        worksheet.write_string(row, 2, &req.description)?;
+        worksheet.write_string(row, 3, &req.reference_code)?;
+        worksheet.write_string(row, 4, &req.category_id)?;
+        worksheet.write_string(row, 5, &req.applicability_id)?;
+        worksheet.write_string(row, 6, &req.status_id)?;
+        worksheet.write_string(row, 7, &req.verification_method_id)?;
+        worksheet.write_string(row, 8, &req.author_id)?;
+        worksheet.write_string(row, 9, &req.reviewer_id)?;
+        worksheet.write_string(row, 10, &req.creation_date)?;
+        worksheet.write_string(row, 11, &req.update_date)?;
+        worksheet.write_string(row, 12, &req.deadline_date)?;
+        worksheet.write_string(row, 13, req.justification.as_deref().unwrap_or(""))?;
 
         let raw_req = &all_requirements[i];
         if let Some(version_id) = raw_req.current_version_id {
@@ -251,7 +205,7 @@ pub fn requirements_workbook_with_repo<R: Repository>(
                 .collect();
             for (col_off, def) in custom_defs.iter().enumerate() {
                 let val = value_map.get(&def.id).cloned().unwrap_or_default();
-                worksheet.write_string(row, base_cols + col_off as u16, &val, None)?;
+                worksheet.write_string(row, base_cols + col_off as u16, &val)?;
             }
         }
     }
@@ -273,35 +227,28 @@ pub fn requirements_workbook_with_repo<R: Repository>(
         }
     }
     all_comments.sort_by_key(|a| a.0.created_at);
-    let mut comments_sheet = workbook.add_worksheet(Some("Comments"))?;
-    comments_sheet.write_string(0, 0, "Requirement ID", None)?;
-    comments_sheet.write_string(0, 1, "Version ID", None)?;
-    comments_sheet.write_string(0, 2, "Author", None)?;
-    comments_sheet.write_string(0, 3, "Created At", None)?;
-    comments_sheet.write_string(0, 4, "Body", None)?;
+    let comments_sheet = workbook.add_worksheet().set_name("Comments")?;
+    comments_sheet.write_string(0, 0, "Requirement ID")?;
+    comments_sheet.write_string(0, 1, "Version ID")?;
+    comments_sheet.write_string(0, 2, "Author")?;
+    comments_sheet.write_string(0, 3, "Created At")?;
+    comments_sheet.write_string(0, 4, "Body")?;
     for (i, (c, author_name)) in all_comments.iter().enumerate() {
         let row = (i + 1) as u32;
-        comments_sheet.write_number(row, 0, c.requirement_id as f64, None)?;
+        comments_sheet.write_number(row, 0, c.requirement_id as f64)?;
         comments_sheet.write_string(
             row,
             1,
-            &c.requirement_version_id
+            c.requirement_version_id
                 .map(|v| v.to_string())
                 .unwrap_or_else(|| "—".to_string()),
-            None,
         )?;
-        comments_sheet.write_string(row, 2, author_name, None)?;
-        comments_sheet.write_string(
-            row,
-            3,
-            &c.created_at.format("%Y-%m-%d %H:%M").to_string(),
-            None,
-        )?;
-        comments_sheet.write_string(row, 4, &c.body, None)?;
+        comments_sheet.write_string(row, 2, author_name)?;
+        comments_sheet.write_string(row, 3, c.created_at.format("%Y-%m-%d %H:%M").to_string())?;
+        comments_sheet.write_string(row, 4, &c.body)?;
     }
 
-    workbook.close()?;
-    temp.read()
+    Ok(workbook.save_to_buffer()?)
 }
 
 pub fn create_tests_workbook(pid: i32) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
@@ -321,38 +268,40 @@ pub fn verifications_workbook_with_repo<R: Repository>(
     // Decorate tests to get real names instead of IDs
     let decorated_tests = decorators::decorate_verifications_with_repo(repo, all_tests);
 
-    let temp = TempWorkbook::new("verifications", pid);
-    let workbook = xlsxwriter::Workbook::new(temp.path_str()?)?;
-    let mut worksheet = workbook.add_worksheet(Some("Tests"))?;
+    let mut workbook = Workbook::new();
+    let worksheet = workbook.add_worksheet().set_name("Tests")?;
 
     // Write headers
-    worksheet.write_string(0, 0, "ID", None)?;
-    worksheet.write_string(0, 1, "Name", None)?;
-    worksheet.write_string(0, 2, "Description", None)?;
-    worksheet.write_string(0, 3, "Source", None)?;
-    worksheet.write_string(0, 4, "Reference", None)?;
-    worksheet.write_string(0, 5, "Status", None)?;
-    worksheet.write_string(0, 6, "Parent", None)?;
+    worksheet.write_string(0, 0, "ID")?;
+    worksheet.write_string(0, 1, "Name")?;
+    worksheet.write_string(0, 2, "Description")?;
+    worksheet.write_string(0, 3, "Source")?;
+    worksheet.write_string(0, 4, "Reference")?;
+    worksheet.write_string(0, 5, "Status")?;
+    worksheet.write_string(0, 6, "Parent")?;
 
     // Write data
     for (i, test) in decorated_tests.iter().enumerate() {
         let row = (i + 1) as u32;
-        worksheet.write_number(row, 0, test.id as f64, None)?;
-        worksheet.write_string(row, 1, &test.name, None)?;
-        worksheet.write_string(row, 2, &test.description, None)?;
-        worksheet.write_string(row, 3, &test.source, None)?;
-        worksheet.write_string(row, 4, &test.reference_code, None)?;
-        worksheet.write_string(row, 5, &test.status_id, None)?;
-        worksheet.write_string(row, 6, &test.verification_parent_title, None)?;
+        worksheet.write_number(row, 0, test.id as f64)?;
+        worksheet.write_string(row, 1, &test.name)?;
+        worksheet.write_string(row, 2, &test.description)?;
+        worksheet.write_string(row, 3, &test.source)?;
+        worksheet.write_string(row, 4, &test.reference_code)?;
+        worksheet.write_string(row, 5, &test.status_id)?;
+        worksheet.write_string(row, 6, &test.verification_parent_title)?;
     }
 
-    workbook.close()?;
-    temp.read()
+    Ok(workbook.save_to_buffer()?)
 }
 
 #[cfg(test)]
-mod matrix_links_tests {
-    use super::matrix_links_workbook_with_repo;
+mod workbook_tests {
+    use super::{
+        matrix_links_workbook_with_repo, requirements_workbook_with_repo,
+        verifications_workbook_with_repo,
+    };
+    use crate::importers::excel::ExcelImporter;
     use crate::models::{MatrixLink, Requirement, Verification};
     use crate::repository::diesel_repo_mock::DieselRepoMock;
     use calamine::{Data, Reader, open_workbook_auto_from_rs};
@@ -462,5 +411,90 @@ mod matrix_links_tests {
             vec!["REQ-B".into(), "TST-2".into()],
         ];
         assert_eq!(rows, expected);
+    }
+
+    fn imported(bytes: Vec<u8>) -> ExcelImporter {
+        ExcelImporter::from_bytes("export.xlsx", &bytes).expect("importer reads export")
+    }
+
+    fn column_names(importer: &ExcelImporter) -> Vec<String> {
+        importer.columns.iter().map(|c| c.name.clone()).collect()
+    }
+
+    #[test]
+    fn requirements_workbook_round_trips_through_importer() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(1, req(1, "REQ-1"));
+        repo.requirements.insert(2, req(2, "REQ-2"));
+
+        let importer = imported(requirements_workbook_with_repo(&repo, 1).expect("workbook"));
+        assert_eq!(
+            column_names(&importer),
+            [
+                "ID",
+                "Title",
+                "Description",
+                "Reference",
+                "Category",
+                "Applicability",
+                "Status",
+                "Verification",
+                "Author",
+                "Reviewer",
+                "Creation Date",
+                "Update Date",
+                "Deadline Date",
+                "Justification",
+            ]
+        );
+        assert_eq!(importer.import_type, "requirements");
+        let mut rows: Vec<(String, String)> = importer
+            .data
+            .iter()
+            .map(|row| (row[1].clone(), row[3].clone()))
+            .collect();
+        rows.sort();
+        assert_eq!(
+            rows,
+            [
+                ("Req 1".to_string(), "REQ-1".to_string()),
+                ("Req 2".to_string(), "REQ-2".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn verifications_workbook_round_trips_through_importer() {
+        let mut repo = DieselRepoMock::default();
+        repo.verifications.insert(10, ver(10, "TST-1"));
+
+        let importer = imported(verifications_workbook_with_repo(&repo, 1).expect("workbook"));
+        assert_eq!(
+            column_names(&importer),
+            [
+                "ID",
+                "Name",
+                "Description",
+                "Source",
+                "Reference",
+                "Status",
+                "Parent"
+            ]
+        );
+        assert_eq!(importer.data.len(), 1);
+        assert_eq!(importer.data[0][1], "Ver 10");
+        assert_eq!(importer.data[0][4], "TST-1");
+    }
+
+    #[test]
+    fn matrix_links_workbook_round_trips_through_importer() {
+        let mut repo = DieselRepoMock::default();
+        repo.requirements.insert(1, req(1, "REQ-A"));
+        repo.verifications.insert(10, ver(10, "TST-1"));
+        repo.matrices.push(link(1, 10));
+
+        let importer = imported(matrix_links_workbook_with_repo(&repo, 1).expect("workbook"));
+        assert_eq!(importer.import_type, "matrix");
+        assert_eq!(importer.data, [["REQ-A".to_string(), "TST-1".to_string()]]);
     }
 }

@@ -162,12 +162,12 @@ pub fn validate_verification(test: &NewVerification) -> Result<(), ValidationErr
         ));
     }
 
-    if let Some(parent_id) = test.parent_id {
-        if parent_id <= 0 {
-            return Err(ValidationError::Custom(
-                "Test parent ID must be positive".to_string(),
-            ));
-        }
+    if let Some(parent_id) = test.parent_id
+        && parent_id <= 0
+    {
+        return Err(ValidationError::Custom(
+            "Test parent ID must be positive".to_string(),
+        ));
     }
 
     if test.project_id <= 0 {
@@ -408,13 +408,14 @@ pub fn validate_group(group: &crate::models::NewGroup) -> Result<(), ValidationE
         });
     }
 
-    if let Some(description) = &group.description {
-        if !description.trim().is_empty() && description.len() > 1000 {
-            return Err(ValidationError::TooLong {
-                field: "description".to_string(),
-                max: 1000,
-            });
-        }
+    if let Some(description) = &group.description
+        && !description.trim().is_empty()
+        && description.len() > 1000
+    {
+        return Err(ValidationError::TooLong {
+            field: "description".to_string(),
+            max: 1000,
+        });
     }
 
     if group.owner_id.is_none() {
@@ -450,13 +451,14 @@ pub fn validate_project(project: &NewProject) -> Result<(), ValidationError> {
     }
 
     // Validate description
-    if let Some(description) = &project.description {
-        if !description.trim().is_empty() && description.len() > 1000 {
-            return Err(ValidationError::TooLong {
-                field: "description".to_string(),
-                max: 1000,
-            });
-        }
+    if let Some(description) = &project.description
+        && !description.trim().is_empty()
+        && description.len() > 1000
+    {
+        return Err(ValidationError::TooLong {
+            field: "description".to_string(),
+            max: 1000,
+        });
     }
 
     if project.owner_id.is_none() {
@@ -554,7 +556,7 @@ pub fn sanitize_string(input: &mut String) {
 
 /// Sanitize optional string input
 pub fn sanitize_optional_string(input: &mut Option<String>) {
-    if let Some(ref mut s) = input {
+    if let Some(s) = input {
         *s = s.trim().to_string();
         if s.is_empty() {
             *input = None;

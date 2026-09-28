@@ -8,8 +8,8 @@
 //! corresponding routes are mounted by `marreq_cloud::routes::routes()`
 //! and are not present in the `marreq-server` binary.
 
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use chrono::{Duration, Utc};
 use rand::Rng;
 use sha2::{Digest, Sha256};
@@ -17,12 +17,12 @@ use thiserror::Error;
 
 use marreq_core::app::{AppState, DieselCachedRepo};
 use marreq_core::auth::password::hash_password;
-use marreq_core::auth::password_policy::{validate_password, PasswordContext};
+use marreq_core::auth::password_policy::{PasswordContext, validate_password};
 use marreq_core::models::{EmailToken, NewEmailToken, NewUser, RegistrationRequest, User};
 use marreq_core::repository::errors::RepoError;
 use marreq_core::repository::{EmailTokensRepository, UserRepository};
-use marreq_core::services::email_sender;
 use marreq_core::services::UserProvisioningService;
+use marreq_core::services::email_sender;
 use marreq_core::validation::{sanitize_string, validate_user};
 
 const VERIFY_TOKEN_TTL_HOURS: i64 = 24;
@@ -410,12 +410,13 @@ mod tests {
 
         let repo = state.repo_read();
         assert!(repo.get_user_by_id(user_id).unwrap().email_verified);
-        assert!(repo
-            .find_email_token_by_hash(&sha256_hex(token))
-            .unwrap()
-            .unwrap()
-            .used_at
-            .is_some());
+        assert!(
+            repo.find_email_token_by_hash(&sha256_hex(token))
+                .unwrap()
+                .unwrap()
+                .used_at
+                .is_some()
+        );
         drop(repo);
 
         assert!(matches!(

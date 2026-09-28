@@ -2,9 +2,9 @@
 // Copyright (C) 2026 Marreq
 
 use crate::repository::errors::RepoError;
-use rocket::http::Status;
-use rocket::serde::json::{json, Json};
 use rocket::Request;
+use rocket::http::Status;
+use rocket::serde::json::{Json, json};
 
 #[catch(401)]
 pub fn unauthorized(_req: &Request<'_>) -> (Status, Json<serde_json::Value>) {

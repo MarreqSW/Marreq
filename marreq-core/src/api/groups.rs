@@ -3,14 +3,14 @@
 
 //! REST API for groups and group members.
 
-use rocket::serde::Deserialize;
 use rocket::State;
+use rocket::serde::Deserialize;
 
 use crate::api::prelude::*;
 use crate::auth::guards::ApiUserOrBearer;
 use crate::models::{NewGroup, UpdateGroup};
 use crate::permissions::{
-    group_role_has_permission, group_role_label, has_group_permission, GroupPermission,
+    GroupPermission, group_role_has_permission, group_role_label, has_group_permission,
 };
 use crate::repository::{GroupMembersRepository, GroupsRepository};
 use crate::services::GroupService;
@@ -316,10 +316,10 @@ mod tests {
     use crate::permissions::{
         GROUP_ROLE_CONTRIBUTOR, GROUP_ROLE_MAINTAINER, GROUP_ROLE_OWNER, GROUP_ROLE_VIEWER,
     };
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use rocket::http::{ContentType, Cookie};
     use rocket::local::asynchronous::Client;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
     use std::sync::{Arc, RwLock};
 
     type TestState = AppState<CacheRepository<DieselRepoMock>>;

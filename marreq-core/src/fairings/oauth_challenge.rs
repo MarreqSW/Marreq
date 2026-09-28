@@ -25,10 +25,10 @@ impl Fairing for OAuthChallengeFairing {
 
     async fn on_response<'r>(&self, request: &'r Request<'_>, response: &mut Response<'r>) {
         let challenge = request.local_cache(|| OAuthChallenge(Mutex::new(None)));
-        if let Ok(current) = challenge.0.lock() {
-            if let Some(value) = current.as_ref() {
-                response.set_header(Header::new("WWW-Authenticate", value.clone()));
-            }
+        if let Ok(current) = challenge.0.lock()
+            && let Some(value) = current.as_ref()
+        {
+            response.set_header(Header::new("WWW-Authenticate", value.clone()));
         }
     }
 }

@@ -49,12 +49,11 @@ pub async fn trace_up(
         let repo = state.inner().repo_read();
         let mut out = Vec::new();
         for link in links {
-            if let Ok(ver) = repo.get_requirement_version_by_id(link.target_version_id) {
-                if let Ok(req) = repo.get_requirement_by_id(ver.requirement_id) {
-                    if req.project_id == project_id {
-                        out.push(req);
-                    }
-                }
+            if let Ok(ver) = repo.get_requirement_version_by_id(link.target_version_id)
+                && let Ok(req) = repo.get_requirement_by_id(ver.requirement_id)
+                && req.project_id == project_id
+            {
+                out.push(req);
             }
         }
         drop(repo);
@@ -251,7 +250,7 @@ mod tests {
         test_session_cookie_for(state, user_id)
     }
     use crate::models::{MatrixLink, Project, ProjectMember, Requirement, Verification};
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use crate::status_enums::ProjectStatus;
     use chrono::NaiveDate;
     use rocket::http::ContentType;

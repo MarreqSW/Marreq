@@ -14,8 +14,8 @@ use crate::models::{
     RequirementVersion, RequirementVersionLink, Verification,
 };
 use crate::repository::{
-    errors::RepoError, MatrixRepository, RequirementsRepository, SavedViewRepository,
-    UserRepository,
+    MatrixRepository, RequirementsRepository, SavedViewRepository, UserRepository,
+    errors::RepoError,
 };
 use crate::services::RequirementService;
 use rocket::form::FromForm;
@@ -371,11 +371,7 @@ fn filter_project_requirement_list(
                 "author" => a.author_id.cmp(&b.author_id),
                 _ => std::cmp::Ordering::Equal,
             };
-            if desc {
-                ord.reverse()
-            } else {
-                ord
-            }
+            if desc { ord.reverse() } else { ord }
         });
     }
 
@@ -503,10 +499,10 @@ fn build_requirement_list_rows(
     }
 
     for requirement in &requirements {
-        if let Some(version_id) = requirement.current_version_id {
-            if let Some(parent_ids) = parent_ids_by_source_version.get(&version_id) {
-                parent_requirement_ids_by_requirement.insert(requirement.id, parent_ids.clone());
-            }
+        if let Some(version_id) = requirement.current_version_id
+            && let Some(parent_ids) = parent_ids_by_source_version.get(&version_id)
+        {
+            parent_requirement_ids_by_requirement.insert(requirement.id, parent_ids.clone());
         }
     }
 
@@ -1128,10 +1124,10 @@ mod tests {
         let state = client.rocket().state::<TestState>().unwrap();
         test_session_cookie_for(state, user_id)
     }
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use rocket::http::ContentType;
     use rocket::local::asynchronous::Client;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
     use std::sync::{Arc, RwLock};
 
     type TestState = AppState<CacheRepository<DieselRepoMock>>;

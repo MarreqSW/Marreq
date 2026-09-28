@@ -6,7 +6,7 @@
 //! into the `marreq-cloud` binary; not present in `marreq-server`.
 
 use rocket::http::Status;
-use rocket::serde::json::{json, Json};
+use rocket::serde::json::{Json, json};
 use rocket::{get, post};
 
 use crate::services::registration_service::{RegistrationError, RegistrationService, TokenError};

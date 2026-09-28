@@ -7,7 +7,7 @@ use crate::repository::errors::RepoError;
 use crate::repository::{ApiTokensRepository, DelegatedOAuthRepository};
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
-use rocket::{async_trait, Request};
+use rocket::{Request, async_trait};
 use sha2::{Digest, Sha256};
 use std::ops::Deref;
 
@@ -179,7 +179,7 @@ async fn authenticate(
             });
         }
         Outcome::Error((status, ())) if status != Status::Unauthorized => {
-            return Outcome::Error((status, ()))
+            return Outcome::Error((status, ()));
         }
         _ => {}
     }

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
-use rocket::http::Header;
 use rocket::Responder;
+use rocket::http::Header;
 
 use crate::api::prelude::*;
 use crate::auth::guards::ProjectAccessOrBearer;
-use crate::generators::{excel, reports, GeneratorError};
+use crate::generators::{GeneratorError, excel, reports};
 use crate::importers::project_bundle;
 use crate::repository::ProjectsRepository;
 use crate::services::ReqIFService;

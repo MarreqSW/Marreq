@@ -15,7 +15,7 @@ use marreq_core::auth::csrf::{CSRF_COOKIE, CSRF_HEADER};
 use marreq_core::auth::session::test_session_cookie_for;
 use marreq_core::repository::UserRepository;
 use rocket::http::{ContentType, Cookie, Header, Status};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 // ============================================================================
 // Deployment metadata
@@ -149,11 +149,17 @@ async fn login_succeeds_after_email_verified_in_cloud_mode() {
 
 #[rocket::async_test]
 async fn admin_user_creation_via_api_returns_gone_in_cloud_mode() {
-    std::env::set_var("MARREQ_SITE_ADMIN_EMAIL", "admin@cloud-test.example.com");
-    std::env::set_var(
-        "MARREQ_SITE_ADMIN_BOOTSTRAP_PASSWORD",
-        "Admin!Bootstrap_2026",
-    );
+    // SAFETY: not strictly guaranteed. Other tests in this binary may run concurrently;
+    // std's env functions are synchronised with each other, so the remaining risk is a
+    // concurrent libc `getenv` from C code (e.g. libpq/OpenSSL), which these mock-repo
+    // tests do not use. Acceptable for test-only configuration.
+    unsafe {
+        std::env::set_var("MARREQ_SITE_ADMIN_EMAIL", "admin@cloud-test.example.com");
+        std::env::set_var(
+            "MARREQ_SITE_ADMIN_BOOTSTRAP_PASSWORD",
+            "Admin!Bootstrap_2026",
+        );
+    }
 
     let client = cloud_client().await;
 

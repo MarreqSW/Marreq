@@ -12,8 +12,8 @@ use crate::repository::{
     UserRepository, VerificationsRepository,
 };
 use crate::services::{MatrixService, RequirementService, VerificationService};
-use anyhow::{anyhow, Result};
-use calamine::{open_workbook_auto_from_rs, Data, Reader};
+use anyhow::{Result, anyhow};
+use calamine::{Data, Reader, open_workbook_auto_from_rs};
 use csv::ReaderBuilder;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -462,10 +462,9 @@ impl ExcelImporter {
                 .columns
                 .iter()
                 .find(|col| col.name == mapping.excel_column)
+                && column.index < row_data.len()
             {
-                if column.index < row_data.len() {
-                    values.insert(mapping.target_field.clone(), row_data[column.index].clone());
-                }
+                values.insert(mapping.target_field.clone(), row_data[column.index].clone());
             }
         }
         values

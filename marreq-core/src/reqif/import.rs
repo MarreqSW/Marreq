@@ -9,9 +9,9 @@
 
 use crate::reqif::mapping;
 use crate::reqif::schema::{ParsedHierarchyEdge, ParsedSpecObject, ParsedSpecRelation};
+use quick_xml::Reader;
 use quick_xml::events::Event;
 use quick_xml::name::QName;
-use quick_xml::Reader;
 use std::collections::HashMap;
 use std::io::Cursor;
 
@@ -135,14 +135,14 @@ impl Parser {
     }
 
     fn start(&mut self, name: &str, e: &quick_xml::events::BytesStart<'_>) {
-        if self.capturing_the_value {
-            if let Some(builder) = self.xhtml.as_mut() {
-                builder.open(name, attr(e, "href").as_deref());
-                if name.eq_ignore_ascii_case("ol") {
-                    if let Some(start) = attr(e, "start").and_then(|v| v.trim().parse().ok()) {
-                        builder.set_list_start(start);
-                    }
-                }
+        if self.capturing_the_value
+            && let Some(builder) = self.xhtml.as_mut()
+        {
+            builder.open(name, attr(e, "href").as_deref());
+            if name.eq_ignore_ascii_case("ol")
+                && let Some(start) = attr(e, "start").and_then(|v| v.trim().parse().ok())
+            {
+                builder.set_list_start(start);
             }
         }
         match name {
@@ -296,17 +296,16 @@ impl Parser {
             }
             "TYPE" => {
                 if self.in_spec_object {
-                    if let Some(obj) = self.current_object.as_mut() {
-                        if obj.type_ref.is_empty() {
-                            obj.type_ref = text.to_string();
-                        }
+                    if let Some(obj) = self.current_object.as_mut()
+                        && obj.type_ref.is_empty()
+                    {
+                        obj.type_ref = text.to_string();
                     }
-                } else if self.in_spec_relation {
-                    if let Some(rel) = self.current_relation.as_mut() {
-                        if rel.type_ref.is_empty() {
-                            rel.type_ref = text.to_string();
-                        }
-                    }
+                } else if self.in_spec_relation
+                    && let Some(rel) = self.current_relation.as_mut()
+                    && rel.type_ref.is_empty()
+                {
+                    rel.type_ref = text.to_string();
                 }
             }
             "DEFINITION" => {
@@ -340,13 +339,13 @@ impl Parser {
         if let Some(frame) = self.hierarchy.last_mut() {
             frame.object_id = Some(object_id.clone());
         }
-        if let Some(parent_id) = parent_id {
-            if parent_id != object_id {
-                self.doc.hierarchy_edges.push(ParsedHierarchyEdge {
-                    child_id: object_id,
-                    parent_id,
-                });
-            }
+        if let Some(parent_id) = parent_id
+            && parent_id != object_id
+        {
+            self.doc.hierarchy_edges.push(ParsedHierarchyEdge {
+                child_id: object_id,
+                parent_id,
+            });
         }
     }
 

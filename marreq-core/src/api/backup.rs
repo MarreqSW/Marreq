@@ -4,7 +4,7 @@
 //! `POST /api/admin/backup` — whole-database backup download for site administrators (issue #247).
 
 use crate::api::prelude::*;
-use crate::backup::{create_backup, remove_quietly, BackupConfig};
+use crate::backup::{BackupConfig, create_backup, remove_quietly};
 use crate::services::log_service::LogService;
 use rocket::fs::NamedFile;
 use rocket::http::{ContentType, Header};
@@ -81,7 +81,7 @@ mod tests {
     use crate::app::AppState;
     use crate::auth::session::test_session_cookie_for;
     use crate::backup::tests::fake_pg_dump;
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository, LogRepository};
+    use crate::repository::{CacheRepository, LogRepository, diesel_repo_mock::DieselRepoMock};
     use rocket::http::Cookie;
     use rocket::local::asynchronous::Client;
     use std::path::PathBuf;
@@ -184,9 +184,10 @@ mod tests {
         assert_eq!(response.into_bytes().await.unwrap(), b"dump");
 
         let logs = audit_descriptions(&client);
-        assert!(logs
-            .iter()
-            .any(|d| d.starts_with("Database backup generated: marreq-backup_")));
+        assert!(
+            logs.iter()
+                .any(|d| d.starts_with("Database backup generated: marreq-backup_"))
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -204,13 +205,17 @@ mod tests {
 
         assert_eq!(response.status(), Status::InternalServerError);
         let body: serde_json::Value = response.into_json().await.unwrap();
-        assert!(body["message"]
-            .as_str()
-            .unwrap()
-            .contains("could not connect"));
-        assert!(audit_descriptions(&client)
-            .iter()
-            .any(|d| d.starts_with("Database backup failed")));
+        assert!(
+            body["message"]
+                .as_str()
+                .unwrap()
+                .contains("could not connect")
+        );
+        assert!(
+            audit_descriptions(&client)
+                .iter()
+                .any(|d| d.starts_with("Database backup failed"))
+        );
         let _ = std::fs::remove_dir_all(&dir);
     }
 }

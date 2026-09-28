@@ -180,21 +180,20 @@ pub fn to_reqif(
         out.push_str("\n            <ATTRIBUTE-VALUE-XHTML><DEFINITION><ATTRIBUTE-DEFINITION-XHTML-REF>ad-statement</ATTRIBUTE-DEFINITION-XHTML-REF></DEFINITION><THE-VALUE>");
         out.push_str(&crate::rich_text::to_xhtml(&req.description));
         out.push_str("</THE-VALUE></ATTRIBUTE-VALUE-XHTML>");
-        if let Some(ref j) = req.justification {
-            if !j.is_empty() {
-                out.push_str("\n            <ATTRIBUTE-VALUE-STRING THE-VALUE=\"");
-                out.push_str(&escape_xml(j));
-                out.push_str("\"><DEFINITION><ATTRIBUTE-DEFINITION-STRING-REF>ad-rationale</ATTRIBUTE-DEFINITION-STRING-REF></DEFINITION></ATTRIBUTE-VALUE-STRING>");
-            }
+        if let Some(ref j) = req.justification
+            && !j.is_empty()
+        {
+            out.push_str("\n            <ATTRIBUTE-VALUE-STRING THE-VALUE=\"");
+            out.push_str(&escape_xml(j));
+            out.push_str("\"><DEFINITION><ATTRIBUTE-DEFINITION-STRING-REF>ad-rationale</ATTRIBUTE-DEFINITION-STRING-REF></DEFINITION></ATTRIBUTE-VALUE-STRING>");
         }
-        if let Some(map) = comments_map {
-            if let Some(remarks) = map.get(&req.id) {
-                if !remarks.is_empty() {
-                    out.push_str("\n            <ATTRIBUTE-VALUE-STRING THE-VALUE=\"");
-                    out.push_str(&escape_xml(remarks));
-                    out.push_str("\"><DEFINITION><ATTRIBUTE-DEFINITION-STRING-REF>ad-remarks</ATTRIBUTE-DEFINITION-STRING-REF></DEFINITION></ATTRIBUTE-VALUE-STRING>");
-                }
-            }
+        if let Some(map) = comments_map
+            && let Some(remarks) = map.get(&req.id)
+            && !remarks.is_empty()
+        {
+            out.push_str("\n            <ATTRIBUTE-VALUE-STRING THE-VALUE=\"");
+            out.push_str(&escape_xml(remarks));
+            out.push_str("\"><DEFINITION><ATTRIBUTE-DEFINITION-STRING-REF>ad-remarks</ATTRIBUTE-DEFINITION-STRING-REF></DEFINITION></ATTRIBUTE-VALUE-STRING>");
         }
         out.push_str("\n          </VALUES>");
         out.push_str(
@@ -340,8 +339,11 @@ mod tests {
         assert!(xml.contains(
             "<TYPE><DATATYPE-DEFINITION-STRING-REF>dt-string</DATATYPE-DEFINITION-STRING-REF></TYPE>"
         ));
-        assert!(xml
-            .contains("<TYPE><SPECIFICATION-TYPE-REF>st-document</SPECIFICATION-TYPE-REF></TYPE>"));
+        assert!(
+            xml.contains(
+                "<TYPE><SPECIFICATION-TYPE-REF>st-document</SPECIFICATION-TYPE-REF></TYPE>"
+            )
+        );
         assert!(xml.contains("<SOURCE><SPEC-OBJECT-REF>so-2</SPEC-OBJECT-REF></SOURCE>"));
         let parent_pos = xml.find("IDENTIFIER=\"sh-1\"").unwrap();
         let child_pos = xml.find("IDENTIFIER=\"sh-2\"").unwrap();

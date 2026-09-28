@@ -786,10 +786,10 @@ mod data_mapping_tests {
 
         let mut req_data = HashMap::new();
         for mapping in &mappings {
-            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                if column.index < row_data.len() {
-                    req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
-                }
+            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                && column.index < row_data.len()
+            {
+                req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
             }
         }
 
@@ -815,10 +815,10 @@ mod data_mapping_tests {
 
         let mut req_data = HashMap::new();
         for mapping in &mappings {
-            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                if column.index < row_data.len() {
-                    req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
-                }
+            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                && column.index < row_data.len()
+            {
+                req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
             }
         }
 
@@ -841,10 +841,10 @@ mod data_mapping_tests {
 
         let mut req_data = HashMap::new();
         for mapping in &mappings {
-            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                if column.index < row_data.len() {
-                    req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
-                }
+            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                && column.index < row_data.len()
+            {
+                req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
             }
         }
 
@@ -879,10 +879,10 @@ mod data_mapping_tests {
 
         let mut test_data = HashMap::new();
         for mapping in &mappings {
-            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                if column.index < row_data.len() {
-                    test_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
-                }
+            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                && column.index < row_data.len()
+            {
+                test_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
             }
         }
 
@@ -905,10 +905,10 @@ mod data_mapping_tests {
 
         let mut req_data = HashMap::new();
         for mapping in &mappings {
-            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                if column.index < row_data.len() {
-                    req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
-                }
+            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                && column.index < row_data.len()
+            {
+                req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
             }
         }
 
@@ -936,10 +936,10 @@ mod data_mapping_tests {
 
         let mut req_data = HashMap::new();
         for mapping in &mappings {
-            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                if column.index < row_data.len() {
-                    req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
-                }
+            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                && column.index < row_data.len()
+            {
+                req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
             }
         }
 
@@ -1769,11 +1769,10 @@ mod data_structure_combination_tests {
 
             let mut req_data = HashMap::new();
             for mapping in &mappings {
-                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                    if column.index < row_data.len() {
-                        req_data
-                            .insert(mapping.target_field.clone(), row_data[column.index].clone());
-                    }
+                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                    && column.index < row_data.len()
+                {
+                    req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
                 }
             }
 
@@ -1799,11 +1798,10 @@ mod data_structure_combination_tests {
 
             let mut req_data = HashMap::new();
             for mapping in &mappings {
-                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                    if column.index < row_data.len() {
-                        req_data
-                            .insert(mapping.target_field.clone(), row_data[column.index].clone());
-                    }
+                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                    && column.index < row_data.len()
+                {
+                    req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
                 }
             }
 
@@ -1826,11 +1824,10 @@ mod data_structure_combination_tests {
 
             let mut req_data = HashMap::new();
             for mapping in &mappings {
-                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                    if column.index < row_data.len() {
-                        req_data
-                            .insert(mapping.target_field.clone(), row_data[column.index].clone());
-                    }
+                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                    && column.index < row_data.len()
+                {
+                    req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
                 }
             }
 
@@ -1865,11 +1862,10 @@ mod data_structure_combination_tests {
 
             let mut test_data = HashMap::new();
             for mapping in &mappings {
-                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                    if column.index < row_data.len() {
-                        test_data
-                            .insert(mapping.target_field.clone(), row_data[column.index].clone());
-                    }
+                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                    && column.index < row_data.len()
+                {
+                    test_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
                 }
             }
 
@@ -1892,11 +1888,10 @@ mod data_structure_combination_tests {
 
             let mut req_data = HashMap::new();
             for mapping in &mappings {
-                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                    if column.index < row_data.len() {
-                        req_data
-                            .insert(mapping.target_field.clone(), row_data[column.index].clone());
-                    }
+                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                    && column.index < row_data.len()
+                {
+                    req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
                 }
             }
 
@@ -1924,11 +1919,10 @@ mod data_structure_combination_tests {
 
             let mut req_data = HashMap::new();
             for mapping in &mappings {
-                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                    if column.index < row_data.len() {
-                        req_data
-                            .insert(mapping.target_field.clone(), row_data[column.index].clone());
-                    }
+                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                    && column.index < row_data.len()
+                {
+                    req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
                 }
             }
 

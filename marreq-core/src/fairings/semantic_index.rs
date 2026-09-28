@@ -247,8 +247,8 @@ mod tests {
     #[tokio::test]
     async fn process_queue_once_when_disabled_returns_zero() {
         use crate::app::AppState;
-        use crate::repository::diesel_repo_mock::DieselRepoMock;
         use crate::repository::CacheRepository;
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
         use std::sync::{Arc, RwLock};
 
         let inner = DieselRepoMock::default();

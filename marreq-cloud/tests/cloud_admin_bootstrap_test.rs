@@ -17,11 +17,15 @@ use marreq_core::repository::UserRepository;
 async fn bootstraps_site_admin_user_on_ignite() {
     // The fairing reads these on `on_ignite`, so they must be set before
     // building the Rocket instance.
-    std::env::set_var("MARREQ_SITE_ADMIN_EMAIL", "root@example.com");
-    std::env::set_var(
-        "MARREQ_SITE_ADMIN_BOOTSTRAP_PASSWORD",
-        "RootBootstrap!Pass_2026",
-    );
+    // SAFETY: this is the only test in its binary and it runs before any Rocket
+    // instance, database connection or other thread that reads the environment exists.
+    unsafe {
+        std::env::set_var("MARREQ_SITE_ADMIN_EMAIL", "root@example.com");
+        std::env::set_var(
+            "MARREQ_SITE_ADMIN_BOOTSTRAP_PASSWORD",
+            "RootBootstrap!Pass_2026",
+        );
+    }
 
     let client = cloud_client().await;
 

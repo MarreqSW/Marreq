@@ -6,8 +6,8 @@ use rocket::serde::{Deserialize, Serialize};
 use crate::api::prelude::*;
 use crate::auth::guards::{ApiUser, ProjectVerificationsRead, ProjectVerificationsWrite};
 use crate::models::{NewVerification, Verification};
-use crate::repository::errors::RepoError;
 use crate::repository::VerificationsRepository;
+use crate::repository::errors::RepoError;
 use crate::services::VerificationService;
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -240,10 +240,10 @@ fn apply_verification_field_update(
 ) -> ApiResult<Value> {
     let service = VerificationService::new(state.inner());
     let mut verification = service.get_by_id(id)?;
-    if let Some(pid) = project_id_match {
-        if verification.project_id != pid {
-            return Err(ApiError::NotFound("verification not in project".into()));
-        }
+    if let Some(pid) = project_id_match
+        && verification.project_id != pid
+    {
+        return Err(ApiError::NotFound("verification not in project".into()));
     }
     require_project_permission(
         state,
@@ -306,7 +306,7 @@ fn apply_verification_field_update(
         other => {
             return Err(ApiError::from(RepoError::BadInput(format!(
                 "unsupported field '{other}'"
-            ))))
+            ))));
         }
     }
 
@@ -381,10 +381,10 @@ mod tests {
         test_session_cookie_for(state, user_id)
     }
     use crate::models::VerificationMethod;
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use rocket::http::ContentType;
     use rocket::local::asynchronous::Client;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
     use std::sync::{Arc, RwLock};
 
     type TestState = AppState<CacheRepository<DieselRepoMock>>;

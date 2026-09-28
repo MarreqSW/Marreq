@@ -312,7 +312,9 @@ mod tests {
         let provider = MockLlmProvider::new();
         let messages = vec![
             ChatMessage::system("You are a helpful assistant."),
-            ChatMessage::user("RELEVANT REQUIREMENTS:\n1. [REQ-001] Test requirement\n\nQUESTION: What does this do?"),
+            ChatMessage::user(
+                "RELEVANT REQUIREMENTS:\n1. [REQ-001] Test requirement\n\nQUESTION: What does this do?",
+            ),
         ];
 
         let response = provider.chat(&messages, 100).await.unwrap();
@@ -336,7 +338,9 @@ mod tests {
         let provider = MockLlmProvider::new();
         let messages = vec![
             ChatMessage::system("You are a helpful assistant."),
-            ChatMessage::user("RELEVANT REQUIREMENTS:\n1. [REQ-001] First\n2. [REQ-002] Second\n3. [REQ-003] Third\n\nQUESTION: Compare them"),
+            ChatMessage::user(
+                "RELEVANT REQUIREMENTS:\n1. [REQ-001] First\n2. [REQ-002] Second\n3. [REQ-003] Third\n\nQUESTION: Compare them",
+            ),
         ];
 
         let response = provider.chat(&messages, 100).await.unwrap();
@@ -350,7 +354,9 @@ mod tests {
         let provider = MockLlmProvider::new();
         let messages = vec![
             ChatMessage::system("You are a helpful assistant."),
-            ChatMessage::user("RELEVANT REQUIREMENTS:\n1. [REQ-001] First\n2. [REQ-002] Second\n3. [REQ-003] Third\n4. [REQ-004] Fourth\n5. [REQ-005] Fifth\n\nQUESTION: List them"),
+            ChatMessage::user(
+                "RELEVANT REQUIREMENTS:\n1. [REQ-001] First\n2. [REQ-002] Second\n3. [REQ-003] Third\n4. [REQ-004] Fourth\n5. [REQ-005] Fifth\n\nQUESTION: List them",
+            ),
         ];
 
         let response = provider.chat(&messages, 100).await.unwrap();

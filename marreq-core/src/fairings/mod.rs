@@ -14,7 +14,7 @@ pub mod semantic_index;
 
 pub use cache_control::AntiCacheFairing;
 pub(crate) mod oauth_challenge;
-pub use csrf::{csrf_denied, CsrfFairing};
+pub use csrf::{CsrfFairing, csrf_denied};
 pub use oauth_challenge::OAuthChallengeFairing;
 pub use request_log::RequestLogFairing;
 pub use security_headers::SecurityHeadersFairing;

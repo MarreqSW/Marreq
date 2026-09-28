@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 
-use super::{map_db_error, DieselRepo};
+use super::{DieselRepo, map_db_error};
 use crate::models::*;
 use crate::repository::{DelegatedOAuthRepository, RepoError};
 use crate::schema::{

@@ -1,6 +1,6 @@
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
-use rocket::{async_trait, Request, State};
+use rocket::{Request, State, async_trait};
 use sha2::{Digest, Sha256};
 
 use crate::api::prelude::*;
@@ -112,16 +112,16 @@ pub fn release(
     operation: &str,
     key: &OptionalIdempotencyKey,
 ) {
-    if let Some(key) = key.0.as_deref() {
-        if let Err(error) = state.repo_write().release_idempotency(
+    if let Some(key) = key.0.as_deref()
+        && let Err(error) = state.repo_write().release_idempotency(
             user_id,
             principal_key,
             target_key,
             operation,
             key,
-        ) {
-            eprintln!("failed to release idempotency claim for {operation}: {error}");
-        }
+        )
+    {
+        eprintln!("failed to release idempotency claim for {operation}: {error}");
     }
 }
 

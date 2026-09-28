@@ -3,8 +3,8 @@
 
 use crate::auth::{AuthConfig, ExternalIdentity};
 use crate::models::{NewLog, NewUserIdentity, User, UserIdentity};
-use crate::repository::errors::RepoError;
 use crate::repository::Repository;
+use crate::repository::errors::RepoError;
 use crate::services::UserProvisioningService;
 
 pub struct ResolvedExternalUser {
@@ -22,10 +22,10 @@ pub fn resolve_login<R: Repository>(
         repo.touch_identity_login(identity.id, chrono::Utc::now().naive_utc())?;
         return Ok(ResolvedExternalUser { user, identity });
     }
-    if let Some(email) = external.email.as_deref() {
-        if repo.get_user_by_email(email)?.is_some() {
-            return Err(RepoError::Duplicate("account_link_required".into()));
-        }
+    if let Some(email) = external.email.as_deref()
+        && repo.get_user_by_email(email)?.is_some()
+    {
+        return Err(RepoError::Duplicate("account_link_required".into()));
     }
     if !auto_register {
         return Err(RepoError::Unauthorized);
@@ -131,8 +131,8 @@ fn audit_identity<R: Repository>(
 mod tests {
     use super::*;
     use crate::auth::{AuthProviderConfig, ProviderKind};
-    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::repository::ExternalIdentityRepository;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
 
     fn external(subject: &str, email: &str) -> ExternalIdentity {
         external_for("github", subject, email)
@@ -217,10 +217,11 @@ mod tests {
         assert!(
             matches!(resolve_login(&mut repo, &external("42", "email@example.com"), true), Err(RepoError::Duplicate(message)) if message == "account_link_required")
         );
-        assert!(repo
-            .get_identity("https://github.com", "42")
-            .unwrap()
-            .is_none());
+        assert!(
+            repo.get_identity("https://github.com", "42")
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
@@ -230,10 +231,11 @@ mod tests {
             resolve_login(&mut repo, &external("42", "alice@example.test"), false),
             Err(RepoError::Unauthorized)
         ));
-        assert!(repo
-            .get_identity("https://github.com", "42")
-            .unwrap()
-            .is_none());
+        assert!(
+            repo.get_identity("https://github.com", "42")
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[test]
@@ -281,13 +283,15 @@ mod tests {
         )
         .unwrap();
 
-        assert!(unlink_identity(
-            &mut repo,
-            &auth_config(true, &["github", "gitlab"]),
-            1,
-            github,
-        )
-        .is_ok());
+        assert!(
+            unlink_identity(
+                &mut repo,
+                &auth_config(true, &["github", "gitlab"]),
+                1,
+                github,
+            )
+            .is_ok()
+        );
     }
 
     #[test]

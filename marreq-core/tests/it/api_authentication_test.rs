@@ -13,20 +13,20 @@
 
 use marreq_core::auth::csrf::CSRF_COOKIE;
 use marreq_core::auth::hash_password;
-use marreq_core::auth::session::{session_cookie_name_for_request, SESSION_COOKIE};
+use marreq_core::auth::session::{SESSION_COOKIE, session_cookie_name_for_request};
 use marreq_core::models::*;
 use marreq_core::repository::UserRepository;
 use marreq_core::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
     use marreq_core::app::AppState;
     use marreq_core::auth::session::test_session_cookie_for;
-    use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use marreq_core::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use std::sync::{Arc, RwLock};
 
     pub type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
@@ -236,10 +236,12 @@ async fn external_callback_rejects_missing_single_use_transaction() {
 
     assert_eq!(response.status(), Status::BadRequest);
     let body: Value = response.into_json().await.expect("json");
-    assert!(body["message"]
-        .as_str()
-        .unwrap_or_default()
-        .contains("missing or already used"));
+    assert!(
+        body["message"]
+            .as_str()
+            .unwrap_or_default()
+            .contains("missing or already used")
+    );
 }
 
 #[rocket::async_test]
@@ -942,11 +944,13 @@ async fn change_password_rejects_wrong_current_password() {
         .await;
     assert_eq!(response.status(), Status::BadRequest);
     let body: Value = response.into_json().await.expect("json");
-    assert!(body["message"]
-        .as_str()
-        .unwrap_or_default()
-        .to_lowercase()
-        .contains("current password"));
+    assert!(
+        body["message"]
+            .as_str()
+            .unwrap_or_default()
+            .to_lowercase()
+            .contains("current password")
+    );
 
     let after = {
         let state = client.rocket().state::<TestAppState>().expect("state");
@@ -1028,9 +1032,11 @@ async fn change_password_updates_hash_and_revokes_session() {
             .password_hash
     };
     assert_ne!(before, after);
-    assert!(after
-        .as_deref()
-        .is_some_and(|hash| hash.starts_with("$argon2")));
+    assert!(
+        after
+            .as_deref()
+            .is_some_and(|hash| hash.starts_with("$argon2"))
+    );
 
     let me = client
         .get("/api/auth/me")

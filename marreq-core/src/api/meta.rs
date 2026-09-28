@@ -4,7 +4,7 @@
 //! Stable JSON entrypoint at `GET /api` (mount base + `/`).
 
 use rocket::response::content::RawJson;
-use rocket::serde::json::{json, Json};
+use rocket::serde::json::{Json, json};
 
 const API_ROOT_JSON: &str = r#"{"service":"marreq","api":"/api","hint":"Open the SPA on port 8080 when using Docker Compose (see docker/README.md)."}"#;
 

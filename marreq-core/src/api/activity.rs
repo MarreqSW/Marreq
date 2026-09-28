@@ -9,7 +9,7 @@ use crate::api::prelude::*;
 use crate::auth::guards::{ProjectRequirementsRead, ProjectVerificationsRead};
 use crate::models::EntityType;
 use crate::permissions::Permission;
-use crate::services::log_service::{change_summary, log_change_details, ChangeDetail, LogService};
+use crate::services::log_service::{ChangeDetail, LogService, change_summary, log_change_details};
 use crate::services::{RequirementService, VerificationService};
 
 /// One audit log row formatted for the entity detail UI.

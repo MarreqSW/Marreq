@@ -6,12 +6,12 @@
 use crate::app::{AppState, DieselCachedRepo};
 use crate::auth::errors::AuthError;
 use crate::auth::password::{admin_set_user_password, hash_password, verify_password};
-use crate::auth::password_policy::{validate_password, PasswordContext};
+use crate::auth::password_policy::{PasswordContext, validate_password};
 use crate::logger::{LogCtx, Logger};
 use crate::models::{
     ActionType, EntityType, NewUser, ProfileUpdate, UpdateUser, User, UserCreateRequest,
 };
-use crate::namespaces::{ensure_namespace_segment_available, NamespaceAvailabilityOptions};
+use crate::namespaces::{NamespaceAvailabilityOptions, ensure_namespace_segment_available};
 use crate::repository::errors::RepoError;
 use crate::repository::{SessionRepository, UserRepository};
 use crate::services::AuditLog;
@@ -525,10 +525,12 @@ mod tests {
         assert_eq!(stored.name, "Bob Example");
         assert_eq!(stored.email, "bob@example.com");
         // Password should be hashed (argon2 hashes start with $argon2)
-        assert!(stored
-            .password_hash
-            .as_deref()
-            .is_some_and(|hash| hash.starts_with("$argon2")));
+        assert!(
+            stored
+                .password_hash
+                .as_deref()
+                .is_some_and(|hash| hash.starts_with("$argon2"))
+        );
         assert_ne!(
             stored.password_hash.as_deref(),
             Some("Skyline!Current_2026")

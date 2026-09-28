@@ -16,7 +16,7 @@
 use marreq_core::app::AppState;
 use marreq_core::auth::csrf::{CSRF_COOKIE, CSRF_HEADER};
 use marreq_core::fairings::CsrfFairing;
-use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+use marreq_core::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
 use rocket::http::{ContentType, Cookie, Header, Status};
 use rocket::local::asynchronous::Client;
 use sha2::{Digest, Sha256};

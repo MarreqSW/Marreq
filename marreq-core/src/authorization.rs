@@ -7,7 +7,7 @@
 //! services do not grow divergent, duplicated authorization semantics.
 
 use crate::models::{RequirementStatus, User, VerificationStatus};
-use crate::permissions::{has_group_permission, has_permission, GroupPermission, Permission};
+use crate::permissions::{GroupPermission, Permission, has_group_permission, has_permission};
 use crate::repository::{
     GroupMembersRepository, LookupRepository, ProjectMembersRepository, ProjectReviewersRepository,
 };

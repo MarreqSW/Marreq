@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
-use rocket::http::Status;
 use rocket::Request;
+use rocket::http::Status;
 
 pub(crate) fn extract_route_param(
     request: &Request<'_>,

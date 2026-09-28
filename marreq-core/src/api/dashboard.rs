@@ -5,7 +5,7 @@
 
 use rocket::http::Cookie;
 use rocket::http::CookieJar;
-use rocket::serde::json::{json, Json};
+use rocket::serde::json::{Json, json};
 
 use crate::api::guards::OptionalSessionUser;
 use crate::api::prelude::*;
@@ -36,10 +36,10 @@ pub fn dashboard_json(
         .get("selected_project_id")
         .and_then(|cookie| cookie.value().parse::<i32>().ok());
 
-    if let Some(id) = selected_project_id {
-        if !projects.iter().any(|p| p.id == id) {
-            selected_project_id = None;
-        }
+    if let Some(id) = selected_project_id
+        && !projects.iter().any(|p| p.id == id)
+    {
+        selected_project_id = None;
     }
 
     if selected_project_id.is_none() && !projects.is_empty() {

@@ -5,16 +5,16 @@ use std::ops::Deref;
 
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
-use rocket::{async_trait, Request};
+use rocket::{Request, async_trait};
 
 use crate::app::AppState;
+use crate::auth::guards::SessionUser;
 use crate::auth::guards::route_params::extract_route_param;
 use crate::auth::guards::session::session_user_has_group_access;
-use crate::auth::guards::SessionUser;
 use crate::models::User;
-use crate::permissions::{has_group_permission, GroupPermission};
-use crate::repository::errors::RepoError;
+use crate::permissions::{GroupPermission, has_group_permission};
 use crate::repository::GroupsRepository;
+use crate::repository::errors::RepoError;
 
 /// Request guard that ensures the user can view the addressed group page.
 pub struct HtmlGroupAccess {

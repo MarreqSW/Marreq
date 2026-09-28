@@ -166,22 +166,22 @@ pub fn parse_inline(src: &str) -> Vec<Inline> {
                 continue;
             }
             '`' => {
-                if let Some(end) = chars[i + 1..].iter().position(|&x| x == '`') {
-                    if end > 0 {
-                        out.push(Inline::Code(chars[i + 1..i + 1 + end].iter().collect()));
-                        i += end + 2;
-                        continue;
-                    }
+                if let Some(end) = chars[i + 1..].iter().position(|&x| x == '`')
+                    && end > 0
+                {
+                    out.push(Inline::Code(chars[i + 1..i + 1 + end].iter().collect()));
+                    i += end + 2;
+                    continue;
                 }
             }
             '*' if chars.get(i + 1) == Some(&'*') => {
-                if let Some(end) = find_closing(&chars, i + 2, &['*', '*']) {
-                    if end > i + 2 {
-                        let inner: String = chars[i + 2..end].iter().collect();
-                        out.push(Inline::Strong(parse_inline(&inner)));
-                        i = end + 2;
-                        continue;
-                    }
+                if let Some(end) = find_closing(&chars, i + 2, &['*', '*'])
+                    && end > i + 2
+                {
+                    let inner: String = chars[i + 2..end].iter().collect();
+                    out.push(Inline::Strong(parse_inline(&inner)));
+                    i = end + 2;
+                    continue;
                 }
             }
             '*' | '_' => {
@@ -211,25 +211,24 @@ pub fn parse_inline(src: &str) -> Vec<Inline> {
                 }
             }
             '[' => {
-                if let Some(close) = find_closing(&chars, i + 1, &[']']) {
-                    if chars.get(close + 1) == Some(&'(') {
-                        if let Some(paren) = chars[close + 2..].iter().position(|&x| x == ')') {
-                            let href: String = chars[close + 2..close + 2 + paren].iter().collect();
-                            let label: String = chars[i + 1..close].iter().collect();
-                            let end = close + 2 + paren + 1;
-                            if close > i + 1 && is_safe_href(&href) {
-                                out.push(Inline::Link {
-                                    href: href.trim().to_string(),
-                                    children: parse_inline(&label),
-                                });
-                            } else {
-                                // Unsafe or empty link: keep the source visible as text.
-                                push_text(&mut out, &chars[i..end].iter().collect::<String>());
-                            }
-                            i = end;
-                            continue;
-                        }
+                if let Some(close) = find_closing(&chars, i + 1, &[']'])
+                    && chars.get(close + 1) == Some(&'(')
+                    && let Some(paren) = chars[close + 2..].iter().position(|&x| x == ')')
+                {
+                    let href: String = chars[close + 2..close + 2 + paren].iter().collect();
+                    let label: String = chars[i + 1..close].iter().collect();
+                    let end = close + 2 + paren + 1;
+                    if close > i + 1 && is_safe_href(&href) {
+                        out.push(Inline::Link {
+                            href: href.trim().to_string(),
+                            children: parse_inline(&label),
+                        });
+                    } else {
+                        // Unsafe or empty link: keep the source visible as text.
+                        push_text(&mut out, &chars[i..end].iter().collect::<String>());
                     }
+                    i = end;
+                    continue;
                 }
             }
             _ => {}

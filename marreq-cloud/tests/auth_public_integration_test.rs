@@ -20,7 +20,7 @@ use common::cloud_client;
 use marreq_core::models::EmailToken;
 use marreq_core::repository::UserRepository;
 use rocket::http::{ContentType, Status};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 #[rocket::async_test]
 async fn register_happy_path_returns_created_and_seeds_verification_token() {

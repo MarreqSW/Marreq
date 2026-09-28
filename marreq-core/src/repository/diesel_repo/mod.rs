@@ -3,11 +3,11 @@
 
 use super::errors::RepoError;
 use crate::namespaces::TAKEN_NAMESPACE_MESSAGE;
+use diesel::RunQueryDsl;
 use diesel::pg::PgConnection;
 use diesel::prelude::define_sql_function;
 use diesel::r2d2::{ConnectionManager, Pool, PooledConnection};
 use diesel::sql_types::Text;
-use diesel::RunQueryDsl;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 

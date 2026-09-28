@@ -5,8 +5,8 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{SavedView, SavedViewPayload};
-use crate::repository::errors::RepoError;
 use crate::repository::SavedViewRepository;
+use crate::repository::errors::RepoError;
 
 pub struct SavedViewService<'a> {
     state: &'a AppState<DieselCachedRepo>,

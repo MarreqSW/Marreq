@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
-use super::requirements::requirement_from_baseline_version;
 use super::DieselRepo;
+use super::requirements::requirement_from_baseline_version;
 use crate::models::entities::*;
 use crate::models::forms::*;
-use crate::repository::errors::RepoError;
 use crate::repository::BaselineRepository;
+use crate::repository::errors::RepoError;
 use crate::schema;
 use diesel::expression_methods::NullableExpressionMethods;
 use diesel::prelude::*;
@@ -89,20 +89,20 @@ impl BaselineRepository for DieselRepo {
                     let applied = crate::saved_view_definition::filters_from_definition(def);
                     rows.into_iter()
                         .filter(|(_container, version)| {
-                            if let Some(sid) = applied.status_id {
-                                if version.status_id != sid {
-                                    return false;
-                                }
+                            if let Some(sid) = applied.status_id
+                                && version.status_id != sid
+                            {
+                                return false;
                             }
-                            if let Some(cid) = applied.category_id {
-                                if version.category_id != cid {
-                                    return false;
-                                }
+                            if let Some(cid) = applied.category_id
+                                && version.category_id != cid
+                            {
+                                return false;
                             }
-                            if let Some(state) = applied.approval_state.as_deref() {
-                                if !version.approval_state.eq_ignore_ascii_case(state) {
-                                    return false;
-                                }
+                            if let Some(state) = applied.approval_state.as_deref()
+                                && !version.approval_state.eq_ignore_ascii_case(state)
+                            {
+                                return false;
                             }
                             if let Some(raw_q) = applied.q.as_deref() {
                                 let needle = raw_q.trim().to_lowercase();

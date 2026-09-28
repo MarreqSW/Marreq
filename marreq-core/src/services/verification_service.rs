@@ -10,9 +10,9 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::authorization::AuthorizationError;
 use crate::models::{NewVerification, User, Verification};
 use crate::permissions::Permission;
-use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
 use crate::repository::VerificationsRepository;
+use crate::repository::errors::RepoError;
 use crate::services::AuditLog;
 
 /// Service wrapper that provides verification operations backed by the shared AppState.
@@ -80,7 +80,7 @@ impl<'a> VerificationService<'a> {
             Err(RepoError::NotFound) => {
                 return Err(RepoError::BadInput(
                     "verification_method_id is not in this project catalog".into(),
-                ))
+                ));
             }
             Err(e) => return Err(e),
         };

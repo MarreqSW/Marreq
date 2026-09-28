@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Marreq
 
 use super::lower;
-use super::{map_unique_violation, DieselRepo};
+use super::{DieselRepo, map_unique_violation};
 use crate::models::entities::*;
 use crate::models::forms::*;
 use crate::repository::errors::RepoError;

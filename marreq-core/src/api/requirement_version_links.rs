@@ -63,7 +63,9 @@ pub async fn create(
 }
 
 /// List requirement version links for a project. Query: source_version_id, target_version_id, link_type (all optional).
-#[get("/projects/<project_id>/requirement-version-links?<source_version_id>&<target_version_id>&<link_type>")]
+#[get(
+    "/projects/<project_id>/requirement-version-links?<source_version_id>&<target_version_id>&<link_type>"
+)]
 pub async fn list(
     access: ProjectAccessOrBearer,
     project_id: i32,

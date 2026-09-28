@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
+use rocket::Request;
 use rocket::http::Status;
 use rocket::response::{Responder, Response};
 use rocket::serde::json::json;
-use rocket::Request;
 
 use diesel::result::{DatabaseErrorKind, Error as DieselError};
 

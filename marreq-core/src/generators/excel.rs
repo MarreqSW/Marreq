@@ -355,7 +355,7 @@ mod matrix_links_tests {
     use super::matrix_links_workbook_with_repo;
     use crate::models::{MatrixLink, Requirement, Verification};
     use crate::repository::diesel_repo_mock::DieselRepoMock;
-    use calamine::{open_workbook_auto_from_rs, Data, Reader};
+    use calamine::{Data, Reader, open_workbook_auto_from_rs};
     use chrono::{NaiveDate, NaiveDateTime};
     use std::io::Cursor;
 

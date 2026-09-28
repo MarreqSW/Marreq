@@ -1038,9 +1038,11 @@ mod tests {
         let titles: Vec<_> = details.iter().map(|d| d.field.as_str()).collect();
         assert!(titles.contains(&"Title"));
         assert!(titles.contains(&"Description"));
-        assert!(details
-            .iter()
-            .any(|d| d.old_value == "—" && d.new_value != "—"));
+        assert!(
+            details
+                .iter()
+                .any(|d| d.old_value == "—" && d.new_value != "—")
+        );
     }
 
     #[test]

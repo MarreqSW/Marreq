@@ -1,13 +1,13 @@
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
+use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use chrono::{Duration, NaiveDateTime};
 use rand::TryRng;
 use sha2::{Digest, Sha256};
 use url::Url;
 
 use crate::models::*;
-use crate::repository::errors::RepoError;
 use crate::repository::DelegatedOAuthRepository;
+use crate::repository::errors::RepoError;
 
 pub const SCOPES: &[&str] = &[
     "projects:read",
@@ -390,36 +390,42 @@ mod tests {
             code_challenge: challenge,
         };
         let code = authorize(&mut repo, 1, req, "https://marreq.test/mcp", now).unwrap();
-        assert!(exchange_code(
-            &mut repo,
-            &code,
-            "wrong",
-            &client.client_id,
-            "http://localhost:9000/callback",
-            "https://marreq.test/mcp",
-            now
-        )
-        .is_err());
-        assert!(exchange_code(
-            &mut repo,
-            &code,
-            &verifier,
-            &client.client_id,
-            "http://localhost:9000/callback",
-            "https://marreq.test/mcp",
-            now
-        )
-        .is_ok());
-        assert!(exchange_code(
-            &mut repo,
-            &code,
-            &verifier,
-            &client.client_id,
-            "http://localhost:9000/callback",
-            "https://marreq.test/mcp",
-            now
-        )
-        .is_err());
+        assert!(
+            exchange_code(
+                &mut repo,
+                &code,
+                "wrong",
+                &client.client_id,
+                "http://localhost:9000/callback",
+                "https://marreq.test/mcp",
+                now
+            )
+            .is_err()
+        );
+        assert!(
+            exchange_code(
+                &mut repo,
+                &code,
+                &verifier,
+                &client.client_id,
+                "http://localhost:9000/callback",
+                "https://marreq.test/mcp",
+                now
+            )
+            .is_ok()
+        );
+        assert!(
+            exchange_code(
+                &mut repo,
+                &code,
+                &verifier,
+                &client.client_id,
+                "http://localhost:9000/callback",
+                "https://marreq.test/mcp",
+                now
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -508,32 +514,38 @@ mod tests {
             now,
         )
         .unwrap();
-        assert!(validate_access(
-            &repo,
-            &tokens.access_token,
-            resource,
-            Some("requirements:write"),
-            now,
-        )
-        .is_ok());
+        assert!(
+            validate_access(
+                &repo,
+                &tokens.access_token,
+                resource,
+                Some("requirements:write"),
+                now,
+            )
+            .is_ok()
+        );
 
         authorize_with(&mut repo, vec!["requirements:read".into()]);
 
-        assert!(validate_access(
-            &repo,
-            &tokens.access_token,
-            resource,
-            Some("requirements:write"),
-            now,
-        )
-        .is_err());
-        assert!(refresh(
-            &mut repo,
-            &tokens.refresh_token,
-            &client.client_id,
-            resource,
-            now,
-        )
-        .is_err());
+        assert!(
+            validate_access(
+                &repo,
+                &tokens.access_token,
+                resource,
+                Some("requirements:write"),
+                now,
+            )
+            .is_err()
+        );
+        assert!(
+            refresh(
+                &mut repo,
+                &tokens.refresh_token,
+                &client.client_id,
+                resource,
+                now,
+            )
+            .is_err()
+        );
     }
 }

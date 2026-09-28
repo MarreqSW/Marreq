@@ -3,7 +3,7 @@
 
 //! Session-scoped project listing for SPA clients (replaces HTML `/projects` data).
 
-use rocket::serde::json::{json, Json, Value};
+use rocket::serde::json::{Json, Value, json};
 
 use crate::api::guards::OptionalSessionUser;
 use crate::api::prelude::*;

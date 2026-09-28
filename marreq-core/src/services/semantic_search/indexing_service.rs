@@ -7,7 +7,7 @@
 
 use super::config::SemanticSearchConfig;
 use super::document_builder::{build_embedding_document, compute_content_hash, needs_reindex};
-use super::embedding_provider::{create_embedding_provider, EmbeddingError};
+use super::embedding_provider::{EmbeddingError, create_embedding_provider};
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{
     DecoratedRequirement, EmbeddingIndexStatus, NewEmbeddingIndexQueueEntry,
@@ -467,10 +467,12 @@ mod tests {
             ..Default::default()
         };
         assert!(config.is_valid_for_embeddings().is_err());
-        assert!(config
-            .is_valid_for_embeddings()
-            .unwrap_err()
-            .contains("disabled"));
+        assert!(
+            config
+                .is_valid_for_embeddings()
+                .unwrap_err()
+                .contains("disabled")
+        );
     }
 
     #[test]
@@ -481,10 +483,12 @@ mod tests {
             ..Default::default()
         };
         assert!(config.is_valid_for_embeddings().is_err());
-        assert!(config
-            .is_valid_for_embeddings()
-            .unwrap_err()
-            .contains("Unknown"));
+        assert!(
+            config
+                .is_valid_for_embeddings()
+                .unwrap_err()
+                .contains("Unknown")
+        );
     }
 
     #[test]
@@ -595,8 +599,8 @@ mod tests {
     #[test]
     fn indexing_service_with_config_stores_config() {
         use crate::app::AppState;
-        use crate::repository::diesel_repo_mock::DieselRepoMock;
         use crate::repository::CacheRepository;
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
         use std::sync::{Arc, RwLock};
 
         let state = AppState {
@@ -618,8 +622,8 @@ mod tests {
     #[test]
     fn indexing_service_is_enabled_false_when_disabled() {
         use crate::app::AppState;
-        use crate::repository::diesel_repo_mock::DieselRepoMock;
         use crate::repository::CacheRepository;
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
         use std::sync::{Arc, RwLock};
 
         let state = AppState {
@@ -635,8 +639,8 @@ mod tests {
     #[test]
     fn indexing_service_is_enabled_true_with_valid_config() {
         use crate::app::AppState;
-        use crate::repository::diesel_repo_mock::DieselRepoMock;
         use crate::repository::CacheRepository;
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
         use std::sync::{Arc, RwLock};
 
         let state = AppState {

@@ -4,7 +4,7 @@
 //! Service for computing diffs between two requirement versions (read-only, deterministic).
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::diff::{compute_requirement_diff, custom_field_diff, RequirementDiff};
+use crate::diff::{RequirementDiff, compute_requirement_diff, custom_field_diff};
 use crate::models::Requirement;
 use crate::repository::errors::RepoError;
 use crate::repository::{
@@ -173,8 +173,8 @@ impl<'a> RequirementDiffService<'a> {
 mod tests {
     use super::*;
     use crate::app::{AppState, DieselCachedRepo};
-    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::repository::CacheRepository;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
 

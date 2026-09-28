@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Marreq
 
 use super::cache::keys::Keyspace;
-use super::cache::{keys, Cache};
+use super::cache::{Cache, keys};
 use crate::models::*;
 use crate::namespaces::project_namespace_segment;
 use crate::repository::errors::RepoError;
@@ -13,7 +13,7 @@ use crate::repository::{
     RequirementVersionLinksRepository, RequirementsRepository, SavedViewRepository, UserRepository,
     VerificationsRepository,
 };
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -65,40 +65,40 @@ impl<R: Repository> CacheRepository<R> {
     /// Populates the cache with common queries to improve initial performance.
     /// Note: This function may copy significant amounts of data; use with caution.
     pub fn warm_cache(&self) {
-        if let Ok(projects) = self.inner.get_projects_all() {
-            if let Ok(json_data) = serde_json::to_string(&projects) {
-                self.cache.set_with_ttl(
-                    keys::PROJECTS_ALL,
-                    json_data.clone(),
-                    Duration::from_secs(600),
-                );
-                self.cache
-                    .set_with_ttl(keys::PROJECTS_NAV, json_data, Duration::from_secs(300));
-            }
+        if let Ok(projects) = self.inner.get_projects_all()
+            && let Ok(json_data) = serde_json::to_string(&projects)
+        {
+            self.cache.set_with_ttl(
+                keys::PROJECTS_ALL,
+                json_data.clone(),
+                Duration::from_secs(600),
+            );
+            self.cache
+                .set_with_ttl(keys::PROJECTS_NAV, json_data, Duration::from_secs(300));
         }
 
-        if let Ok(statuses) = self.inner.get_requirement_status_all() {
-            if let Ok(json_data) = serde_json::to_string(&statuses) {
-                self.cache.set_with_ttl(
-                    keys::REQUIREMENT_STATUS_ALL,
-                    json_data,
-                    Duration::from_secs(900),
-                );
-            }
+        if let Ok(statuses) = self.inner.get_requirement_status_all()
+            && let Ok(json_data) = serde_json::to_string(&statuses)
+        {
+            self.cache.set_with_ttl(
+                keys::REQUIREMENT_STATUS_ALL,
+                json_data,
+                Duration::from_secs(900),
+            );
         }
 
-        if let Ok(categories) = self.inner.get_categories_all() {
-            if let Ok(json_data) = serde_json::to_string(&categories) {
-                self.cache
-                    .set_with_ttl(keys::CATEGORIES_ALL, json_data, Duration::from_secs(900));
-            }
+        if let Ok(categories) = self.inner.get_categories_all()
+            && let Ok(json_data) = serde_json::to_string(&categories)
+        {
+            self.cache
+                .set_with_ttl(keys::CATEGORIES_ALL, json_data, Duration::from_secs(900));
         }
 
-        if let Ok(users) = self.inner.get_users_all() {
-            if let Ok(json_data) = serde_json::to_string(&users) {
-                self.cache
-                    .set_with_ttl(keys::USERS_ALL, json_data, Duration::from_secs(600));
-            }
+        if let Ok(users) = self.inner.get_users_all()
+            && let Ok(json_data) = serde_json::to_string(&users)
+        {
+            self.cache
+                .set_with_ttl(keys::USERS_ALL, json_data, Duration::from_secs(600));
         }
     }
 

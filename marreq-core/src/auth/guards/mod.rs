@@ -19,11 +19,11 @@ pub(crate) mod session;
 pub use admin::AdminOnly;
 pub use api::ApiUser;
 pub use bearer::{
-    request_has_valid_bearer, ApiUserOrBearer, AuthenticationSource, BaselinesRead, BaselinesWrite,
-    McpAuditAuth, McpPrincipalAuth, ProjectsRead, RequirementsAndBaselinesRead,
-    RequirementsAndTraceabilityRead, RequirementsApprove, RequirementsRead,
-    RequirementsVerificationsAndTraceabilityRead, RequirementsWrite, TraceabilityRead,
-    TraceabilityWrite, VerificationsRead, VerificationsWrite,
+    ApiUserOrBearer, AuthenticationSource, BaselinesRead, BaselinesWrite, McpAuditAuth,
+    McpPrincipalAuth, ProjectsRead, RequirementsAndBaselinesRead, RequirementsAndTraceabilityRead,
+    RequirementsApprove, RequirementsRead, RequirementsVerificationsAndTraceabilityRead,
+    RequirementsWrite, TraceabilityRead, TraceabilityWrite, VerificationsRead, VerificationsWrite,
+    request_has_valid_bearer,
 };
 pub use group::{HtmlGroupAccess, HtmlGroupManageAccess};
 pub use html::HtmlProjectAccess;

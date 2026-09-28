@@ -2,11 +2,11 @@
 // Copyright (C) 2026 Marreq
 
 use super::requirements::requirement_from_current;
-use super::{map_db_error, DieselRepo};
+use super::{DieselRepo, map_db_error};
 use crate::models::entities::*;
 use crate::models::forms::*;
-use crate::repository::errors::RepoError;
 use crate::repository::VerificationsRepository;
+use crate::repository::errors::RepoError;
 use crate::schema;
 use diesel::expression_methods::NullableExpressionMethods;
 use diesel::prelude::*;

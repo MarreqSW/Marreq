@@ -4,8 +4,8 @@
 use super::DieselRepo;
 use crate::models::{NewUserIdentity, UserIdentity};
 use crate::repository::{ExternalIdentityRepository, RepoError};
-use diesel::prelude::*;
 use diesel::OptionalExtension;
+use diesel::prelude::*;
 
 impl ExternalIdentityRepository for DieselRepo {
     fn get_identity(

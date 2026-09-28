@@ -9,10 +9,10 @@
 //! - Reciprocal Rank Fusion (RRF) for combining results
 
 use super::config::SemanticSearchConfig;
-use super::embedding_provider::{create_embedding_provider, EmbeddingError};
+use super::embedding_provider::{EmbeddingError, create_embedding_provider};
 use super::llm_provider::{
-    build_rag_system_prompt, build_rag_user_prompt, create_llm_provider, extract_citations,
-    ChatMessage, LlmError,
+    ChatMessage, LlmError, build_rag_system_prompt, build_rag_user_prompt, create_llm_provider,
+    extract_citations,
 };
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{RagAnswerResponse, SemanticSearchResult};
@@ -986,8 +986,8 @@ mod tests {
     #[test]
     fn semantic_search_service_with_config() {
         use crate::app::AppState;
-        use crate::repository::diesel_repo_mock::DieselRepoMock;
         use crate::repository::CacheRepository;
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
         use std::sync::{Arc, RwLock};
 
         let state = AppState {
@@ -1009,8 +1009,8 @@ mod tests {
     #[test]
     fn semantic_search_service_rag_enabled_with_config() {
         use crate::app::AppState;
-        use crate::repository::diesel_repo_mock::DieselRepoMock;
         use crate::repository::CacheRepository;
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
         use std::sync::{Arc, RwLock};
 
         let state = AppState {

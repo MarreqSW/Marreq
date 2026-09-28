@@ -4,8 +4,8 @@
 use super::DieselRepo;
 use crate::models::entities::*;
 use crate::models::forms::*;
-use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
+use crate::repository::errors::RepoError;
 use crate::schema;
 use diesel::prelude::*;
 

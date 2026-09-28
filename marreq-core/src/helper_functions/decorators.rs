@@ -2,7 +2,7 @@
 // Copyright (C) 2026 Marreq
 
 use crate::models::*;
-use crate::repository::{errors::RepoError, DieselRepo, Repository};
+use crate::repository::{DieselRepo, Repository, errors::RepoError};
 
 /// Decorate requirements using the default Diesel repository.
 pub fn decorate_requirements(reqs: Vec<Requirement>) -> Vec<DecoratedRequirement> {
@@ -618,9 +618,10 @@ mod tests {
         assert_eq!(d2.req_parent_title, "Parent");
 
         let d3 = &decorated[2];
-        assert!(d3
-            .verification_method_id
-            .starts_with("Unknown Verification"));
+        assert!(
+            d3.verification_method_id
+                .starts_with("Unknown Verification")
+        );
         assert!(d3.status_id.starts_with("Unknown Status"));
         assert_eq!(d3.author_id, "");
         assert_eq!(d3.reviewer_id, "");

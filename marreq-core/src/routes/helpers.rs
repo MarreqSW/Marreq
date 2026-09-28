@@ -6,9 +6,9 @@
 use std::collections::{HashMap, HashSet};
 
 use chrono::Utc;
-use rocket::http::CookieJar;
-use rocket::serde::json::{json, Value};
 use rocket::State;
+use rocket::http::CookieJar;
+use rocket::serde::json::{Value, json};
 
 use crate::app::AppState;
 use crate::helper_functions::{
@@ -324,7 +324,7 @@ pub(crate) fn describe_project_role(role: i32) -> &'static str {
 
 /// Build template context with project permission flags. Call when rendering a project-scoped page.
 pub(crate) fn project_permissions_context(state: &AppState, user: &User, project_id: i32) -> Value {
-    use crate::permissions::{has_permission, may_change_review_gates, Permission};
+    use crate::permissions::{Permission, has_permission, may_change_review_gates};
     let repo = state.repo_read();
     let is_project_reviewer = may_change_review_gates(&*repo, user, project_id);
     json!({
@@ -459,8 +459,8 @@ mod tests {
     }
 
     fn create_test_state() -> crate::app::AppState {
-        use crate::repository::diesel_repo_mock::DieselRepoMock;
         use crate::repository::CacheRepository;
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
         let repo = DieselRepoMock::default();
         let cached_repo = CacheRepository::new(repo, 0);
         crate::app::AppState {

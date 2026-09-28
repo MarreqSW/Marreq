@@ -5,18 +5,18 @@ use std::ops::Deref;
 
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
-use rocket::{async_trait, Request};
+use rocket::{Request, async_trait};
 
 use crate::app::AppState;
+use crate::auth::guards::SessionUser;
 use crate::auth::guards::route_params::extract_route_param;
 use crate::auth::guards::session::session_user_has_project_access;
-use crate::auth::guards::SessionUser;
 use crate::models::User;
 use crate::namespaces::{
-    project_namespace_segment, resolve_project_namespace_entity, NamespaceEntity,
+    NamespaceEntity, project_namespace_segment, resolve_project_namespace_entity,
 };
-use crate::repository::errors::RepoError;
 use crate::repository::ProjectsRepository;
+use crate::repository::errors::RepoError;
 
 /// Request guard ensuring the authenticated user may access the requested HTML project slug.
 pub struct HtmlProjectAccess {

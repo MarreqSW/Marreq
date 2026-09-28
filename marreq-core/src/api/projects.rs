@@ -70,13 +70,13 @@ mod tests {
         GROUP_ROLE_CONTRIBUTOR, GROUP_ROLE_MAINTAINER, GROUP_ROLE_OWNER, GROUP_ROLE_VIEWER,
     };
     use crate::repository::{
-        diesel_repo_mock::DieselRepoMock, CacheRepository, LookupRepository,
-        ProjectMembersRepository, ProjectsRepository,
+        CacheRepository, LookupRepository, ProjectMembersRepository, ProjectsRepository,
+        diesel_repo_mock::DieselRepoMock,
     };
     use chrono::{NaiveDate, NaiveDateTime};
     use rocket::http::{ContentType, Cookie, Status};
     use rocket::local::asynchronous::Client;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
     use std::sync::{Arc, RwLock};
 
     type TestState = AppState<CacheRepository<DieselRepoMock>>;
@@ -171,9 +171,11 @@ mod tests {
         assert_eq!(project.owner_id, Some(1));
         assert_eq!(project.group_id, None);
         let members = repo.get_members_by_project(project_id).unwrap();
-        assert!(members
-            .iter()
-            .any(|member| member.user_id == 1 && member.role == 1));
+        assert!(
+            members
+                .iter()
+                .any(|member| member.user_id == 1 && member.role == 1)
+        );
         assert_eq!(
             repo.get_requirement_status_by_project(project_id)
                 .unwrap()
@@ -228,13 +230,15 @@ mod tests {
 
             assert_eq!(response.status(), Status::Forbidden, "role {role:?}");
             let state = client.rocket().state::<TestState>().unwrap();
-            assert!(state
-                .repo
-                .read()
-                .unwrap()
-                .get_projects_all()
-                .unwrap()
-                .is_empty());
+            assert!(
+                state
+                    .repo
+                    .read()
+                    .unwrap()
+                    .get_projects_all()
+                    .unwrap()
+                    .is_empty()
+            );
         }
     }
 

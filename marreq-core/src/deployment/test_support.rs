@@ -11,7 +11,7 @@
 //! self-hosted `marreq-server` binary without the production binaries having
 //! to expose their concrete mode types.
 
-use super::{set_current, DeploymentMode};
+use super::{DeploymentMode, set_current};
 
 /// `Server`-equivalent deployment mode used by integration tests.
 pub struct TestServerMode;

@@ -1,7 +1,7 @@
 //! Validate and normalize saved view definition JSON (issue #110).
 
 use crate::repository::errors::RepoError;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 const ALLOWED_VIEW_MODES: &[&str] = &["table", "list"];
 const ALLOWED_SORT_DIRS: &[&str] = &["asc", "desc"];
@@ -125,12 +125,12 @@ pub fn validate_saved_view_definition(definition: &Value) -> Result<Value, RepoE
         .get("sort")
         .cloned()
         .unwrap_or_else(|| json!({ "column": null, "dir": "asc" }));
-    if let Some(dir) = sort.get("dir").and_then(|v| v.as_str()) {
-        if !ALLOWED_SORT_DIRS.contains(&dir) {
-            return Err(RepoError::BadInput(
-                "definition.sort.dir must be asc or desc".into(),
-            ));
-        }
+    if let Some(dir) = sort.get("dir").and_then(|v| v.as_str())
+        && !ALLOWED_SORT_DIRS.contains(&dir)
+    {
+        return Err(RepoError::BadInput(
+            "definition.sort.dir must be asc or desc".into(),
+        ));
     }
 
     let columns = obj.get("columns").cloned().unwrap_or(Value::Null);

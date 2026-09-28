@@ -117,10 +117,10 @@ mod tests {
     use super::*;
     use crate::app::AppState;
     use crate::auth::session::test_session_cookie_for;
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use rocket::http::ContentType;
     use rocket::local::asynchronous::Client;
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
     use std::collections::HashMap;
     use std::sync::{Arc, RwLock};
 

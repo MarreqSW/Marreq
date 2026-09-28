@@ -7,10 +7,10 @@
 
 use marreq_core::app::AppState;
 use marreq_core::auth::session::test_session_cookie_for;
-use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+use marreq_core::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::sync::{Arc, RwLock};
 
 type TestState = AppState<CacheRepository<DieselRepoMock>>;
@@ -112,11 +112,13 @@ async fn ask_returns_error_when_rag_disabled() {
     // Should return bad request when RAG is disabled
     assert_eq!(response.status(), Status::BadRequest);
     let payload: Value = response.into_json().await.unwrap();
-    assert!(payload
-        .get("message")
-        .and_then(|m| m.as_str())
-        .map(|s| s.contains("disabled"))
-        .unwrap_or(false));
+    assert!(
+        payload
+            .get("message")
+            .and_then(|m| m.as_str())
+            .map(|s| s.contains("disabled"))
+            .unwrap_or(false)
+    );
 }
 
 #[rocket::async_test]
@@ -130,11 +132,13 @@ async fn reindex_returns_error_when_embeddings_disabled() {
 
     assert_eq!(response.status(), Status::BadRequest);
     let payload: Value = response.into_json().await.unwrap();
-    assert!(payload
-        .get("message")
-        .and_then(|m| m.as_str())
-        .map(|s| s.contains("disabled"))
-        .unwrap_or(false));
+    assert!(
+        payload
+            .get("message")
+            .and_then(|m| m.as_str())
+            .map(|s| s.contains("disabled"))
+            .unwrap_or(false)
+    );
 }
 
 #[rocket::async_test]

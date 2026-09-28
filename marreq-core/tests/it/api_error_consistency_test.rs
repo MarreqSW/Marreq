@@ -15,14 +15,14 @@ use marreq_core::models::*;
 use marreq_core::status_enums::ProjectStatus;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
     use marreq_core::app::AppState;
     use marreq_core::auth::session::test_session_cookie_for;
-    use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use marreq_core::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use std::sync::{Arc, RwLock};
 
     pub type TestAppState = AppState<CacheRepository<DieselRepoMock>>;

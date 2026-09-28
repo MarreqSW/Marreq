@@ -1,8 +1,8 @@
 use rocket::form::{Form, FromForm};
 use rocket::http::Status;
-use rocket::response::content::RawHtml;
 use rocket::response::Redirect;
-use rocket::serde::json::{json, Json};
+use rocket::response::content::RawHtml;
+use rocket::serde::json::{Json, json};
 use rocket::{Request, Response};
 use std::collections::HashMap;
 use std::net::IpAddr;

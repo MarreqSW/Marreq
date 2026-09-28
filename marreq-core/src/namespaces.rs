@@ -112,10 +112,10 @@ where
         )));
     }
 
-    if let Some(user) = repo.get_user_by_username(&normalized)? {
-        if Some(user.id) != options.exclude_user_id {
-            return Err(RepoError::Duplicate(TAKEN_NAMESPACE_MESSAGE.into()));
-        }
+    if let Some(user) = repo.get_user_by_username(&normalized)?
+        && Some(user.id) != options.exclude_user_id
+    {
+        return Err(RepoError::Duplicate(TAKEN_NAMESPACE_MESSAGE.into()));
     }
 
     match repo.get_group_by_slug(&normalized) {

@@ -9,8 +9,8 @@
 use crate::app::{AppState, DieselCachedRepo};
 use crate::logger::{LogCtx, Loggable, Logger};
 use crate::models::User;
-use crate::repository::errors::RepoError;
 use crate::repository::PooledConnectionWrapper;
+use crate::repository::errors::RepoError;
 
 /// Trait providing reusable audit logging helpers for services.
 ///

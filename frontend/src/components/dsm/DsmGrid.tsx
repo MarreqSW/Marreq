@@ -128,8 +128,10 @@ export default function DsmGrid({ dsm, basePath, highlightIds, focus, onOpenRequ
       className="relative overflow-auto max-h-[70vh] rounded-xl border border-stitch-border bg-stitch-surface shadow-stitch"
       data-testid="dsm-grid"
     >
+      {/* w-max: the grid box must span all tracks, or the sticky row headers
+          (bounded by it) scroll away once the matrix is wider than the viewport. */}
       <div
-        className="grid"
+        className="grid w-max"
         style={{
           gridTemplateColumns: `${ROW_HEADER_W}px ${size}px`,
           gridTemplateRows: `${COL_HEADER_H}px ${size}px`,

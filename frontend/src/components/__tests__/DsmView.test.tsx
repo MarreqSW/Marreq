@@ -94,6 +94,14 @@ describe('DsmView', () => {
     expect(screen.getByTestId('location').textContent).toContain('view=dsm');
   });
 
+  it('sizes the grid to its content so the sticky row headers stay visible when scrolled', async () => {
+    renderView();
+    const grid = await screen.findByTestId('dsm-grid');
+    // Sticky elements cannot leave their containing block; a viewport-wide grid
+    // would let the row headers scroll away horizontally (issue #332).
+    expect(grid.firstElementChild).toHaveClass('w-max');
+  });
+
   it('shows a hover card for a marked cell, including the upstream change', async () => {
     renderView();
     const body = await screen.findByTestId('dsm-body');

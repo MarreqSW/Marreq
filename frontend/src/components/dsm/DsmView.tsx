@@ -11,7 +11,7 @@ import {
   writeDsmParams,
   type DsmParams,
 } from '@/utils/dsm';
-import DsmGrid from './DsmGrid';
+import DsmGrid, { type DsmFocus } from './DsmGrid';
 import DsmSidePanel from './DsmSidePanel';
 
 type Props = { projectId: number; basePath: string };
@@ -35,6 +35,14 @@ export default function DsmView({ projectId, basePath }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [requirements, setRequirements] = useState<Requirement[]>([]);
   const [highlightedLoop, setHighlightedLoop] = useState<number | null>(null);
+  /**
+   * Problem clicked in the side panel, by requirement ids so it survives a reload
+   * (e.g. the switch to Partition order). `seq` makes repeated clicks re-centre the matrix.
+   */
+  const [selection, setSelection] = useState<
+    ({ kind: 'loop'; ids: number[] } | { kind: 'finding'; source: number; target: number }) & { seq: number } | null
+  >(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -74,7 +82,10 @@ export default function DsmView({ projectId, basePath }: Props) {
     };
   }, [projectId]);
 
-  const update = (next: DsmParams) => setSearchParams(writeDsmParams(searchParams, next), { replace: true });
+  const update = (next: DsmParams) => {
+    setNotice(null);
+    setSearchParams(writeDsmParams(searchParams, next), { replace: true });
+  };
 
   const onExport = async () => {
     setExporting(true);
@@ -88,10 +99,76 @@ export default function DsmView({ projectId, basePath }: Props) {
   };
 
   const selected = selectedLinkTypes(params);
-  const highlightIds = useMemo(
-    () => (highlightedLoop != null && dsm ? new Set(dsm.loops[highlightedLoop]?.requirement_ids) : undefined),
-    [highlightedLoop, dsm],
-  );
+  const indexById = useMemo(() => new Map(dsm?.requirements.map((r) => [r.id, r.index]) ?? []), [dsm]);
+  const loopKey = (ids: number[]) => [...ids].sort((a, b) => a - b).join(',');
+  // Resolve the selection against the current data; it disappears if filters removed it.
+  const selectedLoop = useMemo(() => {
+    if (selection?.kind !== 'loop' || !dsm) return null;
+    const i = dsm.loops.findIndex((l) => loopKey(l.requirement_ids) === loopKey(selection.ids));
+    return i >= 0 ? i : null;
+  }, [selection, dsm]);
+  const selectedFinding = useMemo(() => {
+    if (selection?.kind !== 'finding' || !dsm) return null;
+    const row = indexById.get(selection.source);
+    const col = indexById.get(selection.target);
+    return row != null && col != null && dsm.cells.some((c) => c.row === row && c.col === col) ? { row, col } : null;
+  }, [selection, dsm, indexById]);
+  const highlightIds = useMemo(() => {
+    const loop = highlightedLoop ?? selectedLoop;
+    return loop != null && dsm ? new Set(dsm.loops[loop]?.requirement_ids) : undefined;
+  }, [highlightedLoop, selectedLoop, dsm]);
+
+  const loopSpan = (ids: number[]): [number, number] | null => {
+    const indices = ids.map((id) => indexById.get(id)).filter((i): i is number => i != null);
+    return indices.length ? [Math.min(...indices), Math.max(...indices)] : null;
+  };
+
+  const focus = useMemo<DsmFocus | null>(() => {
+    if (!selection || !dsm) return null;
+    // The order is part of the key: after a switch to Partition the loop is re-centred.
+    if (selectedFinding) {
+      const { row, col } = selectedFinding;
+      return { key: `finding-${selection.seq}-${dsm.order}`, kind: 'finding', rows: [row, row], cols: [col, col] };
+    }
+    if (selectedLoop == null) return null;
+    const span = loopSpan(dsm.loops[selectedLoop]!.requirement_ids);
+    return span ? { key: `loop-${selection.seq}-${dsm.order}`, kind: 'loop', rows: span, cols: span } : null;
+    // loopSpan only reads indexById, which follows dsm.
+  }, [selection, dsm, selectedLoop, selectedFinding]);
+
+  const nextSeq = () => (selection?.seq ?? 0) + 1;
+  const selectLoop = (index: number) => {
+    if (!dsm) return;
+    if (selectedLoop === index) {
+      setSelection(null);
+      return;
+    }
+    const ids = dsm.loops[index]!.requirement_ids;
+    setSelection({ kind: 'loop', ids, seq: nextSeq() });
+    // In hierarchy order a loop can span distant category blocks; Partition order keeps
+    // its requirements next to each other, so the focused area is compact.
+    const span = loopSpan(ids);
+    if (params.order === 'hierarchy' && span && span[1] - span[0] + 1 > ids.length) {
+      update({ ...params, order: 'partition' });
+      setNotice('Switched to Partition order so the loop’s requirements are next to each other.');
+    } else {
+      setNotice(null);
+    }
+  };
+  const selectFinding = (row: number, col: number) => {
+    if (!dsm) return;
+    setNotice(null);
+    setSelection(
+      selectedFinding?.row === row && selectedFinding.col === col
+        ? null
+        : {
+            kind: 'finding',
+            source: dsm.requirements[row]!.id,
+            target: dsm.requirements[col]!.id,
+            seq: nextSeq(),
+          },
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -188,6 +265,12 @@ export default function DsmView({ projectId, basePath }: Props) {
         </div>
       </div>
 
+      {notice ? (
+        <p role="status" className="rounded-lg border border-amber-500/40 bg-amber-400/10 px-3 py-2 text-xs text-stitch-fg">
+          {notice}
+        </p>
+      ) : null}
+
       {error ? (
         <p role="alert" className="rounded-lg border border-stitch-danger/40 bg-stitch-danger/10 px-3 py-2 text-sm text-stitch-fg">
           {error}
@@ -205,6 +288,7 @@ export default function DsmView({ projectId, basePath }: Props) {
               dsm={dsm}
               basePath={basePath}
               highlightIds={highlightIds}
+              focus={focus}
               onOpenRequirement={(id) => navigate(`${basePath}/requirements/${id}`)}
             />
             <p className="text-[11px] text-stitch-muted">
@@ -217,9 +301,12 @@ export default function DsmView({ projectId, basePath }: Props) {
           </div>
           <DsmSidePanel
             dsm={dsm}
-            basePath={basePath}
             highlightedLoop={highlightedLoop}
             onHighlightLoop={setHighlightedLoop}
+            selectedLoop={selectedLoop}
+            selectedFinding={selectedFinding}
+            onSelectLoop={selectLoop}
+            onSelectFinding={selectFinding}
           />
         </div>
       ) : null}

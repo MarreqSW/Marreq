@@ -1,11 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import * as apiClient from '@/api/client';
 import type { Dsm } from '@/api/types';
 import DsmView from '../dsm/DsmView';
-import { DSM_CELL } from '../dsm/DsmGrid';
+import { DSM_CELL, focusScrollPosition } from '../dsm/DsmGrid';
 
 vi.mock('@/api/client');
 
@@ -146,6 +146,83 @@ describe('DsmView', () => {
     expect(await screen.findByText('requirement page')).toBeInTheDocument();
   });
 
+  it('focuses the matrix on a loop when it is clicked, and clears it on a second click', async () => {
+    const scrollTo = vi.fn();
+    const originalScrollTo = HTMLElement.prototype.scrollTo;
+    HTMLElement.prototype.scrollTo = scrollTo;
+    onTestFinished(() => {
+      HTMLElement.prototype.scrollTo = originalScrollTo;
+    });
+    const user = userEvent.setup();
+    renderView();
+    const loop = await screen.findByTestId('dsm-loop-0');
+    await user.click(loop);
+
+    expect(loop).toHaveAttribute('aria-pressed', 'true');
+    // Loop members REQ-2 and REQ-3 sit at indices 1..2: the frame spans them (3 px padding).
+    const frame = screen.getByTestId('dsm-focus');
+    expect(frame.style.left).toBe(`${1 * DSM_CELL - 3}px`);
+    expect(frame.style.top).toBe(`${1 * DSM_CELL - 3}px`);
+    expect(frame.style.width).toBe(`${2 * DSM_CELL + 6}px`);
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ behavior: 'smooth' }));
+
+    await user.click(loop);
+    expect(loop).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByTestId('dsm-focus')).not.toBeInTheDocument();
+  });
+
+  it('focuses the matrix on an upstream-changed finding, also from the keyboard', async () => {
+    const user = userEvent.setup();
+    renderView();
+    const finding = await screen.findByTestId('dsm-finding-1-0');
+    finding.focus();
+    await user.keyboard('{Enter}');
+    expect(finding).toHaveAttribute('aria-pressed', 'true');
+    const frame = screen.getByTestId('dsm-focus');
+    expect(frame.style.left).toBe(`${0 * DSM_CELL - 3}px`);
+    expect(frame.style.top).toBe(`${1 * DSM_CELL - 3}px`);
+    expect(frame.style.width).toBe(`${DSM_CELL + 6}px`);
+  });
+
+  it('switches to Partition order when a loop is spread out, then focuses it', async () => {
+    // Hierarchy order: loop members REQ-1 and REQ-3 are two rows apart with REQ-2 between them.
+    const spread: Dsm = {
+      ...dsm,
+      cells: [
+        { row: 0, col: 2, link_types: ['DEPENDS_ON'], link_ids: [20], upstream_changed: false, in_loop: true },
+        { row: 2, col: 0, link_types: ['DEPENDS_ON'], link_ids: [21], upstream_changed: false, in_loop: true },
+      ],
+      loops: [{ requirement_ids: [1, 3], path: [1, 3] }],
+      stats: { ...dsm.stats, cells: 2, links: 2, upstream_changed: 0 },
+    };
+    // Partition order: the loop members are adjacent (indices 1 and 2).
+    const partitioned: Dsm = {
+      ...spread,
+      order: 'partition',
+      groups: [],
+      requirements: [
+        { ...dsm.requirements[1]!, index: 0 },
+        { ...dsm.requirements[0]!, index: 1 },
+        { ...dsm.requirements[2]!, index: 2 },
+      ],
+      cells: [
+        { row: 1, col: 2, link_types: ['DEPENDS_ON'], link_ids: [20], upstream_changed: false, in_loop: true },
+        { row: 2, col: 1, link_types: ['DEPENDS_ON'], link_ids: [21], upstream_changed: false, in_loop: true },
+      ],
+    };
+    vi.mocked(apiClient.getDsm).mockImplementation(async (_pid, p) => (p.order === 'partition' ? partitioned : spread));
+    const user = userEvent.setup();
+    renderView();
+    await user.click(await screen.findByTestId('dsm-loop-0'));
+
+    expect(await screen.findByText(/Switched to Partition order/)).toHaveAttribute('role', 'status');
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toContain('dsm_order=partition'));
+    // After the reload the selection is kept (by requirement ids) and framed compactly.
+    await waitFor(() => expect(screen.getByTestId('dsm-focus').style.top).toBe(`${1 * DSM_CELL - 3}px`));
+    expect(screen.getByTestId('dsm-focus').style.height).toBe(`${2 * DSM_CELL + 6}px`);
+    expect(screen.getByTestId('dsm-loop-0')).toHaveAttribute('aria-pressed', 'true');
+  });
+
   it('exports with the current filters', async () => {
     const user = userEvent.setup();
     renderView('?view=dsm&dsm_order=partition');
@@ -158,5 +235,20 @@ describe('DsmView', () => {
     vi.mocked(apiClient.getDsm).mockRejectedValue(new Error('unknown link type: BOGUS'));
     renderView('?view=dsm&dsm_types=BOGUS');
     expect(await screen.findByRole('alert')).toHaveTextContent('unknown link type: BOGUS');
+  });
+});
+
+describe('focusScrollPosition', () => {
+  it('centres the focused area in the space left by the sticky headers', () => {
+    // Body viewport: 1000 - 300 = 700 wide, 700 - 112 = 588 high.
+    const pos = focusScrollPosition({ rows: [40, 41], cols: [60, 61] }, { width: 1000, height: 700 });
+    expect(pos).toEqual({ left: 61 * DSM_CELL - 350, top: 41 * DSM_CELL - 294 });
+  });
+
+  it('never scrolls to negative offsets', () => {
+    expect(focusScrollPosition({ rows: [0, 0], cols: [1, 1] }, { width: 1000, height: 700 })).toEqual({
+      left: 0,
+      top: 0,
+    });
   });
 });

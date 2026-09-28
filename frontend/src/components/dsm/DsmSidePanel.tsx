@@ -1,31 +1,58 @@
-import { Link } from 'react-router-dom';
+import type { KeyboardEvent } from 'react';
 import type { Dsm } from '@/api/types';
 import { DSM_LINK_TYPES, linkTypeMeta } from '@/utils/dsm';
 
 type Props = {
   dsm: Dsm;
-  basePath: string;
   highlightedLoop: number | null;
   onHighlightLoop: (loopIndex: number | null) => void;
+  /** Problem selected by a click (focused in the matrix). */
+  selectedLoop: number | null;
+  selectedFinding: { row: number; col: number } | null;
+  onSelectLoop: (loopIndex: number) => void;
+  onSelectFinding: (row: number, col: number) => void;
 };
+
+/** Clickable panel item (it contains links, so it cannot be a <button>). */
+function selectable(selected: boolean, onSelect: () => void) {
+  return {
+    role: 'button',
+    tabIndex: 0,
+    'aria-pressed': selected,
+    onClick: onSelect,
+    onKeyDown: (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onSelect();
+      }
+    },
+  } as const;
+}
 
 const sectionTitle =
   'flex justify-between text-[10px] uppercase tracking-widest text-stitch-muted font-bold mb-2';
 
-export default function DsmSidePanel({ dsm, basePath, highlightedLoop, onHighlightLoop }: Props) {
+export default function DsmSidePanel({
+  dsm,
+  highlightedLoop,
+  onHighlightLoop,
+  selectedLoop,
+  selectedFinding,
+  onSelectLoop,
+  onSelectFinding,
+}: Props) {
   const byId = new Map(dsm.requirements.map((r) => [r.id, r]));
   const code = (id: number) => byId.get(id)?.reference_code ?? `#${id}`;
   const changed = dsm.cells.filter((c) => c.upstream_changed);
 
-  const reqLink = (id: number) => (
-    <Link
-      key={id}
-      to={`${basePath}/requirements/${id}`}
-      className="font-mono text-[11px] font-semibold text-stitch-accent hover:underline"
-    >
+  // Plain text, not links: the whole card is the click target that focuses the matrix.
+  // Requirements open from the row headers or by clicking a mark.
+  const reqCode = (id: number) => (
+    <span key={id} className="font-mono text-[11px] font-semibold text-stitch-accent">
       {code(id)}
-    </Link>
+    </span>
   );
+  const hint = <p className="mt-1 text-[10px] text-stitch-subtle">Click to show in the matrix</p>;
 
   return (
     <aside className="rounded-xl border border-stitch-border bg-stitch-surface p-4 space-y-5 text-xs" aria-label="DSM details">
@@ -40,11 +67,18 @@ export default function DsmSidePanel({ dsm, basePath, highlightedLoop, onHighlig
             {dsm.loops.map((l, i) => (
               <li
                 key={l.requirement_ids.join('-')}
-                className={`rounded-lg border p-2.5 ${
-                  highlightedLoop === i ? 'border-amber-500 bg-amber-400/10' : 'border-stitch-border'
+                data-testid={`dsm-loop-${i}`}
+                className={`cursor-pointer rounded-lg border p-2.5 focus:outline-2 focus:outline-amber-500 ${
+                  selectedLoop === i
+                    ? 'border-amber-500 bg-amber-400/20 ring-1 ring-amber-500'
+                    : highlightedLoop === i
+                      ? 'border-amber-500 bg-amber-400/10'
+                      : 'border-stitch-border hover:bg-stitch-higher'
                 }`}
                 onMouseEnter={() => onHighlightLoop(i)}
                 onMouseLeave={() => onHighlightLoop(null)}
+                title="Show this loop in the matrix"
+                {...selectable(selectedLoop === i, () => onSelectLoop(i))}
               >
                 <span className="inline-block rounded bg-amber-400/20 px-1.5 py-0.5 font-mono text-[10px] font-bold text-amber-700 dark:text-amber-300">
                   LOOP {i + 1} · {l.requirement_ids.length} requirements
@@ -53,10 +87,11 @@ export default function DsmSidePanel({ dsm, basePath, highlightedLoop, onHighlig
                   {[...l.path, l.path[0]!].map((id, k) => (
                     <span key={`${id}-${k}`}>
                       {k > 0 ? <span className="text-stitch-muted"> → </span> : null}
-                      {reqLink(id)}
+                      {reqCode(id)}
                     </span>
                   ))}
                 </p>
+                {hint}
               </li>
             ))}
           </ul>
@@ -75,8 +110,22 @@ export default function DsmSidePanel({ dsm, basePath, highlightedLoop, onHighlig
               const source = dsm.requirements[c.row]!;
               const target = dsm.requirements[c.col]!;
               return (
-                <li key={`${c.row}:${c.col}`} className="rounded-lg border border-stitch-border p-2.5">
-                  {reqLink(source.id)} (approved) depends on {reqLink(target.id)}, edited after that approval.
+                <li
+                  key={`${c.row}:${c.col}`}
+                  data-testid={`dsm-finding-${c.row}-${c.col}`}
+                  className={`cursor-pointer rounded-lg border p-2.5 focus:outline-2 focus:outline-stitch-danger ${
+                    selectedFinding?.row === c.row && selectedFinding.col === c.col
+                      ? 'border-stitch-danger bg-stitch-danger/10 ring-1 ring-stitch-danger'
+                      : 'border-stitch-border hover:bg-stitch-higher'
+                  }`}
+                  title="Show this link in the matrix"
+                  {...selectable(
+                    selectedFinding?.row === c.row && selectedFinding.col === c.col,
+                    () => onSelectFinding(c.row, c.col),
+                  )}
+                >
+                  {reqCode(source.id)} (approved) depends on {reqCode(target.id)}, edited after that approval.
+                  {hint}
                 </li>
               );
             })}

@@ -1,4 +1,4 @@
-import { useMemo, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { Link } from 'react-router-dom';
 import type { Dsm, DsmCell } from '@/api/types';
 import { buildCellMap, cellAtPoint, cellKey, linkTypeMeta, loopNumberByRequirement } from '@/utils/dsm';
@@ -13,20 +13,46 @@ const APPROVAL_DOT: Record<string, string> = {
   reviewed: 'bg-amber-500',
 };
 
+/** Area of the matrix to bring into view and frame (inclusive indices). */
+export type DsmFocus = {
+  /** Changes whenever a new focus is requested, so the same area can be re-centred. */
+  key: string;
+  kind: 'loop' | 'finding';
+  rows: [number, number];
+  cols: [number, number];
+};
+
 type Props = {
   dsm: Dsm;
   basePath: string;
   /** Requirement ids of the loop highlighted from the side panel. */
   highlightIds?: Set<number>;
+  /** Selected problem: scrolled into the centre of the matrix and framed. */
+  focus?: DsmFocus | null;
   onOpenRequirement: (requirementId: number) => void;
 };
+
+/** Scroll offsets that centre `focus` in the part of the viewport not covered by the sticky headers. */
+export function focusScrollPosition(
+  focus: Pick<DsmFocus, 'rows' | 'cols'>,
+  viewport: { width: number; height: number },
+): { left: number; top: number } {
+  const bodyWidth = Math.max(0, viewport.width - ROW_HEADER_W);
+  const bodyHeight = Math.max(0, viewport.height - COL_HEADER_H);
+  const centreX = ((focus.cols[0] + focus.cols[1] + 1) / 2) * DSM_CELL;
+  const centreY = ((focus.rows[0] + focus.rows[1] + 1) / 2) * DSM_CELL;
+  return {
+    left: Math.max(0, Math.round(centreX - bodyWidth / 2)),
+    top: Math.max(0, Math.round(centreY - bodyHeight / 2)),
+  };
+}
 
 /**
  * Sparse DSM rendering: grid lines are a CSS background, and only the
  * diagonal, marks, group frames and hover overlays are elements, so the DOM
  * grows with requirements + links rather than requirements².
  */
-export default function DsmGrid({ dsm, basePath, highlightIds, onOpenRequirement }: Props) {
+export default function DsmGrid({ dsm, basePath, highlightIds, focus, onOpenRequirement }: Props) {
   const n = dsm.requirements.length;
   const size = n * DSM_CELL;
   const cellMap = useMemo(() => buildCellMap(dsm.cells), [dsm.cells]);
@@ -46,6 +72,21 @@ export default function DsmGrid({ dsm, basePath, highlightIds, onOpenRequirement
   });
 
   const groupStart = useMemo(() => new Map(dsm.groups.map((g) => [g.start, g.label])), [dsm.groups]);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Bring a newly selected problem into view: the page first, then the matrix itself.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!focus || !el) return;
+    el.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+    const { left, top } = focusScrollPosition(focus, { width: el.clientWidth, height: el.clientHeight });
+    if (typeof el.scrollTo === 'function') el.scrollTo({ left, top, behavior: 'smooth' });
+    else {
+      el.scrollLeft = left;
+      el.scrollTop = top;
+    }
+    // Only a new focus request (new key) re-centres the matrix, not every re-render.
+  }, [focus?.key]);
 
   const hoverCell: DsmCell | undefined = hover ? cellMap.get(cellKey(hover.row, hover.col)) : undefined;
 
@@ -83,6 +124,7 @@ export default function DsmGrid({ dsm, basePath, highlightIds, onOpenRequirement
 
   return (
     <div
+      ref={scrollRef}
       className="relative overflow-auto max-h-[70vh] rounded-xl border border-stitch-border bg-stitch-surface shadow-stitch"
       data-testid="dsm-grid"
     >
@@ -197,6 +239,21 @@ export default function DsmGrid({ dsm, basePath, highlightIds, onOpenRequirement
               title={g.label}
             />
           ))}
+
+          {focus ? (
+            <div
+              data-testid="dsm-focus"
+              className={`absolute rounded-sm border-2 border-dashed pointer-events-none ${
+                focus.kind === 'loop' ? 'border-amber-500 bg-amber-400/10' : 'border-stitch-danger bg-stitch-danger/10'
+              }`}
+              style={{
+                left: focus.cols[0] * DSM_CELL - 3,
+                top: focus.rows[0] * DSM_CELL - 3,
+                width: (focus.cols[1] - focus.cols[0] + 1) * DSM_CELL + 6,
+                height: (focus.rows[1] - focus.rows[0] + 1) * DSM_CELL + 6,
+              }}
+            />
+          ) : null}
 
           {dsm.requirements.map((r) => (
             <div

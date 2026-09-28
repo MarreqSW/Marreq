@@ -23,8 +23,8 @@ use crate::repository::{
     CustomFieldRepository, LookupRepository, MatrixRepository, RequirementVersionLinksRepository,
     RequirementsRepository, VerificationsRepository,
 };
-use crate::services::semantic_search::{IndexingService, SemanticSearchConfig};
 use crate::services::AuditLog;
+use crate::services::semantic_search::{IndexingService, SemanticSearchConfig};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_requirement};
 use serde::Serialize;
 
@@ -270,9 +270,10 @@ impl<'a> RequirementService<'a> {
                 let mut children = Vec::new();
                 for link in links {
                     if let Ok(ver) = repo.get_requirement_version_by_id(link.source_version_id)
-                        && let Ok(req) = repo.get_requirement_by_id(ver.requirement_id) {
-                            children.push(req);
-                        }
+                        && let Ok(req) = repo.get_requirement_by_id(ver.requirement_id)
+                    {
+                        children.push(req);
+                    }
                 }
                 drop(repo);
                 let mut out: Vec<Requirement> = children.into_iter().collect();
@@ -1011,10 +1012,12 @@ mod tests {
 
         assert!(result.is_err());
         assert!(service.get_by_id(11).is_err());
-        assert!(service
-            .get_parent_links_for_version(100)
-            .unwrap()
-            .is_empty());
+        assert!(
+            service
+                .get_parent_links_for_version(100)
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]
@@ -1307,10 +1310,12 @@ mod tests {
             service.get_parent_requirement_ids_for_version(new_vid),
             vec![2]
         );
-        assert!(service
-            .get_parent_links_for_version(v_child)
-            .unwrap()
-            .is_empty());
+        assert!(
+            service
+                .get_parent_links_for_version(v_child)
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]

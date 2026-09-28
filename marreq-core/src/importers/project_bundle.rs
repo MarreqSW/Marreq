@@ -310,31 +310,33 @@ pub fn export_bundle(
             .unwrap_or_default();
         let mut parent_links = Vec::new();
         if let Some(vid) = req.current_version_id
-            && let Ok(links) = repo.list_links_by_source_version(vid) {
-                for link in links {
-                    if let Ok(parent_ver) =
-                        repo.get_requirement_version_by_id(link.target_version_id)
-                        && let Some(code) = req_code.get(&parent_ver.requirement_id) {
-                            parent_links.push(BundleParentLink {
-                                reference_code: code.clone(),
-                                link_type: link.link_type,
-                            });
-                        }
-                }
-            }
-        let mut custom_fields = Vec::new();
-        if let Some(vid) = req.current_version_id
-            && let Ok(values) = repo.get_custom_field_values_for_version(vid) {
-                for value in values {
-                    custom_fields.push(BundleCustomValue {
-                        label: field_label
-                            .get(&value.field_id)
-                            .cloned()
-                            .unwrap_or(value.label),
-                        value: value.value,
+            && let Ok(links) = repo.list_links_by_source_version(vid)
+        {
+            for link in links {
+                if let Ok(parent_ver) = repo.get_requirement_version_by_id(link.target_version_id)
+                    && let Some(code) = req_code.get(&parent_ver.requirement_id)
+                {
+                    parent_links.push(BundleParentLink {
+                        reference_code: code.clone(),
+                        link_type: link.link_type,
                     });
                 }
             }
+        }
+        let mut custom_fields = Vec::new();
+        if let Some(vid) = req.current_version_id
+            && let Ok(values) = repo.get_custom_field_values_for_version(vid)
+        {
+            for value in values {
+                custom_fields.push(BundleCustomValue {
+                    label: field_label
+                        .get(&value.field_id)
+                        .cloned()
+                        .unwrap_or(value.label),
+                    value: value.value,
+                });
+            }
+        }
         requirements.push(BundleRequirement {
             reference_code: req.reference_code,
             title: req.title,

@@ -91,7 +91,7 @@ mod tests {
         test_session_cookie_for(state, user_id)
     }
     use crate::diff::RequirementDiff;
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use rocket::http::ContentType;
     use rocket::local::asynchronous::Client;
     use serde_json::Value;

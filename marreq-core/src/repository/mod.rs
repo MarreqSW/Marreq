@@ -71,7 +71,7 @@ pub trait WorkspacesRepository {
     fn get_workspace_by_id(&self, id: i32) -> Result<Workspace, RepoError>;
     fn get_workspace_by_slug(&self, slug: &str) -> Result<Option<Workspace>, RepoError>;
     fn get_personal_workspace_for_user(&self, user_id: i32)
-        -> Result<Option<Workspace>, RepoError>;
+    -> Result<Option<Workspace>, RepoError>;
 }
 
 /// Single-use email tokens for verification + password reset (Cloud-only).
@@ -307,7 +307,7 @@ pub trait VerificationsRepository {
     fn get_verification_by_id(&self, verification_id: i32) -> Result<Verification, RepoError>;
     fn get_verifications_all(&self) -> Result<Vec<Verification>, RepoError>;
     fn get_verifications_by_project(&self, project_id: i32)
-        -> Result<Vec<Verification>, RepoError>;
+    -> Result<Vec<Verification>, RepoError>;
     fn get_requirements_for_verification(
         &self,
         verification_id: i32,
@@ -385,7 +385,7 @@ pub trait LookupRepository {
 
     fn create_requirement_status(&mut self, new: &NewRequirementStatus) -> Result<i32, RepoError>;
     fn create_verification_status(&mut self, new: &NewVerificationStatus)
-        -> Result<i32, RepoError>;
+    -> Result<i32, RepoError>;
     fn update_requirement_status(
         &mut self,
         id: i32,

@@ -5,8 +5,8 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{Category, NewCategory, User};
-use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
+use crate::repository::errors::RepoError;
 use crate::services::AuditLog;
 
 pub struct CategoryService<'a> {

@@ -6,7 +6,7 @@
 use crate::app::{AppState, DieselCachedRepo};
 use crate::helper_functions::utils::slugify_project_name;
 use crate::models::{Group, GroupMember, NewGroup, NewGroupMember, NewGroupRow, UpdateGroup, User};
-use crate::namespaces::{ensure_namespace_segment_available, NamespaceAvailabilityOptions};
+use crate::namespaces::{NamespaceAvailabilityOptions, ensure_namespace_segment_available};
 use crate::repository::errors::RepoError;
 use crate::repository::{GroupMembersRepository, GroupsRepository, UserRepository};
 use crate::services::AuditLog;

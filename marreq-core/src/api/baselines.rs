@@ -10,8 +10,8 @@ use crate::auth::guards::{ProjectBaselinesRead, ProjectBaselinesWrite};
 use crate::models::{
     Baseline, BaselineTraceability, BaselineVerification, NewBaseline, Requirement,
 };
-use crate::services::baseline_service::BaselineDiff;
 use crate::services::BaselineService;
+use crate::services::baseline_service::BaselineDiff;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(crate = "rocket::serde", rename_all = "snake_case")]
@@ -258,7 +258,7 @@ mod tests {
         Baseline, BaselineTraceability, BaselineVerification, Project, Requirement,
         RequirementVersion, Verification,
     };
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use crate::status_enums::ProjectStatus;
     use chrono::NaiveDate;
     use rocket::http::{ContentType, Status};

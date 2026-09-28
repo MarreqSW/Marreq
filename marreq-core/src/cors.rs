@@ -8,7 +8,7 @@
 //! to prevent intermediaries from caching a response for the wrong origin.
 
 use rocket::fairing::{Fairing, Info, Kind};
-use rocket::{http::Method, http::Status, Request, Response};
+use rocket::{Request, Response, http::Method, http::Status};
 
 /// The set of trusted origins and credential policy for cross-origin requests.
 ///

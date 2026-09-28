@@ -75,7 +75,7 @@ mod tests {
     use crate::app::AppState;
     use crate::auth::session::test_session_cookie_for;
     use crate::models::{Log, Verification, VerificationMethod, VerificationStatus};
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use chrono::{NaiveDate, NaiveDateTime};
     use rocket::local::asynchronous::Client;
     use std::sync::{Arc, RwLock};

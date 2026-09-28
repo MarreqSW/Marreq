@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
-use super::{map_db_error, DieselRepo};
+use super::{DieselRepo, map_db_error};
 use crate::models::entities::*;
 use crate::models::forms::*;
 use crate::repository::errors::RepoError;

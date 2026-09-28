@@ -5,8 +5,8 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{CustomFieldDefinition, CustomFieldDefinitionPayload};
-use crate::repository::errors::RepoError;
 use crate::repository::CustomFieldRepository;
+use crate::repository::errors::RepoError;
 
 pub struct CustomFieldService<'a> {
     state: &'a AppState<DieselCachedRepo>,

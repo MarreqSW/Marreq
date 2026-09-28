@@ -15,7 +15,7 @@ mod test_support {
     use chrono::{NaiveDate, NaiveDateTime};
     use marreq_core::app::AppState;
     use marreq_core::auth::session::test_session_cookie_for;
-    use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use marreq_core::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use std::sync::{Arc, RwLock};
 
     pub type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
@@ -261,11 +261,13 @@ async fn preview_excel_returns_columns() {
     assert_eq!(json["row_count"], 1);
     assert_eq!(json["columns"][0]["name"], "Title");
     assert_eq!(json["unique_values"]["Title"][0], "Alpha requirement");
-    assert!(json["available_fields"]["requirements"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|v| v == "title"));
+    assert!(
+        json["available_fields"]["requirements"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|v| v == "title")
+    );
 }
 
 #[rocket::async_test]
@@ -451,11 +453,13 @@ async fn preview_excel_guesses_matrix_from_code_columns() {
     assert_eq!(response.status(), Status::Ok);
     let json: Value = response.into_json().await.expect("json");
     assert_eq!(json["import_type"], "matrix");
-    assert!(json["available_fields"]["matrix"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|v| v == "requirement_reference_code"));
+    assert!(
+        json["available_fields"]["matrix"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|v| v == "requirement_reference_code")
+    );
 }
 
 #[rocket::async_test]
@@ -505,9 +509,11 @@ async fn commit_matrix_reports_missing_requirement_code() {
     assert_eq!(json["imported_count"], 0);
     assert_eq!(json["success"], false);
     let errors = json["errors"].as_array().unwrap();
-    assert!(errors
-        .iter()
-        .any(|e| e.as_str().unwrap().contains("REQ-MISSING")));
+    assert!(
+        errors
+            .iter()
+            .any(|e| e.as_str().unwrap().contains("REQ-MISSING"))
+    );
 }
 
 #[rocket::async_test]
@@ -526,11 +532,13 @@ async fn commit_matrix_reports_missing_verification_code() {
     assert_eq!(response.status(), Status::Ok);
     let json: Value = response.into_json().await.expect("json");
     assert_eq!(json["imported_count"], 0);
-    assert!(json["errors"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .any(|e| e.as_str().unwrap().contains("TEST-MISSING")));
+    assert!(
+        json["errors"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|e| e.as_str().unwrap().contains("TEST-MISSING"))
+    );
 }
 
 #[rocket::async_test]

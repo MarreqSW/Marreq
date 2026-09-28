@@ -44,7 +44,7 @@ use std::net::IpAddr;
 use std::sync::{Arc, RwLock};
 
 use rocket::fairing::{self, Fairing, Info, Kind};
-use rocket::http::{uri::Origin, Method, Status};
+use rocket::http::{Method, Status, uri::Origin};
 use rocket::response::status;
 use rocket::{Build, Data, Request, Rocket};
 
@@ -234,14 +234,16 @@ impl Fairing for CsrfFairing {
         );
         if api_auth_origin_only {
             if let Some(origin) = req.headers().get_one("Origin")
-                && self.is_allowed(origin) {
-                    return;
-                }
+                && self.is_allowed(origin)
+            {
+                return;
+            }
             if let Some(referer) = req.headers().get_one("Referer")
                 && let Some(ro) = extract_origin_from_url(referer)
-                    && self.is_allowed(&ro) {
-                        return;
-                    }
+                && self.is_allowed(&ro)
+            {
+                return;
+            }
         }
 
         // --- Defense 2: X-CSRF-Token header vs csrf cookie ---

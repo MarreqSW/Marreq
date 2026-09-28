@@ -7,7 +7,7 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{NewRequirement, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{RequirementCommentsRepository, UserRepository};
-use crate::reqif::import::{object_to_fields, parse_reqif, ImportConfig, ImportResult};
+use crate::reqif::import::{ImportConfig, ImportResult, object_to_fields, parse_reqif};
 use crate::reqif::mapping;
 use crate::reqif::to_reqif;
 use crate::services::{BaselineService, ProjectService, RequirementService, StatusService};
@@ -220,13 +220,13 @@ impl<'a> ReqIFService<'a> {
             }
             if let Some(reference) = object_to_fields(obj).1
                 && is_valid_marreq_reference(&reference)
-                    && !valid_references.insert(reference.clone())
-                {
-                    preflight_errors.push(format!(
-                        "duplicate requirement reference '{}' in ReqIF document",
-                        reference
-                    ));
-                }
+                && !valid_references.insert(reference.clone())
+            {
+                preflight_errors.push(format!(
+                    "duplicate requirement reference '{}' in ReqIF document",
+                    reference
+                ));
+            }
         }
         let mut planned_references = HashMap::new();
         let mut fallback_number = 1usize;
@@ -532,8 +532,8 @@ impl<'a> ReqIFService<'a> {
 mod tests {
     use super::*;
     use crate::app::{AppState, DieselCachedRepo};
-    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::repository::CacheRepository;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::status_enums::ProjectStatus;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};

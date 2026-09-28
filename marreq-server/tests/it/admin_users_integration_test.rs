@@ -16,11 +16,11 @@
 use marreq_core::api::users::{create, delete, get, list};
 use marreq_core::app::AppState;
 use marreq_core::auth::session::test_session_cookie_for;
-use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+use marreq_core::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use rocket::routes;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::sync::{Arc, RwLock};
 
 type TestState = AppState<CacheRepository<DieselRepoMock>>;

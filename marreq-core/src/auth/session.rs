@@ -13,8 +13,8 @@
 
 use crate::app::AppState;
 use crate::models::entities::NewSession;
-use crate::repository::errors::RepoError;
 use crate::repository::SessionRepository;
+use crate::repository::errors::RepoError;
 use base64::Engine;
 use rocket::http::{Cookie, CookieJar, SameSite};
 use sha2::{Digest, Sha256};

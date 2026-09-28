@@ -10,11 +10,11 @@ use crate::models::{
     NewApplicability, NewCategory, NewProject, NewProjectMember, NewProjectRow, Project,
     UpdateProject, User,
 };
-use crate::namespaces::{resolve_project_namespace_entity, NamespaceEntity};
+use crate::namespaces::{NamespaceEntity, resolve_project_namespace_entity};
 use crate::repository::errors::RepoError;
 use crate::repository::{LookupRepository, ProjectMembersRepository, ProjectsRepository};
-use crate::services::status_service::StatusService;
 use crate::services::AuditLog;
+use crate::services::status_service::StatusService;
 use crate::services::{ApplicabilityService, CategoryService};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_project};
 

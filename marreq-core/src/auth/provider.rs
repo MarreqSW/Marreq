@@ -313,7 +313,7 @@ fn oauth_client(
 mod tests {
     use super::*;
     use crate::auth::OAuthOperation;
-    use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+    use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
     use rsa::pkcs1v15::SigningKey;
     use rsa::signature::{SignatureEncoding, Signer};
     use rsa::traits::PublicKeyParts;
@@ -531,9 +531,11 @@ mod tests {
 
             let (stream, request) = read_request(&listener);
             assert!(request.starts_with("GET /user "));
-            assert!(request
-                .to_ascii_lowercase()
-                .contains("authorization: bearer temporary-token"));
+            assert!(
+                request
+                    .to_ascii_lowercase()
+                    .contains("authorization: bearer temporary-token")
+            );
             respond(
                 stream,
                 "200 OK",

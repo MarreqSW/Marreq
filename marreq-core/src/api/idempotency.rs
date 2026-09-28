@@ -1,6 +1,6 @@
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
-use rocket::{async_trait, Request, State};
+use rocket::{Request, State, async_trait};
 use sha2::{Digest, Sha256};
 
 use crate::api::prelude::*;
@@ -119,9 +119,10 @@ pub fn release(
             target_key,
             operation,
             key,
-        ) {
-            eprintln!("failed to release idempotency claim for {operation}: {error}");
-        }
+        )
+    {
+        eprintln!("failed to release idempotency claim for {operation}: {error}");
+    }
 }
 
 pub fn release_on_repo_error<T>(

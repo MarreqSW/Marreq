@@ -4,7 +4,7 @@
 //! Diff two verification snapshots reconstructed from the audit log.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::diff::{compute_verification_diff, VerificationSnapshotState, VerificationVersionDiff};
+use crate::diff::{VerificationSnapshotState, VerificationVersionDiff, compute_verification_diff};
 use crate::models::{BaselineVerification, EntityType, Log, Verification};
 use crate::repository::errors::RepoError;
 use crate::repository::{
@@ -225,14 +225,16 @@ fn snapshots_from_logs(logs: &[Log]) -> Vec<SnapshotRecord> {
         if action == "DELETE" {
             continue;
         }
-        if out.is_empty() && (action == "UPDATE" || action == "STATUS_CHANGE")
-            && let Some(old) = log.old_values.as_deref().and_then(parse_state) {
-                out.push(SnapshotRecord {
-                    id: PRE_HISTORY_SNAPSHOT_ID,
-                    created_at: log.created_at,
-                    state: old,
-                });
-            }
+        if out.is_empty()
+            && (action == "UPDATE" || action == "STATUS_CHANGE")
+            && let Some(old) = log.old_values.as_deref().and_then(parse_state)
+        {
+            out.push(SnapshotRecord {
+                id: PRE_HISTORY_SNAPSHOT_ID,
+                created_at: log.created_at,
+                state: old,
+            });
+        }
         if let Some(new) = log.new_values.as_deref().and_then(parse_state) {
             out.push(SnapshotRecord {
                 id: log.log_id,
@@ -248,8 +250,8 @@ fn snapshots_from_logs(logs: &[Log]) -> Vec<SnapshotRecord> {
 mod tests {
     use super::*;
     use crate::app::AppState;
-    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::repository::CacheRepository;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use chrono::{NaiveDate, NaiveDateTime};
     use std::sync::{Arc, RwLock};
 

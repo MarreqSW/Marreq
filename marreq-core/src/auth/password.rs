@@ -2,10 +2,10 @@
 // Copyright (C) 2026 Marreq
 
 use super::errors::AuthError;
-use super::password_policy::{validate_password, PasswordContext};
+use super::password_policy::{PasswordContext, validate_password};
 use crate::repository::Repository;
-use argon2::password_hash::{phc::PasswordHash, PasswordHasher, PasswordVerifier};
 use argon2::Argon2;
+use argon2::password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash};
 use rocket::http::CookieJar;
 use thiserror::Error;
 
@@ -126,8 +126,8 @@ pub fn admin_set_user_password<R: Repository>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::repository::UserRepository;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
 
     #[test]
     fn argon2_roundtrip_ok() {
@@ -241,11 +241,13 @@ mod tests {
 
         let updated = repo.get_user_by_id(1).unwrap();
         assert_ne!(updated.password_hash.as_deref(), Some(old_hash.as_str()));
-        assert!(verify_password(
-            "new-password-123",
-            updated.password_hash.as_deref().unwrap()
-        )
-        .unwrap());
+        assert!(
+            verify_password(
+                "new-password-123",
+                updated.password_hash.as_deref().unwrap()
+            )
+            .unwrap()
+        );
         assert!(!verify_password("old-secret", updated.password_hash.as_deref().unwrap()).unwrap());
     }
 
@@ -288,8 +290,7 @@ mod tests {
     /// Hash used in migrations and scripts/init_complete.sql for seeded users (password: ChangeMe123!).
     #[test]
     fn seeded_demo_password_hash_verifies() {
-        const SEEDED_HASH: &str =
-            "$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0";
+        const SEEDED_HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$3o6cC/67ksnBxHCCF9rGHA$oWCATKyiKRCdDgWucvrMHinlWvzZNhqoUUvnpyCgOW0";
         assert!(
             verify_password("ChangeMe123!", SEEDED_HASH).unwrap(),
             "Seeded demo password must verify; update migrations/ and scripts/ with a hash from hash_password(\"ChangeMe123!\")"

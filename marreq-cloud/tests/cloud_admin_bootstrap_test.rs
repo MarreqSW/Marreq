@@ -22,9 +22,9 @@ async fn bootstraps_site_admin_user_on_ignite() {
     unsafe {
         std::env::set_var("MARREQ_SITE_ADMIN_EMAIL", "root@example.com");
         std::env::set_var(
-        "MARREQ_SITE_ADMIN_BOOTSTRAP_PASSWORD",
-        "RootBootstrap!Pass_2026",
-    );
+            "MARREQ_SITE_ADMIN_BOOTSTRAP_PASSWORD",
+            "RootBootstrap!Pass_2026",
+        );
     }
 
     let client = cloud_client().await;

@@ -8,17 +8,17 @@ use std::net::IpAddr;
 use rocket::form::FromForm;
 use rocket::http::{CookieJar, Status};
 use rocket::response::Redirect;
-use rocket::serde::json::{json, Json};
+use rocket::serde::json::{Json, json};
 
 use crate::api::guards::OptionalSessionUser;
 use crate::api::prelude::*;
+use crate::auth::AuthError;
 use crate::auth::csrf::clear_csrf_cookie;
 use crate::auth::login::login_user;
 use crate::auth::logout::logout_user;
 use crate::auth::password::change_user_password;
 use crate::auth::rate_limiter::LoginRateLimiter;
 use crate::auth::session::clear_session_cookie;
-use crate::auth::AuthError;
 use crate::models::forms::{ChangePasswordForm, LoginForm, ProfileUpdate};
 use crate::repository::errors::RepoError;
 

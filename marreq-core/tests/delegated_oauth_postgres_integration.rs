@@ -390,17 +390,23 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
             .unwrap(),
         "rolled-back authorization code must remain retryable"
     );
-    assert!(oauth_repo
-        .get_oauth_code(&atomic_code_hash)
-        .unwrap()
-        .used_at
-        .is_some());
-    assert!(oauth_repo
-        .get_oauth_access_token(&atomic_access.token_hash)
-        .is_ok());
-    assert!(oauth_repo
-        .get_oauth_refresh_token(&retry_refresh.token_hash)
-        .is_ok());
+    assert!(
+        oauth_repo
+            .get_oauth_code(&atomic_code_hash)
+            .unwrap()
+            .used_at
+            .is_some()
+    );
+    assert!(
+        oauth_repo
+            .get_oauth_access_token(&atomic_access.token_hash)
+            .is_ok()
+    );
+    assert!(
+        oauth_repo
+            .get_oauth_refresh_token(&retry_refresh.token_hash)
+            .is_ok()
+    );
 
     let replay_access = NewOAuthAccessToken {
         token_hash: hash_secret("atomic-replay-access"),
@@ -430,12 +436,16 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
             .unwrap(),
         "a successfully consumed code must not issue a second token pair"
     );
-    assert!(oauth_repo
-        .get_oauth_access_token(&replay_access.token_hash)
-        .is_err());
-    assert!(oauth_repo
-        .get_oauth_refresh_token(&replay_refresh.token_hash)
-        .is_err());
+    assert!(
+        oauth_repo
+            .get_oauth_access_token(&replay_access.token_hash)
+            .is_err()
+    );
+    assert!(
+        oauth_repo
+            .get_oauth_refresh_token(&replay_refresh.token_hash)
+            .is_err()
+    );
 
     // Two repositories racing on one code must still yield exactly one token pair.
     let concurrent_code_hash = hash_secret("concurrent-code");
@@ -497,11 +507,13 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
         1,
         "only one concurrent exchange may consume the code"
     );
-    assert!(oauth_repo
-        .get_oauth_code(&concurrent_code_hash)
-        .unwrap()
-        .used_at
-        .is_some());
+    assert!(
+        oauth_repo
+            .get_oauth_code(&concurrent_code_hash)
+            .unwrap()
+            .used_at
+            .is_some()
+    );
     let concurrent_access_count = (0..2)
         .filter(|index| {
             oauth_repo
@@ -531,8 +543,10 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
         .dispatch()
         .await;
     assert_eq!(response.status(), Status::Forbidden);
-    assert!(challenge(&response)
-        .is_some_and(|v| v.contains("insufficient_scope") && v.contains("projects:read")));
+    assert!(
+        challenge(&response)
+            .is_some_and(|v| v.contains("insufficient_scope") && v.contains("projects:read"))
+    );
 
     let response = client
         .get("/api/projects/1/requirements")
@@ -898,8 +912,16 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
         ),
     ] {
         assert_eq!(
-            repo.claim_idempotency(1, "oauth_grant:1", target, operation, key, &payload_hash, now)
-                .unwrap(),
+            repo.claim_idempotency(
+                1,
+                "oauth_grant:1",
+                target,
+                operation,
+                key,
+                &payload_hash,
+                now
+            )
+            .unwrap(),
             IdempotencyClaim::Acquired
         );
         diesel::sql_query(insert_sql)
@@ -907,7 +929,15 @@ async fn delegated_scope_rbac_revocation_and_downgrade_matrix() {
             .execute(&mut conn)
             .unwrap();
         assert!(matches!(
-            repo.claim_idempotency(1, "oauth_grant:1", target, operation, key, &payload_hash, now),
+            repo.claim_idempotency(
+                1,
+                "oauth_grant:1",
+                target,
+                operation,
+                key,
+                &payload_hash,
+                now
+            ),
             Ok(IdempotencyClaim::Replay(_))
         ));
     }

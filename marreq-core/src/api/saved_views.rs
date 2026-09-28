@@ -3,8 +3,8 @@
 
 //! REST API for project-scoped saved views (issue #110).
 
-use rocket::serde::json::Json;
 use rocket::State;
+use rocket::serde::json::Json;
 
 use crate::api::prelude::*;
 use crate::auth::guards::ProjectAccessOrBearer;
@@ -166,8 +166,8 @@ mod tests {
     use crate::auth::session::test_session_cookie_for;
     use crate::models::{Project, ProjectMember};
     use crate::permissions::{ROLE_AUTHOR, ROLE_VIEWER};
-    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::repository::CacheRepository;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::status_enums::ProjectStatus;
     use chrono::{NaiveDate, NaiveDateTime};
     use rocket::http::{ContentType, Status};

@@ -162,21 +162,25 @@ impl<'a> RequirementAnalyticsService<'a> {
         // Apply the same filtering semantics as the SQL path.
         for requirement in requirements {
             if let Some(filter) = status_filter
-                && requirement.status_id != filter {
-                    continue;
-                }
+                && requirement.status_id != filter
+            {
+                continue;
+            }
             if let Some(_filter) = verification_filter
-                && !verification_requirement_ids.contains(&requirement.id) {
-                    continue;
-                }
+                && !verification_requirement_ids.contains(&requirement.id)
+            {
+                continue;
+            }
             if let Some(filter) = category_filter
-                && requirement.category_id != filter {
-                    continue;
-                }
+                && requirement.category_id != filter
+            {
+                continue;
+            }
             if let Some(filter) = applicability_filter
-                && requirement.applicability_id != filter {
-                    continue;
-                }
+                && requirement.applicability_id != filter
+            {
+                continue;
+            }
 
             let title = status_lookup
                 .get(&requirement.status_id)
@@ -369,7 +373,7 @@ mod tests {
             .insert(1, make_requirement(1, 1, 2, 1, 10)); // Accepted
         repo.requirements
             .insert(2, make_requirement(2, 1, 2, 1, 10)); // Accepted
-                                                          // Req 1 has both verification 1 and 2; Req 2 has only verification 1
+        // Req 1 has both verification 1 and 2; Req 2 has only verification 1
         repo.requirement_verification_methods.push((1, 1));
         repo.requirement_verification_methods.push((1, 2));
         repo.requirement_verification_methods.push((2, 1));

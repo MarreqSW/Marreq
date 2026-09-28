@@ -25,9 +25,10 @@ pub fn default_attribute_mapping() -> HashMap<String, String> {
 fn lookup_exact(obj_attrs: &HashMap<String, String>, keys: &[&str]) -> Option<String> {
     for k in keys {
         if let Some(v) = obj_attrs.get(*k)
-            && !v.is_empty() {
-                return Some(v.clone());
-            }
+            && !v.is_empty()
+        {
+            return Some(v.clone());
+        }
     }
     None
 }

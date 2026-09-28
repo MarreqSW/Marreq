@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
-use marreq_core::api::{classify, RoutePolicy};
-use rocket::fairing::Fairing;
+use marreq_core::api::{RoutePolicy, classify};
 use rocket::Route;
+use rocket::fairing::Fairing;
 use std::sync::Arc;
 
 use crate::api::auth_public;

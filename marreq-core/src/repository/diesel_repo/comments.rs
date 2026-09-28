@@ -3,8 +3,8 @@
 
 use super::DieselRepo;
 use crate::models::entities::*;
-use crate::repository::errors::RepoError;
 use crate::repository::RequirementCommentsRepository;
+use crate::repository::errors::RepoError;
 use crate::schema;
 use diesel::expression_methods::BoolExpressionMethods;
 use diesel::prelude::*;

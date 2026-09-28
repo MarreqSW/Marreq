@@ -3,15 +3,15 @@
 
 //! API-specific request guards that avoid triggering HTML 401 catchers.
 
+use rocket::Request;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
-use rocket::Request;
 
 use crate::app::AppState;
 use crate::auth::session::read_session_user_id_via_state;
 use crate::models::User;
-use crate::repository::errors::RepoError;
 use crate::repository::UserRepository;
+use crate::repository::errors::RepoError;
 
 /// Authenticated user for JSON API routes. Missing session yields `Success(None)` so handlers
 /// return `ApiError::Unauthorized` (JSON) instead of the global HTML `401` catcher.

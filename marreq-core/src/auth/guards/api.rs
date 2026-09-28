@@ -4,7 +4,7 @@
 use std::ops::Deref;
 
 use rocket::request::{FromRequest, Outcome};
-use rocket::{async_trait, Request};
+use rocket::{Request, async_trait};
 
 use crate::auth::guards::SessionUser;
 use crate::logger::LogCtx;

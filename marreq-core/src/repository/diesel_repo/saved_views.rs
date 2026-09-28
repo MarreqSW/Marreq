@@ -2,8 +2,8 @@
 // Copyright (C) 2026 Marreq
 
 use super::DieselRepo;
-use crate::repository::errors::RepoError;
 use crate::repository::SavedViewRepository;
+use crate::repository::errors::RepoError;
 use crate::schema;
 use diesel::expression_methods::BoolExpressionMethods;
 use diesel::prelude::*;

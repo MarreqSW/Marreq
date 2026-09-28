@@ -36,10 +36,18 @@ fn recover_response(
     operation_identity: &str,
 ) -> QueryResult<Option<serde_json::Value>> {
     let query = match operation {
-        "create_requirement" => "SELECT jsonb_build_object('status','ok','id',id) AS response_json FROM requirements WHERE mcp_idempotency_identity=$1",
-        "create_verification" => "SELECT jsonb_build_object('status','ok','id',id) AS response_json FROM verifications WHERE mcp_idempotency_identity=$1",
-        "create_baseline" => "SELECT to_jsonb(b) - 'mcp_idempotency_identity' AS response_json FROM baselines b WHERE mcp_idempotency_identity=$1",
-        "create_requirement_comment" => "SELECT jsonb_build_object('id',c.id,'requirement_id',c.requirement_id,'requirement_version_id',c.requirement_version_id,'author_id',c.author_id,'author_name',COALESCE(u.name,'User#' || c.author_id::text),'body',c.body,'created_at',c.created_at) AS response_json FROM requirement_comments c LEFT JOIN users u ON u.id=c.author_id WHERE c.mcp_idempotency_identity=$1",
+        "create_requirement" => {
+            "SELECT jsonb_build_object('status','ok','id',id) AS response_json FROM requirements WHERE mcp_idempotency_identity=$1"
+        }
+        "create_verification" => {
+            "SELECT jsonb_build_object('status','ok','id',id) AS response_json FROM verifications WHERE mcp_idempotency_identity=$1"
+        }
+        "create_baseline" => {
+            "SELECT to_jsonb(b) - 'mcp_idempotency_identity' AS response_json FROM baselines b WHERE mcp_idempotency_identity=$1"
+        }
+        "create_requirement_comment" => {
+            "SELECT jsonb_build_object('id',c.id,'requirement_id',c.requirement_id,'requirement_version_id',c.requirement_version_id,'author_id',c.author_id,'author_name',COALESCE(u.name,'User#' || c.author_id::text),'body',c.body,'created_at',c.created_at) AS response_json FROM requirement_comments c LEFT JOIN users u ON u.id=c.author_id WHERE c.mcp_idempotency_identity=$1"
+        }
         _ => return Ok(None),
     };
     diesel::sql_query(query)

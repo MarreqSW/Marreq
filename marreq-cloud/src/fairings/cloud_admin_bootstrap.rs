@@ -71,7 +71,9 @@ impl Fairing for CloudAdminBootstrapFairing {
                             "Cloud admin bootstrap: failed to promote {email_norm}: {e}"
                         );
                     } else {
-                        rocket::info!("Cloud admin bootstrap: promoted existing user {email_norm} to site admin.");
+                        rocket::info!(
+                            "Cloud admin bootstrap: promoted existing user {email_norm} to site admin."
+                        );
                     }
                 }
             }

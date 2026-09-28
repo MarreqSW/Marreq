@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 // Copyright (C) 2026 Marreq
 
-#[cfg(any(test, feature = "test-helpers"))]
-use crate::repository::diesel_repo_mock::DieselRepoMock;
-use crate::repository::errors::RepoError;
 use crate::repository::CacheRepository;
 #[cfg(not(any(test, feature = "test-helpers")))]
 use crate::repository::DieselRepo;
+#[cfg(any(test, feature = "test-helpers"))]
+use crate::repository::diesel_repo_mock::DieselRepoMock;
+use crate::repository::errors::RepoError;
 use rocket::{Build, Rocket};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 

@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::api::prelude::*;
 use crate::auth::guards::{ApiUserOrBearer, ProjectAccessOrBearer};
-use crate::importers::{project_bundle, ColumnMapping, ExcelImporter, ImportConfig, ValueMapping};
+use crate::importers::{ColumnMapping, ExcelImporter, ImportConfig, ValueMapping, project_bundle};
 use crate::repository::{GroupsRepository, LookupRepository, ProjectMembersRepository};
 use crate::reqif::import::ImportConfig as ReqifImportConfig;
 use crate::services::ReqIFService;

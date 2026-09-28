@@ -9,8 +9,8 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{
     NewRequirementStatus, NewVerificationStatus, RequirementStatus, VerificationStatus,
 };
-use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
+use crate::repository::errors::RepoError;
 use crate::status_enums::{RequirementStatusEnum, TestStatusEnum};
 use crate::validation::{sanitize_string, validate_requirement_status};
 

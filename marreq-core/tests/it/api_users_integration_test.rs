@@ -15,13 +15,13 @@
 use marreq_core::models::*;
 use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 mod test_support {
     use super::*;
     use marreq_core::app::AppState;
     use marreq_core::auth::session::test_session_cookie_for;
-    use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use marreq_core::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use std::sync::{Arc, RwLock};
 
     pub type TestAppState = AppState<CacheRepository<DieselRepoMock>>;
@@ -490,10 +490,12 @@ async fn admin_cannot_remove_own_admin_flag() {
 
     assert_eq!(response.status(), Status::BadRequest);
     let body: Value = response.into_json().await.expect("json");
-    assert!(body["message"]
-        .as_str()
-        .unwrap()
-        .contains("your own administrator rights"));
+    assert!(
+        body["message"]
+            .as_str()
+            .unwrap()
+            .contains("your own administrator rights")
+    );
 }
 
 #[rocket::async_test]
@@ -550,10 +552,12 @@ async fn set_password_reports_policy_violation() {
 
     assert_eq!(response.status(), Status::BadRequest);
     let body: Value = response.into_json().await.expect("json");
-    assert!(body["message"]
-        .as_str()
-        .unwrap()
-        .contains("at least 8 characters"));
+    assert!(
+        body["message"]
+            .as_str()
+            .unwrap()
+            .contains("at least 8 characters")
+    );
 }
 
 #[rocket::async_test]

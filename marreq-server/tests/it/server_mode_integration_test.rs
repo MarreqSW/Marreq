@@ -9,10 +9,10 @@
 
 use marreq_core::app::AppState;
 use marreq_core::auth::hash_password;
-use marreq_core::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+use marreq_core::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
 use rocket::http::{ContentType, Status};
 use rocket::local::asynchronous::Client;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::sync::{Arc, RwLock};
 
 type TestState = AppState<CacheRepository<DieselRepoMock>>;

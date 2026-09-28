@@ -113,10 +113,10 @@ mod tests {
         let state = client.rocket().state::<TestState>().unwrap();
         test_session_cookie_for(state, user_id)
     }
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use rocket::http::ContentType;
     use rocket::local::asynchronous::{Client, LocalResponse};
-    use serde_json::{json, Value};
+    use serde_json::{Value, json};
     use std::sync::{Arc, RwLock};
 
     type TestState = AppState<CacheRepository<DieselRepoMock>>;

@@ -1568,12 +1568,13 @@ impl RequirementsRepository for DieselRepoMock {
                     continue;
                 }
                 if let Some(vm) = self.verification_methods.get(&ver_id)
-                    && vm.project_id != req_project {
-                        return Err(RepoError::CrossProjectViolation(format!(
-                            "requirement {} (project {}) cannot use verification method {} from project {}",
-                            requirement_id, req_project, ver_id, vm.project_id
-                        )));
-                    }
+                    && vm.project_id != req_project
+                {
+                    return Err(RepoError::CrossProjectViolation(format!(
+                        "requirement {} (project {}) cannot use verification method {} from project {}",
+                        requirement_id, req_project, ver_id, vm.project_id
+                    )));
+                }
             }
         }
         self.requirement_verification_methods
@@ -1666,13 +1667,13 @@ impl RequirementsRepository for DieselRepoMock {
                     .requirements
                     .get(&id)
                     .and_then(|req| req.current_version_id)
-                {
-                    let values: Vec<(i32, Option<String>)> = values
-                        .iter()
-                        .map(|v| (v.field_id, v.value.clone()))
-                        .collect();
-                    self.set_custom_field_values_for_version(version_id, &values)?;
-                }
+            {
+                let values: Vec<(i32, Option<String>)> = values
+                    .iter()
+                    .map(|v| (v.field_id, v.value.clone()))
+                    .collect();
+                self.set_custom_field_values_for_version(version_id, &values)?;
+            }
             let source_version_id = self
                 .requirements
                 .get(&id)
@@ -1786,13 +1787,14 @@ impl RequirementsRepository for DieselRepoMock {
             self.set_requirement_verification_methods(requirement_id, verification_method_ids)?;
             let requirement = self.get_requirement_by_id(requirement_id)?;
             if let Some(values) = custom_fields
-                && let Some(version_id) = requirement.current_version_id {
-                    let values: Vec<(i32, Option<String>)> = values
-                        .iter()
-                        .map(|v| (v.field_id, v.value.clone()))
-                        .collect();
-                    self.set_custom_field_values_for_version(version_id, &values)?;
-                }
+                && let Some(version_id) = requirement.current_version_id
+            {
+                let values: Vec<(i32, Option<String>)> = values
+                    .iter()
+                    .map(|v| (v.field_id, v.value.clone()))
+                    .collect();
+                self.set_custom_field_values_for_version(version_id, &values)?;
+            }
             let requirement = self.get_requirement_by_id(requirement_id)?;
             self.mark_links_suspect_for_requirement(
                 requirement_id,
@@ -1801,14 +1803,15 @@ impl RequirementsRepository for DieselRepoMock {
                 Some(actor_id),
             )?;
             if let Some(links) = parent_links
-                && let Some(source_version_id) = requirement.current_version_id {
-                    self.delete_requirement_version_links_by_source_version(source_version_id)?;
-                    for link in links {
-                        let mut new_link = link.clone();
-                        new_link.source_version_id = source_version_id;
-                        self.insert_requirement_version_link(&new_link)?;
-                    }
+                && let Some(source_version_id) = requirement.current_version_id
+            {
+                self.delete_requirement_version_links_by_source_version(source_version_id)?;
+                for link in links {
+                    let mut new_link = link.clone();
+                    new_link.source_version_id = source_version_id;
+                    self.insert_requirement_version_link(&new_link)?;
                 }
+            }
             self.get_requirement_by_id(requirement_id)
         })();
 
@@ -1906,11 +1909,12 @@ impl RequirementsRepository for DieselRepoMock {
         self.requirement_versions
             .insert(version_id, version.clone());
         if let Some(req) = self.requirements.get_mut(&version.requirement_id)
-            && req.current_version_id == Some(version_id) {
-                req.approval_state = version.approval_state.clone();
-                req.approved_by = version.approved_by;
-                req.approved_at = version.approved_at;
-            }
+            && req.current_version_id == Some(version_id)
+        {
+            req.approval_state = version.approval_state.clone();
+            req.approved_by = version.approved_by;
+            req.approved_at = version.approved_at;
+        }
         let _ = self.mark_links_suspect_for_requirement(
             version.requirement_id,
             "Approval state changed",
@@ -2063,12 +2067,13 @@ impl VerificationsRepository for DieselRepoMock {
             .unwrap_or(0);
         for &id in _requirement_ids {
             if let Some(req) = self.requirements.get(&id)
-                && req.project_id != project_id {
-                    return Err(RepoError::CrossProjectViolation(format!(
-                        "requirement {} belongs to project {} but verification {} is in project {}",
-                        id, req.project_id, _verification_id, project_id
-                    )));
-                }
+                && req.project_id != project_id
+            {
+                return Err(RepoError::CrossProjectViolation(format!(
+                    "requirement {} belongs to project {} but verification {} is in project {}",
+                    id, req.project_id, _verification_id, project_id
+                )));
+            }
             self.matrices.push(MatrixLink {
                 req_id: id,
                 verification_id: _verification_id,
@@ -2370,19 +2375,21 @@ impl MatrixRepository for DieselRepoMock {
     fn insert_new_matrix_item(&mut self, new: &NewMatrixLink) -> Result<(), RepoError> {
         // Mirror the DB trigger: requirement and test must both belong to matrix.project_id
         if let Some(req) = self.requirements.get(&new.req_id)
-            && req.project_id != new.project_id {
-                return Err(RepoError::CrossProjectViolation(format!(
-                    "requirement {} belongs to project {} but matrix row declares project_id={}",
-                    new.req_id, req.project_id, new.project_id
-                )));
-            }
+            && req.project_id != new.project_id
+        {
+            return Err(RepoError::CrossProjectViolation(format!(
+                "requirement {} belongs to project {} but matrix row declares project_id={}",
+                new.req_id, req.project_id, new.project_id
+            )));
+        }
         if let Some(verification) = self.verifications.get(&new.verification_id)
-            && verification.project_id != new.project_id {
-                return Err(RepoError::CrossProjectViolation(format!(
-                    "verification {} belongs to project {} but matrix row declares project_id={}",
-                    new.verification_id, verification.project_id, new.project_id
-                )));
-            }
+            && verification.project_id != new.project_id
+        {
+            return Err(RepoError::CrossProjectViolation(format!(
+                "verification {} belongs to project {} but matrix row declares project_id={}",
+                new.verification_id, verification.project_id, new.project_id
+            )));
+        }
         self.matrices.push(MatrixLink {
             req_id: new.req_id,
             verification_id: new.verification_id,
@@ -2573,12 +2580,13 @@ impl crate::repository::CustomFieldRepository for DieselRepoMock {
                     continue;
                 }
                 if let Some(def) = self.custom_field_definitions.get(&field_id)
-                    && def.project_id != req_project {
-                        return Err(RepoError::CrossProjectViolation(format!(
-                            "requirement version {} (project {}) cannot use custom field definition {} from project {}",
-                            version_id, req_project, field_id, def.project_id
-                        )));
-                    }
+                    && def.project_id != req_project
+                {
+                    return Err(RepoError::CrossProjectViolation(format!(
+                        "requirement version {} (project {}) cannot use custom field definition {} from project {}",
+                        version_id, req_project, field_id, def.project_id
+                    )));
+                }
             }
         }
         self.custom_field_values

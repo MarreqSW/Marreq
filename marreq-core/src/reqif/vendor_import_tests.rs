@@ -4,13 +4,13 @@
 //! Vendor-fixture and robustness tests for ReqIF import.
 //! Fixtures live in `tests/reqif/fixtures` (repo root) and are not modified.
 
-use super::import::{object_to_fields, parse_reqif, ImportConfig};
+use super::import::{ImportConfig, object_to_fields, parse_reqif};
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{
     Applicability, Category, Project, RequirementStatus, User, VerificationMethod,
 };
-use crate::repository::diesel_repo_mock::DieselRepoMock;
 use crate::repository::CacheRepository;
+use crate::repository::diesel_repo_mock::DieselRepoMock;
 use crate::services::{ReqIFService, RequirementService};
 use crate::status_enums::ProjectStatus;
 use chrono::{NaiveDate, NaiveDateTime};
@@ -393,10 +393,11 @@ fn test_reqif_formatted_xhtml_tables_links_and_images() {
     assert!(text.contains("\nCell A Cell B"), "{text}");
     assert_eq!(doc.xhtml_value_count, 1);
     assert_eq!(doc.attachment_count, 1);
-    assert!(doc
-        .warnings
-        .iter()
-        .any(|warning| warning.contains("embedded")));
+    assert!(
+        doc.warnings
+            .iter()
+            .any(|warning| warning.contains("embedded"))
+    );
 }
 
 #[test]
@@ -432,10 +433,12 @@ fn test_reqif_integer_real_boolean_date_and_enumeration_values() {
         .import_into_project(&xml, &config, &user)
         .unwrap();
     assert_eq!(result.imported_count, 1);
-    assert!(result
-        .warnings
-        .iter()
-        .any(|warning| warning.contains("typed")));
+    assert!(
+        result
+            .warnings
+            .iter()
+            .any(|warning| warning.contains("typed"))
+    );
 }
 
 #[test]
@@ -547,14 +550,18 @@ fn test_reqif_duplicate_identifiers_are_rejected_before_writes() {
         .unwrap();
     assert!(!result.success);
     assert_eq!(result.imported_count, 0);
-    assert!(result
-        .errors
-        .iter()
-        .any(|error| error.contains("duplicate SPEC-OBJECT")));
-    assert!(RequirementService::new(&state)
-        .list_by_project(1)
-        .unwrap()
-        .is_empty());
+    assert!(
+        result
+            .errors
+            .iter()
+            .any(|error| error.contains("duplicate SPEC-OBJECT"))
+    );
+    assert!(
+        RequirementService::new(&state)
+            .list_by_project(1)
+            .unwrap()
+            .is_empty()
+    );
 }
 
 #[test]

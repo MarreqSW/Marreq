@@ -186,8 +186,23 @@ fn optional_oidc(
     let secret = std::env::var(format!("MARREQ_{prefix}_CLIENT_SECRET")).ok();
     match (client_id, secret) {
         (None, None) => Ok(None),
-        (Some(client_id), Some(client_secret)) if !client_id.is_empty() && !client_secret.is_empty() => Ok(Some(AuthProviderConfig { key: key.into(), display_name: display.into(), kind: ProviderKind::Oidc { issuer: issuer.into() }, client_id, client_secret, auto_register })),
-        _ => Err(format!("MARREQ_{prefix}_CLIENT_ID and MARREQ_{prefix}_CLIENT_SECRET must be configured together")),
+        (Some(client_id), Some(client_secret))
+            if !client_id.is_empty() && !client_secret.is_empty() =>
+        {
+            Ok(Some(AuthProviderConfig {
+                key: key.into(),
+                display_name: display.into(),
+                kind: ProviderKind::Oidc {
+                    issuer: issuer.into(),
+                },
+                client_id,
+                client_secret,
+                auto_register,
+            }))
+        }
+        _ => Err(format!(
+            "MARREQ_{prefix}_CLIENT_ID and MARREQ_{prefix}_CLIENT_SECRET must be configured together"
+        )),
     }
 }
 

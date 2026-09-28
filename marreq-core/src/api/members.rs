@@ -3,13 +3,13 @@
 
 //! REST API for project members and effective permissions.
 
-use rocket::serde::Deserialize;
 use rocket::State;
+use rocket::serde::Deserialize;
 
 use crate::api::prelude::*;
 use crate::auth::guards::ProjectAccessOrBearer;
 use crate::models::NewProjectMember;
-use crate::permissions::{effective_permissions, role_label, EffectivePermissions};
+use crate::permissions::{EffectivePermissions, effective_permissions, role_label};
 use crate::repository::{
     ProjectMembersRepository, ProjectReviewersRepository, ProjectsRepository, UserRepository,
 };

@@ -5,7 +5,7 @@
 
 use rocket::request::{FromRequest, Outcome};
 use rocket::serde::{Deserialize, Serialize};
-use rocket::{async_trait, Request};
+use rocket::{Request, async_trait};
 
 use crate::api::prelude::*;
 use crate::auth::guards::session::session_user_has_project_access;
@@ -188,9 +188,9 @@ fn record_audit(
     if let Some(project_id) = payload.project_id
         && !session_user_has_project_access(state, user.user(), project_id)
             .map_err(|_| ApiError::Internal("repository unavailable".into()))?
-        {
-            return Err(ApiError::Forbidden("project access denied".into()));
-        }
+    {
+        return Err(ApiError::Forbidden("project access denied".into()));
+    }
     let user_id = user.user().id;
     let description = serde_json::json!({
         "tool": payload.tool_name,
@@ -259,7 +259,7 @@ mod tests {
         let state = client.rocket().state::<TestState>().unwrap();
         test_session_cookie_for(state, user_id)
     }
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use rocket::http::{ContentType, Header, Status};
     use rocket::local::asynchronous::Client;
     use sha2::{Digest, Sha256};
@@ -292,9 +292,9 @@ mod tests {
         unsafe {
             std::env::set_var("MARREQ_MCP_AUDIT_SECRET", AUDIT_SECRET);
             std::env::set_var(
-            "DATABASE_URL",
-            std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://unused".into()),
-        );
+                "DATABASE_URL",
+                std::env::var("DATABASE_URL").unwrap_or_else(|_| "postgres://unused".into()),
+            );
             std::env::set_var("MARREQ_MCP_PUBLIC_URL", "http://localhost:8080/mcp");
         }
         if let Ok(cfg) = crate::config::AppConfig::from_env() {

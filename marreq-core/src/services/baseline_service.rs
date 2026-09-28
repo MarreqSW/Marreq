@@ -7,8 +7,8 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{
     Baseline, BaselineTraceability, BaselineVerification, NewBaseline, Requirement,
 };
-use crate::repository::errors::RepoError;
 use crate::repository::BaselineRepository;
+use crate::repository::errors::RepoError;
 use serde::Serialize;
 use std::collections::HashSet;
 

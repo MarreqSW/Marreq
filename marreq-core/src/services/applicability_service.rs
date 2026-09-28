@@ -5,8 +5,8 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{Applicability, NewApplicability, User};
-use crate::repository::errors::RepoError;
 use crate::repository::LookupRepository;
+use crate::repository::errors::RepoError;
 use crate::services::AuditLog;
 use lazy_static::lazy_static;
 use regex::Regex;

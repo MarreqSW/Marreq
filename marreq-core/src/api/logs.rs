@@ -4,14 +4,14 @@
 //! Instance-wide audit log browser (admin only).
 
 use chrono::NaiveDateTime;
+use rocket::Responder;
 use rocket::http::Header;
 use rocket::serde::{Deserialize, Serialize};
-use rocket::Responder;
 
 use crate::api::prelude::*;
 use crate::repository::LogListQuery;
 use crate::services::log_service::{
-    change_summary, log_change_details, ChangeDetail, LogService, LogStatsResponse,
+    ChangeDetail, LogService, LogStatsResponse, change_summary, log_change_details,
 };
 
 const LIST_LIMIT_DEFAULT: i64 = 50;
@@ -103,11 +103,7 @@ impl JsonDownload {
 fn blank_to_none(s: Option<String>) -> Option<String> {
     s.and_then(|v| {
         let t = v.trim().to_string();
-        if t.is_empty() {
-            None
-        } else {
-            Some(t)
-        }
+        if t.is_empty() { None } else { Some(t) }
     })
 }
 
@@ -128,9 +124,10 @@ fn parse_datetime(raw: &str) -> Result<NaiveDateTime, ApiError> {
             return Ok(dt);
         }
         if *fmt == "%Y-%m-%d"
-            && let Ok(d) = chrono::NaiveDate::parse_from_str(s, fmt) {
-                return Ok(d.and_hms_opt(0, 0, 0).unwrap());
-            }
+            && let Ok(d) = chrono::NaiveDate::parse_from_str(s, fmt)
+        {
+            return Ok(d.and_hms_opt(0, 0, 0).unwrap());
+        }
     }
     Err(ApiError::BadRequest(format!(
         "invalid datetime '{s}'; use RFC 3339 or YYYY-MM-DD[THH:MM]"
@@ -325,7 +322,7 @@ mod tests {
     use crate::app::AppState;
     use crate::auth::session::test_session_cookie_for;
     use crate::models::Log;
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use chrono::NaiveDate;
     use rocket::http::{ContentType, Cookie};
     use rocket::local::asynchronous::Client;

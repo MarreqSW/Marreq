@@ -404,17 +404,23 @@ mod tests {
         assert!(cache.get(&keys::Requirements::by_project(pid)).is_none());
         assert!(cache.get(&keys::Verifications::by_project(pid)).is_none());
         assert!(cache.get(&keys::Matrix::by_project(pid)).is_none());
-        assert!(cache
-            .get(&keys::VerificationMethod::by_project(pid))
-            .is_none());
+        assert!(
+            cache
+                .get(&keys::VerificationMethod::by_project(pid))
+                .is_none()
+        );
         assert!(cache.get(&keys::Categories::by_project(pid)).is_none());
         assert!(cache.get(&keys::Applicability::by_project(pid)).is_none());
-        assert!(cache
-            .get(&keys::RequirementStatus::by_project(pid))
-            .is_none());
-        assert!(cache
-            .get(&keys::VerificationStatus::by_project(pid))
-            .is_none());
+        assert!(
+            cache
+                .get(&keys::RequirementStatus::by_project(pid))
+                .is_none()
+        );
+        assert!(
+            cache
+                .get(&keys::VerificationStatus::by_project(pid))
+                .is_none()
+        );
         assert!(cache.get(&keys::Projects::by_id(pid)).is_none());
         assert!(cache.get(&keys::ProjectMembers::by_project(pid)).is_none());
         assert!(cache.get(keys::PROJECTS_ALL).is_none());
@@ -458,9 +464,11 @@ mod tests {
         cache.set(keys::REQUIREMENTS_ALL, "ra".to_string());
         cache.invalidate_requirement(rid);
         assert!(cache.get(&keys::Requirements::by_id(rid)).is_none());
-        assert!(cache
-            .get(&keys::LinkedVerifications::for_requirement(rid))
-            .is_none());
+        assert!(
+            cache
+                .get(&keys::LinkedVerifications::for_requirement(rid))
+                .is_none()
+        );
         assert!(cache.get(&keys::RequirementTitle::by_id(rid)).is_none());
         assert!(cache.get(keys::REQUIREMENTS_ALL).is_none());
     }
@@ -474,9 +482,11 @@ mod tests {
         cache.set(keys::VERIFICATIONS_ALL, "va".to_string());
         cache.invalidate_verification(vid);
         assert!(cache.get(&keys::Verifications::by_id(vid)).is_none());
-        assert!(cache
-            .get(&keys::LinkedRequirements::for_test(vid))
-            .is_none());
+        assert!(
+            cache
+                .get(&keys::LinkedRequirements::for_test(vid))
+                .is_none()
+        );
         assert!(cache.get(keys::VERIFICATIONS_ALL).is_none());
     }
 

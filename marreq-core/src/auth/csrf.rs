@@ -16,8 +16,8 @@
 //!    - the `X-CSRF-Token` header against the `csrf` cookie value, **or**
 //!    - the `Origin` / `Referer` header against the application's own origin.
 
-use rand::rngs::SysRng;
 use rand::TryRng;
+use rand::rngs::SysRng;
 use rocket::http::{Cookie, CookieJar, SameSite};
 
 /// Name of the private CSRF cookie that stores the token.

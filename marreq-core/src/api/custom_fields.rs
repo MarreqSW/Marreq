@@ -137,7 +137,7 @@ mod tests {
         test_session_cookie_for(state, user_id)
     }
     use crate::models::{CustomFieldDefinition, Project};
-    use crate::repository::{diesel_repo_mock::DieselRepoMock, CacheRepository};
+    use crate::repository::{CacheRepository, diesel_repo_mock::DieselRepoMock};
     use crate::status_enums::ProjectStatus;
     use chrono::NaiveDate;
     use rocket::http::{ContentType, Status};

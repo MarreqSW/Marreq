@@ -30,12 +30,12 @@ pub mod search_service;
 pub use config::SemanticSearchConfig;
 pub use document_builder::{build_embedding_document, compute_content_hash};
 pub use embedding_provider::{
-    create_embedding_provider, EmbeddingError, EmbeddingProvider, EmbeddingResult,
-    MockEmbeddingProvider, OllamaEmbeddingProvider,
+    EmbeddingError, EmbeddingProvider, EmbeddingResult, MockEmbeddingProvider,
+    OllamaEmbeddingProvider, create_embedding_provider,
 };
 pub use indexing_service::IndexingService;
 pub use llm_provider::{
-    build_rag_system_prompt, build_rag_user_prompt, create_llm_provider, extract_citations,
     ChatMessage, LlmError, LlmProvider, LlmResult, MockLlmProvider, OllamaLlmProvider,
+    build_rag_system_prompt, build_rag_user_prompt, create_llm_provider, extract_citations,
 };
 pub use search_service::{SearchError, SearchFilters, SemanticSearchService};

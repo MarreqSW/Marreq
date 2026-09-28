@@ -3,8 +3,8 @@
 
 use crate::auth::ExternalIdentity;
 use crate::models::{NewUser, NewWorkspace, User};
-use crate::repository::errors::RepoError;
 use crate::repository::Repository;
+use crate::repository::errors::RepoError;
 use crate::validation::validate_user;
 
 pub struct UserProvisioningService;
@@ -133,8 +133,8 @@ fn available_username<R: Repository>(repo: &R, candidate: &str) -> Result<String
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::repository::diesel_repo_mock::DieselRepoMock;
     use crate::repository::UserRepository;
+    use crate::repository::diesel_repo_mock::DieselRepoMock;
     #[test]
     fn username_collision_gets_stable_suffix() {
         let mut repo = DieselRepoMock::with_users([DieselRepoMock::make_user(1, "alice", "hash")]);

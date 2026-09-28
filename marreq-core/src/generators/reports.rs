@@ -8,7 +8,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::generators::GeneratorError;
 use crate::helper_functions::reports::{
-    generate_pdf_report_data, generate_requirements_pdf_report, Metrics, RequirementsPdfRow,
+    Metrics, RequirementsPdfRow, generate_pdf_report_data, generate_requirements_pdf_report,
 };
 use crate::repository::Repository;
 

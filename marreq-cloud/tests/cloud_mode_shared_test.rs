@@ -15,7 +15,7 @@ use marreq_core::auth::csrf::{CSRF_COOKIE, CSRF_HEADER};
 use marreq_core::auth::session::test_session_cookie_for;
 use marreq_core::repository::UserRepository;
 use rocket::http::{ContentType, Cookie, Header, Status};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 // ============================================================================
 // Deployment metadata
@@ -156,9 +156,9 @@ async fn admin_user_creation_via_api_returns_gone_in_cloud_mode() {
     unsafe {
         std::env::set_var("MARREQ_SITE_ADMIN_EMAIL", "admin@cloud-test.example.com");
         std::env::set_var(
-        "MARREQ_SITE_ADMIN_BOOTSTRAP_PASSWORD",
-        "Admin!Bootstrap_2026",
-    );
+            "MARREQ_SITE_ADMIN_BOOTSTRAP_PASSWORD",
+            "Admin!Bootstrap_2026",
+        );
     }
 
     let client = cloud_client().await;

@@ -353,6 +353,24 @@ From **Reports**, download:
 - **Matrix (.xlsx)**: coverage grid (requirements as rows, verifications as columns, `Yes` where linked). For review, not for re-import.
 - **Matrix links (.xlsx)**: two columns (`requirement_code`, `verification_code`), one row per link. Upload this file on **Import** as **Matrix links** (same project is a no-op for existing pairs; use it to copy links into another project that already has those codes).
 
+### 6.4 Dependency Structure Matrix (DSM)
+
+The DSM shows how **requirements depend on each other**, for a whole project on one screen. It complements the requirement × verification matrix above.
+
+- **Open it:** **Traceability** → **DSM** tab (URL `/<project-slug>/traceability?view=dsm`).
+- **How to read it:** rows and columns are the same requirements in the same order, and the dark diagonal is the requirement itself. A mark in row *i*, column *j* means requirement *i*'s current version links to requirement *j*. The letter shows the link type: **D** derives from, **R** refines, **P** depends on, **S** satisfies, **~** relates to. Several letters mean several links between the same pair.
+- **Link types:** toggle the chips to choose which relations are drawn. *Relates to* is off by default.
+- **Order:**
+  - **Hierarchy** (default) groups requirements by category, drawn as framed blocks along the diagonal, and nests children under their parent.
+  - **Partition** puts dependencies before the requirements that depend on them. Ordinary dependencies then fall below the diagonal, and marks above it point to feedback worth reviewing.
+- **Scope:** limit the matrix to one **category** or to the **subtree** of one requirement. Links to requirements outside the scope are counted in the summary line but not drawn.
+- **Loops:** requirements that depend on each other in a circle (across any link types) are tinted amber and listed in the side panel with the loop path. Hover a loop in the panel to highlight its cells. Loops are rare, because Marreq already rejects circular links between versions, but they can appear when a link points to an older version of a requirement.
+- **Upstream changed:** a red frame marks an approved requirement whose target was edited *after* that approval. Review whether the approved requirement still holds. The side panel lists all of them.
+- **Details:** hover a cell to see the link types, the target title, loop membership and any upstream change. Click a mark, or a code in the row header, to open the requirement.
+- **Export Excel:** downloads the matrix with the current filters (sheets *DSM*, *Loops* and *Legend*), for offline design reviews.
+
+![Dependency structure matrix](screenshots/dsm.png)
+
 ---
 
 ## 7. Baselines

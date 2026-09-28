@@ -279,6 +279,8 @@ Behind the Docker frontend (or Vite dev), use the **same origin** as the SPA (e.
 - `GET /projects/{project_id}/requirements/{id}/trace_up` - Get parent requirement(s) (session or Bearer)
 - `GET /projects/{project_id}/requirements/{id}/trace_down` - Get child requirements and linked tests (session or Bearer)
 - `GET /projects/{project_id}/coverage_report` - Requirements without tests, tests without requirements, suspect links (session or Bearer)
+- `GET /projects/{project_id}/dsm` - Dependency structure matrix: requirement × requirement links, loops and upstream changes (query: `link_types`, `order=hierarchy|partition`, `category_id`, `root_id`; session or Bearer)
+- `GET /projects/{project_id}/exports/dsm.xlsx` - The same matrix as an Excel workbook (DSM, Loops and Legend sheets)
 - `POST /traceability/clear_suspect` - Clear suspect flag for a traceability link (body: `req_id`, `test_id`; records current user and timestamp)
 
 #### Semantic search (project-scoped; requires embeddings/RAG when enabled)

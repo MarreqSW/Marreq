@@ -162,6 +162,11 @@ describe("remote Streamable HTTP transport", () => {
       { type: "oauth2", scopes: ["requirements:read"] },
     ]);
     expect((requirement?._meta as Record<string, unknown> | undefined)?.securitySchemes).toBeUndefined();
+    const dsm = wireTools.find((tool) => tool.name === "dependency_matrix");
+    expect(dsm?.securitySchemes).toEqual([
+      { type: "oauth2", scopes: ["requirements:read", "traceability:read"] },
+    ]);
+    expect((dsm?.annotations as Record<string, unknown> | undefined)?.readOnlyHint).toBe(true);
     const composite = wireTools.find((tool) => tool.name === "diff_baseline_vs_current");
     expect(composite?.securitySchemes).toEqual([
       { type: "oauth2", scopes: ["requirements:read", "baselines:read"] },

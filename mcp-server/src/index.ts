@@ -127,6 +127,7 @@ export function createMarreqServer(ctx: SessionContext) {
     trace_up: ["requirements:read", "traceability:read"],
     trace_down: ["requirements:read", "verifications:read", "traceability:read"],
     coverage_report: ["traceability:read"],
+    dependency_matrix: ["requirements:read", "traceability:read"],
     get_verification_matrix: ["traceability:read"],
     put_verification_matrix: ["traceability:write"],
     clear_suspect: ["traceability:write"],
@@ -353,6 +354,40 @@ export function createMarreqServer(ctx: SessionContext) {
         '{"scope":"project"}',
         false,
         () => toolClient.coverageReport()
+      );
+      return { content: [jsonContent(out)] };
+    }
+  );
+
+  server.registerTool(
+    "dependency_matrix",
+    {
+      description:
+        "Dependency structure matrix (scope: project): requirement × requirement links where a cell in row i, column j means requirement i depends on requirement j; dependency loops with a cycle path; and upstream_changed cells (target edited after the source was approved). link_types defaults to all but RELATES_TO; order is hierarchy (category blocks) or partition (dependencies first); scope with category_id or root_id (subtree).",
+      inputSchema: z.object({
+        ...projectField,
+        link_types: z
+          .array(z.enum(["DERIVES_FROM", "REFINES", "SATISFIES", "DEPENDS_ON", "RELATES_TO"]))
+          .optional(),
+        order: z.enum(["hierarchy", "partition"]).optional(),
+        category_id: z.number().int().positive().optional(),
+        root_id: z.number().int().positive().optional(),
+      }),
+    },
+    async ({ project_id, link_types, order, category_id, root_id }) => {
+      const toolClient = forProject(project_id);
+      const out = await withAudit(
+        toolClient,
+        "dependency_matrix",
+        JSON.stringify({ link_types, order, category_id, root_id }),
+        false,
+        () =>
+          toolClient.dependencyMatrix({
+            linkTypes: link_types,
+            order,
+            categoryId: category_id,
+            rootId: root_id,
+          })
       );
       return { content: [jsonContent(out)] };
     }

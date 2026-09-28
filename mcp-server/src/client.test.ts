@@ -83,6 +83,38 @@ describe("MarreqClient", () => {
     });
   });
 
+  describe("dependencyMatrix", () => {
+    it("omits the query string by default and encodes filters", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+        async () =>
+          new Response(JSON.stringify({ cells: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          })
+      );
+
+      const client = makeClient();
+      await client.dependencyMatrix();
+      await client.dependencyMatrix({
+        linkTypes: ["DEPENDS_ON", "REFINES"],
+        order: "partition",
+        categoryId: 3,
+        rootId: 9,
+      });
+
+      expect(fetchSpy).toHaveBeenNthCalledWith(
+        1,
+        "http://localhost:8000/api/projects/1/dsm",
+        expect.any(Object)
+      );
+      expect(fetchSpy).toHaveBeenNthCalledWith(
+        2,
+        "http://localhost:8000/api/projects/1/dsm?link_types=DEPENDS_ON%2CREFINES&order=partition&category_id=3&root_id=9",
+        expect.any(Object)
+      );
+    });
+  });
+
   describe("Phase 2 draft_write methods", () => {
     it("createRequirement calls POST with project-scoped URL and body", async () => {
       const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(

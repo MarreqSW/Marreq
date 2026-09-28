@@ -48,7 +48,7 @@ time = { workspace = true }
 tokio = { workspace = true }
 urlencoding = { workspace = true }
 url = { workspace = true }
-xlsxwriter = { workspace = true }
+rust_xlsxwriter = { workspace = true }
 
 [dev-dependencies]
 flate2 = "1"

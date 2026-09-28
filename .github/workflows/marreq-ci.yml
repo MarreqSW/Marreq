@@ -257,9 +257,6 @@ jobs:
           docker system prune -af || true
           df -h
 
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libclang-dev
-
       - name: Ensure CI .env placeholder exists
         run: test -f .env || touch .env
 

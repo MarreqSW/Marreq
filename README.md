@@ -127,7 +127,7 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 + **PostgreSQL**: Database backend (provided via Docker)
 + **Docker & Docker Compose**: For database containerization
 + **Rust**: Programming language
-+ **clang** /  **libclang-dev**: Required by `xlsxwriter`
++ **C toolchain**, **pkg-config**, **libssl-dev** and **libpq-dev**: For the native crates (OpenSSL, libpq, aws-lc)
 
 ### Installation
 
@@ -413,7 +413,7 @@ Marreq/
 - **Backend**: Rust, Rocket, Diesel, PostgreSQL
 - **Frontend**: React 19, TypeScript, Vite, Tailwind CSS (see [frontend/README.md](frontend/README.md))
 - **Legacy assets**: `frontend/static/` (not loaded by default in the React shell)
-- **Reports**: Excel generation with xlsxwriter
+- **Reports**: Excel generation with rust_xlsxwriter (pure Rust)
 - **Containerization**: Docker Compose (db, backend, frontend, optional services)
 
 ### Building

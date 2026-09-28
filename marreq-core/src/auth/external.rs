@@ -8,7 +8,7 @@
 //! parsing, token persistence, or email-based account matching.
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use rand::RngCore;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -129,7 +129,7 @@ fn secret_matches(left: &str, right: &str) -> bool {
 
 fn random_urlsafe() -> String {
     let mut bytes = [0u8; ENTROPY_BYTES];
-    rand::thread_rng().fill_bytes(&mut bytes);
+    rand::rng().fill_bytes(&mut bytes);
     URL_SAFE_NO_PAD.encode(bytes)
 }
 

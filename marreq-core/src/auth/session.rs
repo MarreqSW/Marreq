@@ -52,9 +52,9 @@ pub fn session_cookie_name_for_request() -> &'static str {
 }
 
 fn generate_raw_token() -> String {
-    use rand::RngCore;
+    use rand::Rng;
     let mut buf = [0u8; TOKEN_BYTES];
-    rand::thread_rng().fill_bytes(&mut buf);
+    rand::rng().fill_bytes(&mut buf);
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(buf)
 }
 

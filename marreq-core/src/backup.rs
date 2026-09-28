@@ -96,10 +96,9 @@ fn split_password(database_url: &str) -> Result<(String, Option<String>), Backup
 }
 
 fn create_private_temp_file() -> Result<PathBuf, BackupError> {
-    use rand::Rng;
     use std::fs::OpenOptions;
 
-    let suffix: u64 = rand::thread_rng().gen();
+    let suffix: u64 = rand::random();
     let path = std::env::temp_dir().join(format!("marreq-backup-{suffix:016x}.sql.gz"));
     let mut options = OpenOptions::new();
     options.write(true).create_new(true);

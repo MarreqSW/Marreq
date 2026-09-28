@@ -22,11 +22,10 @@ pub fn resolve_login<R: Repository>(
         repo.touch_identity_login(identity.id, chrono::Utc::now().naive_utc())?;
         return Ok(ResolvedExternalUser { user, identity });
     }
-    if let Some(email) = external.email.as_deref() {
-        if repo.get_user_by_email(email)?.is_some() {
+    if let Some(email) = external.email.as_deref()
+        && repo.get_user_by_email(email)?.is_some() {
             return Err(RepoError::Duplicate("account_link_required".into()));
         }
-    }
     if !auto_register {
         return Err(RepoError::Unauthorized);
     }

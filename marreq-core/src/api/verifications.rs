@@ -240,11 +240,10 @@ fn apply_verification_field_update(
 ) -> ApiResult<Value> {
     let service = VerificationService::new(state.inner());
     let mut verification = service.get_by_id(id)?;
-    if let Some(pid) = project_id_match {
-        if verification.project_id != pid {
+    if let Some(pid) = project_id_match
+        && verification.project_id != pid {
             return Err(ApiError::NotFound("verification not in project".into()));
         }
-    }
     require_project_permission(
         state,
         user,

@@ -89,21 +89,18 @@ impl BaselineRepository for DieselRepo {
                     let applied = crate::saved_view_definition::filters_from_definition(def);
                     rows.into_iter()
                         .filter(|(_container, version)| {
-                            if let Some(sid) = applied.status_id {
-                                if version.status_id != sid {
+                            if let Some(sid) = applied.status_id
+                                && version.status_id != sid {
                                     return false;
                                 }
-                            }
-                            if let Some(cid) = applied.category_id {
-                                if version.category_id != cid {
+                            if let Some(cid) = applied.category_id
+                                && version.category_id != cid {
                                     return false;
                                 }
-                            }
-                            if let Some(state) = applied.approval_state.as_deref() {
-                                if !version.approval_state.eq_ignore_ascii_case(state) {
+                            if let Some(state) = applied.approval_state.as_deref()
+                                && !version.approval_state.eq_ignore_ascii_case(state) {
                                     return false;
                                 }
-                            }
                             if let Some(raw_q) = applied.q.as_deref() {
                                 let needle = raw_q.trim().to_lowercase();
                                 if !needle.is_empty() {

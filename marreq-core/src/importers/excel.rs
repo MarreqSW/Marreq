@@ -462,11 +462,9 @@ impl ExcelImporter {
                 .columns
                 .iter()
                 .find(|col| col.name == mapping.excel_column)
-            {
-                if column.index < row_data.len() {
+                && column.index < row_data.len() {
                     values.insert(mapping.target_field.clone(), row_data[column.index].clone());
                 }
-            }
         }
         values
     }

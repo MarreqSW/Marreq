@@ -786,11 +786,10 @@ mod data_mapping_tests {
 
         let mut req_data = HashMap::new();
         for mapping in &mappings {
-            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                if column.index < row_data.len() {
+            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                && column.index < row_data.len() {
                     req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
                 }
-            }
         }
 
         assert_eq!(req_data.get("title"), Some(&"Test Title".to_string()));
@@ -815,11 +814,10 @@ mod data_mapping_tests {
 
         let mut req_data = HashMap::new();
         for mapping in &mappings {
-            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                if column.index < row_data.len() {
+            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                && column.index < row_data.len() {
                     req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
                 }
-            }
         }
 
         assert_eq!(req_data.get("title"), Some(&"Title Only".to_string()));
@@ -841,11 +839,10 @@ mod data_mapping_tests {
 
         let mut req_data = HashMap::new();
         for mapping in &mappings {
-            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                if column.index < row_data.len() {
+            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                && column.index < row_data.len() {
                     req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
                 }
-            }
         }
 
         assert_eq!(req_data.get("title"), None);
@@ -879,11 +876,10 @@ mod data_mapping_tests {
 
         let mut test_data = HashMap::new();
         for mapping in &mappings {
-            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                if column.index < row_data.len() {
+            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                && column.index < row_data.len() {
                     test_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
                 }
-            }
         }
 
         assert_eq!(test_data.get("name"), Some(&"Test Name".to_string()));
@@ -905,11 +901,10 @@ mod data_mapping_tests {
 
         let mut req_data = HashMap::new();
         for mapping in &mappings {
-            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                if column.index < row_data.len() {
+            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                && column.index < row_data.len() {
                     req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
                 }
-            }
         }
 
         assert_eq!(req_data.get("title"), Some(&"".to_string()));
@@ -936,11 +931,10 @@ mod data_mapping_tests {
 
         let mut req_data = HashMap::new();
         for mapping in &mappings {
-            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                if column.index < row_data.len() {
+            if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                && column.index < row_data.len() {
                     req_data.insert(mapping.target_field.clone(), row_data[column.index].clone());
                 }
-            }
         }
 
         assert_eq!(req_data.get("title"), Some(&"Same Value".to_string()));
@@ -1769,12 +1763,11 @@ mod data_structure_combination_tests {
 
             let mut req_data = HashMap::new();
             for mapping in &mappings {
-                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                    if column.index < row_data.len() {
+                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                    && column.index < row_data.len() {
                         req_data
                             .insert(mapping.target_field.clone(), row_data[column.index].clone());
                     }
-                }
             }
 
             assert_eq!(req_data.get("title"), Some(&"Test Title".to_string()));
@@ -1799,12 +1792,11 @@ mod data_structure_combination_tests {
 
             let mut req_data = HashMap::new();
             for mapping in &mappings {
-                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                    if column.index < row_data.len() {
+                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                    && column.index < row_data.len() {
                         req_data
                             .insert(mapping.target_field.clone(), row_data[column.index].clone());
                     }
-                }
             }
 
             assert_eq!(req_data.get("title"), Some(&"Title Only".to_string()));
@@ -1826,12 +1818,11 @@ mod data_structure_combination_tests {
 
             let mut req_data = HashMap::new();
             for mapping in &mappings {
-                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                    if column.index < row_data.len() {
+                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                    && column.index < row_data.len() {
                         req_data
                             .insert(mapping.target_field.clone(), row_data[column.index].clone());
                     }
-                }
             }
 
             assert_eq!(req_data.get("title"), None);
@@ -1865,12 +1856,11 @@ mod data_structure_combination_tests {
 
             let mut test_data = HashMap::new();
             for mapping in &mappings {
-                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                    if column.index < row_data.len() {
+                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                    && column.index < row_data.len() {
                         test_data
                             .insert(mapping.target_field.clone(), row_data[column.index].clone());
                     }
-                }
             }
 
             assert_eq!(test_data.get("name"), Some(&"Test Name".to_string()));
@@ -1892,12 +1882,11 @@ mod data_structure_combination_tests {
 
             let mut req_data = HashMap::new();
             for mapping in &mappings {
-                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                    if column.index < row_data.len() {
+                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                    && column.index < row_data.len() {
                         req_data
                             .insert(mapping.target_field.clone(), row_data[column.index].clone());
                     }
-                }
             }
 
             assert_eq!(req_data.get("title"), Some(&"".to_string()));
@@ -1924,12 +1913,11 @@ mod data_structure_combination_tests {
 
             let mut req_data = HashMap::new();
             for mapping in &mappings {
-                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column) {
-                    if column.index < row_data.len() {
+                if let Some(column) = columns.iter().find(|col| col.name == mapping.excel_column)
+                    && column.index < row_data.len() {
                         req_data
                             .insert(mapping.target_field.clone(), row_data[column.index].clone());
                     }
-                }
             }
 
             assert_eq!(req_data.get("title"), Some(&"Same Value".to_string()));

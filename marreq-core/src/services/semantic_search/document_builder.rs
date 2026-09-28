@@ -46,11 +46,10 @@ pub fn build_embedding_document(req: &DecoratedRequirement) -> String {
     }
 
     // Justification/rationale
-    if let Some(ref justification) = req.justification {
-        if !justification.is_empty() {
+    if let Some(ref justification) = req.justification
+        && !justification.is_empty() {
             parts.push(format!("[RATIONALE] {}", justification));
         }
-    }
 
     // Category metadata
     if !req.category_id.is_empty() {

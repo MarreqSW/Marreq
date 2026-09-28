@@ -364,15 +364,14 @@ impl<'a> MatrixService<'a> {
         links: &HashSet<(i32, i32)>,
     ) {
         // Check if sorting by verification column
-        if let Some(verification_id_str) = sort_by.strip_prefix("test_") {
-            if let Ok(target_verification_id) = verification_id_str.parse::<i32>() {
+        if let Some(verification_id_str) = sort_by.strip_prefix("test_")
+            && let Ok(target_verification_id) = verification_id_str.parse::<i32>() {
                 reqs.sort_by_key(|r| links.contains(&(r.id, target_verification_id)));
                 if desc {
                     reqs.reverse();
                 }
                 return;
             }
-        }
 
         // Sort by requirement fields or linked tests count
         match sort_by {

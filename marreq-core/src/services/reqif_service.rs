@@ -218,8 +218,8 @@ impl<'a> ReqIFService<'a> {
             } else if !object_ids.insert(obj.id.clone()) {
                 preflight_errors.push(format!("duplicate SPEC-OBJECT IDENTIFIER '{}'", obj.id));
             }
-            if let Some(reference) = object_to_fields(obj).1 {
-                if is_valid_marreq_reference(&reference)
+            if let Some(reference) = object_to_fields(obj).1
+                && is_valid_marreq_reference(&reference)
                     && !valid_references.insert(reference.clone())
                 {
                     preflight_errors.push(format!(
@@ -227,7 +227,6 @@ impl<'a> ReqIFService<'a> {
                         reference
                     ));
                 }
-            }
         }
         let mut planned_references = HashMap::new();
         let mut fallback_number = 1usize;

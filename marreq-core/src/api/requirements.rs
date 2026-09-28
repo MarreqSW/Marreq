@@ -503,11 +503,10 @@ fn build_requirement_list_rows(
     }
 
     for requirement in &requirements {
-        if let Some(version_id) = requirement.current_version_id {
-            if let Some(parent_ids) = parent_ids_by_source_version.get(&version_id) {
+        if let Some(version_id) = requirement.current_version_id
+            && let Some(parent_ids) = parent_ids_by_source_version.get(&version_id) {
                 parent_requirement_ids_by_requirement.insert(requirement.id, parent_ids.clone());
             }
-        }
     }
 
     let mut rows = Vec::with_capacity(requirements.len());

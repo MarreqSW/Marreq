@@ -161,26 +161,22 @@ impl<'a> RequirementAnalyticsService<'a> {
 
         // Apply the same filtering semantics as the SQL path.
         for requirement in requirements {
-            if let Some(filter) = status_filter {
-                if requirement.status_id != filter {
+            if let Some(filter) = status_filter
+                && requirement.status_id != filter {
                     continue;
                 }
-            }
-            if let Some(_filter) = verification_filter {
-                if !verification_requirement_ids.contains(&requirement.id) {
+            if let Some(_filter) = verification_filter
+                && !verification_requirement_ids.contains(&requirement.id) {
                     continue;
                 }
-            }
-            if let Some(filter) = category_filter {
-                if requirement.category_id != filter {
+            if let Some(filter) = category_filter
+                && requirement.category_id != filter {
                     continue;
                 }
-            }
-            if let Some(filter) = applicability_filter {
-                if requirement.applicability_id != filter {
+            if let Some(filter) = applicability_filter
+                && requirement.applicability_id != filter {
                     continue;
                 }
-            }
 
             let title = status_lookup
                 .get(&requirement.status_id)

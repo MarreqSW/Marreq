@@ -127,11 +127,10 @@ fn parse_datetime(raw: &str) -> Result<NaiveDateTime, ApiError> {
         if let Ok(dt) = NaiveDateTime::parse_from_str(s, fmt) {
             return Ok(dt);
         }
-        if *fmt == "%Y-%m-%d" {
-            if let Ok(d) = chrono::NaiveDate::parse_from_str(s, fmt) {
+        if *fmt == "%Y-%m-%d"
+            && let Ok(d) = chrono::NaiveDate::parse_from_str(s, fmt) {
                 return Ok(d.and_hms_opt(0, 0, 0).unwrap());
             }
-        }
     }
     Err(ApiError::BadRequest(format!(
         "invalid datetime '{s}'; use RFC 3339 or YYYY-MM-DD[THH:MM]"

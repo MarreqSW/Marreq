@@ -225,15 +225,14 @@ fn snapshots_from_logs(logs: &[Log]) -> Vec<SnapshotRecord> {
         if action == "DELETE" {
             continue;
         }
-        if out.is_empty() && (action == "UPDATE" || action == "STATUS_CHANGE") {
-            if let Some(old) = log.old_values.as_deref().and_then(parse_state) {
+        if out.is_empty() && (action == "UPDATE" || action == "STATUS_CHANGE")
+            && let Some(old) = log.old_values.as_deref().and_then(parse_state) {
                 out.push(SnapshotRecord {
                     id: PRE_HISTORY_SNAPSHOT_ID,
                     created_at: log.created_at,
                     state: old,
                 });
             }
-        }
         if let Some(new) = log.new_values.as_deref().and_then(parse_state) {
             out.push(SnapshotRecord {
                 id: log.log_id,

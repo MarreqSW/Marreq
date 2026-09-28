@@ -269,11 +269,10 @@ impl<'a> RequirementService<'a> {
             if !links.is_empty() {
                 let mut children = Vec::new();
                 for link in links {
-                    if let Ok(ver) = repo.get_requirement_version_by_id(link.source_version_id) {
-                        if let Ok(req) = repo.get_requirement_by_id(ver.requirement_id) {
+                    if let Ok(ver) = repo.get_requirement_version_by_id(link.source_version_id)
+                        && let Ok(req) = repo.get_requirement_by_id(ver.requirement_id) {
                             children.push(req);
                         }
-                    }
                 }
                 drop(repo);
                 let mut out: Vec<Requirement> = children.into_iter().collect();

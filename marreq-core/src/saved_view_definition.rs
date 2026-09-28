@@ -125,13 +125,12 @@ pub fn validate_saved_view_definition(definition: &Value) -> Result<Value, RepoE
         .get("sort")
         .cloned()
         .unwrap_or_else(|| json!({ "column": null, "dir": "asc" }));
-    if let Some(dir) = sort.get("dir").and_then(|v| v.as_str()) {
-        if !ALLOWED_SORT_DIRS.contains(&dir) {
+    if let Some(dir) = sort.get("dir").and_then(|v| v.as_str())
+        && !ALLOWED_SORT_DIRS.contains(&dir) {
             return Err(RepoError::BadInput(
                 "definition.sort.dir must be asc or desc".into(),
             ));
         }
-    }
 
     let columns = obj.get("columns").cloned().unwrap_or(Value::Null);
     if !(columns.is_null() || columns.is_array()) {

@@ -65,8 +65,8 @@ impl<R: Repository> CacheRepository<R> {
     /// Populates the cache with common queries to improve initial performance.
     /// Note: This function may copy significant amounts of data; use with caution.
     pub fn warm_cache(&self) {
-        if let Ok(projects) = self.inner.get_projects_all() {
-            if let Ok(json_data) = serde_json::to_string(&projects) {
+        if let Ok(projects) = self.inner.get_projects_all()
+            && let Ok(json_data) = serde_json::to_string(&projects) {
                 self.cache.set_with_ttl(
                     keys::PROJECTS_ALL,
                     json_data.clone(),
@@ -75,31 +75,27 @@ impl<R: Repository> CacheRepository<R> {
                 self.cache
                     .set_with_ttl(keys::PROJECTS_NAV, json_data, Duration::from_secs(300));
             }
-        }
 
-        if let Ok(statuses) = self.inner.get_requirement_status_all() {
-            if let Ok(json_data) = serde_json::to_string(&statuses) {
+        if let Ok(statuses) = self.inner.get_requirement_status_all()
+            && let Ok(json_data) = serde_json::to_string(&statuses) {
                 self.cache.set_with_ttl(
                     keys::REQUIREMENT_STATUS_ALL,
                     json_data,
                     Duration::from_secs(900),
                 );
             }
-        }
 
-        if let Ok(categories) = self.inner.get_categories_all() {
-            if let Ok(json_data) = serde_json::to_string(&categories) {
+        if let Ok(categories) = self.inner.get_categories_all()
+            && let Ok(json_data) = serde_json::to_string(&categories) {
                 self.cache
                     .set_with_ttl(keys::CATEGORIES_ALL, json_data, Duration::from_secs(900));
             }
-        }
 
-        if let Ok(users) = self.inner.get_users_all() {
-            if let Ok(json_data) = serde_json::to_string(&users) {
+        if let Ok(users) = self.inner.get_users_all()
+            && let Ok(json_data) = serde_json::to_string(&users) {
                 self.cache
                     .set_with_ttl(keys::USERS_ALL, json_data, Duration::from_secs(600));
             }
-        }
     }
 
     fn invalidate_owned_project_namespace_keys(

@@ -185,13 +185,12 @@ fn record_audit(
     ) {
         return Err(ApiError::Forbidden("project access denied".into()));
     }
-    if let Some(project_id) = payload.project_id {
-        if !session_user_has_project_access(state, user.user(), project_id)
+    if let Some(project_id) = payload.project_id
+        && !session_user_has_project_access(state, user.user(), project_id)
             .map_err(|_| ApiError::Internal("repository unavailable".into()))?
         {
             return Err(ApiError::Forbidden("project access denied".into()));
         }
-    }
     let user_id = user.user().id;
     let description = serde_json::json!({
         "tool": payload.tool_name,

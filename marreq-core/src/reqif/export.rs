@@ -180,22 +180,19 @@ pub fn to_reqif(
         out.push_str("\n            <ATTRIBUTE-VALUE-XHTML><DEFINITION><ATTRIBUTE-DEFINITION-XHTML-REF>ad-statement</ATTRIBUTE-DEFINITION-XHTML-REF></DEFINITION><THE-VALUE>");
         out.push_str(&crate::rich_text::to_xhtml(&req.description));
         out.push_str("</THE-VALUE></ATTRIBUTE-VALUE-XHTML>");
-        if let Some(ref j) = req.justification {
-            if !j.is_empty() {
+        if let Some(ref j) = req.justification
+            && !j.is_empty() {
                 out.push_str("\n            <ATTRIBUTE-VALUE-STRING THE-VALUE=\"");
                 out.push_str(&escape_xml(j));
                 out.push_str("\"><DEFINITION><ATTRIBUTE-DEFINITION-STRING-REF>ad-rationale</ATTRIBUTE-DEFINITION-STRING-REF></DEFINITION></ATTRIBUTE-VALUE-STRING>");
             }
-        }
-        if let Some(map) = comments_map {
-            if let Some(remarks) = map.get(&req.id) {
-                if !remarks.is_empty() {
+        if let Some(map) = comments_map
+            && let Some(remarks) = map.get(&req.id)
+                && !remarks.is_empty() {
                     out.push_str("\n            <ATTRIBUTE-VALUE-STRING THE-VALUE=\"");
                     out.push_str(&escape_xml(remarks));
                     out.push_str("\"><DEFINITION><ATTRIBUTE-DEFINITION-STRING-REF>ad-remarks</ATTRIBUTE-DEFINITION-STRING-REF></DEFINITION></ATTRIBUTE-VALUE-STRING>");
                 }
-            }
-        }
         out.push_str("\n          </VALUES>");
         out.push_str(
             "\n          <TYPE><SPEC-OBJECT-TYPE-REF>sot-req</SPEC-OBJECT-TYPE-REF></TYPE>",

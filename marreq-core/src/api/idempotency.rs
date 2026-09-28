@@ -112,8 +112,8 @@ pub fn release(
     operation: &str,
     key: &OptionalIdempotencyKey,
 ) {
-    if let Some(key) = key.0.as_deref() {
-        if let Err(error) = state.repo_write().release_idempotency(
+    if let Some(key) = key.0.as_deref()
+        && let Err(error) = state.repo_write().release_idempotency(
             user_id,
             principal_key,
             target_key,
@@ -122,7 +122,6 @@ pub fn release(
         ) {
             eprintln!("failed to release idempotency claim for {operation}: {error}");
         }
-    }
 }
 
 pub fn release_on_repo_error<T>(

@@ -251,7 +251,65 @@ From a shell:
 ```
 
 ### Restore Backup
+Restore into an **empty** database (the backend runs migrations on start, so
+restore before starting it, or into a freshly created database):
 ```bash
 gunzip -c backups/marreq_<timestamp>.sql.gz | \
-   docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq
+   docker compose -f docker/docker-compose.yml exec -T db \
+   psql -U rust -d marreq -v ON_ERROR_STOP=1
 ```
+Use `psql` from PostgreSQL 17 or newer: dumps written by `pg_dump` 17 (the
+Docker image and **Admin → Backup**) can contain commands older clients reject.
+
+## Upgrading from PostgreSQL 15
+
+The Compose stack uses PostgreSQL 17 (`pgvector/pgvector:pg17-trixie`) on a new
+volume, `pgdata17`. PostgreSQL cannot open a data directory from an older major
+version, so an existing installation moves its data with a dump and restore. The
+old PostgreSQL 15 volume (`pgdata`) is not touched, which keeps rollback simple.
+
+1. **Before updating**, with the old stack still running, take a backup:
+   **Admin → Backup → Download backup**, or
+   ```bash
+   ./marreq-core/scripts/db_backup.sh    # -> backups/marreq_<timestamp>.sql.gz
+   ```
+   Note a few numbers to compare later (for example the requirement count on
+   the dashboard of each project).
+2. Stop the stack and update to this release (`git pull`, or pull the new images):
+   ```bash
+   docker compose -f docker/docker-compose.yml down
+   ```
+3. Start **only** the new database. This creates the empty `pgdata17` volume:
+   ```bash
+   docker compose -f docker/docker-compose.yml up -d db
+   docker compose -f docker/docker-compose.yml exec db pg_isready -U rust -d marreq
+   ```
+4. Restore the backup **before** the backend starts (it would otherwise create
+   the tables first and the restore would fail):
+   ```bash
+   gunzip -c backups/marreq_<timestamp>.sql.gz | \
+      docker compose -f docker/docker-compose.yml exec -T db \
+      psql -U rust -d marreq -v ON_ERROR_STOP=1
+   ```
+5. Start the rest of the stack and check the data (log in, compare the numbers
+   from step 1):
+   ```bash
+   docker compose -f docker/docker-compose.yml up -d
+   ```
+
+Use the same `-f` files you normally run with (for example add
+`-f docker/docker-compose.prod.yml`, or use `docker-compose.light.yml`).
+
+**Rollback:** check out (or pull) the previous release and start it again. It
+still uses the untouched PostgreSQL 15 volume.
+
+**Clean-up:** once the upgrade is confirmed, remove the old volume. Its name is
+prefixed with the Compose project name; `docker volume ls` shows it (for
+example `docker_pgdata`):
+```bash
+docker volume rm docker_pgdata
+```
+
+**Managed PostgreSQL** (not Compose): upgrade the server with your provider's
+major-version upgrade (or dump and restore as above), and run the backend image
+from this release so its `pg_dump` (17) matches the server.

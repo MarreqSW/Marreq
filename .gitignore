@@ -58,6 +58,7 @@ test_output.html
 # Backup files
 *.bak
 *.backup
+backups/
 
 # nodejs
 node_modules

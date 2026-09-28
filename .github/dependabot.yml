@@ -1,0 +1,70 @@
+# Weekly grouped patch/minor dependency updates (issue #312).
+#
+# Majors are ignored here on purpose: they are planned and tracked as issues
+# (see #293 and its follow-ups). CI audits both ecosystems on every PR:
+# `npm audit` (production deps of frontend/ and mcp-server/, high+) and
+# `cargo deny check advisories`.
+version: 2
+
+updates:
+  # npm: root (legacy static JS tests), SPA and MCP server. One PR per
+  # directory, grouping all patch/minor bumps of that package.
+  - package-ecosystem: npm
+    directories:
+      - "/"
+      - "/frontend"
+      - "/mcp-server"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Madrid
+    groups:
+      npm-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    open-pull-requests-limit: 5
+    labels: [housekeeping]
+    commit-message:
+      prefix: "chore(deps)"
+
+  # Cargo workspace (marreq-core, marreq-server, marreq-cloud share Cargo.lock).
+  - package-ecosystem: cargo
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Madrid
+    groups:
+      cargo-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    open-pull-requests-limit: 5
+    labels: [housekeeping]
+    commit-message:
+      prefix: "chore(deps)"
+
+  # GitHub Actions. Third-party actions are SHA-pinned with a version comment
+  # (#298); Dependabot updates the SHA and the comment together.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Madrid
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+    open-pull-requests-limit: 5
+    labels: [housekeeping]
+    commit-message:
+      prefix: "chore(ci)"

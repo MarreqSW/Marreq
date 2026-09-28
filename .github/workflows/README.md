@@ -7,6 +7,7 @@ This directory contains GitHub Actions workflows and supporting files for automa
 - [Overview](#overview)
 - [Workflows](#workflows)
   - [Marreq CI Pipeline](#marreq-ci-pipeline)
+  - [Dependency Updates (Dependabot)](#dependency-updates-dependabot)
 - [Acceptance Criteria](#acceptance-criteria)
   - [1. Code Formatting](#1-code-formatting)
   - [2. CSS Linting](#2-css-linting)
@@ -50,6 +51,29 @@ All checks must pass before a pull request can be merged.
 3. **test-and-coverage** - Rust backend tests with coverage analysis
 
 **Concurrency:** Only one workflow runs per PR at a time (newer runs cancel older ones)
+
+---
+
+### Dependency Updates (Dependabot)
+
+**File:** `../dependabot.yml`
+
+Every Monday Dependabot opens grouped pull requests with the **patch and minor**
+updates for:
+- **npm:** one PR each for `/`, `/frontend` and `/mcp-server`
+- **Cargo:** the workspace (`Cargo.toml` / `Cargo.lock`)
+- **GitHub Actions:** third-party actions stay SHA-pinned, and Dependabot updates the SHA and its version comment together
+
+Majors are ignored on purpose. They are planned as issues (see #293 and its
+follow-ups), because they usually need code or config changes.
+
+The PRs carry the `housekeeping` label and a `chore(deps)` / `chore(ci)` prefix,
+and they run the normal CI pipeline. Review them like any other PR: a green CI
+means lint, tests, coverage and the audits passed. The audits are
+`npm audit --omit=dev --audit-level=high` for `frontend` and `mcp-server`, and
+`cargo deny check advisories` for the workspace. If a group breaks something, ask
+Dependabot to split it by commenting `@dependabot ignore <dependency>` or
+`@dependabot recreate`.
 
 ---
 

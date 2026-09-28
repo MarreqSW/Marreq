@@ -466,8 +466,10 @@ impl<'a> RequirementService<'a> {
         self.repo_write().delete_requirement_version_link(link_id)
     }
 
-    /// Returns true if adding edge (source_version_id -> target_version_id) would create a cycle.
-    /// Cycle: there exists a path from target to source in the current link graph (reverse direction).
+    /// Returns true if adding edge (source_version_id -> target_version_id) would create a cycle,
+    /// i.e. the target already reaches the source by following links forwards (each version's
+    /// own targets). A self-link counts as a cycle. Parallel links of another type and
+    /// transitive shortcuts (source already reaches target) are not cycles.
     fn would_create_cycle(
         repo: &DieselCachedRepo,
         source_version_id: i32,
@@ -475,13 +477,13 @@ impl<'a> RequirementService<'a> {
         project_id: i32,
     ) -> Result<bool, RepoError> {
         let all_links = repo.list_links_by_project(project_id, None, None, None)?;
-        let mut by_target: std::collections::HashMap<i32, Vec<i32>> =
+        let mut by_source: std::collections::HashMap<i32, Vec<i32>> =
             std::collections::HashMap::new();
         for link in &all_links {
-            by_target
-                .entry(link.target_version_id)
+            by_source
+                .entry(link.source_version_id)
                 .or_default()
-                .push(link.source_version_id);
+                .push(link.target_version_id);
         }
         let mut visited = std::collections::HashSet::new();
         let mut stack = vec![target_version_id];
@@ -492,10 +494,8 @@ impl<'a> RequirementService<'a> {
             if !visited.insert(v) {
                 continue;
             }
-            if let Some(sources) = by_target.get(&v) {
-                for &s in sources {
-                    stack.push(s);
-                }
+            if let Some(targets) = by_source.get(&v) {
+                stack.extend(targets.iter().copied());
             }
         }
         Ok(false)
@@ -1628,6 +1628,100 @@ mod tests {
             "expected CrossProjectViolation, got {:?}",
             err
         );
+    }
+
+    /// Mock repo with requirements 1..=n in project 7, requirement `i` at current version `i * 10`.
+    fn repo_with_linkable_requirements(n: i32) -> DieselRepoMock {
+        let mut repo = DieselRepoMock::default();
+        for i in 1..=n {
+            let mut r = requirement(i, 7, &format!("REQ-{i:03}"));
+            r.current_version_id = Some(i * 10);
+            repo.requirements.insert(i, r);
+            repo.requirement_versions.insert(
+                i * 10,
+                RequirementVersion {
+                    id: i * 10,
+                    requirement_id: i,
+                    title: format!("R{i}"),
+                    description: "".into(),
+                    status_id: 1,
+                    author_id: 1,
+                    reviewer_id: 1,
+                    category_id: 1,
+                    applicability_id: 1,
+                    justification: None,
+                    deadline_date: None,
+                    created_at: timestamp(),
+                    approval_state: "draft".into(),
+                    approved_by: None,
+                    approved_at: None,
+                    reviewed_by: None,
+                    reviewed_at: None,
+                },
+            );
+        }
+        repo
+    }
+
+    fn is_cycle_error(err: &RepoError) -> bool {
+        matches!(err, RepoError::BadInput(msg) if msg.contains("cycle"))
+    }
+
+    /// Issue #330: a second link type between the same pair is not a cycle.
+    #[test]
+    fn create_requirement_version_link_allows_another_type_on_same_pair() {
+        let state = state_with_repo(repo_with_linkable_requirements(2));
+        let service = RequirementService::new(&state);
+        service
+            .create_requirement_version_link(10, 20, "REFINES", 7, None, None)
+            .expect("first link");
+        service
+            .create_requirement_version_link(10, 20, "DEPENDS_ON", 7, None, None)
+            .expect("parallel link of another type must be allowed");
+    }
+
+    /// Issue #330: A -> C is a shortcut, not a cycle, when A -> B -> C already exists.
+    #[test]
+    fn create_requirement_version_link_allows_transitive_shortcut() {
+        let state = state_with_repo(repo_with_linkable_requirements(3));
+        let service = RequirementService::new(&state);
+        service
+            .create_requirement_version_link(10, 20, "DERIVES_FROM", 7, None, None)
+            .expect("A -> B");
+        service
+            .create_requirement_version_link(20, 30, "DERIVES_FROM", 7, None, None)
+            .expect("B -> C");
+        service
+            .create_requirement_version_link(10, 30, "DEPENDS_ON", 7, None, None)
+            .expect("A -> C shortcut must be allowed");
+    }
+
+    /// Issue #330: closing A -> B -> C -> A is rejected by the application check.
+    #[test]
+    fn create_requirement_version_link_rejects_real_cycle() {
+        let state = state_with_repo(repo_with_linkable_requirements(3));
+        let service = RequirementService::new(&state);
+        service
+            .create_requirement_version_link(10, 20, "DERIVES_FROM", 7, None, None)
+            .expect("A -> B");
+        service
+            .create_requirement_version_link(20, 30, "DERIVES_FROM", 7, None, None)
+            .expect("B -> C");
+        let err = service
+            .create_requirement_version_link(30, 10, "DEPENDS_ON", 7, None, None)
+            .unwrap_err();
+        assert!(is_cycle_error(&err), "expected cycle error, got {err:?}");
+    }
+
+    #[test]
+    fn create_requirement_version_link_rejects_self_link() {
+        let state = state_with_repo(repo_with_linkable_requirements(1));
+        let service = RequirementService::new(&state);
+        let err = service
+            .create_requirement_version_link(10, 10, "DEPENDS_ON", 7, None, None)
+            .unwrap_err();
+        // Rejected before the cycle check, with its own message.
+        assert!(matches!(err, RepoError::BadInput(_)), "got {err:?}");
     }
 
     #[test]

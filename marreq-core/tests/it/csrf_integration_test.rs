@@ -13,9 +13,6 @@
 //! * Never blocks safe HTTP methods (`GET`, `HEAD`, `OPTIONS`).
 //! * Protects unauthenticated state-changing endpoints (`POST /login`).
 
-#[macro_use]
-extern crate rocket;
-
 use marreq_core::app::AppState;
 use marreq_core::auth::csrf::{CSRF_COOKIE, CSRF_HEADER};
 use marreq_core::fairings::CsrfFairing;

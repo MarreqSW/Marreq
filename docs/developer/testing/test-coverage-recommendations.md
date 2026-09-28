@@ -258,7 +258,7 @@ The service layer has minimal unit test coverage. While integration tests cover 
 
 ## Priority 6: Database Constraint Violations
 
-### **`tests/api_constraint_violation_test.rs`** ⚠️ HIGH PRIORITY
+### **`marreq-core/tests/it/api_constraint_violation_test.rs`** ⚠️ HIGH PRIORITY
 **Status**: File exists but may need expansion
 **Missing Tests** (from `api-test-coverage-analysis.md`):
 - Unique constraint violations (duplicate usernames, emails, reference codes)
@@ -271,7 +271,7 @@ The service layer has minimal unit test coverage. While integration tests cover 
 ## Priority 7: Edge Cases and Error Scenarios
 
 ### **PATCH Operation Edge Cases** ⚠️ MEDIUM PRIORITY
-**Location**: `tests/api_requirements_integration_test.rs`
+**Location**: `marreq-core/tests/it/api_requirements_integration_test.rs`
 **Missing Tests**:
 - Null value handling in PATCH
 - Partial update combinations
@@ -281,7 +281,7 @@ The service layer has minimal unit test coverage. While integration tests cover 
 **Recommended**: Add to existing test file
 
 ### **Cache API Error Scenarios** ⚠️ LOW PRIORITY
-**Location**: `tests/api_cache_integration_test.rs`
+**Location**: `marreq-core/tests/it/api_cache_integration_test.rs`
 **Missing Tests**:
 - Cache disabled scenarios
 - High load scenarios
@@ -342,7 +342,7 @@ The service layer has minimal unit test coverage. While integration tests cover 
 2. `src/services/test_service.rs`
 3. `src/services/matrix_service.rs`
 4. `src/helper_functions/` (all files)
-5. `tests/api_constraint_violation_test.rs` (expand)
+5. `marreq-core/tests/it/api_constraint_violation_test.rs` (expand)
 
 ### Medium Priority
 1. `src/services/decorated_requirement_service.rs`

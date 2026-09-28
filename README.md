@@ -430,6 +430,11 @@ cargo test --workspace
 # Run tests for a specific crate
 cargo test -p marreq-core
 
+# Integration tests live in one binary per crate (`tests/it/`, one module per
+# area); add new files there as `mod` entries in `tests/it/main.rs`.
+# Run a single area:
+cargo test -p marreq-core --test it api_users
+
 # Run all checks (fmt, clippy, stylelint, purgecss, npm ci, npm test)
 bash marreq-core/scripts/run_checks.sh
 

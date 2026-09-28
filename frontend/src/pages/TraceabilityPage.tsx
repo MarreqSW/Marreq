@@ -2,18 +2,19 @@ import { useMemo } from 'react';
 import { useOutletContext, useSearchParams } from 'react-router-dom';
 import TraceabilityGraph from '@/components/TraceabilityGraph';
 import HierarchyGraph from '@/components/HierarchyGraph';
+import DsmView from '@/components/dsm/DsmView';
 import RequirementsViewSwitcher from '@/components/RequirementsViewSwitcher';
 import { useDashboard } from '@/context/DashboardContext';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 type Ctx = ProjectOutletContext;
 
-type GraphView = 'coverage' | 'hierarchy';
+type GraphView = 'coverage' | 'hierarchy' | 'dsm';
 
 const VIEW_PARAM = 'view';
 
 function readView(value: string | null): GraphView {
-  return value === 'hierarchy' ? 'hierarchy' : 'coverage';
+  return value === 'hierarchy' || value === 'dsm' ? value : 'coverage';
 }
 
 export default function TraceabilityPage() {
@@ -41,7 +42,9 @@ export default function TraceabilityPage() {
   const subtitle =
     view === 'hierarchy'
       ? 'Parent ↔ child links between requirements and between verifications.'
-      : 'Requirement ↔ verification links. Suspect links animate in coral.';
+      : view === 'dsm'
+        ? 'Dependency structure matrix: requirement × requirement links, loops and upstream changes.'
+        : 'Requirement ↔ verification links. Suspect links animate in coral.';
 
   return (
     <div>
@@ -69,10 +72,16 @@ export default function TraceabilityPage() {
           <span className="material-symbols-outlined text-sm">account_tree</span>
           Hierarchy
         </SubtabButton>
+        <SubtabButton active={view === 'dsm'} onClick={() => setView('dsm')}>
+          <span className="material-symbols-outlined text-sm">grid_on</span>
+          DSM
+        </SubtabButton>
       </div>
 
       {view === 'coverage' ? (
         <TraceabilityGraph projectId={projectId} basePath={basePath} />
+      ) : view === 'dsm' ? (
+        <DsmView projectId={projectId} basePath={basePath} />
       ) : (
         <HierarchyGraph projectId={projectId} basePath={basePath} />
       )}

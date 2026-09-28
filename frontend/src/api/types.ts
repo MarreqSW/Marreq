@@ -762,3 +762,56 @@ export interface Project {
   creation_date: string | null;
   update_date: string | null;
 }
+
+/** One requirement row/column of the dependency structure matrix (`GET /api/projects/:id/dsm`). */
+export interface DsmRequirement {
+  id: number;
+  index: number;
+  reference_code: string;
+  title: string;
+  approval_state: string;
+  category_id: number;
+  category: string;
+  parent_id: number | null;
+  depth: number;
+}
+
+/** Non-empty DSM cell: requirement at `row` depends on the one at `col`. */
+export interface DsmCell {
+  row: number;
+  col: number;
+  link_types: string[];
+  link_ids: number[];
+  upstream_changed: boolean;
+  in_loop: boolean;
+}
+
+/** Contiguous block of rows/columns (inclusive indices), e.g. a category. */
+export interface DsmGroup {
+  label: string;
+  start: number;
+  end: number;
+}
+
+export interface DsmLoop {
+  requirement_ids: number[];
+  /** One cycle through the loop: path[0] → path[1] → … → path[0]. */
+  path: number[];
+}
+
+export interface Dsm {
+  order: 'hierarchy' | 'partition' | string;
+  link_types: string[];
+  requirements: DsmRequirement[];
+  cells: DsmCell[];
+  groups: DsmGroup[];
+  loops: DsmLoop[];
+  stats: {
+    requirements: number;
+    links: number;
+    cells: number;
+    loops: number;
+    upstream_changed: number;
+    external_links: number;
+  };
+}

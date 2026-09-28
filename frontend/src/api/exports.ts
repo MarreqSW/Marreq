@@ -1,5 +1,6 @@
 import { fetchBlob } from './transport';
 import { triggerDownload } from '@/utils/tableUtils';
+import { dsmQueryString, type DsmParams } from '@/utils/dsm';
 
 /** Downloads the project requirements workbook (all requirements, not just the filtered rows). */
 export async function downloadRequirementsXlsx(projectId: number): Promise<void> {
@@ -17,6 +18,14 @@ export async function downloadVerificationsXlsx(projectId: number): Promise<void
 export async function downloadMatrixXlsx(projectId: number): Promise<void> {
   const blob = await fetchBlob(`/api/projects/${projectId}/exports/matrix.xlsx`);
   triggerDownload(blob, `matrix-project-${projectId}.xlsx`);
+}
+
+/** Downloads the dependency structure matrix (same filters as the DSM view). */
+export async function downloadDsmXlsx(projectId: number, params: DsmParams): Promise<void> {
+  const blob = await fetchBlob(
+    `/api/projects/${projectId}/exports/dsm.xlsx${dsmQueryString(params)}`,
+  );
+  triggerDownload(blob, `dsm-project-${projectId}.xlsx`);
 }
 
 /** Downloads matrix links as two code columns, matching Import → Matrix links. */

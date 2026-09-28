@@ -77,6 +77,7 @@ pub mod comment_service;
 pub mod custom_field_service;
 pub mod decorated_requirement_service;
 pub mod decorated_test_service;
+pub mod dsm_service;
 pub mod email_sender;
 pub mod external_auth_service;
 pub mod group_service;

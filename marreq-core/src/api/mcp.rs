@@ -82,6 +82,7 @@ const MCP_TOOL_NAMES: &[&str] = &[
     "trace_up",
     "trace_down",
     "coverage_report",
+    "dependency_matrix",
     "get_baseline",
     "diff_baselines",
     "list_verifications",

@@ -116,6 +116,34 @@ pub async fn export_matrix_xlsx(
     ))
 }
 
+/// `GET /api/projects/<id>/exports/dsm.xlsx` — the Dependency Structure Matrix
+/// (same query parameters as `GET /api/projects/<id>/dsm`).
+#[get("/projects/<project_id>/exports/dsm.xlsx?<link_types>&<category_id>&<root_id>&<order>")]
+#[allow(clippy::too_many_arguments)]
+pub async fn export_dsm_xlsx(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    link_types: Option<&str>,
+    category_id: Option<i32>,
+    root_id: Option<i32>,
+    order: Option<&str>,
+    state: &State<AppState>,
+) -> ApiResult<FileDownload> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let options = crate::api::dsm::dsm_options(link_types, category_id, root_id, order)?;
+    let dsm = crate::api::dsm::load(state, project_id, &options)?;
+    let bytes = excel::dsm_workbook(&dsm).map_err(build_failed)?;
+    Ok(FileDownload::xlsx(
+        bytes,
+        format!("dsm-project-{project_id}.xlsx"),
+    ))
+}
+
 #[get("/projects/<project_id>/exports/matrix-links.xlsx")]
 pub async fn export_matrix_links_xlsx(
     access: ProjectAccessOrBearer,

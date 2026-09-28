@@ -77,6 +77,19 @@ export class MarreqClient {
     async coverageReport() {
         return this.request(`/api/projects/${this.ctx.projectId}/coverage_report`);
     }
+    async dependencyMatrix(options = {}) {
+        const params = new URLSearchParams();
+        if (options.linkTypes != null)
+            params.set("link_types", options.linkTypes.join(","));
+        if (options.order != null)
+            params.set("order", options.order);
+        if (options.categoryId != null)
+            params.set("category_id", String(options.categoryId));
+        if (options.rootId != null)
+            params.set("root_id", String(options.rootId));
+        const q = params.toString();
+        return this.request(`/api/projects/${this.ctx.projectId}/dsm${q ? `?${q}` : ""}`);
+    }
     async getBaseline(baselineId) {
         const [meta, requirements, traceability] = await Promise.all([
             this.request(`/api/projects/${this.ctx.projectId}/baselines/${baselineId}`),

@@ -106,6 +106,18 @@ export class MarreqClient {
     );
   }
 
+  async dependencyMatrix(
+    options: { linkTypes?: string[]; order?: string; categoryId?: number; rootId?: number } = {}
+  ) {
+    const params = new URLSearchParams();
+    if (options.linkTypes != null) params.set("link_types", options.linkTypes.join(","));
+    if (options.order != null) params.set("order", options.order);
+    if (options.categoryId != null) params.set("category_id", String(options.categoryId));
+    if (options.rootId != null) params.set("root_id", String(options.rootId));
+    const q = params.toString();
+    return this.request(`/api/projects/${this.ctx.projectId}/dsm${q ? `?${q}` : ""}`);
+  }
+
   async getBaseline(baselineId: number) {
     const [meta, requirements, traceability] = await Promise.all([
       this.request(`/api/projects/${this.ctx.projectId}/baselines/${baselineId}`),

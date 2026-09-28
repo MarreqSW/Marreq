@@ -12,6 +12,7 @@ pub mod categories;
 pub mod comments;
 pub mod custom_fields;
 pub mod dashboard;
+pub mod dsm;
 pub mod error;
 pub mod exports;
 pub mod groups;
@@ -151,6 +152,7 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         traceability::trace_up,
         traceability::trace_down,
         traceability::coverage_report,
+        dsm::get_dsm,
         requirement_version_links::list,
         requirement_version_links::link_types,
         members::get_my_permissions,
@@ -162,6 +164,7 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         exports::export_verifications_xlsx,
         exports::export_matrix_xlsx,
         exports::export_matrix_links_xlsx,
+        exports::export_dsm_xlsx,
         exports::export_requirements_pdf,
         exports::export_report_pdf,
         exports::export_requirements_reqif,

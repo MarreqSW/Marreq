@@ -128,4 +128,20 @@ impl RequirementVersionLinksRepository for DieselRepo {
                 }
             })
     }
+
+    fn requirement_ids_for_versions(
+        &self,
+        version_ids: &[i32],
+    ) -> Result<std::collections::HashMap<i32, i32>, RepoError> {
+        use schema::requirement_versions::dsl;
+        if version_ids.is_empty() {
+            return Ok(std::collections::HashMap::new());
+        }
+        let mut conn = self.get_conn()?;
+        let rows: Vec<(i32, i32)> = dsl::requirement_versions
+            .filter(dsl::id.eq_any(version_ids))
+            .select((dsl::id, dsl::requirement_id))
+            .load(conn.as_mut())?;
+        Ok(rows.into_iter().collect())
+    }
 }

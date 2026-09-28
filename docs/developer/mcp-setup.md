@@ -238,6 +238,7 @@ For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For trac
 | `trace_up` | Parent requirement(s) for a requirement |
 | `trace_down` | Child requirements and linked tests |
 | `coverage_report` | Requirements without tests, tests without requirements, suspect links |
+| `dependency_matrix` | Dependency structure matrix: requirement × requirement links, loops and upstream-changed cells; optional `link_types`, `order` (`hierarchy`/`partition`), `category_id`, `root_id` |
 | `get_baseline` | Baseline metadata, requirements snapshot, and traceability |
 | `diff_baselines` | Compare two baselines (requirements and traceability diff) |
 

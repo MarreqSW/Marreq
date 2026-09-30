@@ -23,6 +23,7 @@ import {
   listVerificationStatuses,
   listVerifications,
 } from '@/api/client';
+import AttachmentsPanel from '@/components/AttachmentsPanel';
 import RequirementVersionDiffDialog from '@/components/RequirementVersionDiffDialog';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatUserLabel } from '@/utils/userLabel';
@@ -837,6 +838,16 @@ export default function ViewRequirementPage() {
               )}
             </div>
           </div>
+          {/* Attachments are not versioned, so historical snapshots don't show them. */}
+          {detail && !isHistorical ? (
+            <AttachmentsPanel
+              projectId={pid}
+              entityType="requirement"
+              entityId={detail.id}
+              canEdit={canMutate}
+              csrfToken={csrfToken ?? ''}
+            />
+          ) : null}
         </aside>
       </div>
 

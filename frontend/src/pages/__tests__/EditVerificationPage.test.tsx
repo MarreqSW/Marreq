@@ -30,6 +30,8 @@ vi.mock('react-router-dom', async () => {
 describe('EditVerificationPage method', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(apiClient.listAttachments).mockResolvedValue([]);
+    vi.mocked(apiClient.getProjectStorage).mockRejectedValue(new Error('not needed'));
     vi.mocked(useOutletContext).mockReturnValue({
       projectId: 5,
       basePath: '/space-project',

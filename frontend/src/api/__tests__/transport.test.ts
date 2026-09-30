@@ -169,5 +169,10 @@ describe('filenameFromDisposition', () => {
     expect(filenameFromDisposition('attachment; filename="a.sql.gz"')).toBe('a.sql.gz');
     expect(filenameFromDisposition('attachment; filename=b.json')).toBe('b.json');
     expect(filenameFromDisposition(null)).toBeNull();
+    expect(
+      filenameFromDisposition(
+        "attachment; filename=\"Gr__e.pdf\"; filename*=UTF-8''Gr%C3%B6%C3%9Fe%20v2.pdf",
+      ),
+    ).toBe('Größe v2.pdf');
   });
 });

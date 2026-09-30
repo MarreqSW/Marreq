@@ -57,8 +57,19 @@ export async function fetchJson<T>(
   return parseJson<T>(res);
 }
 
-/** Filename from a `Content-Disposition: attachment; filename="…"` header, if any. */
+/**
+ * Filename from a `Content-Disposition: attachment; filename="…"` header, if any.
+ * Prefers the RFC 5987 `filename*=UTF-8''…` form, which keeps non-ASCII names.
+ */
 export function filenameFromDisposition(header: string | null): string | null {
+  const encoded = header?.match(/filename\*=UTF-8''([^;]+)/i);
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded[1].trim());
+    } catch {
+      // Fall back to the plain parameter below.
+    }
+  }
   const match = header?.match(/filename="?([^";]+)"?/i);
   return match ? match[1] : null;
 }

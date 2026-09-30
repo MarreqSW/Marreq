@@ -16,6 +16,8 @@ import {
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import ProjectGeneralSettings from '@/components/ProjectGeneralSettings';
+import { parseUser } from '@/utils/parseUser';
+import ProjectStorageSettings from '@/components/ProjectStorageSettings';
 import type { CustomFieldDefinition, EffectivePermissions, User } from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { formatUserLabel } from '@/utils/userLabel';
@@ -227,6 +229,12 @@ export default function ProjectSettingsPage() {
           onSaved={refresh}
         />
       ) : null}
+
+      <ProjectStorageSettings
+        projectId={pid}
+        isAdmin={Boolean(parseUser(dashboard?.user)?.is_admin)}
+        csrfToken={csrfToken ?? ''}
+      />
 
       <section className="mb-10">
         <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-widest mb-4">

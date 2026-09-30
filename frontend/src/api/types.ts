@@ -825,3 +825,32 @@ export interface ProjectUpdateBody {
   owner_id?: number;
   group_id?: number | null;
 }
+
+export type AttachmentEntityType = 'requirement' | 'verification';
+
+/** A file attached to a requirement or verification (`GET /projects/{id}/attachments`). */
+export interface Attachment {
+  id: number;
+  entity_type: AttachmentEntityType;
+  entity_id: number;
+  filename: string;
+  content_type: string;
+  size_bytes: number;
+  uploaded_by: number | null;
+  uploaded_by_name: string | null;
+  created_at: string;
+  /** Only true in baseline listings, for files deleted after the baseline. */
+  deleted: boolean;
+}
+
+/** `GET /projects/{id}/storage`: attachment storage used by a project and the limits. */
+export interface ProjectStorage {
+  used_bytes: number;
+  quota_bytes: number;
+  quota_is_default: boolean;
+  default_quota_bytes: number;
+  /** Part of `used_bytes` taken by deleted files that baselines still keep. */
+  retained_by_baselines_bytes: number;
+  max_file_bytes: number;
+  allowed_extensions: string[];
+}

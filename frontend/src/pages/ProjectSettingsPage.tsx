@@ -15,6 +15,7 @@ import {
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
+import ProjectGeneralSettings from '@/components/ProjectGeneralSettings';
 import type { CustomFieldDefinition, EffectivePermissions, User } from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { formatUserLabel } from '@/utils/userLabel';
@@ -43,7 +44,7 @@ const ROLES = [
 export default function ProjectSettingsPage() {
   const { projectId, basePath } = useOutletContext<ProjectOutletContext>();
   const pid = projectId;
-  const { dashboard, csrfToken } = useDashboard();
+  const { dashboard, csrfToken, refresh } = useDashboard();
 
   const [perms, setPerms] = useState<EffectivePermissions | null>(null);
   const [members, setMembers] = useState<Awaited<ReturnType<typeof listProjectMembers>>>([]);
@@ -213,8 +214,19 @@ export default function ProjectSettingsPage() {
         projectName={projectName}
         section="Settings"
         title="Project settings"
-        subtitle="Permissions, members (with API parity when allowed), and custom field definitions. Editing field schemas remains in the classic UI."
+        subtitle="Project properties, permissions, members (with API parity when allowed), and custom field definitions. Editing field schemas remains in the classic UI."
       />
+
+      {perms ? (
+        <ProjectGeneralSettings
+          projectId={pid}
+          members={members}
+          userLabel={userLabel}
+          canEdit={Boolean(perms.manage_project_configuration) && (csrfToken ?? '').length > 0}
+          csrfToken={csrfToken ?? ''}
+          onSaved={refresh}
+        />
+      ) : null}
 
       <section className="mb-10">
         <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-widest mb-4">

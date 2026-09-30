@@ -5,6 +5,7 @@ import type {
   ProjectFromPath,
   ProjectMember,
   ProjectReviewersResponse,
+  ProjectUpdateBody,
 } from './types';
 import { fetchJson, JSON_HEADERS } from './transport';
 
@@ -20,6 +21,19 @@ export async function createProject(
 }> {
   return fetchJson('/api/projects', {
     method: 'POST',
+    headers: { ...JSON_HEADERS, 'X-CSRF-Token': csrfToken },
+    body: JSON.stringify(body),
+  });
+}
+
+/** Edit project properties (project Admin or instance admin). Returns the updated project. */
+export async function updateProject(
+  projectId: number,
+  body: ProjectUpdateBody,
+  csrfToken: string,
+): Promise<Project & { project_base_path: string }> {
+  return fetchJson(`/api/projects/${projectId}`, {
+    method: 'PATCH',
     headers: { ...JSON_HEADERS, 'X-CSRF-Token': csrfToken },
     body: JSON.stringify(body),
   });

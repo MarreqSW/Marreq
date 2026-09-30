@@ -815,3 +815,13 @@ export interface Dsm {
     external_links: number;
   };
 }
+
+/** `PATCH /api/projects/:id` — only the fields to change. `null` clears the description or
+ * moves the project to the personal namespace (`group_id`). The slug is not editable. */
+export interface ProjectUpdateBody {
+  name?: string;
+  description?: string | null;
+  status?: 'Active' | 'Completed' | 'OnHold' | 'Cancelled';
+  owner_id?: number;
+  group_id?: number | null;
+}

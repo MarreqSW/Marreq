@@ -206,6 +206,11 @@ Behind the Docker frontend (or Vite dev), use the **same origin** as the SPA (e.
 - `GET /project-from-path/{slug}` — resolve `/{slug}` to project id (SPA deep links; **403** if not a member)
 - `GET /projects/{project_id}/verifications` — list verifications (tests) in the project (`ViewRequirements`)
 
+#### Projects
+- `GET /projects` - Projects visible to the current user
+- `POST /projects` - Create a project (body: `name`, optional `description`, `group_id`)
+- `PATCH /projects/{project_id}` - Edit name, description, status, owner or group (project Admin or instance admin; the slug is fixed)
+
 #### Requirements
 - `GET /requirements` - List all requirements
 - `GET /requirements/{id}` - Get specific requirement

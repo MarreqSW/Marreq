@@ -127,9 +127,17 @@ You are typically taken to the new project or the project list.
 
 ### 3.3 Editing a Project
 
-1. Open the project detail page.
-2. Click **Edit Project**.
-3. Update name/description and save.
+Open **Settings** in the project sidebar. The **General** section at the top shows the project's properties:
+
+- **Name** (2–100 characters) and **Description** (up to 1000 characters; leave empty to remove it).
+- **Status**: Active, On hold, Completed or Cancelled.
+- **Owner**: any member of the project.
+- **Group**: the group the project belongs to, or *Personal (no group)*. The list shows the groups where you may manage projects. Moving a project needs that right in both the current and the new group.
+- **URL**: the project's address (`/<project-slug>`). It stays the same when you rename the project, so existing links and bookmarks keep working.
+
+Change the fields and select **Save changes**. The new name appears in the header, the sidebar and the project list right away, and the change is recorded in **System logs** with the old and new values. **Discard** resets the form.
+
+Only project **Admins** and instance administrators can change these properties. Other members see them read-only.
 
 ---
 

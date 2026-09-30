@@ -142,8 +142,25 @@ pub fn build_with_auth(
         .map(|(_, route)| route)
         .collect::<Vec<_>>();
 
-    let mut rocket = rocket::build()
+    let attachments_config = crate::config::AppConfig::try_current()
+        .map(|c| c.attachments.clone())
+        .unwrap_or_else(|| crate::storage::AttachmentsConfig::from_env(&mut Vec::new()));
+    #[cfg(not(any(test, feature = "test-helpers")))]
+    if let Err(e) = crate::storage::LocalFsStore::new(attachments_config.dir.clone()).prepare() {
+        eprintln!(
+            "[marreq] WARNING: attachment storage at {} is not usable ({e}); uploads will fail \
+             until MARREQ_ATTACHMENTS_DIR points to a writable directory",
+            attachments_config.dir.display()
+        );
+    }
+    let figment = figment_with_upload_limits(attachments_config.request_limit_bytes());
+    let attachment_storage = crate::storage::install(Arc::new(
+        crate::storage::AttachmentStorage::local(attachments_config),
+    ));
+
+    let mut rocket = rocket::custom(figment)
         .manage(AppState { repo })
+        .manage(attachment_storage)
         .manage(auth_config)
         .manage(mode)
         .manage(crate::auth::rate_limiter::LoginRateLimiter::new())
@@ -156,6 +173,7 @@ pub fn build_with_auth(
                 crate::routes::catchers::unauthorized,
                 crate::routes::catchers::forbidden,
                 crate::routes::catchers::not_found,
+                crate::routes::catchers::payload_too_large,
             ],
         )
         .attach(crate::fairings::SecurityHeadersFairing)
@@ -176,6 +194,20 @@ pub fn build_with_auth(
     }
 
     rocket
+}
+
+/// Rocket's configuration with the upload limits raised, where needed, so a
+/// maximum-size attachment fits (`Rocket.toml` sets 20 MiB by default).
+fn figment_with_upload_limits(limit_bytes: u64) -> rocket::figment::Figment {
+    let mut figment = rocket::Config::figment();
+    let current: rocket::data::Limits = figment.extract_inner("limits").unwrap_or_default();
+    let needed = rocket::data::ByteUnit::from(limit_bytes);
+    for name in ["file", "data-form", "form"] {
+        if current.get(name).is_none_or(|l| l < needed) {
+            figment = figment.merge((format!("limits.{name}"), limit_bytes));
+        }
+    }
+    figment
 }
 
 #[cfg(not(any(test, feature = "test-helpers")))]

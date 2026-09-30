@@ -6,6 +6,7 @@
 extern crate rocket;
 
 mod api_applicability_integration_test;
+mod api_attachments_test;
 mod api_authentication_test;
 mod api_cache_integration_test;
 mod api_categories_integration_test;

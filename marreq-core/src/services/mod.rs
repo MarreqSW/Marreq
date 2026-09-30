@@ -69,6 +69,7 @@ pub trait AuditLog {
 }
 
 pub mod applicability_service;
+pub mod attachment_service;
 pub mod base_service;
 pub mod baseline_service;
 pub mod cache_service;

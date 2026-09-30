@@ -25,6 +25,10 @@ pub enum ApiError {
     /// Returned when a route is intentionally unavailable in the current
     /// deployment mode (e.g. admin user creation in Cloud mode).
     Gone(String),
+    /// Upload over the per-file limit or the project's storage quota (HTTP 413).
+    PayloadTooLarge(String),
+    /// Upload whose file type is not on the allowlist (HTTP 415).
+    UnsupportedMediaType(String),
     Internal(String),
 }
 
@@ -38,6 +42,8 @@ impl ApiError {
             | ApiError::Conflict(msg)
             | ApiError::UnprocessableEntity(msg)
             | ApiError::Gone(msg)
+            | ApiError::PayloadTooLarge(msg)
+            | ApiError::UnsupportedMediaType(msg)
             | ApiError::Internal(msg) => msg,
         }
     }
@@ -51,6 +57,8 @@ impl ApiError {
             ApiError::Conflict(_) => Status::Conflict,
             ApiError::UnprocessableEntity(_) => Status::UnprocessableEntity,
             ApiError::Gone(_) => Status::Gone,
+            ApiError::PayloadTooLarge(_) => Status::PayloadTooLarge,
+            ApiError::UnsupportedMediaType(_) => Status::UnsupportedMediaType,
             ApiError::Internal(_) => Status::InternalServerError,
         }
     }

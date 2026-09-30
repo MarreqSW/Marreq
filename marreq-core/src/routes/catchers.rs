@@ -28,6 +28,31 @@ pub fn forbidden(_req: &Request<'_>) -> (Status, Json<serde_json::Value>) {
     )
 }
 
+/// Request bodies over Rocket's limits (e.g. an attachment far above the
+/// per-file maximum) never reach a handler; answer with JSON like the API does.
+#[catch(413)]
+pub fn payload_too_large(req: &Request<'_>) -> (Status, Json<serde_json::Value>) {
+    let storage = req
+        .rocket()
+        .state::<std::sync::Arc<crate::storage::AttachmentStorage>>()
+        .or_else(|| crate::storage::installed());
+    let message = match storage {
+        Some(storage) => format!(
+            "The upload is too large. Files can be at most {}.",
+            crate::services::attachment_service::format_mib(storage.config.max_file_bytes as i64)
+        ),
+        None => "The upload is too large.".to_string(),
+    };
+    (
+        Status::PayloadTooLarge,
+        Json(json!({
+            "status": 413,
+            "error": "payload_too_large",
+            "message": message,
+        })),
+    )
+}
+
 /// Rocket’s built-in 404 page is HTML and confuses people who open SPA paths on the API port (`:8000`).
 /// This catcher only runs when **no route matches** (not when a handler returns its own 404 JSON).
 #[catch(404)]

@@ -3,6 +3,7 @@
 
 pub mod activity;
 pub mod applicability;
+pub mod attachments;
 pub mod auth;
 pub mod backup;
 pub mod baselines;
@@ -106,6 +107,11 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         notifications::delete_preference,
     );
     policy_routes!(r, ProjectRead;
+        attachments::list,
+        attachments::download,
+        attachments::get_storage,
+        attachments::list_for_baseline,
+        attachments::download_for_baseline,
         baselines::list,
         baselines::get,
         baselines::get_requirements,
@@ -176,6 +182,8 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         semantic_search::search_status,
     );
     policy_routes!(r, ProjectWrite;
+        attachments::upload,
+        attachments::delete,
         baselines::create,
         requirements::create,
         requirements::create_by_project,
@@ -243,6 +251,7 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         groups::remove_member,
     );
     policy_routes!(r, Administrator;
+        attachments::set_quota,
         users::list,
         users::get,
         users::create,

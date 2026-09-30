@@ -177,6 +177,12 @@ impl<'a> VerificationService<'a> {
             let mut repo = self.state.repo_write();
             repo.delete_verification(id)?
         };
+        let _ = super::attachment_service::on_entity_deleted(
+            self.state,
+            deleted.project_id,
+            super::attachment_service::AttachmentEntity::Verification,
+            deleted.id,
+        );
 
         self.audit_deleted(user, &deleted);
         Ok(deleted)

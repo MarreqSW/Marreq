@@ -6,7 +6,7 @@
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{NewRequirement, User};
 use crate::repository::errors::RepoError;
-use crate::repository::{RequirementCommentsRepository, UserRepository};
+use crate::repository::{AttachmentsRepository, RequirementCommentsRepository, UserRepository};
 use crate::reqif::import::{ImportConfig, ImportResult, object_to_fields, parse_reqif};
 use crate::reqif::mapping;
 use crate::reqif::to_reqif;
@@ -95,6 +95,19 @@ fn create_import_link(
         .map_err(|e| format!("{source_reqif_id} -> {target_reqif_id} ({link_type}): {e}"))
 }
 
+/// requirement_id -> "a.pdf; b.png" for the ReqIF "Attachments" attribute.
+fn attachment_names(rows: Vec<crate::models::Attachment>) -> HashMap<i32, String> {
+    let mut map: HashMap<i32, String> = HashMap::new();
+    for a in rows.into_iter().filter(|a| a.entity_type == "requirement") {
+        let names = map.entry(a.entity_id).or_default();
+        if !names.is_empty() {
+            names.push_str("; ");
+        }
+        names.push_str(&a.original_filename);
+    }
+    map
+}
+
 pub struct ReqIFService<'a> {
     state: &'a AppState<DieselCachedRepo>,
 }
@@ -123,11 +136,21 @@ impl<'a> ReqIFService<'a> {
             })
             .collect();
         let comments_map = self.build_comments_map(&requirements);
+        let attachments = {
+            let repo = self.state.repo_read();
+            let mut rows = Vec::new();
+            for req in &requirements {
+                rows.extend(repo.list_attachments(project_id, "requirement", req.id)?);
+            }
+            rows
+        };
+        let attachments_map = attachment_names(attachments);
         Ok(to_reqif(
             &project.name,
             &requirements,
             &parent_map,
             Some(&comments_map),
+            Some(&attachments_map),
         ))
     }
 
@@ -156,11 +179,17 @@ impl<'a> ReqIFService<'a> {
             .collect();
         let title = format!("{} (baseline: {})", project.name, baseline.name);
         let comments_map = self.build_comments_map(&requirements);
+        let attachments_map = attachment_names(
+            self.state
+                .repo_read()
+                .list_baseline_attachments(baseline_id)?,
+        );
         Ok(to_reqif(
             &title,
             &requirements,
             &parent_map,
             Some(&comments_map),
+            Some(&attachments_map),
         ))
     }
 

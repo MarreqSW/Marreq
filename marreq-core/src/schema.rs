@@ -90,6 +90,39 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    attachments (id) {
+        id -> Int4,
+        project_id -> Int4,
+        #[max_length = 20]
+        entity_type -> Varchar,
+        entity_id -> Int4,
+        #[max_length = 64]
+        sha256 -> Bpchar,
+        size_bytes -> Int8,
+        #[max_length = 255]
+        original_filename -> Varchar,
+        #[max_length = 100]
+        content_type -> Varchar,
+        uploaded_by -> Nullable<Int4>,
+        created_at -> Timestamp,
+        deleted_at -> Nullable<Timestamp>,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
+    baseline_attachments (baseline_id, attachment_id) {
+        baseline_id -> Int4,
+        attachment_id -> Int4,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     baseline_requirements (baseline_id, requirement_id) {
         baseline_id -> Int4,
         requirement_id -> Int4,
@@ -352,6 +385,18 @@ diesel::table! {
     project_reviewers (project_id, user_id) {
         project_id -> Int4,
         user_id -> Int4,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
+    project_storage_quotas (project_id) {
+        project_id -> Int4,
+        quota_bytes -> Int8,
+        updated_by -> Nullable<Int4>,
+        updated_at -> Timestamp,
     }
 }
 
@@ -648,6 +693,10 @@ diesel::table! {
 }
 
 diesel::joinable!(applicability -> projects (project_id));
+diesel::joinable!(attachments -> projects (project_id));
+diesel::joinable!(attachments -> users (uploaded_by));
+diesel::joinable!(baseline_attachments -> attachments (attachment_id));
+diesel::joinable!(baseline_attachments -> baselines (baseline_id));
 diesel::joinable!(baseline_requirements -> baselines (baseline_id));
 diesel::joinable!(baseline_requirements -> requirement_versions (version_id));
 diesel::joinable!(baseline_requirements -> requirements (requirement_id));
@@ -690,6 +739,8 @@ diesel::joinable!(project_members -> projects (project_id));
 diesel::joinable!(project_members -> users (user_id));
 diesel::joinable!(project_reviewers -> projects (project_id));
 diesel::joinable!(project_reviewers -> users (user_id));
+diesel::joinable!(project_storage_quotas -> projects (project_id));
+diesel::joinable!(project_storage_quotas -> users (updated_by));
 diesel::joinable!(projects -> groups (group_id));
 diesel::joinable!(projects -> users (owner_id));
 diesel::joinable!(requirement_comments -> requirement_versions (requirement_version_id));
@@ -720,6 +771,8 @@ diesel::joinable!(workspaces -> users (owner_user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     applicability,
+    attachments,
+    baseline_attachments,
     baseline_requirements,
     baseline_traceability,
     baseline_verifications,
@@ -742,6 +795,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     oauth_refresh_tokens,
     project_members,
     project_reviewers,
+    project_storage_quotas,
     projects,
     requirement_comments,
     requirement_embeddings,

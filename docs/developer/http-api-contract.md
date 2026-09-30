@@ -99,6 +99,23 @@ Errors from API handlers use JSON (see below). Failed login typically returns **
 
 Project-scoped CRUD and resources under `/api/projects/{project_id}/...` follow existing routes (Bearer token or session, per handler).
 
+## Attachments and project storage
+
+Files attached to requirements and verifications (issue #241). Session or Bearer token (project-scoped tokens are limited to their project). Reads need `ViewRequirements`, changes need `EditRequirements`. Errors use the usual JSON body (`status`, `error`, `message`).
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/projects/{project_id}/attachments?entity_type=&entity_id=` | Live attachments of one `requirement` or `verification`, oldest first: `id`, `entity_type`, `entity_id`, `filename`, `content_type`, `size_bytes`, `uploaded_by`, `uploaded_by_name`, `created_at`, `deleted` (always `false` here). **400** for another `entity_type`; **404** if the entity is not in the project. |
+| `POST` | `/api/projects/{project_id}/attachments` | Multipart `file`, `entity_type`, `entity_id`; CSRF header for sessions. **201** with the attachment. **413** when the file is over `MARREQ_ATTACHMENT_MAX_MB` (default 10) or would take the project over its quota (the message gives the usage); **415** when the extension is not allowed or the content does not match it (checked against magic bytes; text types must be UTF-8); **400** for an empty file or missing name. Identical content is stored once and counts once per project. Audited as `CREATE ATTACHMENT`. |
+| `GET` | `/api/projects/{project_id}/attachments/{attachment_id}/download` | The file, streamed with its stored `Content-Type`, `Content-Disposition: attachment; filename="<ascii>"; filename*=UTF-8''<name>`, `X-Content-Type-Options: nosniff` and `Content-Security-Policy: default-src 'none'; sandbox`. **404** for deleted attachments. |
+| `DELETE` | `/api/projects/{project_id}/attachments/{attachment_id}` | **204**. Soft delete: the row and file are removed unless a baseline keeps them. Audited as `DELETE ATTACHMENT`. |
+| `GET` | `/api/projects/{project_id}/storage` | `used_bytes` (distinct files, including ones only baselines keep), `retained_by_baselines_bytes`, `quota_bytes`, `quota_is_default`, `default_quota_bytes`, `max_file_bytes`, `allowed_extensions`. |
+| `PUT` | `/api/projects/{project_id}/storage/quota` | **Instance administrators only** (**403** otherwise). JSON `{ "quota_mb": n }` (whole MB, at least 1) or `{ "quota_mb": null }` to use `MARREQ_PROJECT_STORAGE_QUOTA_MB` (default 500). Returns the storage object. A quota below the current usage only blocks new uploads. Audited as a project `UPDATE`. |
+| `GET` | `/api/projects/{project_id}/baselines/{baseline_id}/attachments` | Attachments recorded when the baseline was taken (live attachments of its requirements and of all verifications); `deleted: true` for files deleted since. |
+| `GET` | `/api/projects/{project_id}/baselines/{baseline_id}/attachments/{attachment_id}/download` | Like the download above, also for files deleted after the baseline. **404** if the attachment is not in that baseline. |
+
+Uploads larger than Rocket's form limits never reach the handler; a JSON **413** catcher answers them. The limits are raised at startup when the per-file maximum needs it, and nginx allows 100 MB on `/api/`.
+
 ## Error format
 
 Structured errors from `ApiError` responses:

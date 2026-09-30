@@ -23,6 +23,8 @@ chrono = { version = "0.4.44", features = ["serde"] }
 csv = "1.4"
 diesel = { version = "2.3.6", features = ["postgres", "chrono", "r2d2", "serde_json"] }
 dotenvy = "0.15.7"
+# Magic-byte file type detection for attachment uploads (no CFB/legacy Office).
+infer = { version = "0.22", default-features = false }
 lazy_static = "1.5"
 openidconnect = { version = "4.0.1", features = ["reqwest"] }
 oauth2 = { version = "5.0.0", features = ["reqwest"] }

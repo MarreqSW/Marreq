@@ -608,6 +608,70 @@ pub trait SavedViewRepository {
     fn lock_saved_view(&mut self, id: i32) -> Result<(), RepoError>;
 }
 
+/// Storage used by a project's attachments. Each distinct file (by hash) is
+/// counted once, whether it is attached live or only kept by a baseline.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct StorageUsage {
+    pub used_bytes: i64,
+    /// Part of `used_bytes` taken by deleted files that baselines still keep.
+    pub retained_by_baselines_bytes: i64,
+}
+
+/// Outcome of [`AttachmentsRepository::create_attachment_within_quota`].
+#[derive(Debug, Clone, PartialEq)]
+pub enum QuotaCheck {
+    Created(Attachment),
+    /// Nothing was inserted: the new file would take the project past its quota.
+    Exceeded {
+        used_bytes: i64,
+    },
+}
+
+pub trait AttachmentsRepository {
+    /// Live (not deleted) attachments of one requirement or verification, oldest first.
+    fn list_attachments(
+        &self,
+        project_id: i32,
+        entity_type: &str,
+        entity_id: i32,
+    ) -> Result<Vec<Attachment>, RepoError>;
+    /// One attachment, including soft-deleted ones.
+    fn get_attachment(&self, id: i32) -> Result<Attachment, RepoError>;
+    /// Insert the row unless the file is new to the project and would exceed
+    /// `quota_bytes`. Concurrent uploads to the same project are serialised.
+    fn create_attachment_within_quota(
+        &mut self,
+        new: &NewAttachment,
+        quota_bytes: i64,
+    ) -> Result<QuotaCheck, RepoError>;
+    fn soft_delete_attachment(&mut self, id: i32) -> Result<Attachment, RepoError>;
+    /// Soft-delete every live attachment of an entity (used when it is deleted).
+    fn soft_delete_attachments_for_entity(
+        &mut self,
+        project_id: i32,
+        entity_type: &str,
+        entity_id: i32,
+    ) -> Result<Vec<Attachment>, RepoError>;
+    /// Hard-delete a soft-deleted row when no baseline keeps it. Returns the
+    /// hash when no row references that file any more, so the caller can
+    /// remove it from the blob store.
+    fn purge_attachment_if_unreferenced(&mut self, id: i32) -> Result<Option<String>, RepoError>;
+    /// Whether any attachment row (in any project) references this file.
+    fn attachment_blob_in_use(&self, sha256: &str) -> Result<bool, RepoError>;
+    fn project_storage_usage(&self, project_id: i32) -> Result<StorageUsage, RepoError>;
+    /// Per-project override, if an instance admin set one.
+    fn get_project_storage_quota(&self, project_id: i32) -> Result<Option<i64>, RepoError>;
+    /// Set (`Some`) or clear (`None`) the per-project override.
+    fn set_project_storage_quota(
+        &mut self,
+        project_id: i32,
+        quota_bytes: Option<i64>,
+        updated_by: i32,
+    ) -> Result<(), RepoError>;
+    /// Attachments recorded in a baseline, including ones deleted since.
+    fn list_baseline_attachments(&self, baseline_id: i32) -> Result<Vec<Attachment>, RepoError>;
+}
+
 pub trait LogRepository {
     fn insert_log(&mut self, new: &NewLog) -> Result<(), RepoError>;
     fn get_logs_recent(&self, limit: i64) -> Result<Vec<Log>, RepoError>;
@@ -751,6 +815,7 @@ pub trait Repository:
     + CustomFieldRepository
     + BaselineRepository
     + SavedViewRepository
+    + AttachmentsRepository
     + LogRepository
     + RequirementCommentsRepository
     + NotificationRepository
@@ -779,6 +844,7 @@ impl<T> Repository for T where
         + CustomFieldRepository
         + BaselineRepository
         + SavedViewRepository
+        + AttachmentsRepository
         + LogRepository
         + RequirementCommentsRepository
         + NotificationRepository

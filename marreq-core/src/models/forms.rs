@@ -197,6 +197,21 @@ pub struct NewSavedViewRow {
     pub updated_at: chrono::NaiveDateTime,
 }
 
+/// Insertable row for attachments.
+#[derive(Insertable, Clone, Debug)]
+#[diesel(table_name = crate::schema::attachments)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct NewAttachment {
+    pub project_id: i32,
+    pub entity_type: String,
+    pub entity_id: i32,
+    pub sha256: String,
+    pub size_bytes: i64,
+    pub original_filename: String,
+    pub content_type: String,
+    pub uploaded_by: Option<i32>,
+}
+
 /// One custom field value when creating/updating a requirement (field_id, value).
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(crate = "rocket::serde")]

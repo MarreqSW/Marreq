@@ -66,12 +66,15 @@ fn write_hierarchy(
 }
 
 /// Build ReqIF 1.2 XML from project name, requirements, optional parent map (req_id -> parent_req_id),
-/// and optional comments per requirement (req_id -> formatted remarks string).
+/// optional comments per requirement (req_id -> formatted remarks string) and optional
+/// attachment file names per requirement (req_id -> `"; "`-separated names; the files
+/// themselves are not embedded).
 pub fn to_reqif(
     project_name: &str,
     requirements: &[Requirement],
     parent_map: &HashMap<i32, i32>,
     comments_map: Option<&HashMap<i32, String>>,
+    attachments_map: Option<&HashMap<i32, String>>,
 ) -> String {
     let generated_at = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
     let mut out = String::new();
@@ -134,7 +137,11 @@ pub fn to_reqif(
         "\n              <TYPE><DATATYPE-DEFINITION-XHTML-REF>dt-xhtml</DATATYPE-DEFINITION-XHTML-REF></TYPE>",
     );
     out.push_str("\n            </ATTRIBUTE-DEFINITION-XHTML>");
-    for (id, name) in [("ad-rationale", "Rationale"), ("ad-remarks", "Remarks")] {
+    for (id, name) in [
+        ("ad-rationale", "Rationale"),
+        ("ad-remarks", "Remarks"),
+        ("ad-attachments", "Attachments"),
+    ] {
         out.push_str(&format!(
             "\n            <ATTRIBUTE-DEFINITION-STRING IDENTIFIER=\"{id}\" LAST-CHANGE=\"{generated_at}\" LONG-NAME=\"{name}\">"
         ));
@@ -194,6 +201,14 @@ pub fn to_reqif(
             out.push_str("\n            <ATTRIBUTE-VALUE-STRING THE-VALUE=\"");
             out.push_str(&escape_xml(remarks));
             out.push_str("\"><DEFINITION><ATTRIBUTE-DEFINITION-STRING-REF>ad-remarks</ATTRIBUTE-DEFINITION-STRING-REF></DEFINITION></ATTRIBUTE-VALUE-STRING>");
+        }
+        if let Some(map) = attachments_map
+            && let Some(names) = map.get(&req.id)
+            && !names.is_empty()
+        {
+            out.push_str("\n            <ATTRIBUTE-VALUE-STRING THE-VALUE=\"");
+            out.push_str(&escape_xml(names));
+            out.push_str("\"><DEFINITION><ATTRIBUTE-DEFINITION-STRING-REF>ad-attachments</ATTRIBUTE-DEFINITION-STRING-REF></DEFINITION></ATTRIBUTE-VALUE-STRING>");
         }
         out.push_str("\n          </VALUES>");
         out.push_str(
@@ -332,7 +347,13 @@ mod tests {
             requirement(1, "Parent", "REQ-001"),
             requirement(2, "Child", "REQ-002"),
         ];
-        let xml = to_reqif("Project", &requirements, &HashMap::from([(2, 1)]), None);
+        let xml = to_reqif(
+            "Project",
+            &requirements,
+            &HashMap::from([(2, 1)]),
+            None,
+            Some(&HashMap::from([(1, "spec.pdf; plot.png".to_string())])),
+        );
 
         assert!(xml.contains("<REQ-IF-HEADER IDENTIFIER=\"header-marreq\">"));
         assert!(xml.contains("<REQ-IF-VERSION>1.0</REQ-IF-VERSION>"));
@@ -350,6 +371,16 @@ mod tests {
         assert!(child_pos > parent_pos);
         assert!(!xml.contains(" TYPE=\"sot-req\""));
         assert!(!xml.contains(" DEFINITION=\"ad-"));
+        assert!(xml.contains("<ATTRIBUTE-DEFINITION-STRING IDENTIFIER=\"ad-attachments\""));
+        assert!(xml.contains("<ATTRIBUTE-VALUE-STRING THE-VALUE=\"spec.pdf; plot.png\"><DEFINITION><ATTRIBUTE-DEFINITION-STRING-REF>ad-attachments</ATTRIBUTE-DEFINITION-STRING-REF>"));
+        let doc = crate::reqif::import::parse_reqif(xml.as_bytes()).expect("parse own export");
+        let names = doc
+            .objects
+            .iter()
+            .find(|o| o.id == "so-1")
+            .and_then(|o| o.attributes.get("Attachments"))
+            .cloned();
+        assert_eq!(names.as_deref(), Some("spec.pdf; plot.png"));
     }
 
     #[test]
@@ -364,6 +395,7 @@ mod tests {
             "Project",
             &[formatted.clone(), plain],
             &HashMap::new(),
+            None,
             None,
         );
 

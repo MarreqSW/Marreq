@@ -88,7 +88,10 @@ impl Fairing for SecurityHeadersFairing {
         ));
 
         // CSP – controls allowed content sources and prevents framing (ASVS V3.4.3).
-        response.set_header(Header::new("Content-Security-Policy", CSP_VALUE));
+        // A handler may set a stricter policy (attachment downloads use `sandbox`).
+        if !response.headers().contains("Content-Security-Policy") {
+            response.set_header(Header::new("Content-Security-Policy", CSP_VALUE));
+        }
 
         // Prevent MIME-type sniffing (ASVS V3.4.4).
         response.set_header(Header::new("X-Content-Type-Options", "nosniff"));
@@ -107,9 +110,23 @@ mod tests {
         "hello"
     }
 
+    #[derive(rocket::Responder)]
+    struct Sandboxed {
+        body: &'static str,
+        csp: Header<'static>,
+    }
+
+    #[get("/sandboxed")]
+    fn sandboxed() -> Sandboxed {
+        Sandboxed {
+            body: "file",
+            csp: Header::new("Content-Security-Policy", "default-src 'none'; sandbox"),
+        }
+    }
+
     fn make_client() -> Client {
         let rocket = rocket::build()
-            .mount("/", routes![index])
+            .mount("/", routes![index, sandboxed])
             .attach(SecurityHeadersFairing);
         Client::tracked(rocket).expect("valid rocket")
     }
@@ -161,5 +178,13 @@ mod tests {
             Some("nosniff"),
             "X-Content-Type-Options: nosniff must be present (ASVS V3.4.4)"
         );
+    }
+
+    #[test]
+    fn keeps_a_stricter_policy_set_by_the_handler() {
+        let client = make_client();
+        let response = client.get("/sandboxed").dispatch();
+        let values: Vec<_> = response.headers().get("Content-Security-Policy").collect();
+        assert_eq!(values, vec!["default-src 'none'; sandbox"]);
     }
 }

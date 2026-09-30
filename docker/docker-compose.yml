@@ -58,6 +58,9 @@ services:
     ports:
       # API on host for debugging; web UI is still the SPA on :8080 (GET / here is JSON in api_only).
       - '127.0.0.1:8000:8000'
+    volumes:
+      # Attachment files (issue #241). Back this up together with the database.
+      - marreq_attachments:/var/lib/marreq/attachments
     healthcheck:
       test: ['CMD-SHELL', 'curl -sf http://127.0.0.1:8000/api/auth/csrf >/dev/null']
       interval: 5s
@@ -141,6 +144,9 @@ services:
       CSRF_ALLOWED_ORIGINS: ${CSRF_ALLOWED_ORIGINS:-http://127.0.0.1:8082,http://localhost:8082,http://127.0.0.1:8001,http://localhost:8001}
     ports:
       - '127.0.0.1:8001:8001'
+    volumes:
+      # Attachment files (issue #241). Back this up together with the database.
+      - marreq_attachments_cloud:/var/lib/marreq/attachments
     healthcheck:
       test: ['CMD-SHELL', 'curl -sf http://127.0.0.1:8001/api/auth/csrf >/dev/null']
       interval: 5s
@@ -191,3 +197,6 @@ volumes:
   # for rollback; see docs/developer/database-setup.md "Upgrading from PostgreSQL 15".
   pgdata17:
   ollama_data:
+  # Attachment files of marreq-server and marreq-cloud (content-addressed blobs).
+  marreq_attachments:
+  marreq_attachments_cloud:

@@ -4,10 +4,12 @@ import {
   compareBaselineRequirementWithCurrent,
   compareBaselineVerificationWithCurrent,
   compareRequirementVersionsByProject,
+  downloadBaselineAttachment,
   getBaseline,
   getBaselineRequirements,
   getBaselineTraceability,
   getBaselineVerifications,
+  listBaselineAttachments,
   listBaselines,
   listRequirements,
   listVerificationMethodsByProject,
@@ -21,6 +23,7 @@ import { RequirementDiffContent } from '@/components/RequirementVersionDiffDialo
 import StitchPageHeader from '@/components/StitchPageHeader';
 import { VerificationDiffContent } from '@/components/VerificationVersionDiffDialog';
 import type {
+  Attachment,
   Baseline,
   BaselineTraceabilityRow,
   BaselineVerificationSnapshot,
@@ -32,6 +35,7 @@ import type {
   VerificationVersionDiff,
 } from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
+import { formatBytes } from '@/utils/formatBytes';
 
 export default function BaselineDetailPage() {
   const { basePath, projectId } = useOutletContext<ProjectOutletContext>();
@@ -65,6 +69,8 @@ export default function BaselineDetailPage() {
   const [err, setErr] = useState<string | null>(null);
   const [reqifBusy, setReqifBusy] = useState(false);
   const [reqifErr, setReqifErr] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [attachmentErr, setAttachmentErr] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(pid) || !Number.isFinite(bid)) return;
@@ -101,6 +107,30 @@ export default function BaselineDetailPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!Number.isFinite(pid) || !Number.isFinite(bid)) return;
+    let alive = true;
+    listBaselineAttachments(pid, bid)
+      .then((rows) => {
+        if (alive) setAttachments(rows ?? []);
+      })
+      .catch(() => {
+        if (alive) setAttachments([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [pid, bid]);
+
+  const attachmentOwner = (a: Attachment): string => {
+    if (a.entity_type === 'requirement') {
+      const r = reqs.find((x) => x.id === a.entity_id);
+      return r?.reference_code || `Requirement #${a.entity_id}`;
+    }
+    const v = vers.find((x) => x.verification_id === a.entity_id);
+    return v?.reference_code || `Verification #${a.entity_id}`;
+  };
 
   useEffect(() => {
     if (compareBaselineId === '') {
@@ -453,6 +483,66 @@ export default function BaselineDetailPage() {
                     <td className="px-3 py-2 font-mono text-stitch-accent">{row.requirement_id}</td>
                     <td className="px-3 py-2 font-mono text-stitch-muted">{row.verification_id}</td>
                     <td className="px-3 py-2">{row.suspect ? 'yes' : '—'}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="mb-8">
+        <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-widest mb-3">
+          Attachments ({attachments.length})
+        </h3>
+        <p className="text-xs text-stitch-muted mb-3">
+          Files attached when the baseline was taken. Files deleted since are kept here.
+        </p>
+        {attachmentErr ? (
+          <p role="alert" className="text-xs text-red-400 mb-2">
+            {attachmentErr}
+          </p>
+        ) : null}
+        <div className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden max-h-96 overflow-y-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="sticky top-0 bg-stitch-elevated border-b border-stitch-border">
+              <tr className="text-stitch-muted uppercase">
+                <th className="px-3 py-2">Item</th>
+                <th className="px-3 py-2">File</th>
+                <th className="px-3 py-2">Size</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stitch-border">
+              {attachments.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className="px-3 py-6 text-stitch-muted text-center">
+                    No attachments in baseline
+                  </td>
+                </tr>
+              ) : (
+                attachments.map((a) => (
+                  <tr key={a.id} className="hover:bg-white/3">
+                    <td className="px-3 py-2 font-mono text-stitch-accent">{attachmentOwner(a)}</td>
+                    <td className="px-3 py-2">
+                      <button
+                        type="button"
+                        className="text-stitch-fg hover:text-stitch-accent hover:underline text-left"
+                        onClick={() => {
+                          setAttachmentErr(null);
+                          downloadBaselineAttachment(pid, bid, a).catch((e: unknown) =>
+                            setAttachmentErr(e instanceof Error ? e.message : 'Download failed'),
+                          );
+                        }}
+                      >
+                        {a.filename}
+                      </button>
+                      {a.deleted ? (
+                        <span className="ml-2 rounded bg-stitch-elevated px-1.5 py-0.5 text-[10px] text-stitch-muted">
+                          deleted since
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2 text-stitch-muted">{formatBytes(a.size_bytes)}</td>
                   </tr>
                 ))
               )}

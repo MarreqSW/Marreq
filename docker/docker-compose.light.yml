@@ -55,6 +55,9 @@ services:
       MARREQ_MCP_AUDIT_SECRET: ${MARREQ_MCP_AUDIT_SECRET:-development-only-mcp-audit-secret-change-me}
     ports:
       - '127.0.0.1:8000:8000'
+    volumes:
+      # Attachment files (issue #241). Back this up together with the database.
+      - marreq_attachments:/var/lib/marreq/attachments
     healthcheck:
       test: ['CMD-SHELL', 'curl -sf http://127.0.0.1:8000/api/auth/csrf >/dev/null']
       interval: 5s
@@ -133,6 +136,9 @@ services:
       CSRF_ALLOWED_ORIGINS: ${CSRF_ALLOWED_ORIGINS:-http://127.0.0.1:8082,http://localhost:8082,http://127.0.0.1:8001,http://localhost:8001}
     ports:
       - '127.0.0.1:8001:8001'
+    volumes:
+      # Attachment files (issue #241). Back this up together with the database.
+      - marreq_attachments_cloud:/var/lib/marreq/attachments
     healthcheck:
       test: ['CMD-SHELL', 'curl -sf http://127.0.0.1:8001/api/auth/csrf >/dev/null']
       interval: 5s
@@ -182,3 +188,6 @@ volumes:
   # PostgreSQL 17 data. The old PostgreSQL 15 volume (`pgdata`) is left untouched
   # for rollback; see docs/developer/database-setup.md "Upgrading from PostgreSQL 15".
   pgdata17:
+  # Attachment files of marreq-server and marreq-cloud (content-addressed blobs).
+  marreq_attachments:
+  marreq_attachments_cloud:

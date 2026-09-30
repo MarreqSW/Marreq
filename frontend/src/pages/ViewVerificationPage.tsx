@@ -14,6 +14,7 @@ import {
   listVerifications,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
+import AttachmentsPanel from '@/components/AttachmentsPanel';
 import { StatusBadge } from '@/components/StatusBadge';
 import VerificationVersionDiffDialog from '@/components/VerificationVersionDiffDialog';
 import { formatUserLabel } from '@/utils/userLabel';
@@ -85,7 +86,7 @@ export default function ViewVerificationPage() {
   const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();
   const { verificationId: verificationIdParam } = useParams();
   const vid = Number(verificationIdParam);
-  const { dashboard } = useDashboard();
+  const { dashboard, csrfToken } = useDashboard();
 
   const projectName = useMemo(
     () => dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project',
@@ -390,6 +391,15 @@ export default function ViewVerificationPage() {
           </ul>
         )}
       </section>
+
+      <AttachmentsPanel
+        className="mt-8"
+        projectId={pid}
+        entityType="verification"
+        entityId={vid}
+        canEdit={canEdit}
+        csrfToken={csrfToken ?? ''}
+      />
 
       <section className="mt-8 bg-stitch-surface rounded-xl border border-stitch-border shadow-stitch overflow-hidden">
         <div className="px-6 py-3 border-b border-stitch-border bg-stitch-elevated">

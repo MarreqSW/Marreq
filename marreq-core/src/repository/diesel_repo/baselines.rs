@@ -175,6 +175,20 @@ impl BaselineRepository for DieselRepo {
                     .execute(conn)?;
             }
 
+            // Snapshot: live attachments of the included requirements and of
+            // every verification, so deleted files stay downloadable here.
+            diesel::sql_query(
+                "INSERT INTO baseline_attachments (baseline_id, attachment_id)
+                 SELECT $1, a.id FROM attachments a
+                 WHERE a.project_id = $2 AND a.deleted_at IS NULL
+                   AND (a.entity_type = 'verification'
+                        OR (a.entity_type = 'requirement' AND a.entity_id IN (
+                            SELECT requirement_id FROM baseline_requirements WHERE baseline_id = $1)))",
+            )
+            .bind::<diesel::sql_types::Integer, _>(baseline_id)
+            .bind::<diesel::sql_types::Integer, _>(project_id)
+            .execute(conn)?;
+
             if let Some(view_id) = source_saved_view_id {
                 use schema::saved_views::dsl as sv;
                 diesel::update(sv::saved_views.filter(sv::id.eq(view_id)))

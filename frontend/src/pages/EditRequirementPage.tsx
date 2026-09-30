@@ -37,6 +37,7 @@ import type {
   Verification,
   VerificationStatus,
 } from '@/api/types';
+import AttachmentsPanel from '@/components/AttachmentsPanel';
 import RequirementVersionDiffDialog from '@/components/RequirementVersionDiffDialog';
 import RequirementCommentComposer, {
   commentsLockedForApproval,
@@ -1018,23 +1019,13 @@ export default function EditRequirementPage() {
               </div>
             </div>
 
-            <div className="bg-stitch-surface rounded-xl shadow-xs border border-stitch-border p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold font-headline text-stitch-accent">Attachments</h3>
-                <span className="material-symbols-outlined text-stitch-muted" title="Not available in this UI">
-                  add_circle
-                </span>
-              </div>
-              <p className="text-xs text-stitch-muted mb-2">
-                File attachments are not managed through this API-backed UI yet.
-              </p>
-              <a
-                href={`${basePath}/requirements/${rid}`}
-                className="text-xs font-bold text-stitch-accent hover:underline"
-              >
-                Open requirement →
-              </a>
-            </div>
+            <AttachmentsPanel
+              projectId={pid}
+              entityType="requirement"
+              entityId={rid}
+              canEdit={Boolean(perms?.edit_requirements)}
+              csrfToken={csrfToken ?? ''}
+            />
           </aside>
         </div>
 

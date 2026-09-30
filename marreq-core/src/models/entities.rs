@@ -527,6 +527,26 @@ pub struct SavedView {
     pub updated_at: chrono::NaiveDateTime,
 }
 
+/// A file attached to a requirement or verification. The file itself lives in
+/// the blob store under its `sha256`; soft-deleted rows stay while a baseline
+/// references them.
+#[derive(Serialize, Deserialize, Queryable, Selectable, Clone, Debug, PartialEq)]
+#[diesel(table_name = crate::schema::attachments)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct Attachment {
+    pub id: i32,
+    pub project_id: i32,
+    pub entity_type: String,
+    pub entity_id: i32,
+    pub sha256: String,
+    pub size_bytes: i64,
+    pub original_filename: String,
+    pub content_type: String,
+    pub uploaded_by: Option<i32>,
+    pub created_at: chrono::NaiveDateTime,
+    pub deleted_at: Option<chrono::NaiveDateTime>,
+}
+
 /// One stored custom field value per requirement version.
 #[derive(Serialize, Deserialize, Queryable, Insertable, Clone, Debug)]
 #[diesel(table_name = crate::schema::custom_field_values)]
@@ -596,6 +616,8 @@ pub enum EntityType {
     VerificationMethod,
     Comment,
     Notification,
+    /// File attached to a requirement or verification.
+    Attachment,
 }
 
 impl std::fmt::Display for EntityType {
@@ -612,6 +634,7 @@ impl std::fmt::Display for EntityType {
             EntityType::VerificationMethod => write!(f, "VERIFICATION_METHOD"),
             EntityType::Comment => write!(f, "COMMENT"),
             EntityType::Notification => write!(f, "NOTIFICATION"),
+            EntityType::Attachment => write!(f, "ATTACHMENT"),
         }
     }
 }
@@ -631,6 +654,7 @@ impl EntityType {
             EntityType::VerificationMethod => "verification method",
             EntityType::Comment => "comment",
             EntityType::Notification => "notification",
+            EntityType::Attachment => "attachment",
         }
     }
 }
@@ -749,6 +773,12 @@ impl_loggable!(
     title
 );
 impl_loggable!(User, EntityType::User, username, no_project);
+impl_loggable!(
+    Attachment,
+    EntityType::Attachment,
+    project_id,
+    original_filename
+);
 
 /// A user notification stored in the database.
 #[derive(Queryable, Serialize, Deserialize, Debug, Clone)]

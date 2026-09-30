@@ -56,6 +56,10 @@ original identifiers, XHTML formatting beyond the subset above (tables,
 images, nesting) and attachments are not currently persisted. The import result reports these losses as warnings. ReqIFZ is not
 supported.
 
+On export, each requirement's attachment file names are written to an
+`Attachments` string attribute (`ad-attachments`, `"; "`-separated). The files
+are not embedded; that needs ReqIFZ.
+
 The Rocket API exposes the same service:
 
 - `GET /api/projects/{project_id}/exports/requirements.reqif`

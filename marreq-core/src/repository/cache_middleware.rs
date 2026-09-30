@@ -7,11 +7,11 @@ use crate::models::*;
 use crate::namespaces::project_namespace_segment;
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    ApiTokensRepository, BaselineRepository, CustomFieldRepository, ExternalIdentityRepository,
-    LogRepository, LookupRepository, MatrixRepository, ProjectMembersRepository,
-    ProjectReviewersRepository, ProjectsRepository, Repository, RequirementCommentsRepository,
-    RequirementVersionLinksRepository, RequirementsRepository, SavedViewRepository, UserRepository,
-    VerificationsRepository,
+    ApiTokensRepository, AttachmentsRepository, BaselineRepository, CustomFieldRepository,
+    ExternalIdentityRepository, LogRepository, LookupRepository, MatrixRepository,
+    ProjectMembersRepository, ProjectReviewersRepository, ProjectsRepository, Repository,
+    RequirementCommentsRepository, RequirementVersionLinksRepository, RequirementsRepository,
+    SavedViewRepository, UserRepository, VerificationsRepository,
 };
 use serde::{Serialize, de::DeserializeOwned};
 use std::sync::Arc;
@@ -1519,6 +1519,78 @@ impl<R: Repository> SavedViewRepository for CacheRepository<R> {
     }
 }
 
+// Attachments are not cached: listings are small and per entity.
+impl<R: Repository> AttachmentsRepository for CacheRepository<R> {
+    fn list_attachments(
+        &self,
+        project_id: i32,
+        entity_type: &str,
+        entity_id: i32,
+    ) -> Result<Vec<Attachment>, RepoError> {
+        self.inner
+            .list_attachments(project_id, entity_type, entity_id)
+    }
+
+    fn get_attachment(&self, id: i32) -> Result<Attachment, RepoError> {
+        self.inner.get_attachment(id)
+    }
+
+    fn create_attachment_within_quota(
+        &mut self,
+        new: &NewAttachment,
+        quota_bytes: i64,
+    ) -> Result<crate::repository::QuotaCheck, RepoError> {
+        self.inner.create_attachment_within_quota(new, quota_bytes)
+    }
+
+    fn soft_delete_attachment(&mut self, id: i32) -> Result<Attachment, RepoError> {
+        self.inner.soft_delete_attachment(id)
+    }
+
+    fn soft_delete_attachments_for_entity(
+        &mut self,
+        project_id: i32,
+        entity_type: &str,
+        entity_id: i32,
+    ) -> Result<Vec<Attachment>, RepoError> {
+        self.inner
+            .soft_delete_attachments_for_entity(project_id, entity_type, entity_id)
+    }
+
+    fn purge_attachment_if_unreferenced(&mut self, id: i32) -> Result<Option<String>, RepoError> {
+        self.inner.purge_attachment_if_unreferenced(id)
+    }
+
+    fn attachment_blob_in_use(&self, sha256: &str) -> Result<bool, RepoError> {
+        self.inner.attachment_blob_in_use(sha256)
+    }
+
+    fn project_storage_usage(
+        &self,
+        project_id: i32,
+    ) -> Result<crate::repository::StorageUsage, RepoError> {
+        self.inner.project_storage_usage(project_id)
+    }
+
+    fn get_project_storage_quota(&self, project_id: i32) -> Result<Option<i64>, RepoError> {
+        self.inner.get_project_storage_quota(project_id)
+    }
+
+    fn set_project_storage_quota(
+        &mut self,
+        project_id: i32,
+        quota_bytes: Option<i64>,
+        updated_by: i32,
+    ) -> Result<(), RepoError> {
+        self.inner
+            .set_project_storage_quota(project_id, quota_bytes, updated_by)
+    }
+
+    fn list_baseline_attachments(&self, baseline_id: i32) -> Result<Vec<Attachment>, RepoError> {
+        self.inner.list_baseline_attachments(baseline_id)
+    }
+}
+
 impl<R: LogRepository> LogRepository for CacheRepository<R> {
     fn insert_log(&mut self, new: &NewLog) -> Result<(), RepoError> {
         self.inner.insert_log(new)
@@ -1855,6 +1927,10 @@ mod tests {
             next_baseline_id: 1,
             saved_views: Vec::new(),
             next_saved_view_id: 1,
+            attachments: Vec::new(),
+            next_attachment_id: 1,
+            baseline_attachments: Vec::new(),
+            project_storage_quotas: HashMap::new(),
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),
             next_custom_field_id: 1,

@@ -31,6 +31,7 @@ import {
   matrixSelectionEquals,
   RequirementMatrixPicker,
 } from '@/components/RequirementMatrixPicker';
+import AttachmentsPanel from '@/components/AttachmentsPanel';
 import { statusTagColorSwatchStyle } from '@/components/StatusBadge';
 import VerificationVersionDiffDialog from '@/components/VerificationVersionDiffDialog';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
@@ -526,6 +527,14 @@ export default function EditVerificationPage() {
             disabled={saving}
           />
         </section>
+
+        <AttachmentsPanel
+          projectId={pid}
+          entityType="verification"
+          entityId={vid}
+          canEdit={Boolean(perms?.edit_requirements)}
+          csrfToken={csrfToken ?? ''}
+        />
 
         {saveError && (
           <div className="rounded-lg bg-red-500/15 border border-red-500/30 text-red-100 text-sm px-4 py-3">

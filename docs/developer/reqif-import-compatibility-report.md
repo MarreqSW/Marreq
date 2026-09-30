@@ -297,6 +297,8 @@ Feature: semantic round-trip
 Core title/reference/description/justification and hierarchy round-trip.
 Status, custom fields, original ReqIF identifiers, datatypes, enumerations,
 XHTML formatting, attachments, users and arbitrary relation metadata do not.
+Marreq attachments (issue #241) are exported as file names in an `Attachments`
+string attribute (`ad-attachments`); the files themselves need ReqIFZ.
 
 ### REQIF-OPS-001 — OPEN
 

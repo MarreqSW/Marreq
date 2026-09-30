@@ -668,6 +668,12 @@ impl<'a> RequirementService<'a> {
             let mut repo = self.repo_write();
             repo.delete_requirement(id)?
         };
+        let _ = super::attachment_service::on_entity_deleted(
+            self.state,
+            removed.project_id,
+            super::attachment_service::AttachmentEntity::Requirement,
+            removed.id,
+        );
 
         self.audit_deleted(actor, &removed);
 

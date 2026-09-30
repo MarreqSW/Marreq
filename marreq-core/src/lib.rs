@@ -37,4 +37,5 @@ pub mod saved_view_definition;
 pub mod schema;
 pub mod services;
 pub mod status_enums;
+pub mod storage;
 pub mod validation;

@@ -255,6 +255,7 @@ impl DieselRepo {
     }
 }
 
+pub(crate) mod attachments;
 pub(crate) mod baselines;
 pub(crate) mod comments;
 pub(crate) mod custom_fields;

@@ -13,6 +13,7 @@ use std::sync::OnceLock;
 
 use crate::cors::CorsPolicy;
 use crate::services::semantic_search::config::SemanticSearchConfig;
+use crate::storage::AttachmentsConfig;
 
 /// Aggregated configuration loaded once at process startup.
 pub struct AppConfig {
@@ -35,6 +36,8 @@ pub struct AppConfig {
     pub csrf_allowed_origins: Vec<String>,
     /// Semantic search / embeddings configuration.
     pub semantic: SemanticSearchConfig,
+    /// Attachment storage directory and size limits.
+    pub attachments: AttachmentsConfig,
 }
 
 static CONFIG: OnceLock<AppConfig> = OnceLock::new();
@@ -106,6 +109,7 @@ impl AppConfig {
             .unwrap_or_default();
 
         let semantic = SemanticSearchConfig::from_env();
+        let attachments = AttachmentsConfig::from_env(&mut issues);
 
         if !issues.is_empty() {
             return Err(ConfigError { issues });
@@ -120,6 +124,7 @@ impl AppConfig {
             cors,
             csrf_allowed_origins,
             semantic,
+            attachments,
         })
     }
 

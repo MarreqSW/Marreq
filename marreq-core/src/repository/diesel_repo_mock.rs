@@ -66,6 +66,12 @@ pub struct DieselRepoMock {
     pub next_user_identity_id: i32,
     pub saved_views: Vec<crate::models::SavedView>,
     pub next_saved_view_id: i32,
+    pub attachments: Vec<crate::models::Attachment>,
+    pub next_attachment_id: i32,
+    /// (baseline_id, attachment_id)
+    pub baseline_attachments: Vec<(i32, i32)>,
+    /// project_id -> quota override in bytes
+    pub project_storage_quotas: HashMap<i32, i64>,
     pub oauth_clients: HashMap<String, OAuthClient>,
     pub oauth_grants: HashMap<i32, OAuthGrant>,
     pub oauth_codes: HashMap<String, OAuthAuthorizationCode>,
@@ -144,6 +150,10 @@ impl Default for DieselRepoMock {
             next_user_identity_id: 1,
             saved_views: Vec::new(),
             next_saved_view_id: 1,
+            attachments: Vec::new(),
+            next_attachment_id: 1,
+            baseline_attachments: Vec::new(),
+            project_storage_quotas: HashMap::new(),
         }
     }
 }
@@ -533,6 +543,10 @@ impl DieselRepoMock {
             next_user_identity_id: 1,
             saved_views: Vec::new(),
             next_saved_view_id: 1,
+            attachments: Vec::new(),
+            next_attachment_id: 1,
+            baseline_attachments: Vec::new(),
+            project_storage_quotas: HashMap::new(),
             oauth_clients: HashMap::new(),
             oauth_grants: HashMap::new(),
             oauth_codes: HashMap::new(),
@@ -590,6 +604,10 @@ impl DieselRepoMock {
             next_user_identity_id: 1,
             saved_views: Vec::new(),
             next_saved_view_id: 1,
+            attachments: Vec::new(),
+            next_attachment_id: 1,
+            baseline_attachments: Vec::new(),
+            project_storage_quotas: HashMap::new(),
             oauth_clients: HashMap::new(),
             oauth_grants: HashMap::new(),
             oauth_codes: HashMap::new(),
@@ -2691,6 +2709,20 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
                     reviewer_id: v.reviewer_id,
                 });
         }
+        let included: std::collections::HashSet<i32> = self
+            .baseline_requirements
+            .iter()
+            .filter(|br| br.baseline_id == id)
+            .map(|br| br.requirement_id)
+            .collect();
+        for a in self.attachments.iter().filter(|a| {
+            a.project_id == project_id
+                && a.deleted_at.is_none()
+                && (a.entity_type == "verification"
+                    || (a.entity_type == "requirement" && included.contains(&a.entity_id)))
+        }) {
+            self.baseline_attachments.push((id, a.id));
+        }
         Ok(baseline)
     }
 
@@ -3502,6 +3534,196 @@ impl super::NotificationRepository for DieselRepoMock {
             .filter(|p| p.project_id == project_id && p.notify_in_app)
             .cloned()
             .collect())
+    }
+}
+
+impl DieselRepoMock {
+    fn mock_storage_usage(&self, project_id: i32) -> crate::repository::StorageUsage {
+        // sha -> (size, live)
+        let mut files: HashMap<&str, (i64, bool)> = HashMap::new();
+        for a in self
+            .attachments
+            .iter()
+            .filter(|a| a.project_id == project_id)
+        {
+            let entry = files
+                .entry(a.sha256.as_str())
+                .or_insert((a.size_bytes, false));
+            entry.0 = entry.0.max(a.size_bytes);
+            entry.1 |= a.deleted_at.is_none();
+        }
+        crate::repository::StorageUsage {
+            used_bytes: files.values().map(|(size, _)| size).sum(),
+            retained_by_baselines_bytes: files
+                .values()
+                .filter(|(_, live)| !live)
+                .map(|(size, _)| size)
+                .sum(),
+        }
+    }
+}
+
+impl crate::repository::AttachmentsRepository for DieselRepoMock {
+    fn list_attachments(
+        &self,
+        project_id: i32,
+        entity_type: &str,
+        entity_id: i32,
+    ) -> Result<Vec<crate::models::Attachment>, RepoError> {
+        if self.force_err {
+            return Err(RepoError::Db(diesel::result::Error::RollbackTransaction));
+        }
+        let mut rows: Vec<_> = self
+            .attachments
+            .iter()
+            .filter(|a| {
+                a.project_id == project_id
+                    && a.entity_type == entity_type
+                    && a.entity_id == entity_id
+                    && a.deleted_at.is_none()
+            })
+            .cloned()
+            .collect();
+        rows.sort_by_key(|a| (a.created_at, a.id));
+        Ok(rows)
+    }
+
+    fn get_attachment(&self, id: i32) -> Result<crate::models::Attachment, RepoError> {
+        self.attachments
+            .iter()
+            .find(|a| a.id == id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn create_attachment_within_quota(
+        &mut self,
+        new: &crate::models::NewAttachment,
+        quota_bytes: i64,
+    ) -> Result<crate::repository::QuotaCheck, RepoError> {
+        if !self.projects.contains_key(&new.project_id) {
+            return Err(RepoError::NotFound);
+        }
+        let already_stored = self
+            .attachments
+            .iter()
+            .any(|a| a.project_id == new.project_id && a.sha256 == new.sha256);
+        if !already_stored {
+            let used = self.mock_storage_usage(new.project_id).used_bytes;
+            if used + new.size_bytes > quota_bytes {
+                return Ok(crate::repository::QuotaCheck::Exceeded { used_bytes: used });
+            }
+        }
+        let id = self.next_attachment_id;
+        self.next_attachment_id += 1;
+        let row = crate::models::Attachment {
+            id,
+            project_id: new.project_id,
+            entity_type: new.entity_type.clone(),
+            entity_id: new.entity_id,
+            sha256: new.sha256.clone(),
+            size_bytes: new.size_bytes,
+            original_filename: new.original_filename.clone(),
+            content_type: new.content_type.clone(),
+            uploaded_by: new.uploaded_by,
+            created_at: epoch(),
+            deleted_at: None,
+        };
+        self.attachments.push(row.clone());
+        Ok(crate::repository::QuotaCheck::Created(row))
+    }
+
+    fn soft_delete_attachment(&mut self, id: i32) -> Result<crate::models::Attachment, RepoError> {
+        let row = self
+            .attachments
+            .iter_mut()
+            .find(|a| a.id == id && a.deleted_at.is_none())
+            .ok_or(RepoError::NotFound)?;
+        row.deleted_at = Some(epoch());
+        Ok(row.clone())
+    }
+
+    fn soft_delete_attachments_for_entity(
+        &mut self,
+        project_id: i32,
+        entity_type: &str,
+        entity_id: i32,
+    ) -> Result<Vec<crate::models::Attachment>, RepoError> {
+        let mut deleted = Vec::new();
+        for a in self.attachments.iter_mut().filter(|a| {
+            a.project_id == project_id
+                && a.entity_type == entity_type
+                && a.entity_id == entity_id
+                && a.deleted_at.is_none()
+        }) {
+            a.deleted_at = Some(epoch());
+            deleted.push(a.clone());
+        }
+        Ok(deleted)
+    }
+
+    fn purge_attachment_if_unreferenced(&mut self, id: i32) -> Result<Option<String>, RepoError> {
+        let row = self.get_attachment(id)?;
+        if row.deleted_at.is_none() || self.baseline_attachments.iter().any(|(_, a)| *a == id) {
+            return Ok(None);
+        }
+        self.attachments.retain(|a| a.id != id);
+        let still_used = self.attachments.iter().any(|a| a.sha256 == row.sha256);
+        Ok((!still_used).then_some(row.sha256))
+    }
+
+    fn attachment_blob_in_use(&self, sha256: &str) -> Result<bool, RepoError> {
+        Ok(self.attachments.iter().any(|a| a.sha256 == sha256))
+    }
+
+    fn project_storage_usage(
+        &self,
+        project_id: i32,
+    ) -> Result<crate::repository::StorageUsage, RepoError> {
+        Ok(self.mock_storage_usage(project_id))
+    }
+
+    fn get_project_storage_quota(&self, project_id: i32) -> Result<Option<i64>, RepoError> {
+        Ok(self.project_storage_quotas.get(&project_id).copied())
+    }
+
+    fn set_project_storage_quota(
+        &mut self,
+        project_id: i32,
+        quota_bytes: Option<i64>,
+        _updated_by: i32,
+    ) -> Result<(), RepoError> {
+        match quota_bytes {
+            Some(bytes) => {
+                self.project_storage_quotas.insert(project_id, bytes);
+            }
+            None => {
+                self.project_storage_quotas.remove(&project_id);
+            }
+        }
+        Ok(())
+    }
+
+    fn list_baseline_attachments(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<crate::models::Attachment>, RepoError> {
+        let ids: Vec<i32> = self
+            .baseline_attachments
+            .iter()
+            .filter(|(b, _)| *b == baseline_id)
+            .map(|(_, a)| *a)
+            .collect();
+        let mut rows: Vec<_> = self
+            .attachments
+            .iter()
+            .filter(|a| ids.contains(&a.id))
+            .cloned()
+            .collect();
+        rows.sort_by(|a, b| {
+            (&a.entity_type, a.entity_id, a.id).cmp(&(&b.entity_type, b.entity_id, b.id))
+        });
+        Ok(rows)
     }
 }
 

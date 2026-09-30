@@ -259,6 +259,8 @@ id="toc-creating-a-project-admin">3.2 Creating a Project
 (Admin)</a></li>
 <li><a href="#editing-a-project" id="toc-editing-a-project">3.3 Editing
 a Project</a></li>
+<li><a href="#project-storage" id="toc-project-storage">3.4 Project
+Storage</a></li>
 </ul></li>
 <li><a href="#requirements" id="toc-requirements">4. Requirements</a>
 <ul>
@@ -278,6 +280,7 @@ id="toc-duplicating-a-requirement">4.7 Duplicating a
 Requirement</a></li>
 <li><a href="#semantic-search-ai" id="toc-semantic-search-ai">4.8
 Semantic Search (AI)</a></li>
+<li><a href="#attachments" id="toc-attachments">4.9 Attachments</a></li>
 </ul></li>
 <li><a href="#test-management-verifications"
 id="toc-test-management-verifications">5. Test Management
@@ -309,6 +312,9 @@ Opening the Matrix</a></li>
 Matrix</a></li>
 <li><a href="#exporting-the-matrix" id="toc-exporting-the-matrix">6.3
 Exporting the Matrix</a></li>
+<li><a href="#dependency-structure-matrix-dsm"
+id="toc-dependency-structure-matrix-dsm">6.4 Dependency Structure Matrix
+(DSM)</a></li>
 </ul></li>
 <li><a href="#baselines" id="toc-baselines">7. Baselines</a>
 <ul>
@@ -604,11 +610,50 @@ New Project</strong>.</li>
 </ol>
 <p>You are typically taken to the new project or the project list.</p>
 <h3 id="editing-a-project">3.3 Editing a Project</h3>
-<ol type="1">
-<li>Open the project detail page.</li>
-<li>Click <strong>Edit Project</strong>.</li>
-<li>Update name/description and save.</li>
-</ol>
+<p>Open <strong>Settings</strong> in the project sidebar. The
+<strong>General</strong> section at the top shows the project’s
+properties:</p>
+<ul>
+<li><strong>Name</strong> (2–100 characters) and
+<strong>Description</strong> (up to 1000 characters; leave empty to
+remove it).</li>
+<li><strong>Status</strong>: Active, On hold, Completed or
+Cancelled.</li>
+<li><strong>Owner</strong>: any member of the project.</li>
+<li><strong>Group</strong>: the group the project belongs to, or
+<em>Personal (no group)</em>. The list shows the groups where you may
+manage projects. Moving a project needs that right in both the current
+and the new group.</li>
+<li><strong>URL</strong>: the project’s address
+(<code>/&lt;project-slug&gt;</code>). It stays the same when you rename
+the project, so existing links and bookmarks keep working.</li>
+</ul>
+<p>Change the fields and select <strong>Save changes</strong>. The new
+name appears in the header, the sidebar and the project list right away,
+and the change is recorded in <strong>System logs</strong> with the old
+and new values. <strong>Discard</strong> resets the form.</p>
+<p>Only project <strong>Admins</strong> and instance administrators can
+change these properties. Other members see them read-only.</p>
+<h3 id="project-storage">3.4 Project Storage</h3>
+<p>Files attached to requirements and verifications (<a
+href="#49-attachments">§4.9</a>) count toward the project’s storage
+limit. <strong>Settings → Storage</strong> shows:</p>
+<ul>
+<li>How much of the limit is used. Each file counts once, even when the
+same file is attached in several places.</li>
+<li>How much of that is taken by deleted files that baselines still keep
+(<a href="#73-viewing-a-baseline">§7.3</a>).</li>
+<li>The largest file allowed and the file types that can be
+uploaded.</li>
+</ul>
+<p>The defaults are <strong>10 MB per file</strong> and <strong>500 MB
+per project</strong>. The server administrator sets them with
+<code>MARREQ_ATTACHMENT_MAX_MB</code> and
+<code>MARREQ_PROJECT_STORAGE_QUOTA_MB</code>. Instance administrators
+can give a project its own limit in <strong>Settings → Storage</strong>,
+or use <strong>Reset to default</strong> to go back to the server-wide
+value. The change is recorded in <strong>System logs</strong>. A limit
+below the current usage is allowed: it only blocks new uploads.</p>
 <hr />
 <h2 id="requirements">4. Requirements</h2>
 <p>Requirements are the core artifact. Each requirement can have
@@ -869,6 +914,37 @@ using the RAG “ask” feature.</li>
 <li>Shortcuts: <strong>Ctrl+K</strong> open, <strong>Enter</strong>
 search, <strong>Esc</strong> close.</li>
 </ul>
+<h3 id="attachments">4.9 Attachments</h3>
+<p>Requirements and verifications can carry files, such as test reports,
+drawings, analysis spreadsheets or photos. The
+<strong>Attachments</strong> card is on the requirement view and edit
+pages (right column) and on the verification view and edit pages.</p>
+<ul>
+<li><strong>Download</strong>: select a file name. Files are always
+downloaded; the browser never opens them inline.</li>
+<li><strong>Upload</strong> (needs <strong>Edit requirements</strong>
+permission): use <strong>Add files</strong>, or drag files onto the drop
+area. You can pick several files at once.</li>
+<li><strong>Delete</strong>: use the bin icon next to a file and
+confirm.</li>
+</ul>
+<p>Allowed types are PDF, PNG, JPEG, GIF, WebP, Word, Excel and
+PowerPoint (<code>.docx</code>, <code>.xlsx</code>, <code>.pptx</code>),
+OpenDocument (<code>.odt</code>, <code>.ods</code>, <code>.odp</code>),
+ZIP, plain text (<code>.txt</code>, <code>.log</code>,
+<code>.md</code>), CSV, JSON and XML. The server checks the file’s
+contents, not just its name: a file renamed to <code>.pdf</code> that is
+not a PDF is refused. Other types, including HTML, SVG and programs, are
+not accepted.</p>
+<p>An upload is refused when the file is larger than the per-file limit,
+or when it would take the project over its storage limit (<a
+href="#34-project-storage">§3.4</a>). The message says how much space is
+used. Uploads and deletions are recorded in <strong>System
+logs</strong>.</p>
+<p>Attachments belong to the requirement, not to one version, so
+historical version snapshots do not show them. Baselines keep their own
+list (<a href="#73-viewing-a-baseline">§7.3</a>). Deleting a requirement
+or verification also deletes its attachments.</p>
 <hr />
 <h2 id="test-management-verifications">5. Test Management
 (Verifications)</h2>
@@ -1036,23 +1112,47 @@ Matrix</strong> on the project detail page.</li>
 <figcaption aria-hidden="true">Traceability matrix</figcaption>
 </figure>
 <h3 id="using-the-matrix">6.2 Using the Matrix</h3>
+<p>The matrix uses the same layout as the dependency structure matrix
+(§6.4).</p>
 <ul>
-<li><strong>Table</strong>: Rows and columns represent requirements and
-verifications (or the configured layout); cells indicate links.</li>
-<li><strong>Filters</strong>: Restrict by verification status,
-requirement status, category, applicability, search, suspect links.</li>
-<li><strong>Sort</strong> and <strong>paginate</strong> as
-available.</li>
-<li><strong>Sticky headers</strong> and <strong>virtual
-scrolling</strong> may be used for large matrices.</li>
-<li><strong>Clear suspect</strong>: For links marked “suspect”
-(e.g. after a requirement or test change), you can clear the suspect
-flag from the matrix (action/button or <strong>Clear suspect</strong>
-form); the system records user and timestamp.</li>
-<li><strong>Review suspect change</strong>: Select
-<strong>Review</strong> on a suspect link to compare the requirement
-version that triggered the flag with its preceding version before
-clearing it.</li>
+<li><strong>Grid:</strong> requirements are rows and verifications are
+columns. The header rows stay visible while you scroll in either
+direction. A symbol in a cell means the requirement is verified by that
+verification, and shows the verification’s status: <strong>✓</strong>
+pass/complete, <strong>✓</strong> verified/accepted, <strong>◐</strong>
+pending/review, <strong>○</strong> draft, <strong>✗</strong>
+fail/reject, <strong>●</strong> other (in the status colour). Empty
+cells are not linked.</li>
+<li><strong>Rows:</strong> grouped by <strong>category</strong>
+(separated by a line, with the category name on the first row), in
+reference-code order. Click the corner header to reverse the order, and
+drag its right edge to resize the requirement column.</li>
+<li><strong>Sort by a verification:</strong> click a verification’s code
+in the column header to list the requirements it verifies first (suspect
+links first among them). Click again to reverse. The <strong>↗</strong>
+below the code opens the verification.</li>
+<li><strong>Hover</strong> a requirement, a verification or a cell to
+see its details: title, category, status, approval state, link counts
+and, for suspect links, the reason and date.</li>
+<li><strong>Filters:</strong> <em>Suspect only</em>, <em>Status
+groups</em>, <em>Requirement status</em> and <em>Verification
+status</em> chips, plus the global search. Filters and sort are kept in
+the page URL, so a filtered view can be bookmarked or shared.</li>
+<li><strong>Suspect links:</strong> shown with a red frame. The side
+panel lists them.
+<ul>
+<li>Click a suspect link in the panel to scroll the matrix to its
+cell.</li>
+<li><strong>Review</strong> compares the requirement version that
+triggered the flag with its preceding version.</li>
+<li><strong>Clear</strong> removes the flag; the system records the user
+and timestamp.</li>
+</ul></li>
+<li><strong>Coverage gaps:</strong> the side panel lists requirements
+without any verification and verifications without any requirement.
+Click one to scroll to its row or column.</li>
+<li><strong>Linked cells by status</strong> in the side panel counts the
+visible links per verification status.</li>
 </ul>
 <h3 id="exporting-the-matrix">6.3 Exporting the Matrix</h3>
 <p>From <strong>Reports</strong>, download:</p>
@@ -1066,6 +1166,59 @@ per link. Upload this file on <strong>Import</strong> as <strong>Matrix
 links</strong> (same project is a no-op for existing pairs; use it to
 copy links into another project that already has those codes).</li>
 </ul>
+<h3 id="dependency-structure-matrix-dsm">6.4 Dependency Structure Matrix
+(DSM)</h3>
+<p>The DSM shows how <strong>requirements depend on each other</strong>,
+for a whole project on one screen. It complements the requirement ×
+verification matrix above.</p>
+<ul>
+<li><strong>Open it:</strong> <strong>Traceability</strong> →
+<strong>DSM</strong> tab (URL
+<code>/&lt;project-slug&gt;/traceability?view=dsm</code>).</li>
+<li><strong>How to read it:</strong> rows and columns are the same
+requirements in the same order, and the dark diagonal is the requirement
+itself. A mark in row <em>i</em>, column <em>j</em> means requirement
+<em>i</em>’s current version links to requirement <em>j</em>. The letter
+shows the link type: <strong>D</strong> derives from, <strong>R</strong>
+refines, <strong>P</strong> depends on, <strong>S</strong> satisfies,
+<strong>~</strong> relates to. Several letters mean several links
+between the same pair.</li>
+<li><strong>Link types:</strong> toggle the chips to choose which
+relations are drawn. <em>Relates to</em> is off by default.</li>
+<li><strong>Order:</strong>
+<ul>
+<li><strong>Hierarchy</strong> (default) groups requirements by
+category, drawn as framed blocks along the diagonal, and nests children
+under their parent.</li>
+<li><strong>Partition</strong> puts dependencies before the requirements
+that depend on them. Ordinary dependencies then fall below the diagonal,
+and marks above it point to feedback worth reviewing.</li>
+</ul></li>
+<li><strong>Scope:</strong> limit the matrix to one
+<strong>category</strong> or to the <strong>subtree</strong> of one
+requirement. Links to requirements outside the scope are counted in the
+summary line but not drawn.</li>
+<li><strong>Loops:</strong> requirements that depend on each other in a
+circle (across any link types) are tinted amber and listed in the side
+panel with the loop path. Hover a loop in the panel to highlight its
+cells. Loops are rare, because Marreq already rejects circular links
+between versions, but they can appear when a link points to an older
+version of a requirement.</li>
+<li><strong>Upstream changed:</strong> a red frame marks an approved
+requirement whose target was edited <em>after</em> that approval. Review
+whether the approved requirement still holds. The side panel lists all
+of them.</li>
+<li><strong>Details:</strong> hover a cell to see the link types, the
+target title, loop membership and any upstream change. Click a mark, or
+a code in the row header, to open the requirement.</li>
+<li><strong>Export Excel:</strong> downloads the matrix with the current
+filters (sheets <em>DSM</em>, <em>Loops</em> and <em>Legend</em>), for
+offline design reviews.</li>
+</ul>
+<figure>
+<img src="screenshots/dsm.png" alt="Dependency structure matrix" />
+<figcaption aria-hidden="true">Dependency structure matrix</figcaption>
+</figure>
 <hr />
 <h2 id="baselines">7. Baselines</h2>
 <p>Baselines are <strong>immutable</strong> point-in-time snapshots of
@@ -1125,6 +1278,11 @@ versions differ.</li>
 <li><strong>Verification diff vs current</strong>: Verification rows
 compare the frozen name, description, source, reference, status, type,
 and parent with the current verification.</li>
+<li><strong>Attachments</strong>: The files attached to the included
+requirements and to the verifications when the baseline was taken. Files
+deleted since stay downloadable here and are marked <em>deleted
+since</em>; they keep counting toward the project’s storage until the
+baseline no longer needs them.</li>
 <li><strong>Export ReqIF</strong>: Button to export <strong>this
 baseline</strong> as ReqIF 1.2 XML.</li>
 </ul>
@@ -1253,6 +1411,8 @@ outside Marreq.</li>
 <li><strong>Current project</strong>: open <strong>Reports</strong> and
 download <strong>Requirements (.reqif)</strong> for the live requirement
 set (comments are included as Remarks when present).</li>
+<li>Attachment file names are listed in an <strong>Attachments</strong>
+attribute; the files themselves are not included.</li>
 <li><strong>From a baseline</strong>: open the baseline and use
 <strong>Export ReqIF</strong> for an immutable ReqIF 1.2 snapshot.</li>
 </ul>
@@ -1263,8 +1423,8 @@ set (comments are included as Remarks when present).</li>
 (.json)</strong>.</li>
 <li>The file is a portable snapshot of the project catalog, current
 requirements, verifications, matrix links, comments, and members (by
-username). It does not include version history, baselines, or
-passwords.</li>
+username). It does not include version history, baselines, attachments,
+or passwords.</li>
 <li>Anyone who can view the project can export the bundle.</li>
 </ul>
 <hr />
@@ -1485,9 +1645,13 @@ keep the page open. The file contains password hashes and all project
 data, so store it securely. Each download (or failure) is recorded in
 <strong>System logs</strong> as an <code>EXPORT</code> entry.</p>
 <p>To restore, load the file into an <strong>empty</strong> database
-with <code>psql</code> from PostgreSQL 15 or newer:</p>
+with <code>psql</code> from PostgreSQL 17 or newer:</p>
 <div class="sourceCode" id="cb1"><pre
 class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">gunzip</span> <span class="at">-c</span> marreq-backup_YYYYMMDD_HHMMSS.sql.gz <span class="kw">|</span> <span class="ex">psql</span> <span class="st">&quot;</span><span class="va">$DATABASE_URL</span><span class="st">&quot;</span></span></code></pre></div>
+<p>The download contains the database only. Attachment files live in the
+<code>marreq_attachments</code> Docker volume (the directory set by
+<code>MARREQ_ATTACHMENTS_DIR</code>). Back that up at the same time; see
+<em>Backup and Restore</em> in the database setup guide.</p>
 <p>Available on self-hosted (<code>marreq-server</code>) installations
 only. In the hosted cloud mode the page explains that backups are
 managed by the hosting operator.</p>

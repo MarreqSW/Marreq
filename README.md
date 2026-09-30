@@ -15,6 +15,7 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 - **Requirements Management**: Create, edit, and organize hierarchical requirements
 - **Test Management**: Manage tests with status tracking and source documentation
 - **Traceability Matrix**: Visual mapping between requirements and tests; requirement detail page lists **all** linked tests per requirement (“Verified by” section with links to test pages)
+- **Attachments**: Files on requirements and verifications (PDF, images, Office/OpenDocument, ZIP, text/CSV/JSON/XML; checked against the file's bytes, always served as downloads). Stored once per content hash on disk, with a per-file limit and a per-project storage quota that instance admins can override (`MARREQ_ATTACHMENTS_DIR`, `MARREQ_ATTACHMENT_MAX_MB` default 10, `MARREQ_PROJECT_STORAGE_QUOTA_MB` default 500). Baselines keep the files they recorded
 - **User Management**: Assign authors and reviewers to requirements with authentication
 - **Project reviewers**: Per-project list of members who may change **requirement status**, **verification status**, and **version approval** (draft / reviewed / approved); configured in the SPA **Settings** or via `GET`/`PUT /api/projects/<id>/reviewers`
 
@@ -32,7 +33,7 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 ### 📊 Reporting & Export
 - **Excel Export**: Export requirements with all fields to Excel format; includes a **Comments** sheet (requirement_id, version_id, author, created_at, body)
 - **Matrix Export**: Export traceability matrix to Excel
-- **ReqIF 1.2 (partial)**: Backend import/export with hierarchy and representable relations; custom datatypes, rich XHTML, attachments, ReqIFZ and lossless vendor round-trips remain limited. See the [compatibility report](docs/developer/reqif-import-compatibility-report.md)
+- **ReqIF 1.2 (partial)**: Backend import/export with hierarchy and representable relations; custom datatypes, rich XHTML, attachments (export lists file names only), ReqIFZ and lossless vendor round-trips remain limited. See the [compatibility report](docs/developer/reqif-import-compatibility-report.md)
 - **Comprehensive Data**: All metadata included in exports (categories, applicability, dates, comments, etc.)
 
 ### 📸 Immutable Baselines
@@ -260,6 +261,15 @@ Behind the Docker frontend (or Vite dev), use the **same origin** as the SPA (e.
 #### Matrix
 - `GET /matrix` - Get traceability matrix data
 - `GET /projects/{project_id}/matrix` - Get traceability matrix for a project (session or Bearer)
+
+#### Attachments & storage
+- `GET /projects/{project_id}/attachments?entity_type=requirement|verification&entity_id=` - List attachments of a requirement or verification
+- `POST /projects/{project_id}/attachments` - Upload (multipart `file`, `entity_type`, `entity_id`); 413 over the size limit or quota, 415 for disallowed types
+- `GET /projects/{project_id}/attachments/{attachment_id}/download` - Download (always `Content-Disposition: attachment`)
+- `DELETE /projects/{project_id}/attachments/{attachment_id}` - Delete (files kept by baselines stay available there)
+- `GET /projects/{project_id}/storage` - Storage used, quota and upload limits
+- `PUT /projects/{project_id}/storage/quota` - Set (`{"quota_mb": n}`) or reset (`null`) the project quota; instance admins only
+- `GET /projects/{project_id}/baselines/{baseline_id}/attachments` (+ `/{attachment_id}/download`) - Files recorded in a baseline
 
 #### Baselines (immutable snapshots)
 - `GET /projects/{project_id}/baselines` - List baselines for a project

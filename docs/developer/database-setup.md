@@ -261,6 +261,38 @@ gunzip -c backups/marreq_<timestamp>.sql.gz | \
 Use `psql` from PostgreSQL 17 or newer: dumps written by `pg_dump` 17 (the
 Docker image and **Admin → Backup**) can contain commands older clients reject.
 
+### Attachment files
+
+The database dump does not contain attachment files (issue #241). The server
+stores them under `MARREQ_ATTACHMENTS_DIR` (`/var/lib/marreq/attachments` in
+the Docker image), which the compose files mount from the `marreq_attachments`
+volume (`marreq_attachments_cloud` for `marreq-cloud`). Compose prefixes volume
+names with the project name, so with the default project it is
+`docker_marreq_attachments`; check with `docker volume ls | grep attachments`.
+
+Back up the volume right after the database dump so both describe the same
+moment:
+
+```bash
+docker run --rm \
+  -v docker_marreq_attachments:/data:ro \
+  -v "$PWD/backups":/backup \
+  alpine tar czf /backup/attachments_<timestamp>.tar.gz -C /data .
+```
+
+Restore it into the (empty) volume before starting the backend:
+
+```bash
+docker run --rm \
+  -v docker_marreq_attachments:/data \
+  -v "$PWD/backups":/backup \
+  alpine sh -c 'tar xzf /backup/attachments_<timestamp>.tar.gz -C /data && chown -R 10001:10001 /data'
+```
+
+Files are named by their SHA-256 (`ab/cd/<hash>`), so a restored directory
+can be checked with `sha256sum`. Files that no database row references are
+harmless. A row whose file is missing gives a 404 on download.
+
 ## Upgrading from PostgreSQL 15
 
 The Compose stack uses PostgreSQL 17 (`pgvector/pgvector:pg17-trixie`) on a new

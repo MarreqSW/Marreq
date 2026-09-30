@@ -139,6 +139,16 @@ Change the fields and select **Save changes**. The new name appears in the heade
 
 Only project **Admins** and instance administrators can change these properties. Other members see them read-only.
 
+### 3.4 Project Storage
+
+Files attached to requirements and verifications ([§4.9](#49-attachments)) count toward the project's storage limit. **Settings → Storage** shows:
+
+- How much of the limit is used. Each file counts once, even when the same file is attached in several places.
+- How much of that is taken by deleted files that baselines still keep ([§7.3](#73-viewing-a-baseline)).
+- The largest file allowed and the file types that can be uploaded.
+
+The defaults are **10 MB per file** and **500 MB per project**. The server administrator sets them with `MARREQ_ATTACHMENT_MAX_MB` and `MARREQ_PROJECT_STORAGE_QUOTA_MB`. Instance administrators can give a project its own limit in **Settings → Storage**, or use **Reset to default** to go back to the server-wide value. The change is recorded in **System logs**. A limit below the current usage is allowed: it only blocks new uploads.
+
 ---
 
 ## 4. Requirements
@@ -260,6 +270,20 @@ If your administrator has enabled semantic search (embeddings/RAG):
 - Enter a natural-language question or search phrase; you can restrict by status, category, applicability, verification.
 - Results show matching requirements; “AI Answer” may appear when using the RAG “ask” feature.
 - Shortcuts: **Ctrl+K** open, **Enter** search, **Esc** close.
+
+### 4.9 Attachments
+
+Requirements and verifications can carry files, such as test reports, drawings, analysis spreadsheets or photos. The **Attachments** card is on the requirement view and edit pages (right column) and on the verification view and edit pages.
+
+- **Download**: select a file name. Files are always downloaded; the browser never opens them inline.
+- **Upload** (needs **Edit requirements** permission): use **Add files**, or drag files onto the drop area. You can pick several files at once.
+- **Delete**: use the bin icon next to a file and confirm.
+
+Allowed types are PDF, PNG, JPEG, GIF, WebP, Word, Excel and PowerPoint (`.docx`, `.xlsx`, `.pptx`), OpenDocument (`.odt`, `.ods`, `.odp`), ZIP, plain text (`.txt`, `.log`, `.md`), CSV, JSON and XML. The server checks the file's contents, not just its name: a file renamed to `.pdf` that is not a PDF is refused. Other types, including HTML, SVG and programs, are not accepted.
+
+An upload is refused when the file is larger than the per-file limit, or when it would take the project over its storage limit ([§3.4](#34-project-storage)). The message says how much space is used. Uploads and deletions are recorded in **System logs**.
+
+Attachments belong to the requirement, not to one version, so historical version snapshots do not show them. Baselines keep their own list ([§7.3](#73-viewing-a-baseline)). Deleting a requirement or verification also deletes its attachments.
 
 ---
 
@@ -423,6 +447,7 @@ You see:
 - **Diff vs current**: For each requirement that has changed since the baseline, a **Diff vs current** action opens a **diff modal** comparing the baseline snapshot to the current version. If the requirement is unchanged, this action is hidden.
 - **Diff between baselines**: Select another baseline and use **Diff baselines** on requirements whose frozen versions differ.
 - **Verification diff vs current**: Verification rows compare the frozen name, description, source, reference, status, type, and parent with the current verification.
+- **Attachments**: The files attached to the included requirements and to the verifications when the baseline was taken. Files deleted since stay downloadable here and are marked *deleted since*; they keep counting toward the project's storage until the baseline no longer needs them.
 - **Export ReqIF**: Button to export **this baseline** as ReqIF 1.2 XML.
 
 ### 7.4 Exporting a Baseline as ReqIF
@@ -510,12 +535,13 @@ You see:
 ### 9.4 Exporting ReqIF
 
 - **Current project**: open **Reports** and download **Requirements (.reqif)** for the live requirement set (comments are included as Remarks when present).
+- Attachment file names are listed in an **Attachments** attribute; the files themselves are not included.
 - **From a baseline**: open the baseline and use **Export ReqIF** for an immutable ReqIF 1.2 snapshot.
 
 ### 9.5 Exporting a project bundle (JSON)
 
 - Open **Reports** and download **Project bundle (.json)**.
-- The file is a portable snapshot of the project catalog, current requirements, verifications, matrix links, comments, and members (by username). It does not include version history, baselines, or passwords.
+- The file is a portable snapshot of the project catalog, current requirements, verifications, matrix links, comments, and members (by username). It does not include version history, baselines, attachments, or passwords.
 - Anyone who can view the project can export the bundle.
 
 ---
@@ -644,6 +670,8 @@ To restore, load the file into an **empty** database with `psql` from PostgreSQL
 ```bash
 gunzip -c marreq-backup_YYYYMMDD_HHMMSS.sql.gz | psql "$DATABASE_URL"
 ```
+
+The download contains the database only. Attachment files live in the `marreq_attachments` Docker volume (the directory set by `MARREQ_ATTACHMENTS_DIR`). Back that up at the same time; see *Backup and Restore* in the database setup guide.
 
 Available on self-hosted (`marreq-server`) installations only. In the hosted cloud mode the page explains that backups are managed by the hosting operator.
 

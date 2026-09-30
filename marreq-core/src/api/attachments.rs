@@ -35,7 +35,7 @@ impl<'r> rocket::request::FromRequest<'r> for Storage {
         request: &'r rocket::Request<'_>,
     ) -> rocket::request::Outcome<Self, Self::Error> {
         let managed = request.rocket().state::<Arc<AttachmentStorage>>();
-        match managed.or_else(|| crate::storage::installed()) {
+        match managed.or(crate::storage::installed()) {
             Some(storage) => rocket::request::Outcome::Success(Storage(Arc::clone(storage))),
             None => rocket::request::Outcome::Error((Status::ServiceUnavailable, ())),
         }

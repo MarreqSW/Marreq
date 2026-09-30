@@ -35,7 +35,7 @@ pub fn payload_too_large(req: &Request<'_>) -> (Status, Json<serde_json::Value>)
     let storage = req
         .rocket()
         .state::<std::sync::Arc<crate::storage::AttachmentStorage>>()
-        .or_else(|| crate::storage::installed());
+        .or(crate::storage::installed());
     let message = match storage {
         Some(storage) => format!(
             "The upload is too large. Files can be at most {}.",

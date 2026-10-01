@@ -152,6 +152,7 @@ async fn harness() -> Harness {
         dir: dir.clone(),
         max_file_bytes: MAX_FILE,
         default_project_quota_bytes: QUOTA,
+        ..AttachmentsConfig::default()
     }));
     let state: TestAppState = AppState {
         repo: Arc::new(RwLock::new(CacheRepository::new(repo(), 0))),

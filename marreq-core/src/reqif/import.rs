@@ -58,6 +58,9 @@ pub struct ImportResult {
     pub object_requirement_ids: HashMap<String, i32>,
 }
 
+/// `class` Marreq puts on the `<xhtml:object>` elements it exports for attachments.
+pub const MARREQ_OBJECT_CLASS: &str = "marreq-attachment";
+
 fn local_name(q: QName<'_>) -> String {
     q.local_name().as_ref().to_owned()
 }
@@ -95,6 +98,9 @@ struct Parser {
     current_value_is_xhtml: bool,
     /// Converts the XHTML inside `THE-VALUE` to statement Markdown (issue #256).
     xhtml: Option<crate::rich_text::MarkdownBuilder>,
+    /// Inside an `<object class="marreq-attachment">` Marreq wrote itself: its
+    /// fallback text is the file name, which is not copied into the statement.
+    marreq_object_depth: usize,
     /// Innermost structural context (SOURCE, TARGET, OBJECT, DEFINITION, TYPE, ENUM).
     container: Option<String>,
     hierarchy: Vec<HierFrame>,
@@ -124,6 +130,7 @@ impl Parser {
             the_value_depth: 0,
             current_value_is_xhtml: false,
             xhtml: None,
+            marreq_object_depth: 0,
             container: None,
             hierarchy: Vec::new(),
             in_spec_object: false,
@@ -137,6 +144,13 @@ impl Parser {
     }
 
     fn start(&mut self, name: &str, e: &quick_xml::events::BytesStart<'_>) {
+        if self.capturing_the_value && name == "object" {
+            let own = attr(e, "class")
+                .is_some_and(|c| c.split_whitespace().any(|c| c == MARREQ_OBJECT_CLASS));
+            if own || self.marreq_object_depth > 0 {
+                self.marreq_object_depth += 1;
+            }
+        }
         if self.capturing_the_value
             && let Some(builder) = self.xhtml.as_mut()
         {
@@ -274,6 +288,9 @@ impl Parser {
             return;
         }
         if self.capturing_the_value {
+            if self.marreq_object_depth > 0 {
+                return;
+            }
             if let Some(builder) = self.xhtml.as_mut() {
                 builder.text(text);
                 return;
@@ -386,6 +403,9 @@ impl Parser {
     }
 
     fn end(&mut self, name: &str) {
+        if name == "object" && self.marreq_object_depth > 0 {
+            self.marreq_object_depth -= 1;
+        }
         if self.capturing_the_value {
             if name == "THE-VALUE" {
                 self.capturing_the_value = false;

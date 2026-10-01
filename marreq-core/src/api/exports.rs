@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Marreq
 
 use rocket::Responder;
+use rocket::fs::NamedFile;
 use rocket::http::Header;
 
 use crate::api::prelude::*;
@@ -225,30 +226,128 @@ pub async fn export_requirements_reqif(
     ))
 }
 
-#[get("/projects/<project_id>/exports/baselines/<filename>")]
-pub async fn export_baseline_reqif(
+/// A ReqIFZ archive streamed from a temp file that is already unlinked.
+#[derive(Responder)]
+#[response(status = 200, content_type = "application/zip")]
+pub struct ArchiveDownload {
+    file: NamedFile,
+    disposition: Header<'static>,
+}
+
+/// Build the archive off the async workers, open it and unlink it (the open
+/// handle keeps it readable while the response streams).
+async fn reqifz_download(
+    input: crate::services::reqif_service::ExportInput,
+    storage: std::sync::Arc<crate::storage::AttachmentStorage>,
+    filename: String,
+) -> ApiResult<ArchiveDownload> {
+    let document_name = filename.trim_end_matches(".reqifz").to_string() + ".reqif";
+    let path = rocket::tokio::task::spawn_blocking(move || {
+        crate::services::reqifz_service::export_archive(&input, &storage, &document_name)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(|e| ApiError::Internal(format!("could not build the ReqIFZ archive: {e}")))?;
+    let opened = NamedFile::open(&path).await;
+    let _ = std::fs::remove_file(&path);
+    let file =
+        opened.map_err(|e| ApiError::Internal(format!("could not read the archive: {e}")))?;
+    Ok(ArchiveDownload {
+        file,
+        disposition: Header::new(
+            "Content-Disposition",
+            format!("attachment; filename=\"{filename}\""),
+        ),
+    })
+}
+
+fn require_storage(
+    storage: Option<crate::api::attachments::Storage>,
+) -> ApiResult<std::sync::Arc<crate::storage::AttachmentStorage>> {
+    storage.map(|s| s.0).ok_or_else(|| {
+        ApiError::Internal(
+            "attachment storage is not configured; ReqIFZ export is unavailable".into(),
+        )
+    })
+}
+
+/// `GET /projects/<id>/exports/requirements.reqifz`: ReqIF plus the
+/// requirements' attachment files (issue #343).
+#[get("/projects/<project_id>/exports/requirements.reqifz")]
+pub async fn export_requirements_reqifz(
     access: ProjectAccessOrBearer,
     project_id: i32,
-    filename: &str,
     state: &State<AppState>,
-) -> ApiResult<FileDownload> {
+    storage: Option<crate::api::attachments::Storage>,
+) -> ApiResult<ArchiveDownload> {
     require_project_permission(
         state,
         access.user(),
         project_id,
         Permission::ViewRequirements,
     )?;
-    let baseline_id = filename
-        .strip_suffix(".reqif")
-        .and_then(|id| id.parse::<i32>().ok())
-        .ok_or_else(|| ApiError::NotFound("baseline ReqIF export not found".into()))?;
-    let xml = ReqIFService::new(state.inner())
+    let storage = require_storage(storage)?;
+    let input = ReqIFService::new(state.inner())
+        .collect_project_export(project_id)
+        .map_err(ApiError::from)?;
+    reqifz_download(
+        input,
+        storage,
+        format!("requirements-project-{project_id}.reqifz"),
+    )
+    .await
+}
+
+/// A baseline export: plain ReqIF or a ReqIFZ archive.
+#[derive(Responder)]
+pub enum BaselineExport {
+    Xml(FileDownload),
+    Archive(ArchiveDownload),
+}
+
+/// `GET /projects/<id>/exports/baselines/<n>.reqif` or `<n>.reqifz` (with the
+/// files the baseline recorded, including ones deleted since).
+#[get("/projects/<project_id>/exports/baselines/<filename>")]
+pub async fn export_baseline_reqif(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    filename: &str,
+    state: &State<AppState>,
+    storage: Option<crate::api::attachments::Storage>,
+) -> ApiResult<BaselineExport> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let not_found = || ApiError::NotFound("baseline ReqIF export not found".into());
+    let (stem, archive) = match filename.strip_suffix(".reqifz") {
+        Some(stem) => (stem, true),
+        None => (
+            filename.strip_suffix(".reqif").ok_or_else(not_found)?,
+            false,
+        ),
+    };
+    let baseline_id = stem.parse::<i32>().map_err(|_| not_found())?;
+    let service = ReqIFService::new(state.inner());
+    if archive {
+        let storage = require_storage(storage)?;
+        let input = service
+            .collect_baseline_export(project_id, baseline_id)
+            .map_err(ApiError::from)?;
+        let name = format!("baseline-{baseline_id}-project-{project_id}.reqifz");
+        return Ok(BaselineExport::Archive(
+            reqifz_download(input, storage, name).await?,
+        ));
+    }
+    let xml = service
         .export_baseline(project_id, baseline_id)
         .map_err(ApiError::from)?;
-    Ok(FileDownload::xml(
+    Ok(BaselineExport::Xml(FileDownload::xml(
         xml.into_bytes(),
         format!("baseline-{baseline_id}-project-{project_id}.reqif"),
-    ))
+    )))
 }
 
 #[get("/projects/<project_id>/exports/bundle.json")]

@@ -175,6 +175,7 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         exports::export_report_pdf,
         exports::export_requirements_reqif,
         exports::export_baseline_reqif,
+        exports::export_requirements_reqifz,
         exports::export_project_bundle,
         semantic_search::semantic_search,
         semantic_search::ask,

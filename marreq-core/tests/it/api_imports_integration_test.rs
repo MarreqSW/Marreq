@@ -423,10 +423,9 @@ async fn commit_reqif_forbids_viewer() {
 }
 
 #[rocket::async_test]
-async fn commit_reqif_rejects_reqifz() {
+async fn commit_reqif_rejects_a_reqifz_that_is_not_a_zip() {
     let client = test_client(catalog_repo()).await;
-    let zip = "PK\u{3}\u{4}not-xml";
-    let (ct, body) = reqif_import_body("bundle.reqifz", zip);
+    let (ct, body) = reqif_import_body("bundle.reqifz", "not a zip archive");
     let response = client
         .post("/api/projects/1/imports/reqif")
         .private_cookie(session_cookie(&client, 1))

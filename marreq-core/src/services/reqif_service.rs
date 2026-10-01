@@ -7,6 +7,7 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{NewRequirement, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{AttachmentsRepository, RequirementCommentsRepository, UserRepository};
+use crate::reqif::export::ExportAttachment;
 use crate::reqif::import::{
     ImportConfig, ImportResult, ParsedDocument, object_to_fields, parse_reqif,
 };
@@ -97,17 +98,52 @@ fn create_import_link(
         .map_err(|e| format!("{source_reqif_id} -> {target_reqif_id} ({link_type}): {e}"))
 }
 
-/// requirement_id -> "a.pdf; b.png" for the ReqIF "Attachments" attribute.
-fn attachment_names(rows: Vec<crate::models::Attachment>) -> HashMap<i32, String> {
-    let mut map: HashMap<i32, String> = HashMap::new();
-    for a in rows.into_iter().filter(|a| a.entity_type == "requirement") {
-        let names = map.entry(a.entity_id).or_default();
-        if !names.is_empty() {
-            names.push_str("; ");
-        }
-        names.push_str(&a.original_filename);
+/// Everything a ReqIF export of a project or a baseline contains.
+pub struct ExportInput {
+    pub title: String,
+    pub requirements: Vec<crate::models::Requirement>,
+    pub parent_map: HashMap<i32, i32>,
+    pub comments_map: HashMap<i32, String>,
+    /// Requirement attachments (live ones, or those a baseline recorded).
+    pub attachments: Vec<crate::models::Attachment>,
+}
+
+impl ExportInput {
+    /// Archive entry of an attachment in a ReqIFZ export. The id keeps two
+    /// files with the same name apart.
+    pub fn archive_path(attachment: &crate::models::Attachment) -> String {
+        format!("files/{}/{}", attachment.id, attachment.original_filename)
     }
-    map
+
+    /// ReqIF XML. Attachments whose ids are in `linked` (the files placed in a
+    /// ReqIFZ archive) are linked from their statement at
+    /// [`ExportInput::archive_path`]; all names go into the Attachments attribute.
+    pub fn to_xml(&self, linked: Option<&std::collections::HashSet<i32>>) -> String {
+        let mut attachments: HashMap<i32, Vec<ExportAttachment>> = HashMap::new();
+        for a in self
+            .attachments
+            .iter()
+            .filter(|a| a.entity_type == "requirement")
+        {
+            attachments
+                .entry(a.entity_id)
+                .or_default()
+                .push(ExportAttachment {
+                    name: a.original_filename.clone(),
+                    content_type: a.content_type.clone(),
+                    path: linked
+                        .is_some_and(|ids| ids.contains(&a.id))
+                        .then(|| Self::archive_path(a)),
+                });
+        }
+        to_reqif(
+            &self.title,
+            &self.requirements,
+            &self.parent_map,
+            Some(&self.comments_map),
+            Some(&attachments),
+        )
+    }
 }
 
 pub struct ReqIFService<'a> {
@@ -121,11 +157,19 @@ impl<'a> ReqIFService<'a> {
 
     /// Export project requirements as ReqIF 1.2 XML (includes comments as Remarks when present).
     pub fn export_project(&self, project_id: i32) -> Result<String, RepoError> {
+        Ok(self.collect_project_export(project_id)?.to_xml(None))
+    }
+
+    /// Export a baseline's requirements as ReqIF 1.2 XML (immutable snapshot).
+    pub fn export_baseline(&self, project_id: i32, baseline_id: i32) -> Result<String, RepoError> {
+        Ok(self
+            .collect_baseline_export(project_id, baseline_id)?
+            .to_xml(None))
+    }
+
+    fn parent_map(&self, requirements: &[crate::models::Requirement]) -> HashMap<i32, i32> {
         let req_service = RequirementService::new(self.state);
-        let project_service = ProjectService::new(self.state);
-        let project = project_service.get_by_id(project_id)?;
-        let requirements = req_service.list_by_project(project_id)?;
-        let parent_map: HashMap<i32, i32> = requirements
+        requirements
             .iter()
             .filter_map(|r| {
                 r.current_version_id.and_then(|vid| {
@@ -136,8 +180,13 @@ impl<'a> ReqIFService<'a> {
                         .map(|pid| (r.id, pid))
                 })
             })
-            .collect();
-        let comments_map = self.build_comments_map(&requirements);
+            .collect()
+    }
+
+    /// The current project: requirements and their live attachments.
+    pub fn collect_project_export(&self, project_id: i32) -> Result<ExportInput, RepoError> {
+        let project = ProjectService::new(self.state).get_by_id(project_id)?;
+        let requirements = RequirementService::new(self.state).list_by_project(project_id)?;
         let attachments = {
             let repo = self.state.repo_read();
             let mut rows = Vec::new();
@@ -146,53 +195,40 @@ impl<'a> ReqIFService<'a> {
             }
             rows
         };
-        let attachments_map = attachment_names(attachments);
-        Ok(to_reqif(
-            &project.name,
-            &requirements,
-            &parent_map,
-            Some(&comments_map),
-            Some(&attachments_map),
-        ))
+        Ok(ExportInput {
+            title: project.name,
+            parent_map: self.parent_map(&requirements),
+            comments_map: self.build_comments_map(&requirements),
+            requirements,
+            attachments,
+        })
     }
 
-    /// Export a baseline's requirements as ReqIF 1.2 XML (immutable snapshot).
-    pub fn export_baseline(&self, project_id: i32, baseline_id: i32) -> Result<String, RepoError> {
-        let project_service = ProjectService::new(self.state);
+    /// A baseline: its requirement versions and the files it recorded
+    /// (including ones deleted since).
+    pub fn collect_baseline_export(
+        &self,
+        project_id: i32,
+        baseline_id: i32,
+    ) -> Result<ExportInput, RepoError> {
+        let project = ProjectService::new(self.state).get_by_id(project_id)?;
         let baseline_service = BaselineService::new(self.state);
-        let project = project_service.get_by_id(project_id)?;
         let baseline = baseline_service.get_by_id(baseline_id)?;
         if baseline.project_id != project_id {
             return Err(RepoError::NotFound);
         }
         let requirements = baseline_service.get_requirements(baseline_id)?;
-        let req_service = RequirementService::new(self.state);
-        let parent_map: HashMap<i32, i32> = requirements
-            .iter()
-            .filter_map(|r| {
-                r.current_version_id.and_then(|vid| {
-                    req_service
-                        .get_parent_requirement_ids_for_version(vid)
-                        .into_iter()
-                        .next()
-                        .map(|pid| (r.id, pid))
-                })
-            })
-            .collect();
-        let title = format!("{} (baseline: {})", project.name, baseline.name);
-        let comments_map = self.build_comments_map(&requirements);
-        let attachments_map = attachment_names(
-            self.state
-                .repo_read()
-                .list_baseline_attachments(baseline_id)?,
-        );
-        Ok(to_reqif(
-            &title,
-            &requirements,
-            &parent_map,
-            Some(&comments_map),
-            Some(&attachments_map),
-        ))
+        let attachments = self
+            .state
+            .repo_read()
+            .list_baseline_attachments(baseline_id)?;
+        Ok(ExportInput {
+            title: format!("{} (baseline: {})", project.name, baseline.name),
+            parent_map: self.parent_map(&requirements),
+            comments_map: self.build_comments_map(&requirements),
+            requirements,
+            attachments,
+        })
     }
 
     /// Build requirement_id -> "Author, date: body\n..." for ReqIF Remarks.

@@ -129,13 +129,13 @@ impl Cache {
 
             // Always decrement active count first
             self.active_entries
-                .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| v.checked_sub(1))
+                .try_update(Ordering::Relaxed, Ordering::Relaxed, |v| v.checked_sub(1))
                 .ok();
 
             // If expired, also decrement expired count
             if entry.expires_at <= now {
                 self.expired_entries
-                    .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |v| v.checked_sub(1))
+                    .try_update(Ordering::Relaxed, Ordering::Relaxed, |v| v.checked_sub(1))
                     .ok();
             }
         }

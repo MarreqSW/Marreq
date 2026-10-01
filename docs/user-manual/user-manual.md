@@ -535,8 +535,9 @@ You see:
 ### 9.4 Exporting ReqIF
 
 - **Current project**: open **Reports** and download **Requirements (.reqif)** for the live requirement set (comments are included as Remarks when present).
-- Attachment file names are listed in an **Attachments** attribute; the files themselves are not included.
-- **From a baseline**: open the baseline and use **Export ReqIF** for an immutable ReqIF 1.2 snapshot.
+- Attachment file names are listed in an **Attachments** attribute; the files themselves are not included in a `.reqif` file.
+- **With the files**: download **Requirements with files (.reqifz)** instead. A ReqIFZ archive is a ZIP file holding the `.reqif` document and each requirement's attachments under `files/<attachment id>/<file name>`. The statements link to the files the standard ReqIF way (XHTML objects), so DOORS, Polarion, Codebeamer and Marreq itself can pick them up.
+- **From a baseline**: open the baseline and use **Export ReqIF** for an immutable ReqIF 1.2 snapshot, or **Export ReqIFZ (with files)** to include the files the baseline recorded, including ones deleted since.
 
 ### 9.5 Exporting a project bundle (JSON)
 
@@ -564,11 +565,13 @@ Excel/CSV requirement and verification import does not create matrix links. Afte
 ### 10.2 Importing ReqIF
 
 1. Open a project and go to **Import** (`/{project-slug}/import`). You need **Edit requirements** permission.
-2. In the **ReqIF 1.2** section, choose a **`.reqif`** or **`.xml`** file (ReqIFZ/ZIP is not supported).
+2. In the **ReqIF 1.2** section, choose a **`.reqif`** or **`.xml`** file, or a **`.reqifz`** archive.
 3. Click **Import ReqIF**. Marreq uses the first project status, category, applicability, and verification method, and the current user as author and reviewer.
 4. Review the imported count, created links, and any warnings or errors, then open the requirements list.
 
-Import creates new requirements; it does not update existing ones. Custom attributes, attachments, and original ReqIF identifiers are not persisted. Empty catalogs (especially verification methods) cause the import to fail until they exist.
+Import creates new requirements; it does not update existing ones. Custom attributes and original ReqIF identifiers are not persisted. Empty catalogs (especially verification methods) cause the import to fail until they exist.
+
+**ReqIFZ archives.** Every `.reqif` document in the archive is imported into the project. Each file a requirement's text references (an XHTML object) becomes an attachment of that requirement, with the same checks as a manual upload ([§4.9](#49-attachments)): allowed types, the per-file limit and the project's storage limit ([§3.4](#34-project-storage)). A file that fails a check, or that is missing from the archive, is skipped and listed as a warning; its requirement is still imported. Archives can be up to 100 MB (`MARREQ_REQIFZ_MAX_MB`). Archives with unsafe content (paths leading outside the archive, links, extreme compression) are refused as a whole. Files attached in other, tool-specific ways are not imported and are reported as a warning.
 
 ### 10.3 Importing a project bundle (JSON)
 

@@ -8,9 +8,11 @@ known limitations.
 
 ## Supported flows
 
-- Export current project requirements as ReqIF XML.
-- Export an immutable baseline snapshot as ReqIF XML.
-- Import ReqIF XML into a project and create requirements.
+- Export current project requirements as ReqIF XML, or as a ReqIFZ archive
+  with their attachment files.
+- Export an immutable baseline snapshot as ReqIF XML or ReqIFZ.
+- Import ReqIF XML or a ReqIFZ archive into a project and create
+  requirements; files referenced from XHTML become attachments.
 - Preserve nested `SPEC-HIERARCHY` as parent-child requirement links.
 - Import representable `SPEC-RELATION` entries as typed requirement links.
 - Include requirement comments in the exported `Remarks` attribute when present.
@@ -53,21 +55,47 @@ paragraphs, `- ` bulleted and `1. ` numbered lists, `**bold**`, `*italic*`,
 
 Unmapped attributes, datatypes, object types, specification boundaries,
 original identifiers, XHTML formatting beyond the subset above (tables,
-images, nesting) and attachments are not currently persisted. The import result reports these losses as warnings. ReqIFZ is not
-supported.
+images, nesting) are not currently persisted. The import result reports these
+losses as warnings.
 
 On export, each requirement's attachment file names are written to an
-`Attachments` string attribute (`ad-attachments`, `"; "`-separated). The files
-are not embedded; that needs ReqIFZ.
+`Attachments` string attribute (`ad-attachments`, `"; "`-separated).
+
+## ReqIFZ (issue #343)
+
+A ReqIFZ archive is a ZIP file with one or more `.reqif` documents and the
+files they reference.
+
+- **Export** writes `<name>.reqif` at the root and each requirement attachment
+  at `files/<attachment id>/<file name>`. The statement XHTML gains one
+  `<xhtml:object class="marreq-attachment" data="files/…" type="…">name</xhtml:object>`
+  per file (images first, paths percent-encoded). A file missing from the blob
+  store is left out. Baseline archives use the files the baseline recorded.
+- **Import** detects the ZIP signature on the normal ReqIF import route and:
+  - opens the archive with strict checks (`reqif/archive.rs`): no absolute
+    or `..` paths, symlinks, encrypted or duplicate entries; at most 10,000
+    entries, 1 GiB uncompressed in total and a 100:1 compression ratio for
+    entries above 1 MiB; documents are read up to 64 MiB;
+  - imports every `.reqif` in archive order, reserving reference codes across
+    documents and prefixing messages with the document name when there are
+    several;
+  - resolves each `<xhtml:object data>` relative to its document and attaches
+    the file through `AttachmentService::create` (type allowlist, per-file
+    limit, project quota). Failures become warnings. Marreq's own object
+    fallback text is not copied into statements, so round trips stay clean.
+  - Archives are limited by `MARREQ_REQIFZ_MAX_MB` (default 100); plain XML
+    imports keep the 20 MiB limit. `FILE-NAME` / `ATTRIBUTE-VALUE-ATTACHMENT`
+    embeddings are not imported.
 
 The Rocket API exposes the same service:
 
-- `GET /api/projects/{project_id}/exports/requirements.reqif`
-- `GET /api/projects/{project_id}/exports/baselines/{baseline_id}.reqif`
-- `POST /api/projects/{project_id}/imports/reqif`
+- `GET /api/projects/{project_id}/exports/requirements.reqif` (and `.reqifz`)
+- `GET /api/projects/{project_id}/exports/baselines/{baseline_id}.reqif` (and `.reqifz`)
+- `POST /api/projects/{project_id}/imports/reqif` (`.reqif`, `.xml` or ReqIFZ)
 
-The SPA downloads live requirements ReqIF from **Reports**, baseline ReqIF from
-the baseline detail page, and imports `.reqif`/`.xml` from **Import**.
+The SPA downloads live requirements ReqIF and ReqIFZ from **Reports**, baseline
+ReqIF and ReqIFZ from the baseline detail page, and imports `.reqif`/`.xml`/
+`.reqifz` from **Import**.
 
 ## Import defaults
 

@@ -443,6 +443,9 @@ impl<'a> ReqIFService<'a> {
             .iter()
             .flat_map(|obj| obj.attributes.keys())
             .filter(|name| !mapping::is_core_field(name))
+            // Marreq's own list of attachment names: informational, and in a
+            // ReqIFZ the files themselves are imported.
+            .filter(|name| name.as_str() != "Attachments")
             .cloned()
             .collect::<std::collections::BTreeSet<_>>()
             .into_iter()

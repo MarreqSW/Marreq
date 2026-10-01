@@ -447,11 +447,10 @@ async fn export_round_trips_requirements_and_files() {
     assert_eq!(body["imported_attachment_count"], 2);
     assert_eq!(body["documents"], json!(["requirements-project-3.reqif"]));
     assert!(
-        !body["warnings"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|w| w.as_str().unwrap().contains("embedded")),
+        !body["warnings"].as_array().unwrap().iter().any(|w| {
+            let w = w.as_str().unwrap();
+            w.contains("embedded") || w.contains("Attachments")
+        }),
         "{body}"
     );
 

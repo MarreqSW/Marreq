@@ -623,7 +623,7 @@ export default function ImportPage() {
           File
           <input
             type="file"
-            accept=".reqif,.xml,application/xml,text/xml"
+            accept=".reqif,.reqifz,.xml,application/xml,text/xml,application/zip"
             className={`${inp} mt-2`}
             data-testid="reqif-import-file"
             disabled={reqifBusy || busy}
@@ -635,9 +635,10 @@ export default function ImportPage() {
         </label>
         <p className="text-xs text-stitch-muted">
           Upload a <code className="font-mono">.reqif</code> or <code className="font-mono">.xml</code>{' '}
-          file. Catalog fields use the first project status, category, applicability, and
-          verification method; you are set as author and reviewer. ReqIFZ archives are not
-          supported.
+          file, or a <code className="font-mono">.reqifz</code> archive. Catalog fields use the first
+          project status, category, applicability, and verification method; you are set as author
+          and reviewer. A ReqIFZ archive brings the files its requirements reference along as
+          attachments, within the project&apos;s storage limit; every document in it is imported.
         </p>
         <button type="submit" disabled={!reqifFile || !token || reqifBusy || busy} className={btnPrimary}>
           {reqifBusy ? 'Importing…' : 'Import ReqIF'}
@@ -655,6 +656,12 @@ export default function ImportPage() {
             Imported {reqifResult.imported_count} requirement(s)
             {reqifResult.created_link_count
               ? `, created ${reqifResult.created_link_count} link(s)`
+              : ''}
+            {reqifResult.imported_attachment_count
+              ? `, attached ${reqifResult.imported_attachment_count} file(s)`
+              : ''}
+            {reqifResult.documents && reqifResult.documents.length > 1
+              ? ` from ${reqifResult.documents.length} documents`
               : ''}
             .
           </p>

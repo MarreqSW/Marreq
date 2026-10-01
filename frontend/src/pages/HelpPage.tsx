@@ -28,12 +28,12 @@ const blocks: { title: string; body: string }[] = [
   {
     title: 'Creating records',
     body:
-      'Use Create Requirement or New verification from the header or list pages. New requirements need at least one verification method configured for the project. Import Excel/CSV (requirements, verifications, or a matrix-links file of codes) or ReqIF from Import in the sidebar (or the create menu).',
+      'Use Create Requirement or New verification from the header or list pages. New requirements need at least one verification method configured for the project. Import Excel/CSV (requirements, verifications, or a matrix-links file of codes) or ReqIF (a .reqif file, or a .reqifz archive that also brings its attached files) from Import in the sidebar (or the create menu).',
   },
   {
     title: 'Classic (legacy) UI',
     body:
-      'System logs are under Admin → System logs in the sidebar; Log analytics summarises that activity (events per day, top actions, top users). Self-hosted administrators can download a database backup from Admin → Backup. Reports includes Excel (requirements, verifications, matrix grid, matrix links), PDF, and ReqIF downloads served by the API. Import ReqIF from the Import page.',
+      'System logs are under Admin → System logs in the sidebar; Log analytics summarises that activity (events per day, top actions, top users). Self-hosted administrators can download a database backup from Admin → Backup. Reports includes Excel (requirements, verifications, matrix grid, matrix links), PDF, and ReqIF downloads served by the API, including a ReqIFZ archive with the attachment files. Import ReqIF or ReqIFZ from the Import page.',
   },
 ];
 

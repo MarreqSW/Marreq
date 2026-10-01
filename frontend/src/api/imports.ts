@@ -60,6 +60,10 @@ export interface ReqifImportResult {
   errors: string[];
   warnings: string[];
   imported_requirement_ids: number[];
+  /** ReqIFZ only: files attached from the archive. */
+  imported_attachment_count?: number;
+  /** ReqIFZ only: the `.reqif` documents imported, in archive order. */
+  documents?: string[];
 }
 
 export async function commitReqifImport(

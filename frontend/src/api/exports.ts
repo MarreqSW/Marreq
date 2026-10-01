@@ -63,6 +63,23 @@ export async function downloadBaselineReqif(
   triggerDownload(blob, `baseline-${baselineId}-project-${projectId}.reqif`);
 }
 
+/** Downloads the current project requirements with their attachment files as a ReqIFZ archive. */
+export async function downloadRequirementsReqifz(projectId: number): Promise<void> {
+  const blob = await fetchBlob(`/api/projects/${projectId}/exports/requirements.reqifz`);
+  triggerDownload(blob, `requirements-project-${projectId}.reqifz`);
+}
+
+/** Downloads a baseline snapshot with the files it recorded as a ReqIFZ archive. */
+export async function downloadBaselineReqifz(
+  projectId: number,
+  baselineId: number,
+): Promise<void> {
+  const blob = await fetchBlob(
+    `/api/projects/${projectId}/exports/baselines/${baselineId}.reqifz`,
+  );
+  triggerDownload(blob, `baseline-${baselineId}-project-${projectId}.reqifz`);
+}
+
 /** Downloads a JSON project bundle (catalog, current requirements, tests, matrix, comments). */
 export async function downloadProjectBundleJson(projectId: number): Promise<void> {
   const blob = await fetchBlob(`/api/projects/${projectId}/exports/bundle.json`);

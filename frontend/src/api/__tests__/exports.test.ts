@@ -1,12 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   downloadBaselineReqif,
+  downloadBaselineReqifz,
   downloadMatrixLinksXlsx,
   downloadMatrixXlsx,
   downloadProjectBundleJson,
   downloadProjectReportPdf,
   downloadRequirementsPdf,
   downloadRequirementsReqif,
+  downloadRequirementsReqifz,
   downloadRequirementsXlsx,
   downloadVerificationsXlsx,
 } from '../exports';
@@ -95,6 +97,12 @@ describe('workbook downloads', () => {
       filename: 'requirements-project-7.reqif',
     },
     {
+      name: 'the project ReqIFZ archive',
+      download: downloadRequirementsReqifz,
+      path: '/api/projects/7/exports/requirements.reqifz',
+      filename: 'requirements-project-7.reqifz',
+    },
+    {
       name: 'the project JSON bundle',
       download: downloadProjectBundleJson,
       path: '/api/projects/7/exports/bundle.json',
@@ -126,6 +134,19 @@ describe('workbook downloads', () => {
     );
     expect(anchor.download).toBe('baseline-10-project-7.reqif');
     expect(anchor.click).toHaveBeenCalled();
+  });
+
+  it('downloads a baseline ReqIFZ archive for a project', async () => {
+    const anchor = stubDownloadEnvironment();
+    const fetchMock = stubFetchOk(new Blob(['PK']));
+
+    await downloadBaselineReqifz(7, 10);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects/7/exports/baselines/10.reqifz',
+      expect.objectContaining({ credentials: 'same-origin' }),
+    );
+    expect(anchor.download).toBe('baseline-10-project-7.reqifz');
   });
 
   it('surfaces the server error message and downloads nothing', async () => {

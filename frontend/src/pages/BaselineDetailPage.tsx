@@ -16,7 +16,7 @@ import {
   listVerificationStatuses,
   listVerifications,
 } from '@/api/client';
-import { downloadBaselineReqif } from '@/api/exports';
+import { downloadBaselineReqif, downloadBaselineReqifz } from '@/api/exports';
 import { useDashboard } from '@/context/DashboardContext';
 import AsyncDiffDialog from '@/components/AsyncDiffDialog';
 import { RequirementDiffContent } from '@/components/RequirementVersionDiffDialog';
@@ -213,22 +213,31 @@ export default function BaselineDetailPage() {
         title={meta.name}
         subtitle={meta.description ?? 'Snapshot contents from the API.'}
       >
-        <button
-          type="button"
-          disabled={reqifBusy}
-          onClick={() => {
-            setReqifErr(null);
-            setReqifBusy(true);
-            void downloadBaselineReqif(pid, bid)
-              .catch((e) =>
-                setReqifErr(e instanceof Error ? e.message : 'ReqIF export failed'),
-              )
-              .finally(() => setReqifBusy(false));
-          }}
-          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher disabled:opacity-50"
-        >
-          {reqifBusy ? 'Exporting…' : 'Export ReqIF'}
-        </button>
+        {(
+          [
+            { label: 'Export ReqIF', run: downloadBaselineReqif },
+            { label: 'Export ReqIFZ (with files)', run: downloadBaselineReqifz },
+          ] as const
+        ).map((exp) => (
+          <button
+            key={exp.label}
+            type="button"
+            disabled={reqifBusy}
+            onClick={() => {
+              setReqifErr(null);
+              setReqifBusy(true);
+              void exp
+                .run(pid, bid)
+                .catch((e) =>
+                  setReqifErr(e instanceof Error ? e.message : 'ReqIF export failed'),
+                )
+                .finally(() => setReqifBusy(false));
+            }}
+            className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher disabled:opacity-50"
+          >
+            {reqifBusy ? 'Exporting…' : exp.label}
+          </button>
+        ))}
       </StitchPageHeader>
       {reqifErr ? (
         <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-200 text-sm p-4">

@@ -7,6 +7,7 @@ import {
   downloadProjectReportPdf,
   downloadRequirementsPdf,
   downloadRequirementsReqif,
+  downloadRequirementsReqifz,
   downloadRequirementsXlsx,
   downloadVerificationsXlsx,
   getBaselineTraceability,
@@ -59,6 +60,11 @@ const PROJECT_EXPORTS = [
   { key: 'requirements-pdf', label: 'Requirements PDF', run: downloadRequirementsPdf },
   { key: 'report-pdf', label: 'Report PDF', run: downloadProjectReportPdf },
   { key: 'requirements-reqif', label: 'Requirements (.reqif)', run: downloadRequirementsReqif },
+  {
+    key: 'requirements-reqifz',
+    label: 'Requirements with files (.reqifz)',
+    run: downloadRequirementsReqifz,
+  },
   { key: 'project-bundle-json', label: 'Project bundle (.json)', run: downloadProjectBundleJson },
 ] as const;
 

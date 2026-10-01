@@ -5,6 +5,7 @@
 //!
 //! See [OMG ReqIF 1.2](https://www.omg.org/spec/ReqIF/1.2/).
 
+pub mod archive;
 pub mod export;
 pub mod import;
 pub mod mapping;
@@ -13,7 +14,7 @@ pub mod schema;
 pub use export::to_reqif;
 pub use import::{ImportConfig, ImportResult, ParsedDocument, parse_reqif};
 pub use mapping::default_attribute_mapping;
-pub use schema::{ParsedHierarchyEdge, ParsedSpecObject, ParsedSpecRelation};
+pub use schema::{ObjectRef, ParsedHierarchyEdge, ParsedSpecObject, ParsedSpecRelation};
 
 #[cfg(test)]
 mod vendor_import_tests;

@@ -2226,6 +2226,7 @@ dependencies = [
  "tokio",
  "url",
  "urlencoding",
+ "zip",
 ]
 
 [[package]]

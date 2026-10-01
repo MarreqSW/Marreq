@@ -7,7 +7,9 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{NewRequirement, User};
 use crate::repository::errors::RepoError;
 use crate::repository::{AttachmentsRepository, RequirementCommentsRepository, UserRepository};
-use crate::reqif::import::{ImportConfig, ImportResult, object_to_fields, parse_reqif};
+use crate::reqif::import::{
+    ImportConfig, ImportResult, ParsedDocument, object_to_fields, parse_reqif,
+};
 use crate::reqif::mapping;
 use crate::reqif::to_reqif;
 use crate::services::{BaselineService, ProjectService, RequirementService, StatusService};
@@ -237,10 +239,23 @@ impl<'a> ReqIFService<'a> {
         actor: &User,
     ) -> Result<ImportResult, String> {
         let doc = parse_reqif(xml)?;
+        self.import_parsed(&doc, config, actor, &mut std::collections::HashSet::new())
+    }
+
+    /// Import an already parsed document. `reserved_references` carries the
+    /// reference codes taken by earlier documents of the same import (ReqIFZ
+    /// archives can hold several); this document's codes are added to it.
+    pub fn import_parsed(
+        &self,
+        doc: &ParsedDocument,
+        config: &ImportConfig,
+        actor: &User,
+        reserved_references: &mut std::collections::HashSet<String>,
+    ) -> Result<ImportResult, String> {
         let mut preflight_errors = Vec::new();
         let mut preflight_warnings = doc.warnings.clone();
         let mut object_ids = std::collections::HashSet::new();
-        let mut valid_references = std::collections::HashSet::new();
+        let mut valid_references = reserved_references.clone();
         for obj in &doc.objects {
             if obj.id.is_empty() {
                 preflight_errors.push("SPEC-OBJECT without IDENTIFIER".into());
@@ -316,8 +331,10 @@ impl<'a> ReqIFService<'a> {
                 errors: preflight_errors,
                 warnings: preflight_warnings,
                 imported_requirement_ids: Vec::new(),
+                object_requirement_ids: HashMap::new(),
             });
         }
+        reserved_references.extend(planned_references.values().cloned());
 
         let req_service = RequirementService::new(self.state);
         let status_service = StatusService::new(self.state);
@@ -553,6 +570,7 @@ impl<'a> ReqIFService<'a> {
             errors,
             warnings,
             imported_requirement_ids,
+            object_requirement_ids: reqif_id_to_marreq_id,
         })
     }
 }

@@ -393,6 +393,14 @@ fn test_reqif_formatted_xhtml_tables_links_and_images() {
     assert!(text.contains("\nCell A Cell B"), "{text}");
     assert_eq!(doc.xhtml_value_count, 1);
     assert_eq!(doc.attachment_count, 1);
+    // The reference is kept on its SpecObject for ReqIFZ imports (issue #343).
+    assert_eq!(
+        doc.objects[0].object_refs,
+        vec![crate::reqif::ObjectRef {
+            data: "image.png".into(),
+            content_type: Some("image/png".into()),
+        }]
+    );
     assert!(
         doc.warnings
             .iter()

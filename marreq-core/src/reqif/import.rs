@@ -8,7 +8,7 @@
 //! encoding historically emitted by Marreq itself.
 
 use crate::reqif::mapping;
-use crate::reqif::schema::{ParsedHierarchyEdge, ParsedSpecObject, ParsedSpecRelation};
+use crate::reqif::schema::{ObjectRef, ParsedHierarchyEdge, ParsedSpecObject, ParsedSpecRelation};
 use quick_xml::Reader;
 use quick_xml::events::Event;
 use quick_xml::name::QName;
@@ -54,6 +54,8 @@ pub struct ImportResult {
     pub errors: Vec<String>,
     pub warnings: Vec<String>,
     pub imported_requirement_ids: Vec<i32>,
+    /// ReqIF SPEC-OBJECT identifier -> created requirement id (not sent to clients).
+    pub object_requirement_ids: HashMap<String, i32>,
 }
 
 fn local_name(q: QName<'_>) -> String {
@@ -154,6 +156,7 @@ impl Parser {
                     long_name: attr(e, "LONG-NAME"),
                     last_change: attr(e, "LAST-CHANGE"),
                     attributes: HashMap::new(),
+                    object_refs: Vec::new(),
                 });
             }
             "SPEC-RELATION" => {
@@ -247,6 +250,15 @@ impl Parser {
             "object" if attr(e, "data").is_some() => {
                 self.saw_embedded = true;
                 self.doc.attachment_count += 1;
+                if self.in_spec_object
+                    && let (Some(obj), Some(data)) = (self.current_object.as_mut(), attr(e, "data"))
+                    && !obj.object_refs.iter().any(|r| r.data == data)
+                {
+                    obj.object_refs.push(ObjectRef {
+                        data,
+                        content_type: attr(e, "type"),
+                    });
+                }
             }
             _ => {}
         }
@@ -579,6 +591,7 @@ mod tests {
             long_name: None,
             last_change: None,
             attributes: attrs,
+            object_refs: Vec::new(),
         }
     }
 

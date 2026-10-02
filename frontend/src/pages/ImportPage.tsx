@@ -146,7 +146,11 @@ function parseImportKind(value: string): ImportKind {
   return 'requirements';
 }
 
-export default function ImportPage() {
+/**
+ * Excel/CSV and ReqIF import. Under Project settings › Import it is `embedded`:
+ * the hub supplies the page header, so only a short intro is shown.
+ */
+export default function ImportPage({ embedded = false }: { embedded?: boolean }) {
   const { projectId: pid, basePath } = useOutletContext<ProjectOutletContext>();
   const { csrfToken, dashboard } = useDashboard();
   const projectName =
@@ -356,12 +360,18 @@ export default function ImportPage() {
 
   return (
     <div>
-      <StitchPageHeader
-        projectName={projectName}
-        section="Import"
-        title="Import"
-        subtitle="Upload Excel/CSV with column mapping, or ReqIF 1.2 XML using project catalog defaults."
-      />
+      {embedded ? (
+        <p className="text-sm text-stitch-muted mb-6">
+          Upload Excel/CSV with column mapping, or ReqIF 1.2 XML / ReqIFZ using project catalog defaults.
+        </p>
+      ) : (
+        <StitchPageHeader
+          projectName={projectName}
+          section="Import"
+          title="Import"
+          subtitle="Upload Excel/CSV with column mapping, or ReqIF 1.2 XML using project catalog defaults."
+        />
+      )}
 
       {denied ? (
         <div className="rounded-xl border border-stitch-border bg-stitch-surface p-6 text-sm text-stitch-muted">

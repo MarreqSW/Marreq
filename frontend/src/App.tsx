@@ -32,7 +32,11 @@ import ViewRequirementPage from '@/pages/ViewRequirementPage';
 import ViewVerificationPage from '@/pages/ViewVerificationPage';
 import HelpPage from '@/pages/HelpPage';
 import ImportPage from '@/pages/ImportPage';
-import ProjectSettingsPage from '@/pages/ProjectSettingsPage';
+import ProjectSettingsLayout from '@/pages/settings/ProjectSettingsLayout';
+import GeneralSettingsPage from '@/pages/settings/GeneralSettingsPage';
+import MembersSettingsPage from '@/pages/settings/MembersSettingsPage';
+import NotificationSettingsPage from '@/pages/settings/NotificationSettingsPage';
+import StorageSettingsPage from '@/pages/settings/StorageSettingsPage';
 import ProjectCreatePage from '@/pages/ProjectCreatePage';
 import ProjectBundleImportPage from '@/pages/ProjectBundleImportPage';
 import ReportsPage from '@/pages/ReportsPage';
@@ -149,19 +153,27 @@ export default function App() {
           <Route path="baselines/:baselineId" element={<BaselineDetailPage />} />
           <Route path="baselines" element={<BaselinesPage />} />
           <Route path="reports" element={<ReportsPage />} />
-          <Route path="import" element={<ImportPage />} />
-          <Route path="settings" element={<ProjectSettingsPage />} />
-          {/* Old / classic URL; avoid full-page navigation to Rocket (404 on :8000). */}
-          <Route path="members" element={<Navigate to="../settings" replace />} />
-          <Route path="catalog" element={<ProjectCatalogLayout />}>
-            <Route index element={<Navigate to="categories" replace />} />
-            <Route path="categories" element={<CatalogCategoriesPage />} />
-            <Route path="applicability" element={<CatalogApplicabilityPage />} />
-            <Route path="requirement-statuses" element={<CatalogRequirementStatusesPage />} />
-            <Route path="verification-statuses" element={<CatalogVerificationStatusesPage />} />
-            <Route path="custom-fields" element={<CatalogCustomFieldsPage />} />
-            <Route path="verification-methods" element={<CatalogVerificationMethodsPage />} />
+          <Route path="settings" element={<ProjectSettingsLayout />}>
+            <Route index element={<Navigate to="general" replace />} />
+            <Route path="general" element={<GeneralSettingsPage />} />
+            <Route path="members" element={<MembersSettingsPage />} />
+            <Route path="catalog" element={<ProjectCatalogLayout />}>
+              <Route index element={<Navigate to="categories" replace />} />
+              <Route path="categories" element={<CatalogCategoriesPage />} />
+              <Route path="applicability" element={<CatalogApplicabilityPage />} />
+              <Route path="requirement-statuses" element={<CatalogRequirementStatusesPage />} />
+              <Route path="verification-statuses" element={<CatalogVerificationStatusesPage />} />
+              <Route path="custom-fields" element={<CatalogCustomFieldsPage />} />
+              <Route path="verification-methods" element={<CatalogVerificationMethodsPage />} />
+            </Route>
+            <Route path="storage" element={<StorageSettingsPage />} />
+            <Route path="notifications" element={<NotificationSettingsPage />} />
+            <Route path="import" element={<ImportPage embedded />} />
           </Route>
+          {/* Pages that moved into Project settings (issue #346). */}
+          <Route path="import" element={<MovedRedirect to="settings/import" />} />
+          <Route path="members" element={<MovedRedirect to="settings/members" />} />
+          <Route path="catalog/*" element={<MovedRedirect to="settings/catalog" />} />
           <Route path="help" element={<HelpPage />} />
           <Route path="admin/logs" element={<SystemLogsPage />} />
           <Route path="admin/logs/analytics" element={<LogAnalyticsPage />} />

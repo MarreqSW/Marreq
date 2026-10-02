@@ -139,10 +139,10 @@ export default function HelpPage() {
               — project KPIs
             </li>
             <li>
-              <Link to={`${basePath}/import`} className="text-stitch-accent font-semibold hover:underline">
+              <Link to={`${basePath}/settings/import`} className="text-stitch-accent font-semibold hover:underline">
                 Import
               </Link>{' '}
-              — Excel / CSV
+              — Excel / CSV / ReqIF
             </li>
             <li>
               <Link to={`${basePath}/reports`} className="text-stitch-accent font-semibold hover:underline">
@@ -152,9 +152,9 @@ export default function HelpPage() {
             </li>
             <li>
               <Link to={`${basePath}/settings`} className="text-stitch-accent font-semibold hover:underline">
-                Settings
+                Project settings
               </Link>{' '}
-              — permissions & fields
+              — members, catalog, storage
             </li>
           </ul>
         </div>

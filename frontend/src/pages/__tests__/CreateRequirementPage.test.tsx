@@ -230,7 +230,7 @@ describe('CreateRequirementPage duplication', () => {
     expect(screen.getByRole('button', { name: /create requirement/i })).toBeDisabled();
     expect(
       screen.getAllByRole('link', { name: /project settings/i })[0],
-    ).toHaveAttribute('href', '/space-project/settings');
+    ).toHaveAttribute('href', '/space-project/settings/members');
   });
 
   it('prefills from ?template= the same way as ?from=', async () => {

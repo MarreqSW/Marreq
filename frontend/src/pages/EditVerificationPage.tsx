@@ -424,7 +424,7 @@ export default function EditVerificationPage() {
               {reviewerOptionIds.length === 0 ? (
                 <p className="text-xs text-stitch-muted py-2">
                   No project reviewers configured. Add them in{' '}
-                  <Link to={`${basePath}/settings`} className="text-stitch-accent underline font-semibold">
+                  <Link to={`${basePath}/settings/members`} className="text-stitch-accent underline font-semibold">
                     Project settings
                   </Link>
                   .

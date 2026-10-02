@@ -107,12 +107,12 @@ describe('LogAnalyticsPage', () => {
     expect(within(actions).getAllByTestId('ranked-row')).toHaveLength(2);
     expect(within(actions).getByRole('link', { name: 'UPDATE' })).toHaveAttribute(
       'href',
-      `/space-project/admin/logs?since=${rangeStart(30)}T00%3A00&action_type=UPDATE`,
+      `/admin/logs?since=${rangeStart(30)}T00%3A00&action_type=UPDATE`,
     );
     const users = screen.getByRole('list', { name: 'Top users' });
     expect(within(users).getByRole('link', { name: 'alice' })).toHaveAttribute(
       'href',
-      `/space-project/admin/logs?since=${rangeStart(30)}T00%3A00&user_id=1`,
+      `/admin/logs?since=${rangeStart(30)}T00%3A00&user_id=1`,
     );
   });
 

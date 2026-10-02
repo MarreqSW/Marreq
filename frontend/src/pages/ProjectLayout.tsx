@@ -12,6 +12,34 @@ import { getFrontendBuildConstants, shortSha } from '@/utils/semverRange';
 
 const APP_VERSION = 'v0.1.0';
 
+/** Daily work. Configuration lives under Project settings, instance admin under /admin (issue #346). */
+const NAV_ITEMS: { path: string; icon: string; label: string; end?: boolean }[] = [
+  { path: 'dashboard', icon: 'dashboard', label: 'Dashboard', end: true },
+  { path: 'requirements', icon: 'list_alt', label: 'Requirements' },
+  { path: 'verifications', icon: 'verified', label: 'Verifications' },
+  { path: 'traceability', icon: 'account_tree', label: 'Traceability' },
+  { path: 'baselines', icon: 'history_edu', label: 'Baselines' },
+  { path: 'reports', icon: 'description', label: 'Reports & exports' },
+];
+
+const SIDEBAR_WIDE_KEY = 'marreq.sidebar.wide';
+
+function readSidebarWide(): boolean {
+  try {
+    return localStorage.getItem(SIDEBAR_WIDE_KEY) !== '0';
+  } catch {
+    return true;
+  }
+}
+
+function saveSidebarWide(wide: boolean) {
+  try {
+    localStorage.setItem(SIDEBAR_WIDE_KEY, wide ? '1' : '0');
+  } catch {
+    // Private mode / blocked storage: the choice just isn't remembered.
+  }
+}
+
 function userInitials(u: User): string {
   const n = u.name?.trim();
   if (n) {
@@ -30,7 +58,11 @@ export default function ProjectLayout() {
   const navigate = useNavigate();
   const { dashboard, setSelectedProjectId, refresh, logout } = useDashboard();
   const { preference, setPreference } = useTheme();
-  const [sidebarWide, setSidebarWide] = useState(true);
+  const [sidebarWideSetting, setSidebarWideSetting] = useState(readSidebarWide);
+  /** Off-canvas sidebar on narrow screens. */
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const projectMenuRef = useRef<HTMLDivElement | null>(null);
   const ui = getFrontendBuildConstants();
   const { build } = useBuildInfo();
   const uiSha = shortSha(ui.gitSha);
@@ -79,7 +111,7 @@ export default function ProjectLayout() {
               icon: 'list_alt' as const,
             },
             {
-              to: `${basePath}/import`,
+              to: `${basePath}/settings/import`,
               label: 'Import',
               compact: 'Import',
               icon: 'upload_file' as const,
@@ -99,7 +131,7 @@ export default function ProjectLayout() {
               icon: 'verified' as const,
             },
             {
-              to: `${basePath}/import`,
+              to: `${basePath}/settings/import`,
               label: 'Import',
               compact: 'Import',
               icon: 'upload_file' as const,
@@ -111,7 +143,7 @@ export default function ProjectLayout() {
   const primaryCreate = createMenuItems[0];
 
   useEffect(() => {
-    if (!createMenuOpen && !userMenuOpen) return;
+    if (!createMenuOpen && !userMenuOpen && !projectMenuOpen) return;
     const onDown = (e: MouseEvent) => {
       const target = e.target as Node;
       if (createMenuOpen && !createMenuRef.current?.contains(target)) {
@@ -120,11 +152,15 @@ export default function ProjectLayout() {
       if (userMenuOpen && !userMenuRef.current?.contains(target)) {
         setUserMenuOpen(false);
       }
+      if (projectMenuOpen && !projectMenuRef.current?.contains(target)) {
+        setProjectMenuOpen(false);
+      }
     };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setCreateMenuOpen(false);
         setUserMenuOpen(false);
+        setProjectMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', onDown);
@@ -133,7 +169,21 @@ export default function ProjectLayout() {
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [createMenuOpen, userMenuOpen]);
+  }, [createMenuOpen, userMenuOpen, projectMenuOpen]);
+
+  // The drawer closes when a link in it is followed.
+  useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [drawerOpen]);
 
   const invalid = pid == null && projects.length > 0 && !currentProject;
   const user = useMemo(() => parseUser(dashboard?.user), [dashboard?.user]);
@@ -145,6 +195,28 @@ export default function ProjectLayout() {
       </div>
     );
   }
+
+  // In the mobile drawer the sidebar is always shown with labels.
+  const sidebarWide = sidebarWideSetting || drawerOpen;
+  const toggleSidebarWide = () => {
+    setSidebarWideSetting((wide) => {
+      saveSidebarWide(!wide);
+      return !wide;
+    });
+  };
+
+  const switchProject = (id: number) => {
+    setProjectMenuOpen(false);
+    setSelectedProjectId(id);
+    void refresh();
+    const selectedProject = projects.find((p) => p.id === id);
+    if (selectedProject) {
+      const subPath = location.pathname.startsWith(basePath)
+        ? location.pathname.slice(basePath.length)
+        : '/dashboard';
+      navigate(`${selectedProject.project_base_path}${subPath || '/dashboard'}`);
+    }
+  };
 
   const outletContext: ProjectOutletContext = {
     projectId: pid,
@@ -170,19 +242,33 @@ export default function ProjectLayout() {
         } ${!sidebarWide ? 'justify-center px-2' : ''}`
       }
       title={!sidebarWide ? opts.label : undefined}
+      aria-label={opts.label}
     >
-      <span className="material-symbols-outlined text-lg shrink-0">{opts.icon}</span>
+      <span className="material-symbols-outlined text-lg shrink-0" aria-hidden>
+        {opts.icon}
+      </span>
       {sidebarWide ? <span className="truncate">{opts.label}</span> : null}
     </NavLink>
   );
 
   return (
     <div className="stitch-app min-h-screen flex bg-stitch-canvas text-stitch-fg text-stitch font-sans antialiased">
-      {/* SideNavBar */}
+      {drawerOpen ? (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          aria-hidden
+          data-testid="sidebar-backdrop"
+          onClick={() => setDrawerOpen(false)}
+        />
+      ) : null}
+      {/* SideNavBar: sticky column from md up, off-canvas drawer below */}
       <aside
-        className={`flex flex-col h-screen sticky top-0 shrink-0 border-r border-stitch-border bg-stitch-surface z-50 transition-[width] duration-200 ${
-          sidebarWide ? 'w-64' : 'w-18'
-        }`}
+        id="project-sidebar"
+        aria-label="Project navigation"
+        data-drawer-open={drawerOpen ? 'true' : 'false'}
+        className={`flex flex-col h-screen top-0 shrink-0 border-r border-stitch-border bg-stitch-surface z-50 transition-[width,transform] duration-200 fixed left-0 md:sticky md:translate-x-0 ${
+          drawerOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        } ${sidebarWide ? 'w-64' : 'w-18'}`}
       >
         <div className={`px-6 py-8 flex-1 min-h-0 overflow-y-auto ${!sidebarWide ? 'px-3' : ''}`}>
           <div className={`flex items-center gap-3 mb-8 ${!sidebarWide ? 'flex-col' : ''}`}>
@@ -199,105 +285,33 @@ export default function ProjectLayout() {
             ) : null}
           </div>
           <nav className="flex flex-col space-y-1">
-            {sideLink({
-              to: `${basePath}/dashboard`,
-              icon: 'dashboard',
-              label: 'Dashboard',
-              end: true,
-            })}
-            {sideLink({
-              to: `${basePath}/requirements`,
-              icon: 'list_alt',
-              label: 'Requirements',
-            })}
-            {sideLink({
-              to: `${basePath}/verifications`,
-              icon: 'verified',
-              label: 'Verification',
-            })}
-            {sideLink({
-              to: `${basePath}/traceability`,
-              icon: 'account_tree',
-              label: 'Traceability',
-            })}
-            {sideLink({
-              to: `${basePath}/matrix`,
-              icon: 'grid_on',
-              label: 'Matrix',
-            })}
-            {sideLink({
-              to: `${basePath}/baselines`,
-              icon: 'history_edu',
-              label: 'Baselines',
-            })}
-            {sideLink({
-              to: `${basePath}/reports`,
-              icon: 'description',
-              label: 'Reports',
-            })}
-            {sideLink({
-              to: `${basePath}/import`,
-              icon: 'upload_file',
-              label: 'Import',
-            })}
-            {sideLink({
-              to: `${basePath}/catalog`,
-              icon: 'tune',
-              label: 'Catalog',
-            })}
-            {sideLink({
-              to: `${basePath}/admin`,
-              icon: 'admin_panel_settings',
-              label: 'Admin',
-            })}
-            {sideLink({
-              to: `${basePath}/admin/logs`,
-              icon: 'history',
-              label: 'System logs',
-            })}
-            {sideLink({
-              to: `${basePath}/admin/logs/analytics`,
-              icon: 'monitoring',
-              label: 'Log analytics',
-            })}
-            {sideLink({
-              to: `${basePath}/admin/backup`,
-              icon: 'backup',
-              label: 'Backup',
-            })}
+            {NAV_ITEMS.map((item) => (
+              <div key={item.path}>
+                {sideLink({
+                  to: `${basePath}/${item.path}`,
+                  icon: item.icon,
+                  label: item.label,
+                  end: item.end,
+                })}
+              </div>
+            ))}
           </nav>
         </div>
         <div className={`mt-auto px-6 py-6 space-y-2 border-t border-stitch-border ${!sidebarWide ? 'px-2' : ''}`}>
           {sideLink({
             to: `${basePath}/settings`,
             icon: 'settings',
-            label: 'Settings',
+            label: 'Project settings',
           })}
           {sideLink({
             to: `${basePath}/help`,
             icon: 'help',
             label: 'Help',
           })}
-          <Link
-            to="/projects/new"
-            className={`flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider font-bold transition-all rounded-r-md border-l-4 border-transparent text-stitch-muted hover:bg-stitch-elevated hover:text-stitch-fg ${!sidebarWide ? 'justify-center px-2' : ''}`}
-            title={!sidebarWide ? 'New project' : undefined}
-          >
-            <span className="material-symbols-outlined text-lg shrink-0">add_box</span>
-            {sidebarWide ? <span className="truncate">New project</span> : null}
-          </Link>
-          <Link
-            to="/groups"
-            className={`flex items-center gap-3 px-4 py-3 text-xs uppercase tracking-wider font-bold transition-all rounded-r-md border-l-4 border-transparent text-stitch-muted hover:bg-stitch-elevated hover:text-stitch-fg ${!sidebarWide ? 'justify-center px-2' : ''}`}
-            title={!sidebarWide ? 'Groups' : undefined}
-          >
-            <span className="material-symbols-outlined text-lg shrink-0">workspaces</span>
-            {sidebarWide ? <span className="truncate">Groups</span> : null}
-          </Link>
           <button
             type="button"
-            onClick={() => setSidebarWide((w) => !w)}
-            className={`w-full py-2 bg-primary text-white text-[10px] uppercase font-bold tracking-widest rounded-md hover:opacity-90 transition-opacity ${
+            onClick={toggleSidebarWide}
+            className={`hidden md:block w-full py-2 bg-primary text-white text-[10px] uppercase font-bold tracking-widest rounded-md hover:opacity-90 transition-opacity ${
               !sidebarWide ? 'px-1' : ''
             }`}
             title={sidebarWide ? 'Collapse sidebar' : 'Expand sidebar'}
@@ -322,32 +336,85 @@ export default function ProjectLayout() {
         <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-4 w-full px-6 py-3 border-b border-stitch-border bg-stitch-surface/95 backdrop-blur-md shadow-stitch">
           <div className="flex items-center gap-4 md:gap-8 min-w-0 flex-1">
             <div className="flex items-center gap-3 min-w-0">
+              <button
+                type="button"
+                className="md:hidden p-2 -ml-2 rounded-md text-stitch-muted hover:bg-stitch-elevated hover:text-stitch-fg"
+                aria-label="Open navigation"
+                aria-controls="project-sidebar"
+                aria-expanded={drawerOpen}
+                onClick={() => setDrawerOpen(true)}
+              >
+                <span className="material-symbols-outlined text-xl" aria-hidden>
+                  menu
+                </span>
+              </button>
               <h1 className="text-lg md:text-xl font-bold tracking-tight text-stitch-fg truncate">
                 {currentProject?.name ?? 'Project'}
               </h1>
-              <select
-                className="text-stitch max-w-[160px] sm:max-w-[220px] border border-stitch-border rounded-md px-2 py-1.5 bg-stitch-elevated text-stitch-fg text-xs focus:outline-hidden focus:ring-1 focus:ring-stitch-accent/50"
-                value={pid}
-                onChange={(e) => {
-                  const id = Number(e.target.value);
-                  setSelectedProjectId(id);
-                  void refresh();
-                  const selectedProject = projects.find((p) => p.id === id);
-                  if (selectedProject) {
-                    const currentBase = basePath;
-                    const subPath = location.pathname.startsWith(currentBase)
-                      ? location.pathname.slice(currentBase.length)
-                      : '/dashboard';
-                    navigate(`${selectedProject.project_base_path}${subPath || '/dashboard'}`);
-                  }
-                }}
-              >
-                {projects.map((p) => (
-                  <option key={p.id} value={p.id} className="bg-stitch-surface text-stitch-fg">
-                    {p.name}
-                  </option>
-                ))}
-              </select>
+              <div className="relative" ref={projectMenuRef}>
+                <button
+                  type="button"
+                  aria-label="Switch project"
+                  aria-haspopup="menu"
+                  aria-expanded={projectMenuOpen}
+                  onClick={() => setProjectMenuOpen((o) => !o)}
+                  className="inline-flex items-center gap-1 border border-stitch-border rounded-md px-2 py-1.5 bg-stitch-elevated text-stitch-fg text-xs hover:bg-stitch-higher"
+                >
+                  <span className="material-symbols-outlined text-base" aria-hidden>
+                    swap_horiz
+                  </span>
+                  <span className="hidden sm:inline">Projects</span>
+                  <span className="material-symbols-outlined text-base" aria-hidden>
+                    expand_more
+                  </span>
+                </button>
+                {projectMenuOpen ? (
+                  <div
+                    role="menu"
+                    aria-label="Projects"
+                    className="absolute left-0 top-[calc(100%+6px)] min-w-[240px] max-h-[70vh] overflow-y-auto rounded-lg border border-stitch-border bg-stitch-surface shadow-stitch py-1 z-60"
+                  >
+                    {projects.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={p.id === pid}
+                        onClick={() => switchProject(p.id)}
+                        className={`w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-stitch-elevated ${
+                          p.id === pid ? 'font-bold text-stitch-accent' : 'text-stitch-fg'
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-base" aria-hidden>
+                          {p.id === pid ? 'check' : 'folder'}
+                        </span>
+                        <span className="truncate">{p.name}</span>
+                      </button>
+                    ))}
+                    <div className="my-1 border-t border-stitch-border" role="separator" />
+                    {(
+                      [
+                        ['/groups', 'workspaces', 'Groups'],
+                        ['/projects/new', 'add_box', 'New project'],
+                        ['/projects/import-bundle', 'upload_file', 'Import project bundle'],
+                      ] as const
+                    ).map(([to, icon, label]) => (
+                      <Link
+                        key={to}
+                        role="menuitem"
+                        to={to}
+                        onClick={() => setProjectMenuOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-stitch-fg hover:bg-stitch-elevated"
+                      >
+                        <span className="material-symbols-outlined text-base text-stitch-muted" aria-hidden>
+                          {icon}
+                        </span>
+                        {label}
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
             </div>
             <div className="relative hidden md:block min-w-0 flex-1 max-w-md">
               <span className="absolute inset-y-0 left-3 flex items-center text-stitch-muted pointer-events-none">
@@ -364,7 +431,7 @@ export default function ProjectLayout() {
           </div>
           <div className="flex items-center gap-4 shrink-0">
             <div
-              className="flex items-center rounded-lg border border-stitch-border p-0.5 gap-0.5 shrink-0"
+              className="hidden sm:flex items-center rounded-lg border border-stitch-border p-0.5 gap-0.5 shrink-0"
               role="group"
               aria-label="Color scheme"
             >
@@ -393,13 +460,6 @@ export default function ProjectLayout() {
             </div>
             <div className="hidden sm:flex items-center gap-1 text-stitch-muted">
               <NotificationPanel />
-              <Link
-                to={`${basePath}/settings`}
-                className="hover:bg-stitch-elevated p-2 rounded-full transition-colors text-stitch-muted"
-                title="Settings"
-              >
-                <span className="material-symbols-outlined text-xl">settings</span>
-              </Link>
             </div>
             <div className="relative inline-flex" ref={createMenuRef}>
               <div className="inline-flex rounded-md shadow-lg overflow-hidden">
@@ -479,6 +539,17 @@ export default function ProjectLayout() {
                   >
                     Account settings
                   </Link>
+                  {user?.is_admin ? (
+                    <Link
+                      role="menuitem"
+                      to="/admin"
+                      state={{ from: basePath }}
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-stitch-fg hover:bg-stitch-elevated transition-colors"
+                    >
+                      Administration
+                    </Link>
+                  ) : null}
                   <Link
                     role="menuitem"
                     to="/change-password"

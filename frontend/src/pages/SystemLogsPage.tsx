@@ -1,5 +1,5 @@
 import { Fragment, FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
   cleanupAdminLogs,
   downloadAdminLogsJson,
@@ -15,12 +15,12 @@ import type { AdminLogItem, AdminLogListParams } from '@/api/types';
 import { Pagination } from '@/components/table/Pagination';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import { useDashboard } from '@/context/DashboardContext';
-import type { ProjectOutletContext } from '@/types/projectOutlet';
 import {
   formatLogChangeValue,
   type CatalogLabelMaps,
 } from '@/utils/formatLogChangeValue';
 import { parseUser } from '@/utils/parseUser';
+import { ADMIN_BREADCRUMB } from '@/pages/admin/adminArea';
 
 const PAGE_SIZE = 50;
 const inputClass =
@@ -45,7 +45,6 @@ function optionalText(raw: string): string | undefined {
 }
 
 export default function SystemLogsPage() {
-  const { projectId: pid, basePath } = useOutletContext<ProjectOutletContext>();
   const { dashboard, csrfToken } = useDashboard();
   const me = parseUser(dashboard?.user);
   // Drill-down links (e.g. from Log analytics) may pre-set filters via the query string.
@@ -84,8 +83,7 @@ export default function SystemLogsPage() {
     methodById: new Map(),
   });
 
-  const projectName =
-    dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
+  const projectName = ADMIN_BREADCRUMB;
 
   const filterParams = useCallback(
     (pageNum: number): AdminLogListParams => ({
@@ -217,7 +215,7 @@ export default function SystemLogsPage() {
       <div>
         <StitchPageHeader
           projectName={projectName}
-          section="Admin"
+          section="System logs"
           title="System logs"
           subtitle="Restricted area."
         />
@@ -239,23 +237,10 @@ export default function SystemLogsPage() {
     <div>
       <StitchPageHeader
         projectName={projectName}
-        section="Admin"
+        section="System logs"
         title="System logs"
-        subtitle="Instance-wide audit trail. The project in the URL is only for navigation."
-      >
-        <Link
-          to={`${basePath}/admin/logs/analytics`}
-          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
-        >
-          Analytics
-        </Link>
-        <Link
-          to={`${basePath}/admin`}
-          className="text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher"
-        >
-          User directory
-        </Link>
-      </StitchPageHeader>
+        subtitle="Instance-wide audit trail of every project."
+      />
 
       <form
         onSubmit={onApplyFilters}

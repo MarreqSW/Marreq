@@ -149,10 +149,8 @@ describe('SystemLogsPage', () => {
         }),
       ),
     );
-    expect(screen.getByRole('link', { name: 'Analytics' })).toHaveAttribute(
-      'href',
-      '/space-project/admin/logs/analytics',
-    );
+    // Moving between admin pages is the AdminLayout tab bar's job now.
+    expect(screen.queryByRole('link', { name: 'Analytics' })).not.toBeInTheDocument();
   });
 
   it('exports JSON and runs cleanup after confirm', async () => {

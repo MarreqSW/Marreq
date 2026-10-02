@@ -14,7 +14,6 @@ import {
 } from '@/api/client';
 import RequirementVersionDiffDialog from '@/components/RequirementVersionDiffDialog';
 import { StatusBadge } from '@/components/StatusBadge';
-import StitchPageHeader from '@/components/StitchPageHeader';
 import MatrixGrid, {
   type MatrixCellItem,
   type MatrixColItem,
@@ -94,10 +93,14 @@ type Selection =
       seq: number;
     };
 
-export default function MatrixPage() {
+/**
+ * Requirement × verification matrix, shown as the Matrix tab of Traceability.
+ * Filters live in `mx_*` URL params, so they survive switching tabs.
+ */
+export default function MatrixView() {
   const { globalSearch, basePath, projectId } = useOutletContext<ProjectOutletContext>();
   const pid = projectId;
-  const { csrfToken, dashboard } = useDashboard();
+  const { csrfToken } = useDashboard();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const params = useMemo(() => readMatrixParams(searchParams), [searchParams]);
@@ -500,8 +503,6 @@ export default function MatrixPage() {
   const seq = () => (selection?.seq ?? 0) + 1;
   const toggleSelection = (next: Selection, isSame: boolean) => setSelection(isSame ? null : next);
 
-  const projectName = dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
-
   if (loading && reqs.length === 0) {
     return (
       <div className="p-8 text-center text-stitch-muted text-sm border border-stitch-border rounded-xl bg-stitch-surface">
@@ -535,19 +536,14 @@ export default function MatrixPage() {
 
   return (
     <div className="space-y-4">
-      <StitchPageHeader
-        projectName={projectName}
-        section="Matrix"
-        title="Traceability matrix"
-        subtitle="Requirements in rows (grouped by category), verifications in columns. Symbols show the verification status of each link; click a verification code to sort rows by that column."
-      >
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <button type="button" onClick={() => void onExport()} disabled={exporting} className={headerButton}>
           {exporting ? 'Exporting…' : 'Export Excel'}
         </button>
         <button type="button" onClick={() => void load()} className={headerButton}>
           Refresh
         </button>
-      </StitchPageHeader>
+      </div>
 
       <div className="rounded-xl border border-stitch-border bg-stitch-surface p-4 space-y-3">
         <div className="flex flex-wrap items-center gap-2">

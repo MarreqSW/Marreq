@@ -1308,15 +1308,24 @@ impl<R: Repository> ProjectsRepository for CacheRepository<R> {
         Ok(res)
     }
 
-    fn delete_project(&mut self, project_id: i32) -> Result<Project, RepoError> {
-        let proj = self.inner.delete_project(project_id)?;
+    fn delete_project(
+        &mut self,
+        project_id: i32,
+    ) -> Result<crate::repository::ProjectPurge, RepoError> {
+        let purge = self.inner.delete_project(project_id)?;
+        let proj = &purge.project;
         self.cache.invalidate_project(project_id);
         self.cache.invalidate_project_slug(&proj.slug);
-        if let Ok(namespace) = project_namespace_segment(&self.inner, &proj) {
+        if let Ok(namespace) = project_namespace_segment(&self.inner, proj) {
             self.cache
                 .invalidate_project_namespace_slug(&namespace, &proj.slug);
         }
-        Ok(proj)
+        // Permission checks read per-user membership lists.
+        for &user_id in &purge.member_ids {
+            self.cache
+                .invalidate_project_membership(project_id, user_id);
+        }
+        Ok(purge)
     }
 }
 

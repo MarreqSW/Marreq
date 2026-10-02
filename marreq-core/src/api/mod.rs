@@ -240,6 +240,7 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         members::put_project_reviewers,
         projects::create,
         projects::update,
+        projects::delete,
         groups::list,
         groups::list_creatable,
         groups::get,

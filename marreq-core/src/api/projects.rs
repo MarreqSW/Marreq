@@ -6,7 +6,7 @@
 use rocket::serde::{Deserialize, Deserializer};
 
 use crate::api::prelude::*;
-use crate::auth::guards::{ApiUserOrBearer, ProjectAccessOrBearer};
+use crate::auth::guards::{ApiUserOrBearer, ProjectAccess, ProjectAccessOrBearer};
 use crate::models::{NewProject, Project, UpdateProject};
 use crate::namespaces::project_base_path;
 use crate::repository::{GroupsRepository, ProjectMembersRepository};
@@ -165,6 +165,42 @@ pub async fn update(
         .update(user, project_id, payload)
         .map_err(ApiError::from)?;
     Ok(Json(project_json(&project)))
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(crate = "rocket::serde", deny_unknown_fields)]
+pub struct DeleteProjectRequest {
+    /// Must equal the project's slug, so a project is never deleted by mistake.
+    pub confirm_slug: String,
+}
+
+/// DELETE /api/projects/<project_id> — delete the project and everything in it (issue #349).
+///
+/// Only the project owner or an instance administrator, and only from a browser
+/// session (API tokens and MCP clients cannot delete projects). The body must
+/// repeat the project's slug. The deletion is recorded in the audit log.
+#[delete("/projects/<project_id>", data = "<body>")]
+pub async fn delete(
+    access: ProjectAccess,
+    project_id: i32,
+    state: &State<AppState>,
+    body: Json<DeleteProjectRequest>,
+) -> ApiResult<Status> {
+    let user = access.user();
+    let service = ProjectService::new(state.inner());
+    let project = service.get_by_id(project_id).map_err(ApiError::from)?;
+    if !ProjectService::can_delete(user, &project) {
+        return Err(ApiError::Forbidden(
+            "only the project owner or an instance administrator can delete this project".into(),
+        ));
+    }
+    if body.confirm_slug.trim() != project.slug {
+        return Err(ApiError::BadRequest(
+            "confirm_slug does not match the project".into(),
+        ));
+    }
+    service.delete(user, project_id).map_err(ApiError::from)?;
+    Ok(Status::NoContent)
 }
 
 #[cfg(test)]
@@ -634,5 +670,154 @@ mod tests {
         let (status, _) = patch_as(&client, Some(INSTANCE_ADMIN), json!({ "group_id": 20 })).await;
         assert_eq!(status, Status::Ok);
         assert_eq!(stored(&client).group_id, Some(20));
+    }
+
+    // ── DELETE /api/projects/<id> (issue #349) ──────────────────────────
+
+    const SECOND_ADMIN: i32 = 8; // project Admin, not the owner
+
+    fn delete_repo() -> DieselRepoMock {
+        use crate::models::ProjectMember;
+        use crate::permissions::ROLE_ADMIN;
+        let mut repo = edit_repo();
+        repo.users.insert(
+            SECOND_ADMIN,
+            DieselRepoMock::make_user(SECOND_ADMIN, "frank", ""),
+        );
+        repo.project_members.push(ProjectMember {
+            project_id: PROJECT,
+            user_id: SECOND_ADMIN,
+            role: ROLE_ADMIN,
+            created_at: timestamp(),
+            updated_at: timestamp(),
+        });
+        repo
+    }
+
+    async fn delete_client(repo: DieselRepoMock) -> Client {
+        let state = AppState {
+            repo: Arc::new(RwLock::new(CacheRepository::new(repo, 0))),
+        };
+        Client::tracked(rocket::build().manage(state).mount("/api", routes![delete]))
+            .await
+            .expect("client")
+    }
+
+    async fn delete_as(
+        client: &Client,
+        user_id: Option<i32>,
+        project_id: i32,
+        body: Value,
+    ) -> Status {
+        let mut request = client
+            .delete(format!("/api/projects/{project_id}"))
+            .header(ContentType::JSON)
+            .body(body.to_string());
+        if let Some(user_id) = user_id {
+            let state = client.rocket().state::<TestState>().unwrap();
+            request = request.private_cookie(test_session_cookie_for(state, user_id));
+        }
+        request.dispatch().await.status()
+    }
+
+    fn project_exists(client: &Client) -> bool {
+        let state = client.rocket().state::<TestState>().unwrap();
+        state
+            .repo_read()
+            .inner_repo()
+            .projects
+            .contains_key(&PROJECT)
+    }
+
+    #[rocket::async_test]
+    async fn the_owner_deletes_the_project() {
+        let client = delete_client(delete_repo()).await;
+        let status = delete_as(
+            &client,
+            Some(ADMIN_MEMBER),
+            PROJECT,
+            json!({ "confirm_slug": "space-project" }),
+        )
+        .await;
+        assert_eq!(status, Status::NoContent);
+        assert!(!project_exists(&client));
+        let state = client.rocket().state::<TestState>().unwrap();
+        let repo = state.repo_read();
+        assert!(
+            repo.inner_repo()
+                .project_members
+                .iter()
+                .all(|m| m.project_id != PROJECT)
+        );
+    }
+
+    #[rocket::async_test]
+    async fn an_instance_admin_who_is_not_a_member_deletes_the_project() {
+        let client = delete_client(delete_repo()).await;
+        let status = delete_as(
+            &client,
+            Some(INSTANCE_ADMIN),
+            PROJECT,
+            json!({ "confirm_slug": "space-project" }),
+        )
+        .await;
+        assert_eq!(status, Status::NoContent);
+        assert!(!project_exists(&client));
+    }
+
+    #[rocket::async_test]
+    async fn only_the_owner_or_an_instance_admin_may_delete() {
+        let client = delete_client(delete_repo()).await;
+        for user in [SECOND_ADMIN, VIEWER_MEMBER, AUTHOR_MEMBER, OUTSIDER] {
+            let status = delete_as(
+                &client,
+                Some(user),
+                PROJECT,
+                json!({ "confirm_slug": "space-project" }),
+            )
+            .await;
+            assert_eq!(status, Status::Forbidden, "user {user}");
+        }
+        assert_eq!(
+            delete_as(
+                &client,
+                None,
+                PROJECT,
+                json!({ "confirm_slug": "space-project" })
+            )
+            .await,
+            Status::Unauthorized
+        );
+        assert!(project_exists(&client));
+    }
+
+    #[rocket::async_test]
+    async fn the_slug_must_be_confirmed() {
+        let client = delete_client(delete_repo()).await;
+        assert_eq!(
+            delete_as(
+                &client,
+                Some(ADMIN_MEMBER),
+                PROJECT,
+                json!({ "confirm_slug": "Space Project" })
+            )
+            .await,
+            Status::BadRequest
+        );
+        assert_eq!(
+            delete_as(&client, Some(ADMIN_MEMBER), PROJECT, json!({})).await,
+            Status::UnprocessableEntity
+        );
+        assert!(project_exists(&client));
+        assert_eq!(
+            delete_as(
+                &client,
+                Some(INSTANCE_ADMIN),
+                999,
+                json!({ "confirm_slug": "x" })
+            )
+            .await,
+            Status::NotFound
+        );
     }
 }

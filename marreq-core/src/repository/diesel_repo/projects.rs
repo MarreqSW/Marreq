@@ -6,8 +6,8 @@ use crate::models::entities::*;
 use crate::models::forms::*;
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    GroupsRepository, ProjectMembersRepository, ProjectReviewersRepository, ProjectsRepository,
-    UserRepository,
+    GroupsRepository, ProjectMembersRepository, ProjectPurge, ProjectReviewersRepository,
+    ProjectsRepository, UserRepository,
 };
 use crate::schema;
 use diesel::pg::upsert::excluded;
@@ -305,21 +305,112 @@ impl ProjectsRepository for DieselRepo {
         Ok(updated > 0)
     }
 
-    fn delete_project(&mut self, project_id_param: i32) -> Result<Project, RepoError> {
-        use schema::projects::dsl;
+    fn delete_project(&mut self, project_id_param: i32) -> Result<ProjectPurge, RepoError> {
+        use diesel::sql_types::{BigInt, Integer, Text};
+
+        #[derive(QueryableByName)]
+        struct Count {
+            #[diesel(sql_type = BigInt)]
+            n: i64,
+        }
+        #[derive(QueryableByName)]
+        struct Sha {
+            #[diesel(sql_type = Text)]
+            sha256: String,
+        }
+
         let mut conn = self.get_conn()?;
-        let proj = dsl::projects
-            .filter(dsl::id.eq(project_id_param))
-            .get_result::<Project>(conn.as_mut())
-            .map_err(|e| {
-                if e == diesel::result::Error::NotFound {
-                    RepoError::NotFound
-                } else {
-                    e.into()
-                }
-            })?;
-        diesel::delete(dsl::projects.filter(dsl::id.eq(project_id_param)))
-            .execute(conn.as_mut())?;
-        Ok(proj)
+        conn.as_mut().transaction::<_, RepoError, _>(|conn| {
+            use schema::projects::dsl;
+            let project = dsl::projects
+                .filter(dsl::id.eq(project_id_param))
+                .for_update()
+                .get_result::<Project>(conn)
+                .map_err(|e| {
+                    if e == diesel::result::Error::NotFound {
+                        RepoError::NotFound
+                    } else {
+                        e.into()
+                    }
+                })?;
+            let count = |conn: &mut PgConnection, table: &str| -> Result<i64, RepoError> {
+                let row: Count = diesel::sql_query(format!(
+                    "SELECT count(*)::BIGINT AS n FROM {table} WHERE project_id = $1"
+                ))
+                .bind::<Integer, _>(project_id_param)
+                .get_result(conn)?;
+                Ok(row.n)
+            };
+            let requirements = count(conn, "requirements")?;
+            let verifications = count(conn, "verifications")?;
+            let baselines = count(conn, "baselines")?;
+            let attachments = count(conn, "attachments")?;
+            let attachment_blobs = diesel::sql_query(
+                "SELECT DISTINCT sha256::TEXT AS sha256 FROM attachments WHERE project_id = $1",
+            )
+            .bind::<Integer, _>(project_id_param)
+            .load::<Sha>(conn)?
+            .into_iter()
+            .map(|r| r.sha256)
+            .collect();
+            let member_ids = schema::project_members::table
+                .filter(schema::project_members::project_id.eq(project_id_param))
+                .select(schema::project_members::user_id)
+                .load::<i32>(conn)?;
+
+            // Lets the immutability triggers accept these DELETEs; ends with the transaction.
+            diesel::sql_query("SELECT set_config('marreq.purging_project', $1, true)")
+                .bind::<Text, _>(project_id_param.to_string())
+                .execute(conn)?;
+
+            // Order matters: RESTRICT foreign keys (baseline snapshots → versions,
+            // baselines → saved views, baseline_attachments → attachments) and the
+            // matrix consistency trigger, which a SET NULL from a version delete
+            // would fire on rows whose requirement is already gone.
+            const STEPS: &[&str] = &[
+                "DELETE FROM baseline_attachments WHERE baseline_id IN (SELECT id FROM baselines WHERE project_id = $1)",
+                "DELETE FROM baseline_requirements WHERE baseline_id IN (SELECT id FROM baselines WHERE project_id = $1)",
+                "DELETE FROM baseline_traceability WHERE baseline_id IN (SELECT id FROM baselines WHERE project_id = $1)",
+                "DELETE FROM baseline_verifications WHERE baseline_id IN (SELECT id FROM baselines WHERE project_id = $1)",
+                "DELETE FROM baselines WHERE project_id = $1",
+                "DELETE FROM saved_views WHERE project_id = $1",
+                "DELETE FROM attachments WHERE project_id = $1",
+                "DELETE FROM project_storage_quotas WHERE project_id = $1",
+                "DELETE FROM matrix WHERE project_id = $1",
+                "DELETE FROM requirement_version_links WHERE project_id = $1",
+                // Cascades versions, verification methods, custom values, comments, embeddings.
+                "DELETE FROM requirements WHERE project_id = $1",
+                "DELETE FROM verifications WHERE project_id = $1",
+                "DELETE FROM custom_field_definitions WHERE project_id = $1",
+                "DELETE FROM categories WHERE project_id = $1",
+                "DELETE FROM applicability WHERE project_id = $1",
+                "DELETE FROM requirement_status WHERE project_id = $1",
+                "DELETE FROM verification_status WHERE project_id = $1",
+                "DELETE FROM verification_methods WHERE project_id = $1",
+                // Members, reviewers, tokens, notifications cascade; logs keep their rows.
+                "DELETE FROM projects WHERE id = $1",
+            ];
+            for step in STEPS {
+                diesel::sql_query(*step)
+                    .bind::<Integer, _>(project_id_param)
+                    .execute(conn)?;
+            }
+            let target = format!("project:{project_id_param}");
+            diesel::sql_query(
+                "DELETE FROM mcp_idempotency WHERE target_key = $1 OR target_key LIKE $1 || ':%'",
+            )
+            .bind::<Text, _>(target)
+            .execute(conn)?;
+
+            Ok(ProjectPurge {
+                project,
+                requirements,
+                verifications,
+                baselines,
+                attachments,
+                attachment_blobs,
+                member_ids,
+            })
+        })
     }
 }

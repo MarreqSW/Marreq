@@ -461,7 +461,25 @@ pub trait ProjectsRepository {
 
     fn insert_new_project(&mut self, new: &NewProjectRow) -> Result<i32, RepoError>;
     fn edit_project(&mut self, project_id: i32, update: &UpdateProject) -> Result<bool, RepoError>;
-    fn delete_project(&mut self, project_id: i32) -> Result<Project, RepoError>;
+    /// Delete the project and everything in it (issue #349), in one
+    /// transaction. Baselines and locked saved views go too. Audit log rows
+    /// are kept with `project_id` cleared.
+    fn delete_project(&mut self, project_id: i32) -> Result<ProjectPurge, RepoError>;
+}
+
+/// What [`ProjectsRepository::delete_project`] removed.
+#[derive(Debug, Clone)]
+pub struct ProjectPurge {
+    pub project: Project,
+    pub requirements: i64,
+    pub verifications: i64,
+    pub baselines: i64,
+    pub attachments: i64,
+    /// Distinct attachment file hashes the project used; the caller removes
+    /// the files nothing else references.
+    pub attachment_blobs: Vec<String>,
+    /// Former members, for cache invalidation.
+    pub member_ids: Vec<i32>,
 }
 
 pub trait ProjectMembersRepository {

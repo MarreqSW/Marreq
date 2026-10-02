@@ -6,13 +6,17 @@
 use crate::app::{AppState, DieselCachedRepo};
 use crate::helper_functions::generate_unique_project_slug;
 use crate::models::NewVerificationMethod;
+use crate::models::{ActionType, EntityType, NewLog};
 use crate::models::{
     NewApplicability, NewCategory, NewProject, NewProjectMember, NewProjectRow, Project,
     UpdateProject, User,
 };
 use crate::namespaces::{NamespaceEntity, resolve_project_namespace_entity};
 use crate::repository::errors::RepoError;
-use crate::repository::{LookupRepository, ProjectMembersRepository, ProjectsRepository};
+use crate::repository::{
+    AttachmentsRepository, LogRepository, LookupRepository, ProjectMembersRepository, ProjectPurge,
+    ProjectsRepository,
+};
 use crate::services::AuditLog;
 use crate::services::status_service::StatusService;
 use crate::services::{ApplicabilityService, CategoryService};
@@ -221,15 +225,60 @@ impl<'a> ProjectService<'a> {
         Ok(after)
     }
 
-    /// Delete a project entry and log the removal.
-    pub fn delete(&self, actor: &User, id: i32) -> Result<Project, RepoError> {
-        let removed = {
-            let mut repo = self.state.repo_write();
-            repo.delete_project(id)?
-        };
+    /// Whether `actor` may delete the project: its owner or an instance
+    /// administrator (issue #349). Other project Admins may not.
+    pub fn can_delete(actor: &User, project: &Project) -> bool {
+        actor.is_admin || project.owner_id == Some(actor.id)
+    }
 
-        self.audit_deleted(actor, &removed);
-        Ok(removed)
+    /// Delete a project and everything in it (issue #349), then remove the
+    /// attachment files no other project uses and record the deletion in the
+    /// audit log. The log entry has no `project_id`, so it outlives the project.
+    pub fn delete(&self, actor: &User, id: i32) -> Result<ProjectPurge, RepoError> {
+        let project = self.get_by_id(id)?;
+        if !Self::can_delete(actor, &project) {
+            return Err(RepoError::Unauthorized);
+        }
+        let purge = self.state.repo_write().delete_project(id)?;
+
+        if let Some(storage) = crate::storage::installed() {
+            for sha in &purge.attachment_blobs {
+                let state = self.state;
+                let _ = storage.delete_if_unused(sha, || {
+                    state
+                        .repo_read()
+                        .attachment_blob_in_use(sha)
+                        .unwrap_or(true)
+                });
+            }
+        }
+
+        let p = &purge.project;
+        let log = NewLog {
+            user_id: actor.id,
+            action_type: ActionType::Delete.to_string(),
+            entity_type: EntityType::Project.to_string(),
+            entity_id: Some(p.id),
+            project_id: None,
+            old_values: serde_json::to_string(p).ok(),
+            new_values: None,
+            description: Some(format!(
+                "Deleted project {} ({}): {} requirements, {} verifications, {} baselines, {} attachments",
+                p.name,
+                p.slug,
+                purge.requirements,
+                purge.verifications,
+                purge.baselines,
+                purge.attachments
+            )),
+            ip_address: None,
+            user_agent: None,
+        };
+        if let Err(_e) = self.state.repo_write().insert_log(&log) {
+            #[cfg(debug_assertions)]
+            eprintln!("audit: failed to log deletion of project {}: {_e}", p.id);
+        }
+        Ok(purge)
     }
 
     fn prepare_new_payload(&self, payload: &mut NewProject) -> Result<(), RepoError> {
@@ -609,16 +658,93 @@ mod tests {
         assert_eq!(projects[1].name, "Beta Initiative");
     }
 
+    fn owned_by(id: i32, name: &str, owner: i32) -> Project {
+        Project {
+            owner_id: Some(owner),
+            ..project(id, name)
+        }
+    }
+
+    fn requirement_in(id: i32, project_id: i32) -> crate::models::Requirement {
+        crate::models::Requirement {
+            id,
+            current_version_id: None,
+            same_as_current: None,
+            title: format!("R{id}"),
+            description: String::new(),
+            status_id: 1,
+            author_id: 7,
+            reviewer_id: 7,
+            reference_code: format!("REQ-{id}"),
+            category_id: 1,
+            parent_id: None,
+            creation_date: timestamp(),
+            update_date: timestamp(),
+            deadline_date: None,
+            applicability_id: 1,
+            justification: None,
+            project_id,
+            approval_state: "draft".into(),
+            approved_by: None,
+            approved_at: None,
+            custom_fields: None,
+        }
+    }
+
     #[test]
-    fn delete_removes_project() {
+    fn the_owner_deletes_the_project_and_its_data_only() {
         let mut repo = DieselRepoMock::default();
-        repo.projects.insert(4, project(4, "To remove"));
+        repo.projects.insert(4, owned_by(4, "To remove", 7));
+        repo.projects.insert(5, owned_by(5, "Keep", 7));
+        repo.requirements.insert(40, requirement_in(40, 4));
+        repo.requirements.insert(50, requirement_in(50, 5));
         let state = state_with_repo(repo);
         let service = ProjectService::new(&state);
 
-        let deleted = service.delete(&actor(), 4).unwrap();
-        assert_eq!(deleted.id, 4);
+        let purge = service.delete(&actor(), 4).unwrap();
+        assert_eq!(purge.project.id, 4);
+        assert_eq!(purge.requirements, 1);
         assert!(matches!(service.get_by_id(4), Err(RepoError::NotFound)));
+        assert!(service.get_by_id(5).is_ok());
+
+        let repo = state.repo_read();
+        let inner = repo.inner_repo();
+        assert!(!inner.requirements.contains_key(&40));
+        assert!(inner.requirements.contains_key(&50));
+        let log = inner.logs.last().expect("audit entry");
+        assert_eq!(log.action_type, "DELETE");
+        assert_eq!(log.entity_type, "PROJECT");
+        assert_eq!(log.entity_id, Some(4));
+        assert_eq!(log.project_id, None, "the entry must outlive the project");
+        assert!(
+            log.description
+                .as_deref()
+                .unwrap()
+                .contains("1 requirements")
+        );
+    }
+
+    #[test]
+    fn an_instance_admin_may_delete_but_other_project_admins_may_not() {
+        let mut repo = DieselRepoMock::default();
+        repo.projects
+            .insert(4, owned_by(4, "Owned by someone else", 99));
+        let state = state_with_repo(repo);
+        let service = ProjectService::new(&state);
+
+        assert!(matches!(
+            service.delete(&actor(), 4),
+            Err(RepoError::Unauthorized)
+        ));
+        assert!(service.get_by_id(4).is_ok());
+
+        let mut admin = actor();
+        admin.is_admin = true;
+        assert!(service.delete(&admin, 4).is_ok());
+        assert!(matches!(
+            service.delete(&admin, 4),
+            Err(RepoError::NotFound)
+        ));
     }
 
     #[test]

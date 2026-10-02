@@ -2373,10 +2373,118 @@ impl ProjectsRepository for DieselRepoMock {
         }
     }
 
-    fn delete_project(&mut self, _project_id: i32) -> Result<Project, RepoError> {
-        self.projects
-            .remove(&_project_id)
-            .ok_or(RepoError::NotFound)
+    fn delete_project(
+        &mut self,
+        project_id: i32,
+    ) -> Result<crate::repository::ProjectPurge, RepoError> {
+        let project = self
+            .projects
+            .remove(&project_id)
+            .ok_or(RepoError::NotFound)?;
+        let req_ids: std::collections::HashSet<i32> = self
+            .requirements
+            .values()
+            .filter(|r| r.project_id == project_id)
+            .map(|r| r.id)
+            .collect();
+        let ver_ids: std::collections::HashSet<i32> = self
+            .verifications
+            .values()
+            .filter(|v| v.project_id == project_id)
+            .map(|v| v.id)
+            .collect();
+        let version_ids: std::collections::HashSet<i32> = self
+            .requirement_versions
+            .values()
+            .filter(|v| req_ids.contains(&v.requirement_id))
+            .map(|v| v.id)
+            .collect();
+        let baseline_ids: std::collections::HashSet<i32> = self
+            .baselines
+            .iter()
+            .filter(|b| b.project_id == project_id)
+            .map(|b| b.id)
+            .collect();
+        let project_attachments: Vec<&crate::models::Attachment> = self
+            .attachments
+            .iter()
+            .filter(|a| a.project_id == project_id)
+            .collect();
+        let attachments = project_attachments.len() as i64;
+        let mut attachment_blobs: Vec<String> = project_attachments
+            .iter()
+            .map(|a| a.sha256.clone())
+            .collect();
+        attachment_blobs.sort();
+        attachment_blobs.dedup();
+        let member_ids: Vec<i32> = self
+            .project_members
+            .iter()
+            .filter(|m| m.project_id == project_id)
+            .map(|m| m.user_id)
+            .collect();
+        let purge = crate::repository::ProjectPurge {
+            project,
+            requirements: req_ids.len() as i64,
+            verifications: ver_ids.len() as i64,
+            baselines: baseline_ids.len() as i64,
+            attachments,
+            attachment_blobs,
+            member_ids,
+        };
+
+        self.baseline_requirements
+            .retain(|b| !baseline_ids.contains(&b.baseline_id));
+        self.baseline_traceability
+            .retain(|b| !baseline_ids.contains(&b.baseline_id));
+        self.baseline_verifications
+            .retain(|b| !baseline_ids.contains(&b.baseline_id));
+        self.baseline_attachments
+            .retain(|(b, _)| !baseline_ids.contains(b));
+        self.baselines.retain(|b| b.project_id != project_id);
+        self.saved_views.retain(|v| v.project_id != project_id);
+        self.attachments.retain(|a| a.project_id != project_id);
+        self.project_storage_quotas.remove(&project_id);
+        self.matrices.retain(|m| m.project_id != project_id);
+        self.requirement_version_links
+            .retain(|l| l.project_id != project_id);
+        self.requirement_comments
+            .retain(|c| !req_ids.contains(&c.requirement_id));
+        self.custom_field_values
+            .retain(|(v, _, _)| !version_ids.contains(v));
+        self.requirement_verification_methods
+            .retain(|(r, _)| !req_ids.contains(r));
+        self.requirement_versions
+            .retain(|_, v| !req_ids.contains(&v.requirement_id));
+        self.requirements.retain(|_, r| r.project_id != project_id);
+        self.verifications.retain(|_, v| v.project_id != project_id);
+        self.custom_field_definitions
+            .retain(|_, d| d.project_id != project_id);
+        self.categories.retain(|_, c| c.project_id != project_id);
+        self.applicability.retain(|_, a| a.project_id != project_id);
+        self.requirement_statuses
+            .retain(|_, st| st.project_id != project_id);
+        self.statuses.retain(|_, st| st.project_id != project_id);
+        self.verification_statuses
+            .retain(|_, st| st.project_id != project_id);
+        self.verification_methods
+            .retain(|_, m| m.project_id != project_id);
+        self.project_members.retain(|m| m.project_id != project_id);
+        self.project_reviewers.remove(&project_id);
+        self.notifications
+            .retain(|n| n.project_id != Some(project_id));
+        self.notification_preferences
+            .retain(|n| n.project_id != project_id);
+        self.api_tokens
+            .retain(|_, (_, scope)| *scope != Some(project_id));
+        for log in self
+            .logs
+            .iter_mut()
+            .filter(|l| l.project_id == Some(project_id))
+        {
+            log.project_id = None;
+        }
+        Ok(purge)
     }
 }
 

@@ -39,6 +39,22 @@ export async function updateProject(
   });
 }
 
+/**
+ * Permanently delete a project and all its data (owner or instance admin).
+ * `confirmSlug` must equal the project's slug.
+ */
+export async function deleteProject(
+  projectId: number,
+  confirmSlug: string,
+  csrfToken: string,
+): Promise<void> {
+  await fetchJson(`/api/projects/${projectId}`, {
+    method: 'DELETE',
+    headers: { ...JSON_HEADERS, 'X-CSRF-Token': csrfToken },
+    body: JSON.stringify({ confirm_slug: confirmSlug }),
+  });
+}
+
 export async function getProjectFromPath(slug: string): Promise<ProjectFromPath> {
   return fetchJson<ProjectFromPath>(`/api/project-from-path/${encodeURIComponent(slug)}`);
 }

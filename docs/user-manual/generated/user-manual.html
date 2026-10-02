@@ -261,6 +261,8 @@ id="toc-creating-a-project-admin">3.2 Creating a Project
 a Project</a></li>
 <li><a href="#project-storage" id="toc-project-storage">3.4 Project
 Storage</a></li>
+<li><a href="#deleting-a-project" id="toc-deleting-a-project">3.5
+Deleting a Project</a></li>
 </ul></li>
 <li><a href="#requirements" id="toc-requirements">4. Requirements</a>
 <ul>
@@ -652,6 +654,33 @@ Storage</strong>, or use <strong>Reset to default</strong> to go back to
 the server-wide value. The change is recorded in <strong>System
 logs</strong>. A limit below the current usage is allowed: it only
 blocks new uploads.</p>
+<h3 id="deleting-a-project">3.5 Deleting a Project</h3>
+<p>The <strong>project owner</strong> and instance administrators can
+delete a project. Open <strong>Project settings › General</strong> and
+select <strong>Delete project…</strong> in the <strong>Danger
+zone</strong> at the bottom of the page. Other members see who can
+delete the project instead.</p>
+<p>Deleting a project <strong>cannot be undone</strong>. It removes
+everything in the project:</p>
+<ul>
+<li>requirements, with their versions, links and comments;</li>
+<li>verifications and the traceability matrix;</li>
+<li>baselines (including frozen ones) and saved views;</li>
+<li>attachments and their files (a file that another project also uses
+is kept);</li>
+<li>the catalog, custom fields, members, reviewers and storage
+settings.</li>
+</ul>
+<p>To keep a copy, export a project bundle or a ReqIFZ archive from
+<strong>Reports &amp; exports</strong> first (<a
+href="#9-reports--export">§9</a>). To confirm, type the project’s URL
+name (its slug, e.g. <code>satellite-demo</code>) and select
+<strong>Delete project</strong>. You are then taken to another project,
+or to the home page if you have none left.</p>
+<p>Users are not deleted. The project’s entries in <strong>System
+logs</strong> are kept, and a new entry records who deleted the project,
+its name and how many requirements, verifications, baselines and
+attachments it had.</p>
 <hr />
 <h2 id="requirements">4. Requirements</h2>
 <p>Requirements are the core artifact. Each requirement can have

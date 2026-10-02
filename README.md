@@ -211,6 +211,7 @@ Behind the Docker frontend (or Vite dev), use the **same origin** as the SPA (e.
 - `GET /projects` - Projects visible to the current user
 - `POST /projects` - Create a project (body: `name`, optional `description`, `group_id`)
 - `PATCH /projects/{project_id}` - Edit name, description, status, owner or group (project Admin or instance admin; the slug is fixed)
+- `DELETE /projects/{project_id}` - Permanently delete the project and all its data (owner or instance admin; body `confirm_slug`; session only)
 
 #### Requirements
 - `GET /requirements` - List all requirements

@@ -154,6 +154,22 @@ Files attached to requirements and verifications ([§4.9](#49-attachments)) coun
 
 The defaults are **10 MB per file** and **500 MB per project**. The server administrator sets them with `MARREQ_ATTACHMENT_MAX_MB` and `MARREQ_PROJECT_STORAGE_QUOTA_MB`. Instance administrators can give a project its own limit in **Project settings › Storage**, or use **Reset to default** to go back to the server-wide value. The change is recorded in **System logs**. A limit below the current usage is allowed: it only blocks new uploads.
 
+### 3.5 Deleting a Project
+
+The **project owner** and instance administrators can delete a project. Open **Project settings › General** and select **Delete project…** in the **Danger zone** at the bottom of the page. Other members see who can delete the project instead.
+
+Deleting a project **cannot be undone**. It removes everything in the project:
+
+- requirements, with their versions, links and comments;
+- verifications and the traceability matrix;
+- baselines (including frozen ones) and saved views;
+- attachments and their files (a file that another project also uses is kept);
+- the catalog, custom fields, members, reviewers and storage settings.
+
+To keep a copy, export a project bundle or a ReqIFZ archive from **Reports & exports** first ([§9](#9-reports--export)). To confirm, type the project's URL name (its slug, e.g. `satellite-demo`) and select **Delete project**. You are then taken to another project, or to the home page if you have none left.
+
+Users are not deleted. The project's entries in **System logs** are kept, and a new entry records who deleted the project, its name and how many requirements, verifications, baselines and attachments it had.
+
 ---
 
 ## 4. Requirements

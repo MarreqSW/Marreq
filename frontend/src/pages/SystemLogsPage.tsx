@@ -215,7 +215,7 @@ export default function SystemLogsPage() {
       <div>
         <StitchPageHeader
           projectName={projectName}
-          section="Admin"
+          section="System logs"
           title="System logs"
           subtitle="Restricted area."
         />
@@ -237,7 +237,7 @@ export default function SystemLogsPage() {
     <div>
       <StitchPageHeader
         projectName={projectName}
-        section="Admin"
+        section="System logs"
         title="System logs"
         subtitle="Instance-wide audit trail of every project."
       />

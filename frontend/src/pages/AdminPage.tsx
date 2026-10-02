@@ -100,7 +100,7 @@ export default function AdminPage() {
       <div>
         <StitchPageHeader
           projectName={projectName}
-          section="Admin"
+          section="Users"
           title="Administration"
           subtitle="Restricted area."
         />
@@ -120,7 +120,7 @@ export default function AdminPage() {
     <div>
       <StitchPageHeader
         projectName={projectName}
-        section="Admin"
+        section="Users"
         title="User directory"
         subtitle={
           canCreate || deployment === null

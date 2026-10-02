@@ -104,7 +104,7 @@ export default function LogAnalyticsPage() {
       <div>
         <StitchPageHeader
           projectName={projectName}
-          section="Admin"
+          section="Log analytics"
           title="Log analytics"
           subtitle="Restricted area."
         />
@@ -126,7 +126,7 @@ export default function LogAnalyticsPage() {
     <div>
       <StitchPageHeader
         projectName={projectName}
-        section="Admin"
+        section="Log analytics"
         title="Log analytics"
         subtitle="Instance-wide activity from the audit log. Days are in UTC."
       />

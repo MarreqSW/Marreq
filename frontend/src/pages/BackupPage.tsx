@@ -71,7 +71,7 @@ export default function BackupPage() {
       <div>
         <StitchPageHeader
           projectName={projectName}
-          section="Admin"
+          section="Backup"
           title="Database backup"
           subtitle="Restricted area."
         />
@@ -93,7 +93,7 @@ export default function BackupPage() {
     <div>
       <StitchPageHeader
         projectName={projectName}
-        section="Admin"
+        section="Backup"
         title="Database backup"
         subtitle="Download a full copy of the Marreq database, e.g. before an upgrade."
       />

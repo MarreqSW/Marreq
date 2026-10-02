@@ -431,7 +431,7 @@ export default function ProjectLayout() {
           </div>
           <div className="flex items-center gap-4 shrink-0">
             <div
-              className="flex items-center rounded-lg border border-stitch-border p-0.5 gap-0.5 shrink-0"
+              className="hidden sm:flex items-center rounded-lg border border-stitch-border p-0.5 gap-0.5 shrink-0"
               role="group"
               aria-label="Color scheme"
             >

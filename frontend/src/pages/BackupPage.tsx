@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { Link, useOutletContext } from 'react-router-dom';
 import {
   downloadDatabaseBackup,
   getCsrfToken,
@@ -10,14 +9,11 @@ import type { DeploymentInfo } from '@/api/types';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import { useDashboard } from '@/context/DashboardContext';
 import { btnPrimary } from '@/pages/catalog/catalogUi';
-import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { parseUser } from '@/utils/parseUser';
+import { ADMIN_BREADCRUMB } from '@/pages/admin/adminArea';
 
-const headerBtn =
-  'text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher';
 
 export default function BackupPage() {
-  const { projectId: pid, basePath } = useOutletContext<ProjectOutletContext>();
   const { dashboard, csrfToken } = useDashboard();
   const me = parseUser(dashboard?.user);
 
@@ -45,8 +41,7 @@ export default function BackupPage() {
     };
   }, []);
 
-  const projectName =
-    dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
+  const projectName = ADMIN_BREADCRUMB;
   const backupDisabled = deployment?.allows_database_backup === false;
 
   async function onDownload() {
@@ -76,7 +71,7 @@ export default function BackupPage() {
       <div>
         <StitchPageHeader
           projectName={projectName}
-          section="Admin"
+          section="Backup"
           title="Database backup"
           subtitle="Restricted area."
         />
@@ -98,17 +93,10 @@ export default function BackupPage() {
     <div>
       <StitchPageHeader
         projectName={projectName}
-        section="Admin"
+        section="Backup"
         title="Database backup"
         subtitle="Download a full copy of the Marreq database, e.g. before an upgrade."
-      >
-        <Link to={`${basePath}/admin`} className={headerBtn}>
-          User directory
-        </Link>
-        <Link to={`${basePath}/admin/logs`} className={headerBtn}>
-          System logs
-        </Link>
-      </StitchPageHeader>
+      />
 
       {error ? (
         <div

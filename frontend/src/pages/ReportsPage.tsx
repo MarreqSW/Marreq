@@ -567,7 +567,7 @@ export default function ReportsPage() {
                       </td>
                       <td className="px-4 py-2 text-right">
                         <Link
-                          to={`${basePath}/matrix`}
+                          to={`${basePath}/traceability?view=matrix`}
                           className="text-xs font-bold text-stitch-accent hover:underline mr-2"
                         >
                           Matrix

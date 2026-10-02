@@ -3,18 +3,19 @@ import { useOutletContext, useSearchParams } from 'react-router-dom';
 import TraceabilityGraph from '@/components/TraceabilityGraph';
 import HierarchyGraph from '@/components/HierarchyGraph';
 import DsmView from '@/components/dsm/DsmView';
+import MatrixView from '@/components/matrix/MatrixView';
 import RequirementsViewSwitcher from '@/components/RequirementsViewSwitcher';
 import { useDashboard } from '@/context/DashboardContext';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 
 type Ctx = ProjectOutletContext;
 
-type GraphView = 'coverage' | 'hierarchy' | 'dsm';
+type GraphView = 'coverage' | 'hierarchy' | 'dsm' | 'matrix';
 
 const VIEW_PARAM = 'view';
 
 function readView(value: string | null): GraphView {
-  return value === 'hierarchy' || value === 'dsm' ? value : 'coverage';
+  return value === 'hierarchy' || value === 'dsm' || value === 'matrix' ? value : 'coverage';
 }
 
 export default function TraceabilityPage() {
@@ -44,7 +45,9 @@ export default function TraceabilityPage() {
       ? 'Parent ↔ child links between requirements and between verifications.'
       : view === 'dsm'
         ? 'Dependency structure matrix: requirement × requirement links, loops and upstream changes.'
-        : 'Requirement ↔ verification links. Suspect links animate in coral.';
+        : view === 'matrix'
+          ? 'Requirements in rows (grouped by category), verifications in columns. Symbols show the verification status of each link; click a verification code to sort rows by that column.'
+          : 'Requirement ↔ verification links. Suspect links animate in coral.';
 
   return (
     <div>
@@ -76,12 +79,18 @@ export default function TraceabilityPage() {
           <span className="material-symbols-outlined text-sm">grid_on</span>
           DSM
         </SubtabButton>
+        <SubtabButton active={view === 'matrix'} onClick={() => setView('matrix')}>
+          <span className="material-symbols-outlined text-sm">table_chart</span>
+          Matrix
+        </SubtabButton>
       </div>
 
       {view === 'coverage' ? (
         <TraceabilityGraph projectId={projectId} basePath={basePath} />
       ) : view === 'dsm' ? (
         <DsmView projectId={projectId} basePath={basePath} />
+      ) : view === 'matrix' ? (
+        <MatrixView />
       ) : (
         <HierarchyGraph projectId={projectId} basePath={basePath} />
       )}

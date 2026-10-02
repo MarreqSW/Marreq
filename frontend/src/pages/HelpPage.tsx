@@ -13,7 +13,7 @@ const blocks: { title: string; body: string }[] = [
   {
     title: 'Navigation',
     body:
-      'Use the sidebar for Dashboard, Requirements, Verifications, Traceability, Matrix, Baselines, Reports, Import, Settings, Admin, and System logs (administrators only). Project scope follows the project selected in the header.',
+      'The sidebar holds Dashboard, Requirements, Verifications, Traceability (with Coverage, Hierarchy, DSM and Matrix tabs), Baselines and Reports & exports. Project settings at the bottom has tabs for General, Members & reviewers, Catalog, Storage, Notifications and Import. Switch projects, or open Groups and New project, from the Projects menu in the header. Instance administrators find Administration in the user menu. On a narrow screen, open the sidebar with the menu button.',
   },
   {
     title: 'Search',
@@ -28,12 +28,12 @@ const blocks: { title: string; body: string }[] = [
   {
     title: 'Creating records',
     body:
-      'Use Create Requirement or New verification from the header or list pages. New requirements need at least one verification method configured for the project. Import Excel/CSV (requirements, verifications, or a matrix-links file of codes) or ReqIF (a .reqif file, or a .reqifz archive that also brings its attached files) from Import in the sidebar (or the create menu).',
+      'Use Create Requirement or New verification from the header or list pages. New requirements need at least one verification method configured for the project. Import Excel/CSV (requirements, verifications, or a matrix-links file of codes) or ReqIF (a .reqif file, or a .reqifz archive that also brings its attached files) from Project settings › Import (or Create → Import).',
   },
   {
     title: 'Classic (legacy) UI',
     body:
-      'System logs are under Admin → System logs in the sidebar; Log analytics summarises that activity (events per day, top actions, top users). Self-hosted administrators can download a database backup from Admin → Backup. Reports includes Excel (requirements, verifications, matrix grid, matrix links), PDF, and ReqIF downloads served by the API, including a ReqIFZ archive with the attachment files. Import ReqIF or ReqIFZ from the Import page.',
+      'Administrators open Administration from the user menu: Users, System logs, Log analytics (events per day, top actions, top users) and, on self-hosted installations, Backup. Reports includes Excel (requirements, verifications, matrix grid, matrix links), PDF, and ReqIF downloads served by the API, including a ReqIFZ archive with the attachment files. Import ReqIF or ReqIFZ from Project settings › Import.',
   },
 ];
 
@@ -139,10 +139,10 @@ export default function HelpPage() {
               — project KPIs
             </li>
             <li>
-              <Link to={`${basePath}/import`} className="text-stitch-accent font-semibold hover:underline">
+              <Link to={`${basePath}/settings/import`} className="text-stitch-accent font-semibold hover:underline">
                 Import
               </Link>{' '}
-              — Excel / CSV
+              — Excel / CSV / ReqIF
             </li>
             <li>
               <Link to={`${basePath}/reports`} className="text-stitch-accent font-semibold hover:underline">
@@ -152,9 +152,9 @@ export default function HelpPage() {
             </li>
             <li>
               <Link to={`${basePath}/settings`} className="text-stitch-accent font-semibold hover:underline">
-                Settings
+                Project settings
               </Link>{' '}
-              — permissions & fields
+              — members, catalog, storage
             </li>
           </ul>
         </div>

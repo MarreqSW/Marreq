@@ -4,20 +4,181 @@
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>Typical Workflow with Marreq</title>
-  <link rel="stylesheet" href="../styles.css" />
+  <title>workflow</title>
+  <style>
+    html {
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      overflow-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 12px;
+      }
+      h1 {
+        font-size: 1.8em;
+      }
+    }
+    @media print {
+      html {
+        background-color: white;
+      }
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    svg {
+      height: auto;
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
+      font-size: 85%;
+      margin: 0;
+      hyphens: manual;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+      overflow-wrap: normal;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid #1a1a1a;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC ul {
+      padding-left: 1.3em;
+    }
+    #TOC > ul {
+      padding-left: 0;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
 </head>
 <body>
-<main class="o-main-content">
-<header id="title-block-header">
-<h1 class="title">Typical Workflow with Marreq</h1>
-</header>
 <nav id="TOC" role="doc-toc">
 <ul>
-<li><a href="#typical-workflow-with-Marreq"
-id="toc-typical-workflow-with-Marreq">Typical Workflow with Marreq</a>
+<li><a href="#typical-workflow-with-marreq"
+id="toc-typical-workflow-with-marreq">Typical Workflow with Marreq</a>
 <ul>
-<li><a href="#overview" id="toc-overview">Overview</a></li>
+<li><a href="#overview" id="toc-overview">Overview</a>
+<ul>
+<li><a href="#workflow-diagram" id="toc-workflow-diagram">Workflow
+diagram</a></li>
+</ul></li>
 <li><a href="#set-up-the-project" id="toc-set-up-the-project">1. Set Up
 the Project</a></li>
 <li><a href="#capture-requirements" id="toc-capture-requirements">2.
@@ -26,15 +187,15 @@ Capture Requirements</a></li>
 id="toc-test-management-and-traceability">3. Test Management and
 Traceability</a>
 <ul>
-<li><a href="#define-and-organize-tests"
-id="toc-define-and-organize-tests">3.1 Define and Organize
-Tests</a></li>
-<li><a href="#link-tests-to-requirements-traceability"
-id="toc-link-tests-to-requirements-traceability">3.2 Link Tests to
-Requirements (Traceability)</a></li>
-<li><a href="#track-test-execution-test-status"
-id="toc-track-test-execution-test-status">3.3 Track Test Execution (Test
-Status)</a></li>
+<li><a href="#define-and-organize-verifications"
+id="toc-define-and-organize-verifications">3.1 Define and Organize
+Verifications</a></li>
+<li><a href="#link-verifications-to-requirements-traceability"
+id="toc-link-verifications-to-requirements-traceability">3.2 Link
+Verifications to Requirements (Traceability)</a></li>
+<li><a href="#track-test-execution-verification-status"
+id="toc-track-test-execution-verification-status">3.3 Track Test
+Execution (Verification Status)</a></li>
 </ul></li>
 <li><a href="#review-and-approve-requirements"
 id="toc-review-and-approve-requirements">4. Review and Approve
@@ -49,36 +210,71 @@ id="toc-iteration-and-maintenance">Iteration and Maintenance</a></li>
 </ul></li>
 </ul>
 </nav>
-<h1 id="typical-workflow-with-Marreq">Typical Workflow with Marreq</h1>
+<h1 id="typical-workflow-with-marreq">Typical Workflow with Marreq</h1>
 <p>This document describes a <strong>typical end-to-end
 workflow</strong> for using Marreq: from project setup through
-requirements, <strong>test management</strong>, traceability, approval,
-baselines, and export. For detailed steps on each screen, see the <a
-href="user-manual.html">User Manual</a>, in particular <a
-href="user-manual.html#test-management">Test Management</a> and <a
-href="user-manual.html#traceability-matrix">Traceability Matrix</a>.</p>
+requirements, <strong>verification management</strong>, traceability,
+approval, baselines, and export. For detailed steps on each screen, see
+the <a href="user-manual.md">User Manual</a>, in particular <a
+href="user-manual.md#5-test-management-verifications">Test Management
+(Verifications)</a> and <a
+href="user-manual.md#6-traceability-matrix">Traceability Matrix</a>.</p>
 <hr />
 <h2 id="overview">Overview</h2>
 <p>A common Marreq workflow follows this sequence:</p>
 <ol type="1">
 <li><strong>Set up the project</strong> and configuration (categories,
-applicability, verification, requirement and <strong>test
-statuses</strong>).</li>
+applicability, verification methods, requirement and
+<strong>verification statuses</strong>), and designate <strong>project
+reviewers</strong> in <strong>Project settings › Members &amp;
+reviewers</strong> (who may change requirement/verification
+<strong>status</strong> and requirement <strong>version
+approval</strong>).</li>
 <li><strong>Capture requirements</strong> (create, optionally import,
 organize in hierarchy).</li>
-<li><strong>Test management</strong>: define tests, organize
-(e.g. hierarchy), link to requirements in the traceability matrix, and
-track test status (Pass/Fail/Pending) as tests are run.</li>
+<li><strong>Verification management</strong>: define verifications (test
+cases), organize (e.g. hierarchy), link to requirements in the
+traceability matrix, and track verification status (Pass/Fail/Pending)
+as tests are run.</li>
 <li><strong>Review and approve</strong> requirements (draft → reviewed →
 approved).</li>
 <li><strong>Create baselines</strong> for milestones or releases.</li>
 <li><strong>Export</strong> for audits, documentation, or tooling
-(requirements Excel, <strong>tests Excel</strong>, matrix Excel/CSV,
-ReqIF, PDF).</li>
+(requirements Excel, <strong>verifications Excel</strong>, matrix
+Excel/CSV, ReqIF, PDF).</li>
 </ol>
 <p>You can adapt the order (e.g. import requirements first, then
-configure categories) or iterate (add requirements and tests over time,
-update test status as you execute tests).</p>
+configure categories) or iterate (add requirements and verifications
+over time, update verification status as you execute tests).</p>
+<h3 id="workflow-diagram">Workflow diagram</h3>
+<pre class="mermaid"><code>flowchart LR
+  subgraph setup [1. Set up]
+    A[Create project]
+    B[Members]
+    C[Categories / Applicability / Verification / Statuses]
+  end
+  subgraph capture [2. Capture]
+    D[Create or import requirements]
+    E[Refine hierarchy]
+  end
+  subgraph test [3. Verification management]
+    F[Define verifications]
+    G[Link in matrix]
+    H[Track status]
+  end
+  subgraph approve [4. Approve]
+    I[Review]
+    J[Mark Reviewed]
+    K[Approve]
+  end
+  subgraph baseline [5. Baseline]
+    L[New Baseline]
+  end
+  subgraph export [6. Export]
+    M[Excel / ReqIF / PDF]
+  end
+  setup --&gt; capture --&gt; test --&gt; approve --&gt; baseline --&gt; export
+  export -.-&gt;|&quot;Iterate&quot;| capture</code></pre>
 <hr />
 <h2 id="set-up-the-project">1. Set Up the Project</h2>
 <ul>
@@ -86,7 +282,14 @@ update test status as you execute tests).</p>
 Project</strong>). Enter name and description.</li>
 <li><strong>Add project members</strong> (<strong>Members</strong>):
 assign users and roles (e.g. owner, manager) so the right people can
-approve requirements and manage the project.</li>
+edit and manage the project.</li>
+<li><strong>Designate project reviewers</strong> (<strong>Project
+settings › Members &amp; reviewers</strong> in the SPA, or via API
+<code>GET</code>/<code>PUT /api/projects/&lt;id&gt;/reviewers</code>):
+choose which members may change <strong>requirement status</strong>,
+<strong>verification status</strong>, and <strong>version
+approval</strong> (draft / reviewed / approved). Do this early if you
+use strict workflow gates.</li>
 <li><strong>Configure project-level data</strong> (Admin or project
 <strong>Quick Actions</strong>):
 <ul>
@@ -98,8 +301,8 @@ used for product line or scope.</li>
 Inspection) — used to state how each requirement will be verified.</li>
 <li><strong>Requirement statuses</strong> (e.g. Draft, Accepted,
 Rejected) — lifecycle of requirements.</li>
-<li><strong>Test statuses</strong> (e.g. Pass, Fail, Not Run, Blocked) —
-for test execution.</li>
+<li><strong>Verification statuses</strong> (e.g. Pass, Fail, Not Run,
+Blocked) — for test execution.</li>
 </ul></li>
 </ul>
 <p>Having these in place before bulk-adding requirements keeps data
@@ -114,11 +317,10 @@ method(s), and optionally parent requirement (for hierarchy) and
 reviewer.</li>
 <li><strong>Or import</strong> existing data:
 <ul>
-<li><strong>Import File</strong>: upload Excel/CSV, map columns to
-Marreq fields, then run the import (see <a
-href="user-manual.html#import">User Manual – Import</a>).</li>
-<li><strong>Import ReqIF</strong>: upload ReqIF 1.2 XML to bring in
-requirements (and optionally comments) from another tool.</li>
+<li><strong>Import File</strong>: <strong>Project settings ›
+Import</strong> (or <strong>Create → Import</strong>); upload Excel/CSV,
+map columns to Marreq fields, then run the import (see <a
+href="user-manual.md#10-import">User Manual – Import</a>).</li>
 </ul></li>
 <li><strong>Refine</strong>: use the <strong>Requirements</strong> list
 in card/table/tree view, filter by status/category/applicability, and
@@ -131,46 +333,52 @@ requirement set.</li>
 <hr />
 <h2 id="test-management-and-traceability">3. Test Management and
 Traceability</h2>
-<h3 id="define-and-organize-tests">3.1 Define and Organize Tests</h3>
+<h3 id="define-and-organize-verifications">3.1 Define and Organize
+Verifications</h3>
 <ul>
-<li><strong>Create tests</strong>: <strong>Tests → New Test</strong>.
-Enter name, description, <strong>Source</strong> (e.g. test file or
-document), <strong>Status</strong> (e.g. Pending, Not Run), and
-<strong>Reference code</strong> (e.g. TEST-PWR-001). Use <strong>Parent
-test</strong> to build a test hierarchy (suites, feature areas) if
-needed.</li>
-<li><strong>Manage tests</strong> from the <strong>Tests</strong> list:
-filter by status, verification, category, search; switch between card
-and table view; view metrics (total tests, by status). Edit tests to
-change name, description, source, or parent.</li>
-<li><strong>Export tests</strong>: From the Tests list or Reports,
-<strong>Export Excel</strong> (tests) to get all tests in
-<code>.xls</code> for external reporting or test management.</li>
+<li><strong>Create verifications</strong>: <strong>Verifications → New
+Verification</strong>. Enter name, description, <strong>Source</strong>
+(e.g. test file or document), <strong>Status</strong> (e.g. Pending, Not
+Run), and <strong>Reference code</strong> (e.g. TEST-PWR-001). Use
+<strong>Parent verification</strong> to build a hierarchy (suites,
+feature areas) if needed.</li>
+<li><strong>Manage verifications</strong> from the
+<strong>Verifications</strong> list: filter by verification status,
+verification method, category, search; switch between card and table
+view; view metrics (total verifications, by status). Edit verifications
+to change name, description, source, verification method, or
+parent.</li>
+<li><strong>Export verifications</strong>: From the Verifications list
+or Reports, <strong>Export Excel</strong> (verifications) to get all
+verifications in <code>.xls</code> for external reporting or test
+management.</li>
 </ul>
-<h3 id="link-tests-to-requirements-traceability">3.2 Link Tests to
-Requirements (Traceability)</h3>
+<h3 id="link-verifications-to-requirements-traceability">3.2 Link
+Verifications to Requirements (Traceability)</h3>
 <ul>
 <li>Open the <strong>Traceability Matrix</strong> for the project.</li>
-<li><strong>Add links</strong> between requirements and tests (via the
-matrix UI: e.g. select requirement and test, then add link).</li>
+<li><strong>Add links</strong> between requirements and verifications
+(via the matrix UI: e.g. select requirement and verification, then add
+link).</li>
 <li>The matrix shows <strong>coverage</strong>; requirements without
-tests and tests without requirements are visible in
+verifications and verifications without requirements are visible in
 <strong>Reports</strong> (Coverage analysis) and on requirement detail
 pages (<strong>Verified by</strong> section,
 <strong>Verification</strong> panel).</li>
 </ul>
-<h3 id="track-test-execution-test-status">3.3 Track Test Execution (Test
-Status)</h3>
+<h3 id="track-test-execution-verification-status">3.3 Track Test
+Execution (Verification Status)</h3>
 <ul>
-<li><strong>Update test status</strong> as tests are run (e.g. Pass,
-Fail, Pending, In Progress) from the <strong>Test detail</strong> page
-or, when available, inline from the tests list or matrix.</li>
+<li><strong>Update verification status</strong> as tests are run
+(e.g. Pass, Fail, Pending, In Progress) from the <strong>Verification
+detail</strong> page or, when available, inline from the verifications
+list or matrix.</li>
 <li>Requirement detail pages then show the <strong>Verification</strong>
 panel: passed/failed/pending counts and overall pass rate for linked
-tests.</li>
+verifications.</li>
 <li><strong>Reports</strong> and the <strong>Matrix</strong> reflect
-current coverage and test results; filter the matrix by test status
-(e.g. show only Failed tests) for test management and defect
+current coverage and test results; filter the matrix by verification
+status (e.g. show only Failed) for test management and defect
 follow-up.</li>
 </ul>
 <hr />
@@ -181,15 +389,24 @@ Requirements</h2>
 <strong>Requirement detail</strong> page to read the requirement, check
 linked tests and verification status, and use the
 <strong>Comments</strong> section to discuss.</li>
-<li><strong>Mark as Reviewed</strong>: A project owner/manager uses
-<strong>Mark as Reviewed</strong> on the requirement (with
-confirmation). This moves the requirement along the approval
-workflow.</li>
+<li><strong>Who can change status and approval</strong>: Only users
+listed as <strong>project reviewers</strong> (see <strong>Project
+settings › Members &amp; reviewers</strong>) or
+<strong>administrators</strong> can change <strong>requirement
+status</strong> in the table/editor, <strong>verification
+status</strong>, and move the current version through <strong>draft →
+reviewed → approved</strong>. Others with <strong>Edit
+requirements</strong> can still edit text and most metadata.</li>
+<li><strong>Mark as Reviewed</strong>: A <strong>project
+reviewer</strong> (or admin) uses <strong>Mark as Reviewed</strong> on
+the requirement (with confirmation). This moves the requirement along
+the approval workflow.</li>
 <li><strong>Approve</strong>: When the requirement is ready for release
-or baseline, a project owner/manager uses <strong>Approve
-Requirement</strong> (with confirmation). The requirement then shows as
-<strong>Approved</strong> with approver and date; editing it later
-creates a new <strong>Draft</strong> version.</li>
+or baseline, a <strong>project reviewer</strong> (or admin) uses
+<strong>Approve Requirement</strong> (with confirmation). The
+requirement then shows as <strong>Approved</strong> with approver and
+date; editing it later creates a new <strong>Draft</strong>
+version.</li>
 <li><strong>Filter by approval</strong>: On the Requirements list, use
 filters such as <strong>Approved only</strong> or <strong>Not
 approved</strong> to focus on what still needs review.</li>
@@ -205,8 +422,9 @@ approved</strong> to focus on what still needs review.</li>
 description, then submit.</li>
 </ul></li>
 <li>The baseline is <strong>immutable</strong>: it stores the current
-requirement version for each requirement and the traceability matrix at
-that moment. You cannot edit or delete a baseline.</li>
+requirement version for each requirement, the traceability matrix, and a
+snapshot of verification statuses at that moment. You cannot edit or
+delete a baseline.</li>
 <li>Use baselines to:
 <ul>
 <li><strong>Export ReqIF</strong> for that exact snapshot (e.g. for
@@ -223,21 +441,21 @@ Documentation</h2>
 <li><strong>Requirements</strong>: From <strong>Requirements</strong> or
 <strong>Reports</strong>, <strong>Export Excel</strong> to get all
 requirements (and a Comments sheet) in <code>.xls</code>.</li>
-<li><strong>Tests</strong> (test management): From
-<strong>Tests</strong> list or <strong>Reports</strong>, <strong>Export
-Excel</strong> (tests) to get all tests in <code>.xls</code> (name,
-description, source, status, reference code, etc.).</li>
+<li><strong>Verifications</strong> (test management): From
+<strong>Verifications</strong> list or <strong>Reports</strong>,
+<strong>Export Excel</strong> (verifications) to get all verifications
+in <code>.xls</code> (name, description, source, status, reference code,
+etc.).</li>
 <li><strong>Traceability matrix</strong>: From <strong>Matrix</strong>,
-<strong>Export Excel</strong> (or CSV) for the requirement–test mapping;
-optionally filter by test status before export.</li>
+<strong>Export Excel</strong> (or CSV) for the requirement–verification
+mapping; optionally filter by verification status before export.</li>
 <li><strong>ReqIF</strong>:
 <ul>
-<li><strong>Current project</strong>: <strong>Export → ReqIF
-(current)</strong> for the latest state.</li>
+<li><strong>Current project</strong>: <strong>Reports → Requirements
+(.reqif)</strong> for the latest state.</li>
 <li><strong>From a baseline</strong>: Open the baseline and use
-<strong>Export ReqIF</strong>, or <strong>Export → ReqIF (from
-baseline…)</strong> and select the baseline — use this for audits or
-release packages.</li>
+<strong>Export ReqIF</strong> — use this for audits or release
+packages.</li>
 </ul></li>
 <li><strong>Reports</strong>: From <strong>Reports</strong>, use
 <strong>Generate PDF Report</strong> or <strong>Download requirements
@@ -247,14 +465,15 @@ metrics.</li>
 <hr />
 <h2 id="iteration-and-maintenance">Iteration and Maintenance</h2>
 <ul>
-<li><strong>Ongoing</strong>: Add or edit requirements and tests, update
-traceability, <strong>run tests and update test status</strong>
-(Pass/Fail/Pending), and add comments. Create new baselines at each
-major milestone.</li>
-<li><strong>Test management</strong>: Use the Tests list and Matrix to
-track which tests are passing or failing; use Reports for coverage and
-test status distribution. Export tests to Excel when you need to share
-test data or integrate with other test tools.</li>
+<li><strong>Ongoing</strong>: Add or edit requirements and
+verifications, update traceability, <strong>run tests and update
+verification status</strong> (Pass/Fail/Pending), and add comments.
+Create new baselines at each major milestone.</li>
+<li><strong>Test management</strong>: Use the Verifications list and
+Matrix to track which verifications are passing or failing; use Reports
+for coverage and verification status distribution. Export verifications
+to Excel when you need to share test data or integrate with other test
+tools.</li>
 <li><strong>After changes</strong>: Traceability links may be marked
 <strong>suspect</strong> when a requirement or test changes; review and
 <strong>Clear suspect</strong> from the matrix when the link is still
@@ -264,8 +483,8 @@ requirements and <strong>Diff</strong> (between versions or baseline vs
 current) to see what changed and when.</li>
 </ul>
 <p>For detailed instructions on each action, see the <a
-href="user-manual.html">User Manual</a>, including <a
-href="user-manual.html#test-management">Test Management</a>.</p>
-</main>
+href="user-manual.md">User Manual</a>, including <a
+href="user-manual.md#5-test-management-verifications">Test Management
+(Verifications)</a>.</p>
 </body>
 </html>

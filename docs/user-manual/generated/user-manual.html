@@ -330,18 +330,7 @@ ReqIF</a></li>
 </ul></li>
 <li><a href="#categories-applicability-verification"
 id="toc-categories-applicability-verification">8. Categories,
-Applicability &amp; Verification</a>
-<ul>
-<li><a href="#categories" id="toc-categories">8.1 Categories</a></li>
-<li><a href="#applicability" id="toc-applicability">8.2
-Applicability</a></li>
-<li><a href="#verification-methods" id="toc-verification-methods">8.3
-Verification Methods</a></li>
-<li><a href="#requirement-statuses" id="toc-requirement-statuses">8.4
-Requirement Statuses</a></li>
-<li><a href="#verification-statuses" id="toc-verification-statuses">8.5
-Verification Statuses</a></li>
-</ul></li>
+Applicability &amp; Verification</a></li>
 <li><a href="#reports-export" id="toc-reports-export">9. Reports &amp;
 Export</a>
 <ul>
@@ -390,17 +379,13 @@ Password</a></li>
 <li><a href="#administration" id="toc-administration">13.
 Administration</a>
 <ul>
-<li><a href="#admin-dashboard" id="toc-admin-dashboard">13.1 Admin
-Dashboard</a></li>
-<li><a href="#user-management" id="toc-user-management">13.2 User
+<li><a href="#user-management" id="toc-user-management">13.1 User
 Management</a></li>
-<li><a href="#database-backup" id="toc-database-backup">13.3 Database
+<li><a href="#database-backup" id="toc-database-backup">13.2 Database
 Backup</a></li>
-<li><a href="#cache-if-exposed" id="toc-cache-if-exposed">13.4 Cache (if
-exposed)</a></li>
-<li><a href="#system-logs" id="toc-system-logs">13.5 System
+<li><a href="#system-logs" id="toc-system-logs">13.3 System
 Logs</a></li>
-<li><a href="#log-analytics" id="toc-log-analytics">13.6 Log
+<li><a href="#log-analytics" id="toc-log-analytics">13.4 Log
 Analytics</a></li>
 </ul></li>
 <li><a href="#tips-shortcuts" id="toc-tips-shortcuts">14. Tips &amp;
@@ -504,11 +489,12 @@ feed</li>
 <figcaption aria-hidden="true">Home page after login</figcaption>
 </figure>
 <h3 id="navigation">2.3 Navigation</h3>
-<p>The top navigation bar includes:</p>
+<p>Inside a project, the <strong>sidebar</strong> on the left holds the
+pages you work in every day:</p>
 <table>
 <colgroup>
-<col style="width: 17%" />
-<col style="width: 82%" />
+<col style="width: 50%" />
+<col style="width: 50%" />
 </colgroup>
 <thead>
 <tr>
@@ -518,57 +504,67 @@ feed</li>
 </thead>
 <tbody>
 <tr>
-<td><strong>Home</strong></td>
-<td>Dashboard and project list</td>
-</tr>
-<tr>
-<td><strong>Projects</strong></td>
-<td>All Projects / New Project (admin only)</td>
+<td><strong>Dashboard</strong></td>
+<td>Counts and traceability health of the project</td>
 </tr>
 <tr>
 <td><strong>Requirements</strong></td>
-<td>Project requirements (active when a project is selected)</td>
+<td>The requirement list (table, list or graph view)</td>
 </tr>
 <tr>
 <td><strong>Verifications</strong></td>
-<td>Project verifications (test cases and their status)</td>
+<td>Verifications (test cases, analyses, reviews) and their status</td>
 </tr>
 <tr>
-<td><strong>Reports</strong></td>
-<td>Project reports &amp; analytics</td>
-</tr>
-<tr>
-<td><strong>Import</strong></td>
-<td>Excel/CSV, ReqIF 1.2, and JSON project bundle</td>
-</tr>
-<tr>
-<td><strong>Members</strong></td>
-<td>Project members</td>
+<td><strong>Traceability</strong></td>
+<td>Coverage graph, hierarchy, dependency structure matrix (DSM) and the
+requirement × verification <strong>Matrix</strong>, as tabs</td>
 </tr>
 <tr>
 <td><strong>Baselines</strong></td>
-<td>Project baselines</td>
+<td>Immutable snapshots of the project</td>
 </tr>
 <tr>
-<td><strong>Quick Actions</strong> (admin)</td>
-<td>Shortcuts: New Project, New
-Requirement/Verification/Category/Applicability/Verification
-Method/Verification Status, New User, Import File/ReqIF</td>
-</tr>
-<tr>
-<td><strong>Admin</strong> (admin)</td>
-<td>User directory, System logs, Backup</td>
+<td><strong>Reports &amp; exports</strong></td>
+<td>Coverage reports and Excel, PDF, ReqIF/ReqIFZ and JSON
+downloads</td>
 </tr>
 </tbody>
 </table>
-<p>In the top-right:</p>
+<p>At the bottom of the sidebar:</p>
 <ul>
-<li><strong>Theme toggle</strong> (sun/moon) for light/dark mode</li>
-<li><strong>User menu</strong> (avatar): Change password, Sign out</li>
+<li><strong>Project settings</strong>: one page with tabs for
+<strong>General</strong> (name, status, owner, group), <strong>Members
+&amp; reviewers</strong>, <strong>Catalog</strong> (categories,
+applicability, statuses, custom fields, verification methods),
+<strong>Storage</strong>, <strong>Notifications</strong> and
+<strong>Import</strong>.</li>
+<li><strong>Help</strong>, the <strong>Collapse</strong> button (the
+sidebar remembers whether it is collapsed) and the UI and API
+versions.</li>
 </ul>
-<p>Requirements, Verifications, Reports, Members, and Baselines are
-<strong>project-scoped</strong>: select a project first (e.g. by opening
-it from Home or Projects) so these links apply to that project.</p>
+<p>The top bar holds:</p>
+<ul>
+<li>the project name and the <strong>Projects</strong> menu: switch to
+another project (you stay on the same page), or open
+<strong>Groups</strong>, <strong>New project</strong> or <strong>Import
+project bundle</strong>;</li>
+<li><strong>Global search</strong>, the theme switch (light, dark, match
+system) and notifications;</li>
+<li>the <strong>Create</strong> button: create a requirement or
+verification, or <strong>Import</strong>;</li>
+<li>the <strong>user menu</strong> (avatar): Account settings,
+<strong>Administration</strong> (instance administrators only, see <a
+href="#13-administration">§13</a>), Change password and Sign out.</li>
+</ul>
+<p>On a narrow screen the sidebar is hidden; open it with the
+<strong>☰</strong> button in the top bar.</p>
+<p>Older links keep working: <code>/&lt;project&gt;/matrix</code> opens
+the Matrix tab, <code>/&lt;project&gt;/import</code>,
+<code>/&lt;project&gt;/members</code> and
+<code>/&lt;project&gt;/catalog/…</code> open the matching Project
+settings tab, and <code>/&lt;project&gt;/admin/…</code> opens the
+Administration area.</p>
 <hr />
 <h2 id="projects">3. Projects</h2>
 <h3 id="viewing-projects">3.1 Viewing Projects</h3>
@@ -610,9 +606,10 @@ New Project</strong>.</li>
 </ol>
 <p>You are typically taken to the new project or the project list.</p>
 <h3 id="editing-a-project">3.3 Editing a Project</h3>
-<p>Open <strong>Settings</strong> in the project sidebar. The
-<strong>General</strong> section at the top shows the project’s
-properties:</p>
+<p>Open <strong>Project settings</strong> at the bottom of the sidebar.
+The <strong>General</strong> tab
+(<code>/&lt;project-slug&gt;/settings/general</code>) shows the
+project’s properties:</p>
 <ul>
 <li><strong>Name</strong> (2–100 characters) and
 <strong>Description</strong> (up to 1000 characters; leave empty to
@@ -637,7 +634,7 @@ change these properties. Other members see them read-only.</p>
 <h3 id="project-storage">3.4 Project Storage</h3>
 <p>Files attached to requirements and verifications (<a
 href="#49-attachments">§4.9</a>) count toward the project’s storage
-limit. <strong>Settings → Storage</strong> shows:</p>
+limit. <strong>Project settings › Storage</strong> shows:</p>
 <ul>
 <li>How much of the limit is used. Each file counts once, even when the
 same file is attached in several places.</li>
@@ -650,10 +647,11 @@ uploaded.</li>
 per project</strong>. The server administrator sets them with
 <code>MARREQ_ATTACHMENT_MAX_MB</code> and
 <code>MARREQ_PROJECT_STORAGE_QUOTA_MB</code>. Instance administrators
-can give a project its own limit in <strong>Settings → Storage</strong>,
-or use <strong>Reset to default</strong> to go back to the server-wide
-value. The change is recorded in <strong>System logs</strong>. A limit
-below the current usage is allowed: it only blocks new uploads.</p>
+can give a project its own limit in <strong>Project settings ›
+Storage</strong>, or use <strong>Reset to default</strong> to go back to
+the server-wide value. The change is recorded in <strong>System
+logs</strong>. A limit below the current usage is allowed: it only
+blocks new uploads.</p>
 <hr />
 <h2 id="requirements">4. Requirements</h2>
 <p>Requirements are the core artifact. Each requirement can have
@@ -1103,9 +1101,12 @@ display test status, requirement status, category, applicability, and
 suspect links.</p>
 <h3 id="opening-the-matrix">6.1 Opening the Matrix</h3>
 <ul>
-<li>From the project: <strong>Matrix</strong> in the nav or <strong>View
-Matrix</strong> on the project detail page.</li>
-<li>URL: <code>/&lt;project-slug&gt;/matrix</code>.</li>
+<li>From the project: <strong>Traceability</strong> in the sidebar, then
+the <strong>Matrix</strong> tab (next to Coverage, Hierarchy and
+DSM).</li>
+<li>URL: <code>/&lt;project-slug&gt;/traceability?view=matrix</code>
+(the old <code>/&lt;project-slug&gt;/matrix</code> still works). Filters
+and sorting are kept in the URL, so they survive switching tabs.</li>
 </ul>
 <figure>
 <img src="screenshots/matrix.png" alt="Traceability matrix" />
@@ -1298,64 +1299,59 @@ Requirements (.reqif)</strong>.</li>
 <h2 id="categories-applicability-verification">8. Categories,
 Applicability &amp; Verification</h2>
 <p>These are <strong>project-level</strong> configuration entities used
-to classify and manage requirements (and sometimes tests).</p>
-<h3 id="categories">8.1 Categories</h3>
-<p>Categories organize requirements (e.g. “Safety”, “Performance”).</p>
-<ul>
-<li><strong>List</strong>:
-<code>/&lt;project-slug&gt;/categories</code>.</li>
-<li><strong>New</strong>: <strong>Quick Actions → New Category</strong>
-or <code>/&lt;project-slug&gt;/categories/new</code> — enter title,
-description, tag.</li>
-<li><strong>Edit</strong>: Open a category → Edit; URL
-<code>/&lt;project-slug&gt;/categories/edit/&lt;category_id&gt;</code>.</li>
-</ul>
-<h3 id="applicability">8.2 Applicability</h3>
-<p>Applicability represents product lines, system types, or scope
-(e.g. “Product A”, “All”).</p>
-<ul>
-<li><strong>List</strong>:
-<code>/&lt;project-slug&gt;/applicability</code>.</li>
-<li><strong>New</strong>: <strong>Quick Actions → New
-Applicability</strong> or
-<code>/&lt;project-slug&gt;/applicability/new</code>.</li>
-<li><strong>Edit</strong>:
-<code>/&lt;project-slug&gt;/applicability/edit/&lt;applicability_id&gt;</code>.</li>
-</ul>
-<h3 id="verification-methods">8.3 Verification Methods</h3>
-<p>Verification methods define how requirements are verified (e.g. Test,
-Analysis, Review).</p>
-<ul>
-<li><strong>List</strong>:
-<code>/&lt;project-slug&gt;/verification</code>.</li>
-<li><strong>New</strong>: <strong>Quick Actions → New
-Verification</strong> or
-<code>/&lt;project-slug&gt;/verification/new</code>.</li>
-<li><strong>Edit</strong>:
-<code>/&lt;project-slug&gt;/verification/edit/&lt;verification_id&gt;</code>.</li>
-</ul>
-<h3 id="requirement-statuses">8.4 Requirement Statuses</h3>
-<p>Requirement statuses (e.g. Draft, Accepted, Rejected) are configured
-per project.</p>
-<ul>
-<li><strong>List</strong>:
-<code>/&lt;project-slug&gt;/requirement_statuses</code>.</li>
-<li><strong>New</strong>:
-<code>/&lt;project-slug&gt;/requirement_statuses/new</code>.</li>
-<li><strong>Edit</strong>:
-<code>/&lt;project-slug&gt;/requirement_statuses/edit/&lt;status_id&gt;</code>.</li>
-</ul>
-<h3 id="verification-statuses">8.5 Verification Statuses</h3>
-<p>Verification statuses (e.g. Pass, Fail, Not Run) are configured per
-project.</p>
-<ul>
-<li><strong>List</strong>:
-<code>/&lt;project-slug&gt;/verification_statuses</code>.</li>
-<li><strong>New</strong>:
-<code>/&lt;project-slug&gt;/verification_statuses/new</code>.</li>
-<li><strong>Edit</strong>:
-<code>/&lt;project-slug&gt;/verification_statuses/edit/&lt;status_id&gt;</code>.</li>
-</ul>
+to classify and manage requirements and verifications. They are edited
+under <strong>Project settings › Catalog</strong>
+(<code>/&lt;project-slug&gt;/settings/catalog</code>), one tab each; you
+need <strong>Edit requirements</strong> permission to change them.</p>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th>Tab</th>
+<th>What it holds</th>
+<th>URL</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Categories</strong></td>
+<td>Groups of requirements (e.g. “Safety”, “Performance”)</td>
+<td><code>…/settings/catalog/categories</code></td>
+</tr>
+<tr>
+<td><strong>Applicability</strong></td>
+<td>Product lines, system types or scope (e.g. “Product A”, “All”)</td>
+<td><code>…/settings/catalog/applicability</code></td>
+</tr>
+<tr>
+<td><strong>Requirement statuses</strong></td>
+<td>e.g. Draft, Accepted, Rejected</td>
+<td><code>…/settings/catalog/requirement-statuses</code></td>
+</tr>
+<tr>
+<td><strong>Verification statuses</strong></td>
+<td>e.g. Pass, Fail, Not run</td>
+<td><code>…/settings/catalog/verification-statuses</code></td>
+</tr>
+<tr>
+<td><strong>Custom fields</strong></td>
+<td>Extra requirement fields and their types</td>
+<td><code>…/settings/catalog/custom-fields</code></td>
+</tr>
+<tr>
+<td><strong>Verification methods</strong></td>
+<td>How requirements are verified (e.g. Test, Analysis, Review)</td>
+<td><code>…/settings/catalog/verification-methods</code></td>
+</tr>
+</tbody>
+</table>
+<p>Each tab lists the entries with their title, description and tag, and
+lets you add, edit and delete them. The old
+<code>/&lt;project-slug&gt;/catalog/…</code> URLs redirect here.</p>
 <hr />
 <h2 id="reports-export">9. Reports &amp; Export</h2>
 <h3 id="reports-page">9.1 Reports Page</h3>
@@ -1441,9 +1437,9 @@ or passwords.</li>
 <h3 id="importing-from-excel-or-csv">10.1 Importing from Excel or
 CSV</h3>
 <ol type="1">
-<li>Open a project and go to <strong>Import</strong> in the sidebar,
+<li>Open a project and go to <strong>Project settings › Import</strong>,
 <strong>Create → Import</strong>, or
-<code>/{project-slug}/import</code>.</li>
+<code>/{project-slug}/settings/import</code>.</li>
 <li>You need <strong>Edit requirements</strong> permission.</li>
 <li>Upload a <strong><code>.xlsx</code></strong> or
 <strong><code>.csv</code></strong> file (first sheet only).</li>
@@ -1454,8 +1450,7 @@ each column to a Marreq field (or skip it), then
 <strong>Import</strong>.</li>
 <li>Review the count and any per-row errors, then open the requirements
 or verifications list. After a matrix import, open
-<strong>Matrix</strong> or <strong>Traceability</strong> to see
-coverage.</li>
+<strong>Traceability</strong> (Matrix tab) to see coverage.</li>
 </ol>
 <p>Unmapped catalog fields (status, category, applicability,
 verification method) use project defaults. When a mapped file value does
@@ -1473,8 +1468,8 @@ not invent records. Extra columns are ignored. Re-importing a file
 exported from the same project skips pairs that already exist.</p>
 <h3 id="importing-reqif">10.2 Importing ReqIF</h3>
 <ol type="1">
-<li>Open a project and go to <strong>Import</strong>
-(<code>/{project-slug}/import</code>). You need <strong>Edit
+<li>Open a project and go to <strong>Project settings › Import</strong>
+(<code>/{project-slug}/settings/import</code>). You need <strong>Edit
 requirements</strong> permission.</li>
 <li>In the <strong>ReqIF 1.2</strong> section, choose a
 <strong><code>.reqif</code></strong> or
@@ -1522,20 +1517,21 @@ add records to the project you already have open.</p>
 <hr />
 <h2 id="project-members">11. Project Members</h2>
 <ul>
-<li><strong>View members</strong>: Project detail page → <strong>View
-Members</strong>, or <strong>Members</strong> in the nav for the
-selected project.</li>
-<li>URL: <code>/&lt;project-slug&gt;/members</code>.</li>
+<li><strong>View members</strong>: <strong>Project settings › Members
+&amp; reviewers</strong>.</li>
+<li>URL: <code>/&lt;project-slug&gt;/settings/members</code> (the old
+<code>/&lt;project-slug&gt;/members</code> redirects here).</li>
 </ul>
-<p>You see the list of members with names, usernames, roles (e.g. owner,
-manager), and email. <strong>Admins</strong> can add/remove members and
-change roles via <strong>Add member</strong> and member actions
-(e.g. remove).</p>
+<p>You see each member and their role (Admin, Reviewer, Author, Viewer).
+Users with <strong>Manage members</strong> can change roles and remove
+members.</p>
 <ul>
-<li><strong>Add member</strong>: Submit the form with user and
-role.</li>
-<li><strong>Remove member</strong>: Use the remove action for a member
-(e.g. <strong>Remove</strong> button); confirm if prompted.</li>
+<li><strong>Add member</strong>: pick an account and a role, then
+<strong>Add</strong>. Picking from all accounts needs the user
+directory, which only instance administrators can see; other managers
+are asked to have an administrator add people.</li>
+<li><strong>Remove member</strong>: <strong>Remove</strong> next to the
+member, then confirm.</li>
 </ul>
 <h3 id="project-reviewers-workflow-gates">11.1 Project reviewers
 (workflow gates)</h3>
@@ -1543,12 +1539,10 @@ role.</li>
 list</strong> for the project (not the same as the “Reviewer” role
 alone):</p>
 <ul>
-<li><strong>Who</strong>: In the React app, open
-<strong>Settings</strong> for the project (project-scoped
-<strong>Settings</strong> in the nav). Users with <strong>Manage
-members</strong> can check which <strong>project members</strong> act as
-<strong>project reviewers</strong>. Only members of the project can be
-reviewers.</li>
+<li><strong>Who</strong>: open <strong>Project settings › Members &amp;
+reviewers</strong>. Users with <strong>Manage members</strong> can check
+which <strong>project members</strong> act as <strong>project
+reviewers</strong>. Only members of the project can be reviewers.</li>
 <li><strong>What they control</strong>: <strong>Requirement
 status</strong> (from the requirements table or requirement editor),
 <strong>verification (test) status</strong>, and <strong>version
@@ -1598,8 +1592,8 @@ change, and the header shows the new name right away.</li>
 </ul>
 <p>On the hosted cloud service, where email addresses must be verified,
 the email field is read-only; contact your administrator to change it.
-Administrators can also edit any user from <strong>Admin → User
-directory</strong> (see <a href="#132-user-management">§13.2</a>).</p>
+Administrators can also edit any user from <strong>Administration ›
+Users</strong> (see <a href="#131-user-management">§13.1</a>).</p>
 <h3 id="change-password">12.3 Change Password</h3>
 <ul>
 <li><strong>User menu (avatar, top-right) → Change password</strong>.
@@ -1614,19 +1608,18 @@ on your name or username. Submit; on success you are signed out and
 redirected to sign in.</p>
 <hr />
 <h2 id="administration">13. Administration</h2>
-<p>Available only to <strong>administrators</strong>
-(<code>is_admin</code>).</p>
-<h3 id="admin-dashboard">13.1 Admin Dashboard</h3>
+<p>Available only to <strong>instance administrators</strong>
+(<code>is_admin</code>). Open <strong>Administration</strong> from the
+user menu (avatar, top right); other users don’t see the entry. The area
+lives outside any project at <code>/admin</code>, with tabs for
+<strong>Users</strong>, <strong>System logs</strong>, <strong>Log
+analytics</strong> and <strong>Backup</strong>, and a <strong>Back to
+project</strong> link. Old <code>/&lt;project-slug&gt;/admin/…</code>
+links redirect here.</p>
+<h3 id="user-management">13.1 User Management</h3>
 <ul>
-<li><strong>Admin → Dashboard</strong>.</li>
-<li>URL: <code>/-/admin</code>.</li>
-</ul>
-<p>Overview of system status and links to user management, backup,
-cache, logs.</p>
-<h3 id="user-management">13.2 User Management</h3>
-<ul>
-<li><strong>Admin</strong> in the project sidebar.</li>
-<li>URL: <code>/&lt;project-slug&gt;/admin</code>.</li>
+<li><strong>Administration › Users</strong>.</li>
+<li>URL: <code>/admin</code>.</li>
 </ul>
 <p>The <strong>User directory</strong> lists every account (username,
 name, email, admin flag). Row actions:</p>
@@ -1651,11 +1644,11 @@ cloud mode), <strong>New user</strong> is hidden and the <strong>Site
 administrator</strong> flag cannot be changed; the remaining actions
 work the same way. All changes are recorded in <strong>System
 logs</strong>.</p>
-<h3 id="database-backup">13.3 Database Backup</h3>
+<h3 id="database-backup">13.2 Database Backup</h3>
 <ul>
-<li><strong>Backup</strong> in the project sidebar (or the
-<strong>Backup</strong> button on the User directory).</li>
-<li>URL: <code>/&lt;project-slug&gt;/admin/backup</code>.</li>
+<li><strong>Administration › Backup</strong> (not shown in the hosted
+cloud mode).</li>
+<li>URL: <code>/admin/backup</code>.</li>
 </ul>
 <p><strong>Download backup</strong> runs <code>pg_dump</code> on the
 server and downloads the whole database (all projects, users, and audit
@@ -1676,28 +1669,19 @@ class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="
 <p>Available on self-hosted (<code>marreq-server</code>) installations
 only. In the hosted cloud mode the page explains that backups are
 managed by the hosting operator.</p>
-<h3 id="cache-if-exposed">13.4 Cache (if exposed)</h3>
+<h3 id="system-logs">13.3 System Logs</h3>
 <ul>
-<li><strong>Admin → Cache</strong> (or <code>/-/admin/cache</code> when
-available).</li>
-<li>Options may include: view cache stats, <strong>Clear cache</strong>,
-<strong>Cleanup</strong> expired entries, health check, warm cache. Use
-for tuning or troubleshooting.</li>
-</ul>
-<h3 id="system-logs">13.5 System Logs</h3>
-<ul>
-<li><strong>Admin → System Logs</strong>.</li>
-<li>URL: <code>/&lt;project-slug&gt;/admin/logs</code>.</li>
+<li><strong>Administration › System logs</strong>.</li>
+<li>URL: <code>/admin/logs</code>.</li>
 </ul>
 <p>Browse audit logs (entity type, entity ID, user, action, timestamp).
 You can filter by entity and export logs (e.g. <strong>Export
 logs</strong> with optional filename). <strong>Cleanup logs</strong> (if
 available) removes old entries.</p>
-<h3 id="log-analytics">13.6 Log Analytics</h3>
+<h3 id="log-analytics">13.4 Log Analytics</h3>
 <ul>
-<li><strong>Log analytics</strong> in the project sidebar (or
-<strong>Analytics</strong> on the System logs page).</li>
-<li>URL: <code>/&lt;project-slug&gt;/admin/logs/analytics</code>.</li>
+<li><strong>Administration › Log analytics</strong>.</li>
+<li>URL: <code>/admin/logs/analytics</code>.</li>
 </ul>
 <p>A summary of instance-wide activity from the audit log, for the last
 <strong>7</strong>, <strong>30</strong> (default), or
@@ -1717,9 +1701,9 @@ administrators only.</p>
 <hr />
 <h2 id="tips-shortcuts">14. Tips &amp; Shortcuts</h2>
 <ul>
-<li><strong>Theme</strong>: Use the sun/moon icon in the navbar or on
-the login page for light/dark mode; preference is often stored in the
-browser.</li>
+<li><strong>Theme</strong>: use the light / dark / match-system switch
+in the top bar (on wider screens) or on the login page; the choice is
+stored in the browser.</li>
 <li><strong>Semantic search</strong>: <strong>Ctrl+K</strong> on the
 requirements page (when semantic search is enabled) opens the AI search
 modal; <strong>Enter</strong> runs the search, <strong>Esc</strong>
@@ -1731,9 +1715,10 @@ unchanged.</li>
 <li><strong>Breadcrumbs</strong>: Requirement and test edit/create pages
 show breadcrumbs (Project → Requirements → …); use them to navigate
 back.</li>
-<li><strong>Project context</strong>: Many links (Requirements,
-Verifications, Matrix, Reports, Members, Baselines) depend on having a
-project selected; open a project from Home or Projects first.</li>
+<li><strong>Project context</strong>: the sidebar pages and Project
+settings belong to the current project; switch projects with the
+<strong>Projects</strong> menu in the top bar (you stay on the same
+page).</li>
 <li><strong>Export formats</strong>: Requirements, verifications, matrix
 grid, and matrix links export as <strong>Excel</strong>
 (<code>.xlsx</code>) from Reports; ReqIF export is <strong>XML</strong>.

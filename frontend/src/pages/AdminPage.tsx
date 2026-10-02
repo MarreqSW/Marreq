@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Link, useOutletContext } from 'react-router-dom';
 import { deleteUser, getCsrfToken, getDeploymentInfo, listUsersOptional } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import type { DeploymentInfo, User } from '@/api/types';
-import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { parseUser } from '@/utils/parseUser';
 import { btnDanger } from '@/pages/catalog/catalogUi';
 import SetPasswordDialog from '@/pages/admin/SetPasswordDialog';
 import UserFormDialog from '@/pages/admin/UserFormDialog';
+import { ADMIN_BREADCRUMB } from '@/pages/admin/adminArea';
 
 const headerBtn =
   'text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher';
@@ -16,7 +15,6 @@ const rowBtn =
   'text-xs font-bold uppercase text-stitch-accent hover:text-stitch-fg disabled:opacity-40';
 
 export default function AdminPage() {
-  const { projectId: pid, basePath } = useOutletContext<ProjectOutletContext>();
   const { dashboard, csrfToken } = useDashboard();
 
   const me = parseUser(dashboard?.user);
@@ -87,8 +85,7 @@ export default function AdminPage() {
     await load();
   }
 
-  const projectName =
-    dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
+  const projectName = ADMIN_BREADCRUMB;
 
   if (loading) {
     return (
@@ -139,14 +136,6 @@ export default function AdminPage() {
           >
             New user
           </button>
-        ) : null}
-        <Link to={`${basePath}/admin/logs`} className={headerBtn}>
-          System logs
-        </Link>
-        {deployment?.allows_database_backup !== false ? (
-          <Link to={`${basePath}/admin/backup`} className={headerBtn}>
-            Backup
-          </Link>
         ) : null}
         <button type="button" onClick={() => void load()} className={headerBtn}>
           Refresh

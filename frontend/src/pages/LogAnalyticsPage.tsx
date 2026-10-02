@@ -1,21 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useOutletContext, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { getAdminLogStats, listUsersOptional } from '@/api/client';
 import type { AdminLogStats } from '@/api/types';
 import DailyBarChart, { formatDay } from '@/components/analytics/DailyBarChart';
 import RankedBars from '@/components/analytics/RankedBars';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import { useDashboard } from '@/context/DashboardContext';
-import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { parseUser } from '@/utils/parseUser';
+import { ADMIN_BASE, ADMIN_BREADCRUMB } from '@/pages/admin/adminArea';
 
 const RANGES = [7, 30, 90] as const;
 type RangeDays = (typeof RANGES)[number];
 const DEFAULT_RANGE: RangeDays = 30;
 const TOP = 10;
 
-const headerBtn =
-  'text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher';
 const card = 'rounded-xl border border-stitch-border bg-stitch-surface p-5 shadow-stitch';
 
 /** UTC midnight `days - 1` days before today, as `YYYY-MM-DD` (so the range covers `days` days). */
@@ -42,7 +40,6 @@ function Tile({ label, value, hint }: { label: string; value: string | number; h
 }
 
 export default function LogAnalyticsPage() {
-  const { projectId: pid, basePath } = useOutletContext<ProjectOutletContext>();
   const { dashboard } = useDashboard();
   const me = parseUser(dashboard?.user);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -90,10 +87,9 @@ export default function LogAnalyticsPage() {
     return stats.by_day.reduce((best, d) => (d.count > best.count ? d : best), stats.by_day[0]);
   }, [stats]);
 
-  const projectName =
-    dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
+  const projectName = ADMIN_BREADCRUMB;
   const logsLink = (params: Record<string, string>) =>
-    `${basePath}/admin/logs?${new URLSearchParams({ since: `${since}T00:00`, ...params })}`;
+    `${ADMIN_BASE}/logs?${new URLSearchParams({ since: `${since}T00:00`, ...params })}`;
 
   if (allowed === null) {
     return (
@@ -133,11 +129,7 @@ export default function LogAnalyticsPage() {
         section="Admin"
         title="Log analytics"
         subtitle="Instance-wide activity from the audit log. Days are in UTC."
-      >
-        <Link to={`${basePath}/admin/logs`} className={headerBtn}>
-          System logs
-        </Link>
-      </StitchPageHeader>
+      />
 
       <div className="mb-4 flex items-center gap-2" role="group" aria-label="Time range">
         {RANGES.map((r) => (

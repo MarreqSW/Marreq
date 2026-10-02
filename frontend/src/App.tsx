@@ -44,6 +44,7 @@ import RequirementsPage from '@/pages/RequirementsPage';
 import TraceabilityPage from '@/pages/TraceabilityPage';
 import VerificationsPage from '@/pages/VerificationsPage';
 import { MatrixRedirect, MovedRedirect } from '@/pages/LegacyRedirects';
+import AdminLayout from '@/pages/admin/AdminLayout';
 import BaselinesPage from '@/pages/BaselinesPage';
 import BaselineDetailPage from '@/pages/BaselineDetailPage';
 import ProjectCatalogLayout from '@/pages/catalog/ProjectCatalogLayout';
@@ -124,6 +125,13 @@ export default function App() {
         <Route path="groups/:groupId" element={<GroupViewPage />} />
         <Route path="groups/:groupId/edit" element={<GroupEditPage />} />
         <Route path="groups/:groupId/members" element={<GroupMembersPage />} />
+        {/* Instance administration ("admin" is a reserved namespace, so no project can shadow it). */}
+        <Route path="admin" element={<AdminLayout />}>
+          <Route index element={<AdminPage />} />
+          <Route path="logs" element={<SystemLogsPage />} />
+          <Route path="logs/analytics" element={<LogAnalyticsPage />} />
+          <Route path="backup" element={<BackupPage />} />
+        </Route>
         {/* Project workspace: /:projectSlug/... */}
         <Route path=":projectSlug" element={<ProjectLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
@@ -175,10 +183,8 @@ export default function App() {
           <Route path="members" element={<MovedRedirect to="settings/members" />} />
           <Route path="catalog/*" element={<MovedRedirect to="settings/catalog" />} />
           <Route path="help" element={<HelpPage />} />
-          <Route path="admin/logs" element={<SystemLogsPage />} />
-          <Route path="admin/logs/analytics" element={<LogAnalyticsPage />} />
-          <Route path="admin/backup" element={<BackupPage />} />
-          <Route path="admin" element={<AdminPage />} />
+          {/* Instance administration moved to /admin (issue #346). */}
+          <Route path="admin/*" element={<MovedRedirect to="/admin" />} />
         </Route>
         <Route
           path=":namespace/:projectSlug/*"

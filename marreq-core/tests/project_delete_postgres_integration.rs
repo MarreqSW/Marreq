@@ -65,6 +65,8 @@ fn seed_project(project: i32, base: i32, slug: &str) -> String {
          INSERT INTO baseline_verifications (baseline_id,verification_id,name,reference_code,status_id,project_id,author_id,reviewer_id)
            VALUES ({b},{b}+1,'Parent test','VER-{b}-1',{b},{project},1,1);
          INSERT INTO baseline_attachments (baseline_id,attachment_id) VALUES ({b},{b});
+         INSERT INTO verification_control (verification_id,project_id,verification_level,evidence_reference) VALUES ({b}+1,{project},'System','TR-{b}');
+         INSERT INTO requirement_compliance (requirement_id,project_id,compliance,note) VALUES ({b}+1,{project},'C','accepted');
          INSERT INTO notifications (user_id,project_id,notification_type,title) VALUES (2,{project},'requirement_updated','Changed');
          INSERT INTO notification_preferences (user_id,project_id) VALUES (2,{project});
          INSERT INTO user_api_tokens (user_id,token_hash,project_id) VALUES (2,'token-{b}',{project});
@@ -97,6 +99,8 @@ fn project_rows(conn: &mut PgConnection, p: i32) -> Vec<(&'static str, i64)> {
         "notifications",
         "notification_preferences",
         "user_api_tokens",
+        "verification_control",
+        "requirement_compliance",
     ];
     let mut out: Vec<(&'static str, i64)> = by_project
         .iter()

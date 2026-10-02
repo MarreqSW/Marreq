@@ -145,6 +145,7 @@ mod test_support {
                 project_id: 1,
                 is_system: true,
                 tag_color: None,
+                outcome: marreq_core::status_enums::default_outcome(),
             },
         );
 

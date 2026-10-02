@@ -343,8 +343,10 @@ impl LookupRepository for DieselRepo {
         new: &NewVerificationStatus,
     ) -> Result<i32, RepoError> {
         let mut conn = self.get_conn()?;
+        let mut new = new.clone();
+        new.outcome = Some(resolved_outcome(&new));
         let res: VerificationStatus = diesel::insert_into(schema::verification_status::table)
-            .values(new)
+            .values(&new)
             .get_result(conn.as_mut())?;
         Ok(res.id)
     }
@@ -403,12 +405,14 @@ impl LookupRepository for DieselRepo {
             return Err(RepoError::BadInput("Cannot modify system status".into()));
         }
         let mut conn = self.get_conn()?;
+        let outcome = payload.outcome.clone().unwrap_or(status.outcome);
         let updated = diesel::update(dsl::verification_status.filter(dsl::id.eq(id)))
             .set((
                 dsl::title.eq(&payload.title),
                 dsl::description.eq(&payload.description),
                 dsl::tag.eq(&payload.tag),
                 dsl::tag_color.eq(&payload.tag_color),
+                dsl::outcome.eq(outcome),
             ))
             .execute(conn.as_mut())?;
         Ok(updated > 0)
@@ -434,4 +438,14 @@ impl LookupRepository for DieselRepo {
         diesel::delete(dsl::verification_status.filter(dsl::id.eq(id))).execute(conn.as_mut())?;
         Ok(status)
     }
+}
+
+/// The outcome stored for a new verification status: the explicit one, or a
+/// guess from the title.
+pub(crate) fn resolved_outcome(new: &NewVerificationStatus) -> String {
+    new.outcome.clone().unwrap_or_else(|| {
+        crate::status_enums::VerificationOutcome::infer_from_title(&new.title)
+            .as_str()
+            .to_string()
+    })
 }

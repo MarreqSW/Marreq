@@ -293,6 +293,7 @@ impl<'a> StatusService<'a> {
                 project_id,
                 is_system: true,
                 tag_color: None,
+                outcome: None,
             };
             self.create_system_verification_status(payload)?;
         }
@@ -349,6 +350,7 @@ mod tests {
                 project_id: 1,
                 is_system: false,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
         repo
@@ -518,6 +520,7 @@ mod tests {
                 project_id: 10,
                 is_system: false,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
         repo.verification_statuses.insert(
@@ -530,6 +533,7 @@ mod tests {
                 project_id: 10,
                 is_system: false,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
         repo.verification_statuses.insert(
@@ -542,6 +546,7 @@ mod tests {
                 project_id: 20,
                 is_system: false,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
 
@@ -602,6 +607,7 @@ mod tests {
             project_id: 1,
             is_system: false,
             tag_color: None,
+            outcome: None,
         };
 
         let id = service.create_verification_status(payload).unwrap();
@@ -618,6 +624,57 @@ mod tests {
     }
 
     #[test]
+    fn verification_status_outcome_is_inferred_set_and_kept() {
+        let state = state_with_repo(populated_repo());
+        let service = StatusService::new(&state);
+        let new = |title: &str, outcome: Option<&str>| NewVerificationStatus {
+            id: None,
+            title: title.into(),
+            description: String::new(),
+            tag: title[..3].to_uppercase(),
+            project_id: 1,
+            is_system: false,
+            tag_color: None,
+            outcome: outcome.map(str::to_string),
+        };
+        let outcome = |id: i32| {
+            state.repo_read().inner_repo().verification_statuses[&id]
+                .outcome
+                .clone()
+        };
+
+        let in_progress = service
+            .create_verification_status(new("  In Progress  ", None))
+            .unwrap();
+        let blocked = service
+            .create_verification_status(new("Blocked", None))
+            .unwrap();
+        let waived = service
+            .create_verification_status(new("Waived", Some("passed")))
+            .unwrap();
+        assert_eq!(
+            outcome(in_progress),
+            "in_progress",
+            "inferred from the title"
+        );
+        assert_eq!(outcome(blocked), "not_run", "unknown titles are not run");
+        assert_eq!(outcome(waived), "passed", "explicit outcome wins");
+
+        service
+            .update_verification_status(blocked, &new("Blocked", Some("failed")))
+            .unwrap();
+        assert_eq!(outcome(blocked), "failed");
+        service
+            .update_verification_status(blocked, &new("Blocked again", None))
+            .unwrap();
+        assert_eq!(
+            outcome(blocked),
+            "failed",
+            "no outcome in the update keeps it"
+        );
+    }
+
+    #[test]
     fn create_verification_status_rejects_invalid_title() {
         let repo = populated_repo();
         let state = state_with_repo(repo);
@@ -631,6 +688,7 @@ mod tests {
             project_id: 1,
             is_system: false,
             tag_color: None,
+            outcome: None,
         };
 
         let err = service.create_verification_status(payload).unwrap_err();
@@ -745,6 +803,7 @@ mod tests {
                 project_id: 1,
                 is_system: true,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
         let state = state_with_repo(repo);
@@ -758,6 +817,7 @@ mod tests {
             project_id: 1,
             is_system: false,
             tag_color: None,
+            outcome: None,
         };
         let err = service.update_verification_status(1, &payload).unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
@@ -777,6 +837,7 @@ mod tests {
                 project_id: 1,
                 is_system: true,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
         let state = state_with_repo(repo);

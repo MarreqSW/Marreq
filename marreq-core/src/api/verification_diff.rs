@@ -141,6 +141,7 @@ mod tests {
                 project_id: 1,
                 is_system: true,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
         repo.verification_statuses.insert(
@@ -153,6 +154,7 @@ mod tests {
                 project_id: 1,
                 is_system: true,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
         repo.verification_methods.insert(

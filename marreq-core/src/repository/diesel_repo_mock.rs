@@ -72,6 +72,8 @@ pub struct DieselRepoMock {
     pub baseline_attachments: Vec<(i32, i32)>,
     /// project_id -> quota override in bytes
     pub project_storage_quotas: HashMap<i32, i64>,
+    pub verification_controls: HashMap<i32, VerificationControl>,
+    pub requirement_compliance: HashMap<i32, RequirementCompliance>,
     pub oauth_clients: HashMap<String, OAuthClient>,
     pub oauth_grants: HashMap<i32, OAuthGrant>,
     pub oauth_codes: HashMap<String, OAuthAuthorizationCode>,
@@ -154,6 +156,8 @@ impl Default for DieselRepoMock {
             next_attachment_id: 1,
             baseline_attachments: Vec::new(),
             project_storage_quotas: HashMap::new(),
+            verification_controls: HashMap::new(),
+            requirement_compliance: HashMap::new(),
         }
     }
 }
@@ -547,6 +551,8 @@ impl DieselRepoMock {
             next_attachment_id: 1,
             baseline_attachments: Vec::new(),
             project_storage_quotas: HashMap::new(),
+            verification_controls: HashMap::new(),
+            requirement_compliance: HashMap::new(),
             oauth_clients: HashMap::new(),
             oauth_grants: HashMap::new(),
             oauth_codes: HashMap::new(),
@@ -608,6 +614,8 @@ impl DieselRepoMock {
             next_attachment_id: 1,
             baseline_attachments: Vec::new(),
             project_storage_quotas: HashMap::new(),
+            verification_controls: HashMap::new(),
+            requirement_compliance: HashMap::new(),
             oauth_clients: HashMap::new(),
             oauth_grants: HashMap::new(),
             oauth_codes: HashMap::new(),
@@ -1349,6 +1357,7 @@ impl LookupRepository for DieselRepoMock {
             project_id: new.project_id,
             is_system: new.is_system,
             tag_color: new.tag_color.clone(),
+            outcome: crate::repository::diesel_repo::lookups::resolved_outcome(new),
         };
         self.verification_statuses.insert(id, status);
         Ok(id)
@@ -1418,6 +1427,9 @@ impl LookupRepository for DieselRepoMock {
         status.description = payload.description.clone();
         status.tag = payload.tag.clone();
         status.tag_color = payload.tag_color.clone();
+        if let Some(outcome) = &payload.outcome {
+            status.outcome = outcome.clone();
+        }
         Ok(true)
     }
 
@@ -2445,6 +2457,10 @@ impl ProjectsRepository for DieselRepoMock {
         self.saved_views.retain(|v| v.project_id != project_id);
         self.attachments.retain(|a| a.project_id != project_id);
         self.project_storage_quotas.remove(&project_id);
+        self.verification_controls
+            .retain(|_, c| c.project_id != project_id);
+        self.requirement_compliance
+            .retain(|_, c| c.project_id != project_id);
         self.matrices.retain(|m| m.project_id != project_id);
         self.requirement_version_links
             .retain(|l| l.project_id != project_id);
@@ -3832,6 +3848,75 @@ impl crate::repository::AttachmentsRepository for DieselRepoMock {
             (&a.entity_type, a.entity_id, a.id).cmp(&(&b.entity_type, b.entity_id, b.id))
         });
         Ok(rows)
+    }
+}
+
+impl crate::repository::VerificationControlRepository for DieselRepoMock {
+    fn get_verification_control(
+        &self,
+        verification_id: i32,
+    ) -> Result<Option<VerificationControl>, RepoError> {
+        Ok(self.verification_controls.get(&verification_id).cloned())
+    }
+
+    fn list_verification_control_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<VerificationControl>, RepoError> {
+        let mut rows: Vec<_> = self
+            .verification_controls
+            .values()
+            .filter(|c| c.project_id == project_id)
+            .cloned()
+            .collect();
+        rows.sort_by_key(|c| c.verification_id);
+        Ok(rows)
+    }
+
+    fn upsert_verification_control(
+        &mut self,
+        control: &VerificationControl,
+    ) -> Result<VerificationControl, RepoError> {
+        self.verification_controls
+            .insert(control.verification_id, control.clone());
+        Ok(control.clone())
+    }
+
+    fn get_requirement_compliance(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Option<RequirementCompliance>, RepoError> {
+        Ok(self.requirement_compliance.get(&requirement_id).cloned())
+    }
+
+    fn list_requirement_compliance_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<RequirementCompliance>, RepoError> {
+        let mut rows: Vec<_> = self
+            .requirement_compliance
+            .values()
+            .filter(|c| c.project_id == project_id)
+            .cloned()
+            .collect();
+        rows.sort_by_key(|c| c.requirement_id);
+        Ok(rows)
+    }
+
+    fn set_requirement_compliance(
+        &mut self,
+        compliance: &RequirementCompliance,
+    ) -> Result<RequirementCompliance, RepoError> {
+        self.requirement_compliance
+            .insert(compliance.requirement_id, compliance.clone());
+        Ok(compliance.clone())
+    }
+
+    fn clear_requirement_compliance(&mut self, requirement_id: i32) -> Result<bool, RepoError> {
+        Ok(self
+            .requirement_compliance
+            .remove(&requirement_id)
+            .is_some())
     }
 }
 

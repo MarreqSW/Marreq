@@ -678,6 +678,7 @@ fn import_catalog(
             project_id,
             is_system: false,
             tag_color: item.tag_color.clone(),
+            outcome: None,
         })?;
         counts.verification_statuses += 1;
     }

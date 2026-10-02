@@ -141,6 +141,10 @@ pub struct NewVerificationStatus {
     pub is_system: bool,
     #[serde(default)]
     pub tag_color: Option<String>,
+    /// `None` on create infers the outcome from the title; on update it keeps
+    /// the current value.
+    #[serde(default)]
+    pub outcome: Option<String>,
 }
 
 define_tagged_form!(NewVerificationMethod, verification_methods);
@@ -975,6 +979,7 @@ mod forms_tests {
             project_id: 1,
             is_system: false,
             tag_color: None,
+            outcome: None,
         };
         assert_eq!(
             NewVerificationStatus::entity_type(),

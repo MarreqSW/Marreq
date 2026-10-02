@@ -47,6 +47,14 @@ export default defineConfig({
         'src/test/**',
         'src/main.tsx',
       ],
+      // CI floor (issue #351): `test:coverage` fails below these. Raise them
+      // when coverage goes up; keep them a little under the measured values.
+      thresholds: {
+        lines: 62,
+        statements: 61,
+        functions: 59,
+        branches: 52,
+      },
     },
   },
 });

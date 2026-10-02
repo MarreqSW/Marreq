@@ -33,7 +33,7 @@ Documentation index (by audience): [docs/README.md](docs/README.md)
 ### 📊 Reporting & Export
 - **Excel Export**: Export requirements with all fields to Excel format; includes a **Comments** sheet (requirement_id, version_id, author, created_at, body)
 - **Matrix Export**: Export traceability matrix to Excel
-- **ReqIF 1.2 (partial)**: Backend import/export with hierarchy and representable relations; custom datatypes, rich XHTML, attachments (export lists file names only), ReqIFZ and lossless vendor round-trips remain limited. See the [compatibility report](docs/developer/reqif-import-compatibility-report.md)
+- **ReqIF 1.2 (partial)**: Backend import/export with hierarchy and representable relations; ReqIFZ archives carry attachment files both ways (`MARREQ_REQIFZ_MAX_MB`, default 100); custom datatypes, rich XHTML and lossless vendor round-trips remain limited. See the [compatibility report](docs/developer/reqif-import-compatibility-report.md)
 - **Comprehensive Data**: All metadata included in exports (categories, applicability, dates, comments, etc.)
 
 ### 📸 Immutable Baselines
@@ -176,13 +176,13 @@ Use the SPA (**Docker** `http://localhost:8080` or **`npm run dev`** in `fronten
 
 - **Requirements Export**: Click "Export Excel" on the requirements page or homepage
 - **Matrix Export**: Click "Export Excel" on the matrix page
-- **ReqIF Export**: On **Reports**, download **Requirements (.reqif)** for the live project, or open a baseline and use **Export ReqIF** for that snapshot.
-- **File Format**: Excel downloads as `.xlsx`; ReqIF as XML (`.reqif`)
+- **ReqIF Export**: On **Reports**, download **Requirements (.reqif)** or **Requirements with files (.reqifz)** for the live project, or open a baseline and use **Export ReqIF** / **Export ReqIFZ (with files)** for that snapshot.
+- **File Format**: Excel downloads as `.xlsx`; ReqIF as XML (`.reqif`), or as a ZIP archive with the attachment files (`.reqifz`)
 
 ### Import Features
 
 - **Excel Import (Web UI)**: Open **Import** in a project (`/{slug}/import`), upload `.xlsx`/`.csv`, map columns, then create requirements or verifications
-- **ReqIF 1.2 Import (Web UI)**: Same Import page; upload `.reqif`/`.xml`. Catalog defaults are applied on the server; warnings are shown after import. ReqIFZ is not supported.
+- **ReqIF 1.2 Import (Web UI)**: Same Import page; upload `.reqif`/`.xml`, or a `.reqifz` archive whose referenced files become attachments. Catalog defaults are applied on the server; warnings are shown after import.
 - **Indexing integration**: Imported requirements are queued for semantic index refresh when embeddings are enabled
 
 ## 🔌 API Reference

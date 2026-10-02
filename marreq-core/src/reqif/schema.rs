@@ -18,6 +18,16 @@ pub struct ParsedSpecObject {
     pub last_change: Option<String>,
     /// Attribute long-name or identifier -> value (string).
     pub attributes: HashMap<String, String>,
+    /// Files referenced from XHTML values (`<xhtml:object data=…>`), in document order.
+    pub object_refs: Vec<ObjectRef>,
+}
+
+/// A file referenced from XHTML (`<object data="files/plot.png" type="image/png">`).
+/// In a ReqIFZ archive `data` is a path relative to the `.reqif` document.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ObjectRef {
+    pub data: String,
+    pub content_type: Option<String>,
 }
 
 /// A relation between two SpecObjects (e.g. parent-child or trace).

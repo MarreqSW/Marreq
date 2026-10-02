@@ -46,8 +46,8 @@ PARTIAL.
 | `IDENTIFIER` | temporary import key; fallback Marreq reference generated when needed | Partial; original ReqIF ID is not persisted |
 | `LAST-CHANGE` | parsed on `SPEC-OBJECT` | Ignored with warning; Marreq creation time is used |
 | users/authors | import actor/default author and reviewer | ReqIF author metadata is not mapped |
-| attachments / XHTML objects | detected | Unsupported; warning emitted |
-| ReqIFZ | none | Unsupported; rejected as non-XML |
+| attachments / XHTML objects | imported from ReqIFZ | XHTML `object` files in a ReqIFZ become attachments (issue #343); `FILE-NAME` embeddings and objects in plain `.reqif` files are warned about |
+| ReqIFZ | yes | All documents imported; referenced files attached within the project quota; unsafe archives rejected |
 
 Attribute-name mappings include:
 
@@ -67,7 +67,7 @@ in-memory lookup key.
 | Tool/source | Files | Compatibility | Notes |
 | --- | ---: | --- | --- |
 | IBM Rational DOORS | 4 | 0 PASS / 4 PARTIAL | Objects import; XHTML is flattened; enum/date/vendor attributes are not persisted |
-| Polarion | 5 | 0 PASS / 4 PARTIAL / 1 FAIL | Hierarchy imports; custom fields/XHTML are lossy; ReqIFZ unsupported; MAG8000 has 26 external relations skipped with warnings |
+| Polarion | 5 | 0 PASS / 4 PARTIAL / 1 FAIL | Hierarchy imports; custom fields/XHTML are lossy; ReqIFZ imports; MAG8000 has 26 external relations skipped with warnings |
 | Eclipse RMF | 3 | 0 PASS / 3 PARTIAL | Objects and the relation sample import; two files use the older 2010 namespace |
 | Eclipse Capella fixtures | 3 | 0 PASS / 3 PARTIAL | Objects and relation import; XHTML/enumerations are lossy |
 | Enterprise Architect example | 2 copies | 0 PASS / 2 FAIL | Both contain references to `FUNC-REQ-1/2`, while objects are `R001/2/3`; preflight imports nothing |
@@ -103,7 +103,7 @@ This audit therefore makes no DOORS Next compatibility claim.
 | StrictDoc minimal | 0 | 0 | 0 | 0 | 0 | FAIL (schema-incomplete) |
 | StrictDoc/DOORS large input | 3 | 3 | 0 | 0 | 0 | PARTIAL |
 | StrictDoc native sample | 18 | 18 | 14 | 0 | 14 | PARTIAL |
-| Polarion ReqIFZ | 2 inside archive | 0 | 1 | 0 | 0 | FAIL (unsupported container) |
+| Polarion ReqIFZ | 2 | 2 | 1 | 0 | 1 | PARTIAL |
 
 For MAG8000, all 26 relation targets refer to objects outside the exchanged
 object set. The importer now reports every skipped relation. It does not
@@ -170,7 +170,7 @@ successfully against the same schema bundle after this audit's exporter fixes.
 | missing hierarchy IDs | Preflight rejection with zero writes |
 | missing relation endpoints | Valid objects import; relation skipped with warning |
 | duplicate object IDs/references | Preflight rejection with zero writes |
-| ReqIFZ | Unsupported |
+| ReqIFZ | Imported; path traversal, symlinks, duplicates and zip bombs rejected |
 
 ## Findings
 
@@ -218,7 +218,7 @@ Other values are listed in warnings.
 Impact: vendor custom metadata, dates, booleans, real/integer constraints and
 enumeration semantics are lost.
 
-### REQIF-IMP-005 — OPEN
+### REQIF-IMP-005 — PARTIALLY FIXED
 
 Severity: HIGH  
 Feature: XHTML and attachments
@@ -226,9 +226,11 @@ Feature: XHTML and attachments
 Expected: preserve rich XHTML, tables, links, images and embedded files.  
 Actual: paragraphs, lists, emphasis, code, safe links and line breaks are
 converted to statement Markdown (issue #256); tables are reduced to one line per
-row; images and embedded files are not stored.  
-Impact: tables, images and embedded evidence are still lost. The importer warns
-about embedded content.
+row. Files referenced by XHTML `object` elements in a ReqIFZ archive are stored
+as requirement attachments (issue #343).  
+Impact: tables are flattened and images are attachments, not inline content.
+Objects in plain `.reqif` files and tool-specific `FILE-NAME` embeddings are
+still not stored; the importer warns about them.
 
 ### REQIF-IMP-006 — FIXED
 
@@ -269,13 +271,17 @@ Feature: specifications and object types
 Actual: multiple specifications and all object types collapse into one Marreq
 project/model. Warnings are emitted.
 
-### REQIF-IMP-010 — OPEN
+### REQIF-IMP-010 — FIXED
 
 Severity: HIGH  
 Feature: ReqIFZ
 
-Actual: ZIP bytes are rejected as malformed XML. No attachment extraction or
-path-safety handling exists.
+Previous actual: ZIP bytes were rejected as malformed XML.  
+Fix (issue #343): the ReqIF import detects ZIP archives, imports every `.reqif`
+document in them and attaches the referenced files. Entry names are validated
+before anything is extracted (no absolute or `..` paths, symlinks, encrypted or
+duplicate entries), entry count, total size and compression ratio are limited,
+and extraction sizes are enforced while reading.
 
 ### REQIF-EXP-001 — FIXED
 
@@ -289,7 +295,7 @@ Fix: exporter emits schema-valid ReqIF, nested refs, required type definitions,
 timestamps, nested hierarchy and typed parent relations. A generated export was
 validated against the StrictDoc schema bundle.
 
-### REQIF-EXP-002 — OPEN
+### REQIF-EXP-002 — PARTIALLY FIXED
 
 Severity: HIGH  
 Feature: semantic round-trip
@@ -298,15 +304,17 @@ Core title/reference/description/justification and hierarchy round-trip.
 Status, custom fields, original ReqIF identifiers, datatypes, enumerations,
 XHTML formatting, attachments, users and arbitrary relation metadata do not.
 Marreq attachments (issue #241) are exported as file names in an `Attachments`
-string attribute (`ad-attachments`); the files themselves need ReqIFZ.
+string attribute (`ad-attachments`). The ReqIFZ export (issue #343) also
+carries the files, linked from the statements with XHTML `object` elements, and
+a ReqIFZ export re-imports with its attachments.
 
 ### REQIF-OPS-001 — OPEN
 
 Severity: LOW  
 Feature: accessibility
 
-HTTP and SPA now wrap `ReqIFService` for ReqIF XML only. ReqIFZ, mapping UI,
-and preview-without-write remain out of scope. Automated vendor-fixture tests
+HTTP and SPA wrap `ReqIFService` for ReqIF XML and ReqIFZ archives. A mapping
+UI and preview-without-write remain out of scope. Automated vendor-fixture tests
 still call the internal production service directly.
 
 ## StrictDoc implementation observations
@@ -359,7 +367,7 @@ Features tested:       basic structure, seven attribute value families,
                        namespaces, unknown elements, attachments, malformed XML,
                        duplicate/missing IDs, ReqIFZ, core round-trip
 Problems found:        13
-Problems fixed:        4
-Partially fixed:       1
-Remaining limitations: 9 (including the partial relation-model limitation)
+Problems fixed:        5
+Partially fixed:       3
+Remaining limitations: 5 open (plus the three partial fixes)
 ```

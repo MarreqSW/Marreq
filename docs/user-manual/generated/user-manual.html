@@ -1412,9 +1412,18 @@ outside Marreq.</li>
 download <strong>Requirements (.reqif)</strong> for the live requirement
 set (comments are included as Remarks when present).</li>
 <li>Attachment file names are listed in an <strong>Attachments</strong>
-attribute; the files themselves are not included.</li>
+attribute; the files themselves are not included in a
+<code>.reqif</code> file.</li>
+<li><strong>With the files</strong>: download <strong>Requirements with
+files (.reqifz)</strong> instead. A ReqIFZ archive is a ZIP file holding
+the <code>.reqif</code> document and each requirement’s attachments
+under <code>files/&lt;attachment id&gt;/&lt;file name&gt;</code>. The
+statements link to the files the standard ReqIF way (XHTML objects), so
+DOORS, Polarion, Codebeamer and Marreq itself can pick them up.</li>
 <li><strong>From a baseline</strong>: open the baseline and use
-<strong>Export ReqIF</strong> for an immutable ReqIF 1.2 snapshot.</li>
+<strong>Export ReqIF</strong> for an immutable ReqIF 1.2 snapshot, or
+<strong>Export ReqIFZ (with files)</strong> to include the files the
+baseline recorded, including ones deleted since.</li>
 </ul>
 <h3 id="exporting-a-project-bundle-json">9.5 Exporting a project bundle
 (JSON)</h3>
@@ -1469,8 +1478,8 @@ exported from the same project skips pairs that already exist.</p>
 requirements</strong> permission.</li>
 <li>In the <strong>ReqIF 1.2</strong> section, choose a
 <strong><code>.reqif</code></strong> or
-<strong><code>.xml</code></strong> file (ReqIFZ/ZIP is not
-supported).</li>
+<strong><code>.xml</code></strong> file, or a
+<strong><code>.reqifz</code></strong> archive.</li>
 <li>Click <strong>Import ReqIF</strong>. Marreq uses the first project
 status, category, applicability, and verification method, and the
 current user as author and reviewer.</li>
@@ -1478,9 +1487,21 @@ current user as author and reviewer.</li>
 errors, then open the requirements list.</li>
 </ol>
 <p>Import creates new requirements; it does not update existing ones.
-Custom attributes, attachments, and original ReqIF identifiers are not
-persisted. Empty catalogs (especially verification methods) cause the
-import to fail until they exist.</p>
+Custom attributes and original ReqIF identifiers are not persisted.
+Empty catalogs (especially verification methods) cause the import to
+fail until they exist.</p>
+<p><strong>ReqIFZ archives.</strong> Every <code>.reqif</code> document
+in the archive is imported into the project. Each file a requirement’s
+text references (an XHTML object) becomes an attachment of that
+requirement, with the same checks as a manual upload (<a
+href="#49-attachments">§4.9</a>): allowed types, the per-file limit and
+the project’s storage limit (<a href="#34-project-storage">§3.4</a>). A
+file that fails a check, or that is missing from the archive, is skipped
+and listed as a warning; its requirement is still imported. Archives can
+be up to 100 MB (<code>MARREQ_REQIFZ_MAX_MB</code>). Archives with
+unsafe content (paths leading outside the archive, links, extreme
+compression) are refused as a whole. Files attached in other,
+tool-specific ways are not imported and are reported as a warning.</p>
 <h3 id="importing-a-project-bundle-json">10.3 Importing a project bundle
 (JSON)</h3>
 <ol type="1">

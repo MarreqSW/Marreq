@@ -263,6 +263,43 @@ describe('ImportPage', () => {
     );
   });
 
+  it('imports a ReqIFZ archive and shows the attached files', async () => {
+    vi.mocked(apiClient.commitReqifImport).mockResolvedValue({
+      success: true,
+      message: 'Successfully imported 3 requirements (0 links, 2 files)',
+      imported_count: 3,
+      created_link_count: 0,
+      imported_attachment_count: 2,
+      documents: ['power/battery.reqif', 'solar/array.reqif'],
+      errors: [],
+      warnings: ['power/battery.reqif: Battery sizing: logo.svg: .svg files are not allowed; not attached'],
+      imported_requirement_ids: [31, 32, 33],
+    });
+
+    const user = userEvent.setup();
+    render(
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/space-project/import']}>
+          <Routes>
+            <Route path="/:projectSlug/import" element={<ImportPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>,
+    );
+
+    const input = screen.getByTestId('reqif-import-file');
+    expect(input).toHaveAttribute('accept', expect.stringContaining('.reqifz'));
+    const file = new File(['PK'], 'power.reqifz', { type: 'application/zip' });
+    await user.upload(input, file);
+    await user.click(screen.getByRole('button', { name: /import reqif/i }));
+
+    await waitFor(() => expect(apiClient.commitReqifImport).toHaveBeenCalledWith(5, file, 'csrf-test'));
+    expect(await screen.findByTestId('reqif-import-result')).toHaveTextContent(
+      'Imported 3 requirement(s), attached 2 file(s) from 2 documents.',
+    );
+    expect(screen.getByTestId('reqif-import-warnings')).toHaveTextContent('logo.svg');
+  });
+
   it('commits a matrix links spreadsheet', async () => {
     vi.mocked(apiClient.previewExcelImport).mockResolvedValue({
       import_type: 'matrix',

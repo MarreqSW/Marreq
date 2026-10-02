@@ -20,6 +20,7 @@ const MIB: u64 = 1024 * 1024;
 pub const DEFAULT_ATTACHMENTS_DIR: &str = "/var/lib/marreq/attachments";
 pub const DEFAULT_MAX_FILE_MB: u64 = 10;
 pub const DEFAULT_PROJECT_QUOTA_MB: u64 = 500;
+pub const DEFAULT_REQIFZ_MAX_MB: u64 = 100;
 
 /// Attachment settings, read once at startup.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -31,6 +32,9 @@ pub struct AttachmentsConfig {
     /// `MARREQ_PROJECT_STORAGE_QUOTA_MB`, in bytes. Instance admins can
     /// override it per project.
     pub default_project_quota_bytes: u64,
+    /// `MARREQ_REQIFZ_MAX_MB`, in bytes: largest ReqIFZ archive accepted by
+    /// the ReqIF import (issue #343).
+    pub max_reqifz_bytes: u64,
 }
 
 impl Default for AttachmentsConfig {
@@ -39,6 +43,7 @@ impl Default for AttachmentsConfig {
             dir: PathBuf::from(DEFAULT_ATTACHMENTS_DIR),
             max_file_bytes: DEFAULT_MAX_FILE_MB * MIB,
             default_project_quota_bytes: DEFAULT_PROJECT_QUOTA_MB * MIB,
+            max_reqifz_bytes: DEFAULT_REQIFZ_MAX_MB * MIB,
         }
     }
 }
@@ -71,17 +76,19 @@ impl AttachmentsConfig {
         let max_file_bytes = megabytes("MARREQ_ATTACHMENT_MAX_MB", DEFAULT_MAX_FILE_MB);
         let default_project_quota_bytes =
             megabytes("MARREQ_PROJECT_STORAGE_QUOTA_MB", DEFAULT_PROJECT_QUOTA_MB);
+        let max_reqifz_bytes = megabytes("MARREQ_REQIFZ_MAX_MB", DEFAULT_REQIFZ_MAX_MB);
         Self {
             dir,
             max_file_bytes,
             default_project_quota_bytes,
+            max_reqifz_bytes,
         }
     }
 
-    /// Request body limit Rocket needs so a maximum-size file fits
-    /// (multipart framing and the other form fields get 1 MiB).
+    /// Request body limit Rocket needs so a maximum-size attachment or ReqIFZ
+    /// archive fits (multipart framing and the other form fields get 1 MiB).
     pub fn request_limit_bytes(&self) -> u64 {
-        self.max_file_bytes + MIB
+        self.max_file_bytes.max(self.max_reqifz_bytes) + MIB
     }
 }
 
@@ -195,7 +202,8 @@ mod tests {
         assert_eq!(cfg.max_file_bytes, 10 * MIB);
         assert_eq!(cfg.default_project_quota_bytes, 500 * MIB);
         assert_eq!(cfg.dir, PathBuf::from("/var/lib/marreq/attachments"));
-        assert_eq!(cfg.request_limit_bytes(), 11 * MIB);
+        assert_eq!(cfg.max_reqifz_bytes, 100 * MIB);
+        assert_eq!(cfg.request_limit_bytes(), 101 * MIB);
     }
 
     #[test]
@@ -204,11 +212,14 @@ mod tests {
             ("MARREQ_ATTACHMENTS_DIR", "/data/files"),
             ("MARREQ_ATTACHMENT_MAX_MB", "25"),
             ("MARREQ_PROJECT_STORAGE_QUOTA_MB", " 2048 "),
+            ("MARREQ_REQIFZ_MAX_MB", "300"),
         ]);
         assert!(issues.is_empty());
         assert_eq!(cfg.dir, PathBuf::from("/data/files"));
         assert_eq!(cfg.max_file_bytes, 25 * MIB);
         assert_eq!(cfg.default_project_quota_bytes, 2048 * MIB);
+        assert_eq!(cfg.max_reqifz_bytes, 300 * MIB);
+        assert_eq!(cfg.request_limit_bytes(), 301 * MIB);
     }
 
     #[test]

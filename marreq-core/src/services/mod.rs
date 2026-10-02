@@ -87,6 +87,7 @@ pub mod matrix_service;
 pub mod notification_service;
 pub mod project_service;
 pub mod reqif_service;
+pub mod reqifz_service;
 pub mod requirement_analytics_service;
 pub mod requirement_diff_service;
 pub mod requirement_service;

@@ -23,6 +23,53 @@ fn escape_xml(s: &str) -> String {
         .replace('\t', "&#9;")
 }
 
+/// An attachment of an exported requirement. `path` is set for ReqIFZ
+/// exports: the archive entry the statement links to with `<xhtml:object>`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExportAttachment {
+    pub name: String,
+    pub content_type: String,
+    pub path: Option<String>,
+}
+
+/// `files/1/my plot.png` -> `files/1/my%20plot.png` (each segment encoded).
+fn encode_path(path: &str) -> String {
+    path.split('/')
+        .map(|segment| urlencoding::encode(segment).into_owned())
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
+/// The statement XHTML, with one `<xhtml:object>` per archived attachment
+/// (images first) appended inside its `<xhtml:div>`.
+fn statement_xhtml(description: &str, attachments: &[ExportAttachment]) -> String {
+    let mut xhtml = crate::rich_text::to_xhtml(description);
+    let mut linked: Vec<&ExportAttachment> =
+        attachments.iter().filter(|a| a.path.is_some()).collect();
+    if linked.is_empty() {
+        return xhtml;
+    }
+    linked.sort_by_key(|a| !a.content_type.starts_with("image/"));
+    let Some(body) = xhtml.strip_suffix("</xhtml:div>") else {
+        return xhtml;
+    };
+    let mut out = body.to_string();
+    out.push_str("<xhtml:p>");
+    for a in linked {
+        let path = a.path.as_deref().unwrap_or_default();
+        out.push_str(&format!(
+            "<xhtml:object class=\"{}\" data=\"{}\" type=\"{}\">{}</xhtml:object>",
+            crate::reqif::import::MARREQ_OBJECT_CLASS,
+            escape_xml(&encode_path(path)),
+            escape_xml(&a.content_type),
+            escape_xml(&a.name)
+        ));
+    }
+    out.push_str("</xhtml:p></xhtml:div>");
+    xhtml = out;
+    xhtml
+}
+
 fn req_timestamp(req: &Requirement) -> String {
     format!("{}Z", req.update_date.format("%Y-%m-%dT%H:%M:%S"))
 }
@@ -67,14 +114,14 @@ fn write_hierarchy(
 
 /// Build ReqIF 1.2 XML from project name, requirements, optional parent map (req_id -> parent_req_id),
 /// optional comments per requirement (req_id -> formatted remarks string) and optional
-/// attachment file names per requirement (req_id -> `"; "`-separated names; the files
-/// themselves are not embedded).
+/// attachments per requirement. Attachment names always go into the `Attachments`
+/// attribute; those with a `path` (ReqIFZ) are also linked from the statement.
 pub fn to_reqif(
     project_name: &str,
     requirements: &[Requirement],
     parent_map: &HashMap<i32, i32>,
     comments_map: Option<&HashMap<i32, String>>,
-    attachments_map: Option<&HashMap<i32, String>>,
+    attachments_map: Option<&HashMap<i32, Vec<ExportAttachment>>>,
 ) -> String {
     let generated_at = Utc::now().to_rfc3339_opts(SecondsFormat::Millis, true);
     let mut out = String::new();
@@ -185,7 +232,11 @@ pub fn to_reqif(
             );
         }
         out.push_str("\n            <ATTRIBUTE-VALUE-XHTML><DEFINITION><ATTRIBUTE-DEFINITION-XHTML-REF>ad-statement</ATTRIBUTE-DEFINITION-XHTML-REF></DEFINITION><THE-VALUE>");
-        out.push_str(&crate::rich_text::to_xhtml(&req.description));
+        let attachments = attachments_map
+            .and_then(|map| map.get(&req.id))
+            .map(Vec::as_slice)
+            .unwrap_or_default();
+        out.push_str(&statement_xhtml(&req.description, attachments));
         out.push_str("</THE-VALUE></ATTRIBUTE-VALUE-XHTML>");
         if let Some(ref j) = req.justification
             && !j.is_empty()
@@ -202,12 +253,14 @@ pub fn to_reqif(
             out.push_str(&escape_xml(remarks));
             out.push_str("\"><DEFINITION><ATTRIBUTE-DEFINITION-STRING-REF>ad-remarks</ATTRIBUTE-DEFINITION-STRING-REF></DEFINITION></ATTRIBUTE-VALUE-STRING>");
         }
-        if let Some(map) = attachments_map
-            && let Some(names) = map.get(&req.id)
-            && !names.is_empty()
-        {
+        if !attachments.is_empty() {
+            let names = attachments
+                .iter()
+                .map(|a| a.name.as_str())
+                .collect::<Vec<_>>()
+                .join("; ");
             out.push_str("\n            <ATTRIBUTE-VALUE-STRING THE-VALUE=\"");
-            out.push_str(&escape_xml(names));
+            out.push_str(&escape_xml(&names));
             out.push_str("\"><DEFINITION><ATTRIBUTE-DEFINITION-STRING-REF>ad-attachments</ATTRIBUTE-DEFINITION-STRING-REF></DEFINITION></ATTRIBUTE-VALUE-STRING>");
         }
         out.push_str("\n          </VALUES>");
@@ -352,7 +405,13 @@ mod tests {
             &requirements,
             &HashMap::from([(2, 1)]),
             None,
-            Some(&HashMap::from([(1, "spec.pdf; plot.png".to_string())])),
+            Some(&HashMap::from([(
+                1,
+                vec![
+                    attachment("spec.pdf", "application/pdf", None),
+                    attachment("plot.png", "image/png", None),
+                ],
+            )])),
         );
 
         assert!(xml.contains("<REQ-IF-HEADER IDENTIFIER=\"header-marreq\">"));
@@ -381,6 +440,54 @@ mod tests {
             .and_then(|o| o.attributes.get("Attachments"))
             .cloned();
         assert_eq!(names.as_deref(), Some("spec.pdf; plot.png"));
+        // Without archive paths nothing is linked from the statement.
+        assert!(!xml.contains("xhtml:object"));
+    }
+
+    fn attachment(name: &str, content_type: &str, path: Option<&str>) -> ExportAttachment {
+        ExportAttachment {
+            name: name.into(),
+            content_type: content_type.into(),
+            path: path.map(Into::into),
+        }
+    }
+
+    #[test]
+    fn archived_attachments_are_linked_from_the_statement_and_skipped_on_reimport() {
+        let mut req = requirement(1, "Thermal", "REQ-THM-001");
+        req.description = "The radiator shall reject **40 W**.".into();
+        let attachments = HashMap::from([(
+            1,
+            vec![
+                attachment(
+                    "TVAC report.pdf",
+                    "application/pdf",
+                    Some("files/7/TVAC report.pdf"),
+                ),
+                attachment("plot <1>.png", "image/png", Some("files/8/plot <1>.png")),
+            ],
+        )]);
+        let xml = to_reqif("Project", &[req], &HashMap::new(), None, Some(&attachments));
+
+        let image = "<xhtml:object class=\"marreq-attachment\" data=\"files/8/plot%20%3C1%3E.png\" type=\"image/png\">plot &lt;1&gt;.png</xhtml:object>";
+        let pdf = "<xhtml:object class=\"marreq-attachment\" data=\"files/7/TVAC%20report.pdf\" type=\"application/pdf\">TVAC report.pdf</xhtml:object>";
+        assert!(xml.contains(image), "{xml}");
+        assert!(xml.contains(pdf), "{xml}");
+        assert!(xml.find(image) < xml.find(pdf), "images come first");
+        assert!(xml.contains("TVAC report.pdf</xhtml:object></xhtml:p></xhtml:div></THE-VALUE>"));
+
+        let doc = crate::reqif::import::parse_reqif(xml.as_bytes()).expect("parse own export");
+        let obj = &doc.objects[0];
+        assert_eq!(
+            obj.object_refs
+                .iter()
+                .map(|r| r.data.as_str())
+                .collect::<Vec<_>>(),
+            ["files/8/plot%20%3C1%3E.png", "files/7/TVAC%20report.pdf"]
+        );
+        // The file names are not pasted back into the statement.
+        let statement = obj.attributes.get("Statement").cloned().unwrap_or_default();
+        assert_eq!(statement, "The radiator shall reject **40 W**.");
     }
 
     #[test]

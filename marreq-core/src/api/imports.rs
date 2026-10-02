@@ -182,11 +182,51 @@ pub struct ReqifImportForm<'r> {
     file: TempFile<'r>,
 }
 
+/// Upload persisted to a private temp file (removed on drop).
+struct TempUpload(std::path::PathBuf);
+
+impl Drop for TempUpload {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_file(&self.0);
+    }
+}
+
+async fn persist_upload(file: &mut TempFile<'_>) -> ApiResult<TempUpload> {
+    let suffix: u64 = rand::random();
+    let path = std::env::temp_dir().join(format!("marreq-import-{suffix:016x}"));
+    file.move_copy_to(&path)
+        .await
+        .map_err(|e| ApiError::BadRequest(format!("could not store upload: {e}")))?;
+    Ok(TempUpload(path))
+}
+
+fn reqif_result_json(
+    result: &crate::reqif::ImportResult,
+    documents: &[String],
+    imported_attachment_count: usize,
+) -> Value {
+    json!({
+        "success": result.success,
+        "message": result.message,
+        "imported_count": result.imported_count,
+        "created_link_count": result.created_link_count,
+        "imported_attachment_count": imported_attachment_count,
+        "documents": documents,
+        "errors": result.errors,
+        "warnings": result.warnings,
+        "imported_requirement_ids": result.imported_requirement_ids,
+    })
+}
+
+/// `POST /projects/<id>/imports/reqif`: a `.reqif`/`.xml` document, or a
+/// ReqIFZ archive (detected by its ZIP signature) whose documents are all
+/// imported and whose referenced files become attachments (issue #343).
 #[post("/projects/<project_id>/imports/reqif", data = "<form>")]
 pub async fn commit_reqif(
     access: ProjectAccessOrBearer,
     project_id: i32,
     state: &State<AppState>,
+    storage: Option<crate::api::attachments::Storage>,
     mut form: Form<ReqifImportForm<'_>>,
 ) -> ApiResult<Value> {
     require_project_permission(
@@ -195,32 +235,72 @@ pub async fn commit_reqif(
         project_id,
         Permission::EditRequirements,
     )?;
-    let (filename, bytes) = read_upload(&mut form.file).await?;
-    reject_reqifz(&filename, &bytes)?;
-    let config = reqif_import_config(state, project_id, access.user().id)?;
-    let result = ReqIFService::new(state.inner())
-        .import_into_project(&bytes, &config, access.user())
-        .map_err(ApiError::BadRequest)?;
-    Ok(json!({
-        "success": result.success,
-        "message": result.message,
-        "imported_count": result.imported_count,
-        "created_link_count": result.created_link_count,
-        "errors": result.errors,
-        "warnings": result.warnings,
-        "imported_requirement_ids": result.imported_requirement_ids,
-    }))
-}
-
-fn reject_reqifz(filename: &str, bytes: &[u8]) -> ApiResult<()> {
-    let lower = filename.to_ascii_lowercase();
-    let zip_magic = bytes.starts_with(b"PK\x03\x04") || bytes.starts_with(b"PK\x05\x06");
-    if lower.ends_with(".reqifz") || zip_magic {
-        return Err(ApiError::BadRequest(
-            "ReqIFZ archives are not supported; upload a .reqif or .xml file".into(),
-        ));
+    let size = form.file.len();
+    if size == 0 {
+        return Err(ApiError::BadRequest("empty file".into()));
     }
-    Ok(())
+    let named_reqifz = form
+        .file
+        .raw_name()
+        .map(|n| {
+            n.dangerous_unsafe_unsanitized_raw()
+                .as_str()
+                .to_ascii_lowercase()
+        })
+        .is_some_and(|n| n.ends_with(".reqifz"));
+    let upload = persist_upload(&mut form.file).await?;
+    let mut head = [0u8; 4];
+    let head_len = std::fs::File::open(&upload.0)
+        .and_then(|mut f| std::io::Read::read(&mut f, &mut head))
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    let is_zip = head_len == 4 && (head == *b"PK\x03\x04" || head == *b"PK\x05\x06");
+    let config = reqif_import_config(state, project_id, access.user().id)?;
+
+    if !is_zip {
+        if named_reqifz {
+            return Err(ApiError::BadRequest(
+                "the .reqifz file is not a ZIP archive".into(),
+            ));
+        }
+        if size > MAX_UPLOAD_BYTES {
+            return Err(ApiError::BadRequest("file is larger than 20 MiB".into()));
+        }
+        let bytes = std::fs::read(&upload.0).map_err(|e| ApiError::Internal(e.to_string()))?;
+        let result = ReqIFService::new(state.inner())
+            .import_into_project(&bytes, &config, access.user())
+            .map_err(ApiError::BadRequest)?;
+        return Ok(reqif_result_json(&result, &[], 0));
+    }
+
+    let Some(crate::api::attachments::Storage(storage)) = storage else {
+        return Err(ApiError::Internal(
+            "attachment storage is not configured; ReqIFZ import is unavailable".into(),
+        ));
+    };
+    if size > storage.config.max_reqifz_bytes {
+        return Err(ApiError::PayloadTooLarge(format!(
+            "the archive is {}; ReqIFZ imports can be at most {}",
+            crate::services::attachment_service::format_mib(size as i64),
+            crate::services::attachment_service::format_mib(storage.config.max_reqifz_bytes as i64)
+        )));
+    }
+    let app_state = state.inner().clone();
+    let user = access.user().clone();
+    let imported = rocket::tokio::task::spawn_blocking(move || {
+        let outcome = crate::services::reqifz_service::import_archive(
+            &app_state, &storage, &user, &config, &upload.0,
+        );
+        drop(upload);
+        outcome
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(ApiError::BadRequest)?;
+    Ok(reqif_result_json(
+        &imported.result,
+        &imported.documents,
+        imported.imported_attachment_count,
+    ))
 }
 
 fn reqif_import_config(

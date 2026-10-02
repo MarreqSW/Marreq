@@ -21,6 +21,7 @@ mod api_mcp_phase2_test;
 mod api_project_bundle_test;
 mod api_project_edit_test;
 mod api_project_scoping_test;
+mod api_reqifz_test;
 mod api_requirements_integration_test;
 mod api_semantic_search_test;
 mod api_status_integration_test;

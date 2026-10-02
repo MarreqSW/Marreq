@@ -73,27 +73,32 @@ Use **Home** in the navbar to return here anytime.
 
 ### 2.3 Navigation
 
-The top navigation bar includes:
+Inside a project, the **sidebar** on the left holds the pages you work in every day:
 
-| Item                      | Description                                                                                                          |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **Home**                  | Dashboard and project list                                                                                           |
-| **Projects**              | All Projects / New Project (admin only)                                                                              |
-| **Requirements**          | Project requirements (active when a project is selected)                                                             |
-| **Verifications**         | Project verifications (test cases and their status)                                                                  |
-| **Reports**               | Project reports & analytics                                                                                          |
-| **Import**                | Excel/CSV, ReqIF 1.2, and JSON project bundle                                                                        |
-| **Members**               | Project members                                                                                                      |
-| **Baselines**             | Project baselines                                                                                                    |
-| **Quick Actions** (admin) | Shortcuts: New Project, New Requirement/Verification/Category/Applicability/Verification Method/Verification Status, New User, Import File/ReqIF |
-| **Admin** (admin)         | User directory, System logs, Backup                                                                                  |
+| Item | Description |
+| --- | --- |
+| **Dashboard** | Counts and traceability health of the project |
+| **Requirements** | The requirement list (table, list or graph view) |
+| **Verifications** | Verifications (test cases, analyses, reviews) and their status |
+| **Traceability** | Coverage graph, hierarchy, dependency structure matrix (DSM) and the requirement × verification **Matrix**, as tabs |
+| **Baselines** | Immutable snapshots of the project |
+| **Reports & exports** | Coverage reports and Excel, PDF, ReqIF/ReqIFZ and JSON downloads |
 
-In the top-right:
+At the bottom of the sidebar:
 
-- **Theme toggle** (sun/moon) for light/dark mode
-- **User menu** (avatar): Change password, Sign out
+- **Project settings**: one page with tabs for **General** (name, status, owner, group), **Members & reviewers**, **Catalog** (categories, applicability, statuses, custom fields, verification methods), **Storage**, **Notifications** and **Import**.
+- **Help**, the **Collapse** button (the sidebar remembers whether it is collapsed) and the UI and API versions.
 
-Requirements, Verifications, Reports, Members, and Baselines are **project-scoped**: select a project first (e.g. by opening it from Home or Projects) so these links apply to that project.
+The top bar holds:
+
+- the project name and the **Projects** menu: switch to another project (you stay on the same page), or open **Groups**, **New project** or **Import project bundle**;
+- **Global search**, the theme switch (light, dark, match system) and notifications;
+- the **Create** button: create a requirement or verification, or **Import**;
+- the **user menu** (avatar): Account settings, **Administration** (instance administrators only, see [§13](#13-administration)), Change password and Sign out.
+
+On a narrow screen the sidebar is hidden; open it with the **☰** button in the top bar.
+
+Older links keep working: `/<project>/matrix` opens the Matrix tab, `/<project>/import`, `/<project>/members` and `/<project>/catalog/…` open the matching Project settings tab, and `/<project>/admin/…` opens the Administration area.
 
 ---
 
@@ -127,7 +132,7 @@ You are typically taken to the new project or the project list.
 
 ### 3.3 Editing a Project
 
-Open **Settings** in the project sidebar. The **General** section at the top shows the project's properties:
+Open **Project settings** at the bottom of the sidebar. The **General** tab (`/<project-slug>/settings/general`) shows the project's properties:
 
 - **Name** (2–100 characters) and **Description** (up to 1000 characters; leave empty to remove it).
 - **Status**: Active, On hold, Completed or Cancelled.
@@ -141,13 +146,13 @@ Only project **Admins** and instance administrators can change these properties.
 
 ### 3.4 Project Storage
 
-Files attached to requirements and verifications ([§4.9](#49-attachments)) count toward the project's storage limit. **Settings → Storage** shows:
+Files attached to requirements and verifications ([§4.9](#49-attachments)) count toward the project's storage limit. **Project settings › Storage** shows:
 
 - How much of the limit is used. Each file counts once, even when the same file is attached in several places.
 - How much of that is taken by deleted files that baselines still keep ([§7.3](#73-viewing-a-baseline)).
 - The largest file allowed and the file types that can be uploaded.
 
-The defaults are **10 MB per file** and **500 MB per project**. The server administrator sets them with `MARREQ_ATTACHMENT_MAX_MB` and `MARREQ_PROJECT_STORAGE_QUOTA_MB`. Instance administrators can give a project its own limit in **Settings → Storage**, or use **Reset to default** to go back to the server-wide value. The change is recorded in **System logs**. A limit below the current usage is allowed: it only blocks new uploads.
+The defaults are **10 MB per file** and **500 MB per project**. The server administrator sets them with `MARREQ_ATTACHMENT_MAX_MB` and `MARREQ_PROJECT_STORAGE_QUOTA_MB`. Instance administrators can give a project its own limit in **Project settings › Storage**, or use **Reset to default** to go back to the server-wide value. The change is recorded in **System logs**. A limit below the current usage is allowed: it only blocks new uploads.
 
 ---
 
@@ -364,8 +369,8 @@ The traceability matrix is central to **test management** and coverage: it shows
 
 ### 6.1 Opening the Matrix
 
-- From the project: **Matrix** in the nav or **View Matrix** on the project detail page.
-- URL: `/<project-slug>/matrix`.
+- From the project: **Traceability** in the sidebar, then the **Matrix** tab (next to Coverage, Hierarchy and DSM).
+- URL: `/<project-slug>/traceability?view=matrix` (the old `/<project-slug>/matrix` still works). Filters and sorting are kept in the URL, so they survive switching tabs.
 
 ![Traceability matrix](screenshots/matrix.png)
 
@@ -459,47 +464,18 @@ You see:
 
 ## 8. Categories, Applicability & Verification
 
-These are **project-level** configuration entities used to classify and manage requirements (and sometimes tests).
+These are **project-level** configuration entities used to classify and manage requirements and verifications. They are edited under **Project settings › Catalog** (`/<project-slug>/settings/catalog`), one tab each; you need **Edit requirements** permission to change them.
 
-### 8.1 Categories
+| Tab | What it holds | URL |
+| --- | --- | --- |
+| **Categories** | Groups of requirements (e.g. “Safety”, “Performance”) | `…/settings/catalog/categories` |
+| **Applicability** | Product lines, system types or scope (e.g. “Product A”, “All”) | `…/settings/catalog/applicability` |
+| **Requirement statuses** | e.g. Draft, Accepted, Rejected | `…/settings/catalog/requirement-statuses` |
+| **Verification statuses** | e.g. Pass, Fail, Not run | `…/settings/catalog/verification-statuses` |
+| **Custom fields** | Extra requirement fields and their types | `…/settings/catalog/custom-fields` |
+| **Verification methods** | How requirements are verified (e.g. Test, Analysis, Review) | `…/settings/catalog/verification-methods` |
 
-Categories organize requirements (e.g. “Safety”, “Performance”).
-
-- **List**: `/<project-slug>/categories`.
-- **New**: **Quick Actions → New Category** or `/<project-slug>/categories/new` — enter title, description, tag.
-- **Edit**: Open a category → Edit; URL `/<project-slug>/categories/edit/<category_id>`.
-
-### 8.2 Applicability
-
-Applicability represents product lines, system types, or scope (e.g. “Product A”, “All”).
-
-- **List**: `/<project-slug>/applicability`.
-- **New**: **Quick Actions → New Applicability** or `/<project-slug>/applicability/new`.
-- **Edit**: `/<project-slug>/applicability/edit/<applicability_id>`.
-
-### 8.3 Verification Methods
-
-Verification methods define how requirements are verified (e.g. Test, Analysis, Review).
-
-- **List**: `/<project-slug>/verification`.
-- **New**: **Quick Actions → New Verification** or `/<project-slug>/verification/new`.
-- **Edit**: `/<project-slug>/verification/edit/<verification_id>`.
-
-### 8.4 Requirement Statuses
-
-Requirement statuses (e.g. Draft, Accepted, Rejected) are configured per project.
-
-- **List**: `/<project-slug>/requirement_statuses`.
-- **New**: `/<project-slug>/requirement_statuses/new`.
-- **Edit**: `/<project-slug>/requirement_statuses/edit/<status_id>`.
-
-### 8.5 Verification Statuses
-
-Verification statuses (e.g. Pass, Fail, Not Run) are configured per project.
-
-- **List**: `/<project-slug>/verification_statuses`.
-- **New**: `/<project-slug>/verification_statuses/new`.
-- **Edit**: `/<project-slug>/verification_statuses/edit/<status_id>`.
+Each tab lists the entries with their title, description and tag, and lets you add, edit and delete them. The old `/<project-slug>/catalog/…` URLs redirect here.
 
 ---
 
@@ -551,12 +527,12 @@ You see:
 
 ### 10.1 Importing from Excel or CSV
 
-1. Open a project and go to **Import** in the sidebar, **Create → Import**, or `/{project-slug}/import`.
+1. Open a project and go to **Project settings › Import**, **Create → Import**, or `/{project-slug}/settings/import`.
 2. You need **Edit requirements** permission.
 3. Upload a **`.xlsx`** or **`.csv`** file (first sheet only).
 4. Click **Upload and map columns**.
 5. Choose **Requirements**, **Verifications**, or **Matrix links**, map each column to a Marreq field (or skip it), then **Import**.
-6. Review the count and any per-row errors, then open the requirements or verifications list. After a matrix import, open **Matrix** or **Traceability** to see coverage.
+6. Review the count and any per-row errors, then open the requirements or verifications list. After a matrix import, open **Traceability** (Matrix tab) to see coverage.
 
 Unmapped catalog fields (status, category, applicability, verification method) use project defaults. When a mapped file value does not exist in the project (for example, a category from another instance), the mapping page preselects a safe project default and asks you to confirm or change it. Parent references remain strict and must identify an existing requirement or an earlier successfully imported row. Import creates new records; it does not update existing ones.
 
@@ -564,7 +540,7 @@ Excel/CSV requirement and verification import does not create matrix links. Afte
 
 ### 10.2 Importing ReqIF
 
-1. Open a project and go to **Import** (`/{project-slug}/import`). You need **Edit requirements** permission.
+1. Open a project and go to **Project settings › Import** (`/{project-slug}/settings/import`). You need **Edit requirements** permission.
 2. In the **ReqIF 1.2** section, choose a **`.reqif`** or **`.xml`** file, or a **`.reqifz`** archive.
 3. Click **Import ReqIF**. Marreq uses the first project status, category, applicability, and verification method, and the current user as author and reviewer.
 4. Review the imported count, created links, and any warnings or errors, then open the requirements list.
@@ -586,19 +562,19 @@ This is separate from in-project Excel/CSV and ReqIF import, which add records t
 
 ## 11. Project Members
 
-- **View members**: Project detail page → **View Members**, or **Members** in the nav for the selected project.
-- URL: `/<project-slug>/members`.
+- **View members**: **Project settings › Members & reviewers**.
+- URL: `/<project-slug>/settings/members` (the old `/<project-slug>/members` redirects here).
 
-You see the list of members with names, usernames, roles (e.g. owner, manager), and email. **Admins** can add/remove members and change roles via **Add member** and member actions (e.g. remove).
+You see each member and their role (Admin, Reviewer, Author, Viewer). Users with **Manage members** can change roles and remove members.
 
-- **Add member**: Submit the form with user and role.
-- **Remove member**: Use the remove action for a member (e.g. **Remove** button); confirm if prompted.
+- **Add member**: pick an account and a role, then **Add**. Picking from all accounts needs the user directory, which only instance administrators can see; other managers are asked to have an administrator add people.
+- **Remove member**: **Remove** next to the member, then confirm.
 
 ### 11.1 Project reviewers (workflow gates)
 
 Some actions are limited to a **designated reviewer list** for the project (not the same as the “Reviewer” role alone):
 
-- **Who**: In the React app, open **Settings** for the project (project-scoped **Settings** in the nav). Users with **Manage members** can check which **project members** act as **project reviewers**. Only members of the project can be reviewers.
+- **Who**: open **Project settings › Members & reviewers**. Users with **Manage members** can check which **project members** act as **project reviewers**. Only members of the project can be reviewers.
 - **What they control**: **Requirement status** (from the requirements table or requirement editor), **verification (test) status**, and **version approval** transitions (**draft → reviewed → approved**). Other editors can still change most requirement or verification fields if they have **Edit requirements**, but not those gates unless they are in the reviewer list.
 - **Verifications**: Each verification has an assigned **author** and **reviewer** (users). The **status** of the verification is still changed only by **project reviewers** (or an administrator).
 - **Audit**: Version **reviewed** / **approved** and verification status changes record **who** performed the action where the product exposes it (and in server logs).
@@ -625,7 +601,7 @@ In **Account settings → Profile**:
 - **Email**: must be a valid address not used by another account. When you change it, enter your **Current password** to confirm. Accounts that only sign in with an external provider (no password) don't need one.
 - Click **Save profile**. "Profile updated." confirms the change, and the header shows the new name right away.
 
-On the hosted cloud service, where email addresses must be verified, the email field is read-only; contact your administrator to change it. Administrators can also edit any user from **Admin → User directory** (see [§13.2](#132-user-management)).
+On the hosted cloud service, where email addresses must be verified, the email field is read-only; contact your administrator to change it. Administrators can also edit any user from **Administration › Users** (see [§13.1](#131-user-management)).
 
 ### 12.3 Change Password
 
@@ -638,19 +614,12 @@ Enter **Current password**, **New password**, and **Confirm new password**. Pass
 
 ## 13. Administration
 
-Available only to **administrators** (`is_admin`).
+Available only to **instance administrators** (`is_admin`). Open **Administration** from the user menu (avatar, top right); other users don't see the entry. The area lives outside any project at `/admin`, with tabs for **Users**, **System logs**, **Log analytics** and **Backup**, and a **Back to project** link. Old `/<project-slug>/admin/…` links redirect here.
 
-### 13.1 Admin Dashboard
+### 13.1 User Management
 
-- **Admin → Dashboard**.
-- URL: `/-/admin`.
-
-Overview of system status and links to user management, backup, cache, logs.
-
-### 13.2 User Management
-
-- **Admin** in the project sidebar.
-- URL: `/<project-slug>/admin`.
+- **Administration › Users**.
+- URL: `/admin`.
 
 The **User directory** lists every account (username, name, email, admin flag). Row actions:
 
@@ -661,10 +630,10 @@ The **User directory** lists every account (username, name, email, admin flag). 
 
 In deployments where users **self-register** (hosted cloud mode), **New user** is hidden and the **Site administrator** flag cannot be changed; the remaining actions work the same way. All changes are recorded in **System logs**.
 
-### 13.3 Database Backup
+### 13.2 Database Backup
 
-- **Backup** in the project sidebar (or the **Backup** button on the User directory).
-- URL: `/<project-slug>/admin/backup`.
+- **Administration › Backup** (not shown in the hosted cloud mode).
+- URL: `/admin/backup`.
 
 **Download backup** runs `pg_dump` on the server and downloads the whole database (all projects, users, and audit logs) as gzipped SQL named `marreq-backup_<YYYYMMDD>_<HHMMSS>.sql.gz`. Nothing is stored on the server. Large databases can take a few minutes; keep the page open. The file contains password hashes and all project data, so store it securely. Each download (or failure) is recorded in **System logs** as an `EXPORT` entry.
 
@@ -678,22 +647,17 @@ The download contains the database only. Attachment files live in the `marreq_at
 
 Available on self-hosted (`marreq-server`) installations only. In the hosted cloud mode the page explains that backups are managed by the hosting operator.
 
-### 13.4 Cache (if exposed)
+### 13.3 System Logs
 
-- **Admin → Cache** (or `/-/admin/cache` when available).
-- Options may include: view cache stats, **Clear cache**, **Cleanup** expired entries, health check, warm cache. Use for tuning or troubleshooting.
-
-### 13.5 System Logs
-
-- **Admin → System Logs**.
-- URL: `/<project-slug>/admin/logs`.
+- **Administration › System logs**.
+- URL: `/admin/logs`.
 
 Browse audit logs (entity type, entity ID, user, action, timestamp). You can filter by entity and export logs (e.g. **Export logs** with optional filename). **Cleanup logs** (if available) removes old entries.
 
-### 13.6 Log Analytics
+### 13.4 Log Analytics
 
-- **Log analytics** in the project sidebar (or **Analytics** on the System logs page).
-- URL: `/<project-slug>/admin/logs/analytics`.
+- **Administration › Log analytics**.
+- URL: `/admin/logs/analytics`.
 
 A summary of instance-wide activity from the audit log, for the last **7**, **30** (default), or **90** days:
 
@@ -707,11 +671,11 @@ Days are calendar days in **UTC**. Available to administrators only.
 
 ## 14. Tips & Shortcuts
 
-- **Theme**: Use the sun/moon icon in the navbar or on the login page for light/dark mode; preference is often stored in the browser.
+- **Theme**: use the light / dark / match-system switch in the top bar (on wider screens) or on the login page; the choice is stored in the browser.
 - **Semantic search**: **Ctrl+K** on the requirements page (when semantic search is enabled) opens the AI search modal; **Enter** runs the search, **Esc** closes.
 - **Requirement diff**: From requirement version history or baseline “Diff vs current”, the diff modal uses **red** for removed, **green** for added, **gray** for unchanged.
 - **Breadcrumbs**: Requirement and test edit/create pages show breadcrumbs (Project → Requirements → …); use them to navigate back.
-- **Project context**: Many links (Requirements, Verifications, Matrix, Reports, Members, Baselines) depend on having a project selected; open a project from Home or Projects first.
+- **Project context**: the sidebar pages and Project settings belong to the current project; switch projects with the **Projects** menu in the top bar (you stay on the same page).
 - **Export formats**: Requirements, verifications, matrix grid, and matrix links export as **Excel** (`.xlsx`) from Reports; ReqIF export is **XML**. PDF reports are available from the Reports page.
 
 ---

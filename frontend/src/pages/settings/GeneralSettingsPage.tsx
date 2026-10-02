@@ -1,3 +1,4 @@
+import DeleteProjectSection from '@/components/DeleteProjectSection';
 import ProjectGeneralSettings from '@/components/ProjectGeneralSettings';
 import { useDashboard } from '@/context/DashboardContext';
 import { SettingsLoadState } from './ProjectSettingsLayout';
@@ -17,9 +18,9 @@ function PermPill({ label, on }: { label: string; on: boolean }) {
   );
 }
 
-/** Project settings › General: project properties and the viewer's own permissions. */
+/** Project settings › General: project properties, the viewer's own permissions and project deletion. */
 export default function GeneralSettingsPage() {
-  const { projectId: pid, settings } = useSettingsContext();
+  const { projectId: pid, basePath, settings } = useSettingsContext();
   const { csrfToken, refresh } = useDashboard();
   const { perms, members, userLabel } = settings;
   if (settings.loading || settings.error) return <SettingsLoadState settings={settings} />;
@@ -55,6 +56,8 @@ export default function GeneralSettingsPage() {
           </div>
         ) : null}
       </section>
+
+      <DeleteProjectSection projectId={pid} basePath={basePath} userLabel={userLabel} />
     </div>
   );
 }

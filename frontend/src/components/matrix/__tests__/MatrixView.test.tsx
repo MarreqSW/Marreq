@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import * as apiClient from '@/api/client';
 import type { MatrixLink, Requirement, Verification } from '@/api/types';
 import { MATRIX_CELL } from '@/components/matrix/MatrixGrid';
-import MatrixPage from '../MatrixPage';
+import MatrixView from '../MatrixView';
 
 vi.mock('@/api/client');
 vi.mock('@/context/DashboardContext', () => ({
@@ -97,7 +97,7 @@ function renderPage(search = '') {
           path="/:projectSlug/matrix"
           element={
             <>
-              <MatrixPage />
+              <MatrixView />
               <LocationProbe />
             </>
           }
@@ -136,7 +136,7 @@ beforeEach(() => {
 const rowCodes = () =>
   screen.getAllByTestId(/^matrix-row-\d+$/).map((el) => within(el).getByRole('link').textContent);
 
-describe('MatrixPage (DSM-style grid)', () => {
+describe('MatrixView (DSM-style grid)', () => {
   it('groups rows by category, draws status symbols and summarises the matrix', async () => {
     renderPage();
     await screen.findByTestId('matrix-body');

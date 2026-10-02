@@ -39,7 +39,7 @@ import ReportsPage from '@/pages/ReportsPage';
 import RequirementsPage from '@/pages/RequirementsPage';
 import TraceabilityPage from '@/pages/TraceabilityPage';
 import VerificationsPage from '@/pages/VerificationsPage';
-import MatrixPage from '@/pages/MatrixPage';
+import { MatrixRedirect, MovedRedirect } from '@/pages/LegacyRedirects';
 import BaselinesPage from '@/pages/BaselinesPage';
 import BaselineDetailPage from '@/pages/BaselineDetailPage';
 import ProjectCatalogLayout from '@/pages/catalog/ProjectCatalogLayout';
@@ -145,7 +145,7 @@ export default function App() {
           <Route path="verifications/:verificationId" element={<ViewVerificationPage />} />
           <Route path="verifications" element={<VerificationsPage />} />
           <Route path="traceability" element={<TraceabilityPage />} />
-          <Route path="matrix" element={<MatrixPage />} />
+          <Route path="matrix" element={<MatrixRedirect />} />
           <Route path="baselines/:baselineId" element={<BaselineDetailPage />} />
           <Route path="baselines" element={<BaselinesPage />} />
           <Route path="reports" element={<ReportsPage />} />

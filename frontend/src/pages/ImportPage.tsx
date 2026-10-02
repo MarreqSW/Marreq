@@ -351,7 +351,7 @@ export default function ImportPage() {
     importType === 'tests'
       ? `${basePath}/verifications`
       : importType === 'matrix'
-        ? `${basePath}/matrix`
+        ? `${basePath}/traceability?view=matrix`
         : `${basePath}/requirements`;
 
   return (

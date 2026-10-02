@@ -138,7 +138,7 @@ export default function DashboardPage() {
           label="Matrix links"
           value={linkCount}
           hint="Requirement ↔ verification ties"
-          to={`${basePath}/matrix`}
+          to={`${basePath}/traceability?view=matrix`}
         />
         <StatCard
           label="Req. with tests"

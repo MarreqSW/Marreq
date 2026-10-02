@@ -370,7 +370,7 @@ describe('ImportPage', () => {
     );
     expect(await screen.findByRole('link', { name: /open matrix/i })).toHaveAttribute(
       'href',
-      '/space-project/matrix',
+      '/space-project/traceability?view=matrix',
     );
   });
 });

@@ -8,11 +8,19 @@ import {
   updateVerificationStatus,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
-import type { VerificationStatus, VerificationStatusWriteBody } from '@/api/types';
+import type { VerificationOutcome, VerificationStatus, VerificationStatusWriteBody } from '@/api/types';
 import { StatusBadge } from '@/components/StatusBadge';
 import TagColorPicker from '@/components/TagColorPicker';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { btnDanger, btnPrimary, inp } from './catalogUi';
+
+/** What each status means for requirement close-out in the VCD (issue #353). */
+const OUTCOMES: { value: VerificationOutcome; label: string }[] = [
+  { value: 'passed', label: 'Passed' },
+  { value: 'failed', label: 'Failed' },
+  { value: 'in_progress', label: 'In progress' },
+  { value: 'not_run', label: 'Not run' },
+];
 
 export default function CatalogVerificationStatusesPage() {
   const { projectId: pid } = useOutletContext<ProjectOutletContext>();
@@ -26,7 +34,9 @@ export default function CatalogVerificationStatusesPage() {
     description: string;
     tag: string;
     tag_color: string | null;
-  }>({ title: '', description: '', tag: '', tag_color: null });
+    /** `''` lets the server infer it from the title. */
+    outcome: VerificationOutcome | '';
+  }>({ title: '', description: '', tag: '', tag_color: null, outcome: '' });
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
@@ -65,9 +75,10 @@ export default function CatalogVerificationStatusesPage() {
         tag: draft.tag.trim() || 'TAG',
         project_id: pid,
         tag_color: draft.tag_color?.trim() || null,
+        ...(draft.outcome ? { outcome: draft.outcome } : {}),
       };
       await createVerificationStatus(body, token);
-      setDraft({ title: '', description: '', tag: '', tag_color: null });
+      setDraft({ title: '', description: '', tag: '', tag_color: null, outcome: '' });
       await load();
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Create failed');
@@ -90,6 +101,7 @@ export default function CatalogVerificationStatusesPage() {
         project_id: c.project_id,
         is_system: c.is_system,
         tag_color: c.tag_color?.trim() || null,
+        ...(c.outcome ? { outcome: c.outcome } : {}),
       };
       await updateVerificationStatus(c.id, body, token);
       await load();
@@ -170,11 +182,26 @@ export default function CatalogVerificationStatusesPage() {
             />
           </div>
           <input
-            className={`md:col-span-3 ${inp}`}
+            className={`md:col-span-2 ${inp}`}
             placeholder="Description"
             value={draft.description}
             onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
           />
+          <select
+            className={inp}
+            aria-label="Close-out outcome"
+            value={draft.outcome}
+            onChange={(e) =>
+              setDraft((d) => ({ ...d, outcome: e.target.value as VerificationOutcome | '' }))
+            }
+          >
+            <option value="">Outcome: from the title</option>
+            {OUTCOMES.map((o) => (
+              <option key={o.value} value={o.value}>
+                Outcome: {o.label}
+              </option>
+            ))}
+          </select>
         </div>
         <button type="submit" disabled={!canEdit || busy} className={btnPrimary}>
           Add status
@@ -189,6 +216,9 @@ export default function CatalogVerificationStatusesPage() {
               <th className="px-3 py-2">Tag</th>
               <th className="px-3 py-2">Color</th>
               <th className="px-3 py-2">Description</th>
+              <th className="px-3 py-2" title="What the status means for requirement close-out">
+                Outcome
+              </th>
               <th className="px-3 py-2">Flags</th>
               <th className="px-3 py-2 w-28">Actions</th>
             </tr>
@@ -248,6 +278,29 @@ export default function CatalogVerificationStatusesPage() {
                         )
                       }
                     />
+                  </td>
+                  <td className="px-3 py-2 align-top w-36">
+                    <select
+                      className={inp}
+                      aria-label={`Outcome of ${c.title}`}
+                      value={c.outcome ?? 'not_run'}
+                      disabled={ro}
+                      onChange={(e) =>
+                        setRows((prev) =>
+                          prev.map((x) =>
+                            x.id === c.id
+                              ? { ...x, outcome: e.target.value as VerificationOutcome }
+                              : x,
+                          ),
+                        )
+                      }
+                    >
+                      {OUTCOMES.map((o) => (
+                        <option key={o.value} value={o.value}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-3 py-2 align-top text-xs text-stitch-muted">
                     {c.is_system ? (

@@ -82,6 +82,9 @@ export interface Verification {
   status_set_at?: string | null;
 }
 
+/** What a verification status means for requirement close-out (issue #353). */
+export type VerificationOutcome = 'passed' | 'failed' | 'in_progress' | 'not_run';
+
 export interface VerificationStatus {
   id: number;
   title: string;
@@ -90,6 +93,7 @@ export interface VerificationStatus {
   project_id: number;
   is_system: boolean;
   tag_color: string | null;
+  outcome?: VerificationOutcome;
 }
 
 export interface VerificationMethod {
@@ -681,6 +685,8 @@ export type VerificationStatusWriteBody = {
   project_id: number;
   is_system?: boolean;
   tag_color?: string | null;
+  /** Omit on create to infer it from the title; omit on update to keep it. */
+  outcome?: VerificationOutcome;
 };
 
 /** POST/PUT `/api/projects/:pid/custom_fields` */
@@ -853,4 +859,48 @@ export interface ProjectStorage {
   retained_by_baselines_bytes: number;
   max_file_bytes: number;
   allowed_extensions: string[];
+}
+
+/** `GET|PUT /api/projects/:pid/verifications/:vid/control` (issue #353). */
+export interface VerificationControl {
+  verification_id: number;
+  verification_level: string | null;
+  verification_stage: string | null;
+  evidence_reference: string | null;
+  updated_by: number | null;
+  updated_at: string | null;
+  /** Levels and stages already used in the project. */
+  suggestions: { levels: string[]; stages: string[] };
+}
+
+export type VerificationControlBody = {
+  verification_level?: string | null;
+  verification_stage?: string | null;
+  evidence_reference?: string | null;
+};
+
+/** Reviewer's assessment: compliant, partially compliant, non-compliant. */
+export type Compliance = 'C' | 'PC' | 'NC';
+
+export interface CloseOut {
+  status: 'open' | 'closed';
+  reason: string;
+}
+
+/** `GET /api/projects/:pid/requirements/:rid/close_out` */
+export interface RequirementCloseOut {
+  requirement_id: number;
+  compliance: Compliance | null;
+  note: string | null;
+  set_by: number | null;
+  set_at: string | null;
+  close_out: CloseOut;
+  verifications: {
+    id: number;
+    reference_code: string;
+    name: string;
+    status_id: number;
+    status_title: string;
+    outcome: VerificationOutcome;
+  }[];
 }

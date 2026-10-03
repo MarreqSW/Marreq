@@ -1106,3 +1106,114 @@ async fn admin_can_access_all_projects() {
 
     assert_eq!(response.status(), Status::Ok);
 }
+
+// ============================================================================
+// Project configuration - service-boundary authorization (issue #288)
+// ============================================================================
+
+fn custom_field(id: i32, project_id: i32) -> CustomFieldDefinition {
+    CustomFieldDefinition {
+        id,
+        project_id,
+        label: "Owner".into(),
+        field_type: "text".into(),
+        enum_values: None,
+        sort_order: 0,
+        created_at: timestamp(),
+    }
+}
+
+/// User 2 administers project 2 but the field belongs to project 1: the update
+/// must be refused before anything is written.
+#[rocket::async_test]
+async fn custom_field_update_through_another_project_does_not_write() {
+    let mut repo = base_repo();
+    repo.custom_field_definitions
+        .insert(10, custom_field(10, 1));
+    let client = test_client(repo).await;
+
+    let response = client
+        .put("/api/projects/2/custom_fields/10")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 2))
+        .body(json!({ "label": "Hijacked", "field_type": "text" }).to_string())
+        .dispatch()
+        .await;
+
+    assert_eq!(response.status(), Status::NotFound);
+    let state = client
+        .rocket()
+        .state::<TestAppState>()
+        .expect("managed app state");
+    let label = state.repo_read().inner_repo().custom_field_definitions[&10]
+        .label
+        .clone();
+    assert_eq!(label, "Owner");
+}
+
+/// Verification methods are project configuration: a reviewer (who may edit
+/// requirements) is refused, the project admin is allowed.
+#[rocket::async_test]
+async fn verification_methods_require_project_configuration_permission() {
+    let mut repo = base_repo();
+    repo.verification_methods.insert(
+        2,
+        VerificationMethod {
+            id: 2,
+            title: "Test".into(),
+            description: "".into(),
+            tag: "TEST".into(),
+            project_id: 2,
+        },
+    );
+    let client = test_client(repo).await;
+    let body = json!({
+        "title": "Simulation",
+        "description": "Model-based",
+        "tag": "SIM",
+        "project_id": 0
+    })
+    .to_string();
+
+    // User 2 is a reviewer of project 1.
+    let create = client
+        .post("/api/projects/1/verification-methods")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 2))
+        .body(body.clone())
+        .dispatch()
+        .await;
+    assert_eq!(create.status(), Status::Forbidden);
+    let update = client
+        .put("/api/projects/1/verification-methods/1")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 2))
+        .body(body.clone())
+        .dispatch()
+        .await;
+    assert_eq!(update.status(), Status::Forbidden);
+    let delete = client
+        .delete("/api/projects/1/verification-methods/1")
+        .private_cookie(session_cookie(&client, 2))
+        .dispatch()
+        .await;
+    assert_eq!(delete.status(), Status::Forbidden);
+
+    // User 2 owns project 2.
+    let update = client
+        .put("/api/projects/2/verification-methods/2")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 2))
+        .body(body.clone())
+        .dispatch()
+        .await;
+    assert_eq!(update.status(), Status::Ok);
+    let create = client
+        .post("/api/projects/2/verification-methods")
+        .header(ContentType::JSON)
+        .private_cookie(session_cookie(&client, 2))
+        .body(body)
+        .dispatch()
+        .await;
+    assert_eq!(create.status(), Status::Ok);
+}

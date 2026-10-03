@@ -7,10 +7,12 @@ use std::collections::HashMap;
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{
-    NewRequirementStatus, NewVerificationStatus, RequirementStatus, VerificationStatus,
+    NewRequirementStatus, NewVerificationStatus, RequirementStatus, User, VerificationStatus,
 };
+use crate::permissions::Permission;
 use crate::repository::LookupRepository;
 use crate::repository::errors::RepoError;
+use crate::services::project_service::ProjectBootstrap;
 use crate::status_enums::{RequirementStatusEnum, TestStatusEnum};
 use crate::validation::{sanitize_string, validate_requirement_status};
 
@@ -122,11 +124,23 @@ impl<'a> StatusService<'a> {
             .collect()
     }
 
+    fn require_manage(&self, actor: &User, project_id: i32) -> Result<(), RepoError> {
+        crate::authorization::require_project_permission_for_service(
+            &*self.state.repo_read(),
+            actor,
+            project_id,
+            Permission::ManageProjectConfiguration,
+        )
+    }
+
     /// Create a new requirement status entry (user-created; is_system is always false).
+    /// Requires `ManageProjectConfiguration` on the target project.
     pub fn create_requirement_status(
         &self,
+        actor: &User,
         mut payload: NewRequirementStatus,
     ) -> Result<i32, RepoError> {
+        self.require_manage(actor, payload.project_id)?;
         payload.is_system = false;
         self.create_system_requirement_status(payload)
     }
@@ -152,10 +166,13 @@ impl<'a> StatusService<'a> {
     }
 
     /// Create a new verification status entry (user-created; is_system is always false).
+    /// Requires `ManageProjectConfiguration` on the target project.
     pub fn create_verification_status(
         &self,
+        actor: &User,
         mut payload: NewVerificationStatus,
     ) -> Result<i32, RepoError> {
+        self.require_manage(actor, payload.project_id)?;
         payload.is_system = false;
         self.create_system_verification_status(payload)
     }
@@ -190,12 +207,20 @@ impl<'a> StatusService<'a> {
     }
 
     /// Update a requirement status (title, description, tag). Fails if the status is system.
+    /// Authorized against the stored project, which cannot be changed.
     pub fn update_requirement_status(
         &self,
+        actor: &User,
         id: i32,
         payload: &NewRequirementStatus,
     ) -> Result<bool, RepoError> {
         let status = self.get_requirement_status(id)?;
+        self.require_manage(actor, status.project_id)?;
+        if payload.project_id != status.project_id {
+            return Err(RepoError::CrossProjectViolation(
+                "status project cannot be changed".into(),
+            ));
+        }
         if status.is_system {
             return Err(RepoError::BadInput("Cannot modify system status".into()));
         }
@@ -210,8 +235,14 @@ impl<'a> StatusService<'a> {
     }
 
     /// Delete a requirement status. Fails if system or in use.
-    pub fn delete_requirement_status(&self, id: i32) -> Result<RequirementStatus, RepoError> {
+    /// Authorized against the stored project.
+    pub fn delete_requirement_status(
+        &self,
+        actor: &User,
+        id: i32,
+    ) -> Result<RequirementStatus, RepoError> {
         let status = self.get_requirement_status(id)?;
+        self.require_manage(actor, status.project_id)?;
         if status.is_system {
             return Err(RepoError::BadInput("Cannot delete system status".into()));
         }
@@ -220,12 +251,20 @@ impl<'a> StatusService<'a> {
     }
 
     /// Update a verification status (title, description, tag). Fails if the status is system.
+    /// Authorized against the stored project, which cannot be changed.
     pub fn update_verification_status(
         &self,
+        actor: &User,
         id: i32,
         payload: &NewVerificationStatus,
     ) -> Result<bool, RepoError> {
         let status = self.get_verification_status(id)?;
+        self.require_manage(actor, status.project_id)?;
+        if payload.project_id != status.project_id {
+            return Err(RepoError::CrossProjectViolation(
+                "status project cannot be changed".into(),
+            ));
+        }
         if status.is_system {
             return Err(RepoError::BadInput("Cannot modify system status".into()));
         }
@@ -248,8 +287,14 @@ impl<'a> StatusService<'a> {
     }
 
     /// Delete a verification status. Fails if system or in use.
-    pub fn delete_verification_status(&self, id: i32) -> Result<VerificationStatus, RepoError> {
+    /// Authorized against the stored project.
+    pub fn delete_verification_status(
+        &self,
+        actor: &User,
+        id: i32,
+    ) -> Result<VerificationStatus, RepoError> {
         let status = self.get_verification_status(id)?;
+        self.require_manage(actor, status.project_id)?;
         if status.is_system {
             return Err(RepoError::BadInput("Cannot delete system status".into()));
         }
@@ -262,13 +307,13 @@ impl<'a> StatusService<'a> {
     /// This method creates the standard set of statuses defined in the
     /// `RequirementStatusEnum` and `TestStatusEnum` enums for the given project.
     ///
-    /// # Arguments
-    /// * `project_id` - The ID of the project to initialize statuses for
-    ///
-    /// # Returns
-    /// * `Ok(())` if all statuses were created successfully
-    /// * `Err(RepoError)` if any status creation failed
-    pub fn initialize_default_statuses(&self, project_id: i32) -> Result<(), RepoError> {
+    /// Only reachable with a [`ProjectBootstrap`], i.e. from
+    /// `ProjectService::create`; it performs no permission check.
+    pub(crate) fn initialize_default_statuses(
+        &self,
+        bootstrap: &ProjectBootstrap,
+    ) -> Result<(), RepoError> {
+        let project_id = bootstrap.project_id();
         // Initialize requirement statuses from enum
         for status_enum in RequirementStatusEnum::all() {
             let payload = NewRequirementStatus {
@@ -312,6 +357,13 @@ mod tests {
         AppState {
             repo: Arc::new(RwLock::new(DieselCachedRepo::new(repo, 0))),
         }
+    }
+
+    /// Site admin: passes every project permission check.
+    fn admin() -> User {
+        let mut user = DieselRepoMock::make_user(1, "admin", "");
+        user.is_admin = true;
+        user
     }
 
     fn populated_repo() -> DieselRepoMock {
@@ -384,7 +436,9 @@ mod tests {
             tag_color: None,
         };
 
-        let id = service.create_requirement_status(payload).unwrap();
+        let id = service
+            .create_requirement_status(&admin(), payload)
+            .unwrap();
 
         let repo_guard = state.repo_read();
         let stored = repo_guard.inner_repo().statuses.get(&id).unwrap();
@@ -409,7 +463,9 @@ mod tests {
             tag_color: None,
         };
 
-        let err = service.create_requirement_status(payload).unwrap_err();
+        let err = service
+            .create_requirement_status(&admin(), payload)
+            .unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
     }
 
@@ -420,7 +476,7 @@ mod tests {
         let service = StatusService::new(&state);
 
         let project_id = 42;
-        let result = service.initialize_default_statuses(project_id);
+        let result = service.initialize_default_statuses(&ProjectBootstrap::for_tests(project_id));
         assert!(result.is_ok());
 
         // Verify all requirement statuses were created
@@ -610,7 +666,9 @@ mod tests {
             outcome: None,
         };
 
-        let id = service.create_verification_status(payload).unwrap();
+        let id = service
+            .create_verification_status(&admin(), payload)
+            .unwrap();
 
         let repo_guard = state.repo_read();
         let stored = repo_guard
@@ -644,13 +702,13 @@ mod tests {
         };
 
         let in_progress = service
-            .create_verification_status(new("  In Progress  ", None))
+            .create_verification_status(&admin(), new("  In Progress  ", None))
             .unwrap();
         let blocked = service
-            .create_verification_status(new("Blocked", None))
+            .create_verification_status(&admin(), new("Blocked", None))
             .unwrap();
         let waived = service
-            .create_verification_status(new("Waived", Some("passed")))
+            .create_verification_status(&admin(), new("Waived", Some("passed")))
             .unwrap();
         assert_eq!(
             outcome(in_progress),
@@ -661,11 +719,11 @@ mod tests {
         assert_eq!(outcome(waived), "passed", "explicit outcome wins");
 
         service
-            .update_verification_status(blocked, &new("Blocked", Some("failed")))
+            .update_verification_status(&admin(), blocked, &new("Blocked", Some("failed")))
             .unwrap();
         assert_eq!(outcome(blocked), "failed");
         service
-            .update_verification_status(blocked, &new("Blocked again", None))
+            .update_verification_status(&admin(), blocked, &new("Blocked again", None))
             .unwrap();
         assert_eq!(
             outcome(blocked),
@@ -691,7 +749,9 @@ mod tests {
             outcome: None,
         };
 
-        let err = service.create_verification_status(payload).unwrap_err();
+        let err = service
+            .create_verification_status(&admin(), payload)
+            .unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
     }
 
@@ -762,7 +822,9 @@ mod tests {
             is_system: false,
             tag_color: None,
         };
-        let err = service.update_requirement_status(1, &payload).unwrap_err();
+        let err = service
+            .update_requirement_status(&admin(), 1, &payload)
+            .unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
         assert!(err.to_string().to_lowercase().contains("system"));
     }
@@ -785,7 +847,7 @@ mod tests {
         let state = state_with_repo(repo);
         let service = StatusService::new(&state);
 
-        let err = service.delete_requirement_status(1).unwrap_err();
+        let err = service.delete_requirement_status(&admin(), 1).unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
         assert!(err.to_string().to_lowercase().contains("system"));
     }
@@ -819,7 +881,9 @@ mod tests {
             tag_color: None,
             outcome: None,
         };
-        let err = service.update_verification_status(1, &payload).unwrap_err();
+        let err = service
+            .update_verification_status(&admin(), 1, &payload)
+            .unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
         assert!(err.to_string().to_lowercase().contains("system"));
     }
@@ -843,7 +907,7 @@ mod tests {
         let state = state_with_repo(repo);
         let service = StatusService::new(&state);
 
-        let err = service.delete_verification_status(1).unwrap_err();
+        let err = service.delete_verification_status(&admin(), 1).unwrap_err();
         assert!(matches!(err, RepoError::BadInput(_)));
         assert!(err.to_string().to_lowercase().contains("system"));
     }

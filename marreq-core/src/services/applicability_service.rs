@@ -5,9 +5,11 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{Applicability, NewApplicability, User};
+use crate::permissions::Permission;
 use crate::repository::LookupRepository;
 use crate::repository::errors::RepoError;
 use crate::services::AuditLog;
+use crate::services::project_service::ProjectBootstrap;
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -44,8 +46,34 @@ impl<'a> ApplicabilityService<'a> {
         self.state.repo_read().get_applicability_by_id(id)
     }
 
-    /// Create a new applicability entry and log the action.
-    pub fn create(&self, user: &User, mut new_app: NewApplicability) -> Result<i32, RepoError> {
+    fn require_manage(&self, actor: &User, project_id: i32) -> Result<(), RepoError> {
+        crate::authorization::require_project_permission_for_service(
+            &*self.state.repo_read(),
+            actor,
+            project_id,
+            Permission::ManageProjectConfiguration,
+        )
+    }
+
+    /// Create a new applicability entry and log the action. Requires
+    /// `ManageProjectConfiguration` on the target project.
+    pub fn create(&self, user: &User, new_app: NewApplicability) -> Result<i32, RepoError> {
+        self.require_manage(user, new_app.project_id)?;
+        self.insert(user, new_app)
+    }
+
+    /// Seed a default applicability for a project that was just created.
+    pub(crate) fn create_bootstrap(
+        &self,
+        bootstrap: &ProjectBootstrap,
+        user: &User,
+        new_app: NewApplicability,
+    ) -> Result<i32, RepoError> {
+        bootstrap.check(new_app.project_id)?;
+        self.insert(user, new_app)
+    }
+
+    fn insert(&self, user: &User, mut new_app: NewApplicability) -> Result<i32, RepoError> {
         self.prepare_payload(&mut new_app)?;
 
         let id = {
@@ -57,7 +85,8 @@ impl<'a> ApplicabilityService<'a> {
         Ok(id)
     }
 
-    /// Update an existing applicability entry and log the change.
+    /// Update an existing applicability entry and log the change. Authorized
+    /// against the stored project, which cannot be changed.
     pub fn update(
         &self,
         user: &User,
@@ -65,6 +94,12 @@ impl<'a> ApplicabilityService<'a> {
         mut updated_app: NewApplicability,
     ) -> Result<Applicability, RepoError> {
         let before = self.get_by_id(id)?;
+        self.require_manage(user, before.project_id)?;
+        if updated_app.project_id != before.project_id {
+            return Err(RepoError::CrossProjectViolation(
+                "applicability project cannot be changed".into(),
+            ));
+        }
 
         updated_app.id = Some(id);
         self.prepare_payload(&mut updated_app)?;
@@ -82,8 +117,11 @@ impl<'a> ApplicabilityService<'a> {
         Ok(after)
     }
 
-    /// Delete an applicability entry and log the removal.
+    /// Delete an applicability entry and log the removal. Authorized against
+    /// the stored project.
     pub fn delete(&self, user: &User, id: i32) -> Result<Applicability, RepoError> {
+        let existing = self.get_by_id(id)?;
+        self.require_manage(user, existing.project_id)?;
         let deleted = {
             let mut repo = self.state.repo_write();
             repo.delete_applicability(id)?
@@ -165,8 +203,12 @@ mod tests {
         }
     }
 
+    /// Site admin: passes the project permission checks (see
+    /// `services/config_authorization_tests.rs` for the authorization cases).
     fn actor() -> User {
-        DieselRepoMock::make_user(1, "actor", "")
+        let mut user = DieselRepoMock::make_user(1, "actor", "");
+        user.is_admin = true;
+        user
     }
 
     fn sample_app(id: i32, title: &str) -> Applicability {
@@ -231,14 +273,14 @@ mod tests {
             title: "  New Title  ".into(),
             description: "  New Description  ".into(),
             tag: "  NEW_TAG  ".into(),
-            project_id: 2,
+            project_id: 1,
         };
 
         let updated = service.update(&actor(), 7, payload).unwrap();
         assert_eq!(updated.title, "New Title");
         assert_eq!(updated.description, "New Description");
         assert_eq!(updated.tag, "NEW_TAG");
-        assert_eq!(updated.project_id, 2);
+        assert_eq!(updated.project_id, 1);
     }
 
     #[test]

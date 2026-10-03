@@ -32,7 +32,7 @@ export default function CatalogCategoriesPage() {
         getMyPermissions(pid).catch(() => null),
       ]);
       setRows(all.filter((c) => c.project_id === pid));
-      setCanEdit(Boolean(perms?.edit_requirements && (csrfToken ?? '').length));
+      setCanEdit(Boolean(perms?.manage_project_configuration && (csrfToken ?? '').length));
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Load failed');
     } finally {
@@ -124,8 +124,8 @@ export default function CatalogCategoriesPage() {
       ) : null}
       {!canEdit ? (
         <p className="text-xs text-stitch-muted">
-          You need <strong className="text-stitch-accent">edit requirements</strong> permission and an
-          active session to change categories.
+          You need <strong className="text-stitch-accent">manage project configuration</strong> permission
+          (project admin) and an active session to change categories.
         </p>
       ) : null}
 

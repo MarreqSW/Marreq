@@ -9,6 +9,7 @@ use crate::api::prelude::*;
 use crate::auth::guards::ProjectAccessOrBearer;
 use crate::models::{NewVerificationMethod, VerificationMethod};
 use crate::repository::LookupRepository;
+use crate::services::VerificationMethodService;
 
 #[get("/projects/<project_id>/verification-methods")]
 pub async fn list_by_project(
@@ -39,14 +40,11 @@ pub async fn create_by_project(
         state,
         access.user(),
         project_id,
-        Permission::EditRequirements,
+        Permission::ManageProjectConfiguration,
     )?;
     let mut body = payload.into_inner();
     body.project_id = project_id;
-    let id = {
-        let mut repo = state.repo_write();
-        repo.insert_new_verification_method(&body)?
-    };
+    let id = VerificationMethodService::new(state.inner()).create(access.user(), body)?;
     Ok(json!({ "status": "ok", "id": id }))
 }
 
@@ -65,25 +63,18 @@ pub async fn update_by_project(
         state,
         access.user(),
         project_id,
-        Permission::EditRequirements,
+        Permission::ManageProjectConfiguration,
     )?;
-    let vm = state
-        .repo_read()
-        .get_verification_method_by_id(method_id)
-        .map_err(ApiError::from)?;
+    let service = VerificationMethodService::new(state.inner());
+    let vm = service.get_by_id(method_id)?;
     if vm.project_id != project_id {
         return Err(ApiError::NotFound(
             "verification method not in project".into(),
         ));
     }
     let mut body = payload.into_inner();
-    body.id = Some(method_id);
     body.project_id = project_id;
-    let mut repo = state.repo_write();
-    let ok = repo.edit_verification_method(&body)?;
-    if !ok {
-        return Err(ApiError::NotFound("verification method not found".into()));
-    }
+    service.update(access.user(), method_id, body)?;
     Ok(json!({ "status": "ok" }))
 }
 
@@ -98,18 +89,15 @@ pub async fn delete_by_project(
         state,
         access.user(),
         project_id,
-        Permission::EditRequirements,
+        Permission::ManageProjectConfiguration,
     )?;
-    let vm = state
-        .repo_read()
-        .get_verification_method_by_id(method_id)
-        .map_err(ApiError::from)?;
+    let service = VerificationMethodService::new(state.inner());
+    let vm = service.get_by_id(method_id)?;
     if vm.project_id != project_id {
         return Err(ApiError::NotFound(
             "verification method not in project".into(),
         ));
     }
-    let mut repo = state.repo_write();
-    repo.delete_verification_method(method_id)?;
+    service.delete(access.user(), method_id)?;
     Ok(Status::NoContent)
 }

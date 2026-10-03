@@ -155,6 +155,18 @@ The canonical flow is:
    from projects the actor may view.
 5. Requirement and verification mutation services repeat the write check at
    the application boundary so a future non-HTTP caller cannot bypass it.
+   Project configuration services do the same with `ManageProjectConfiguration`
+   (`ManageCustomFields` for custom fields): `CategoryService`,
+   `ApplicabilityService`, `StatusService`, `CustomFieldService` and
+   `VerificationMethodService`. Create checks the target project; update and
+   delete load the row and check its stored project, and an update cannot move
+   a row to another project. All use
+   `authorization::require_project_permission_for_service`.
+6. The only unchecked path is seeding a new project's defaults: the
+   `*_bootstrap` service methods and `initialize_default_statuses` need a
+   `ProjectBootstrap`, which only `ProjectService::create` can build, right
+   after it inserts the project. Bundle import uses the normal checked methods
+   (the importer owns the new project).
 
 Site administrators retain the documented cross-project override. Project
 roles map to capabilities in `permissions.rs`; project configuration is limited

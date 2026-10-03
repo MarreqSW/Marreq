@@ -512,7 +512,7 @@ You see:
 
 ## 8. Categories, Applicability & Verification
 
-These are **project-level** configuration entities used to classify and manage requirements and verifications. They are edited under **Project settings › Catalog** (`/<project-slug>/settings/catalog`), one tab each; you need **Edit requirements** permission to change them.
+These are **project-level** configuration entities used to classify and manage requirements and verifications. They are edited under **Project settings › Catalog** (`/<project-slug>/settings/catalog`), one tab each. Only **project administrators** (the project's Admin role, or a site administrator) can change them; custom fields need **Manage custom fields**, which the same roles have. Other members see the tabs read-only.
 
 | Tab | What it holds | URL |
 | --- | --- | --- |
@@ -647,7 +647,7 @@ Some actions are limited to a **designated reviewer list** for the project (not 
 
 - **Who**: open **Project settings › Members & reviewers**. Users with **Manage members** can check which **project members** act as **project reviewers**. Only members of the project can be reviewers.
 - **What they control**: **Requirement status** (from the requirements table or requirement editor), **verification (test) status**, and **version approval** transitions (**draft → reviewed → approved**). Other editors can still change most requirement or verification fields if they have **Edit requirements**, but not those gates unless they are in the reviewer list.
-- **Verifications**: Each verification has an assigned **author** and **reviewer** (users). The **status** of the verification is still changed only by **project reviewers** (or an administrator).
+- **Verifications**: Each verification has an assigned **author** and **reviewer** (users). The **status** of the verification is still changed only by **project reviewers** (an administrator only while no reviewers are configured).
 - **Audit**: Version **reviewed** / **approved** and verification status changes record **who** performed the action where the product exposes it (and in server logs).
 
 If **no project reviewers** are configured, only **administrators** can change those statuses and approvals until at least one reviewer is added.

@@ -4,7 +4,8 @@
 //! Service for project-scoped custom field definitions.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{CustomFieldDefinition, CustomFieldDefinitionPayload};
+use crate::models::{CustomFieldDefinition, CustomFieldDefinitionPayload, User};
+use crate::permissions::Permission;
 use crate::repository::CustomFieldRepository;
 use crate::repository::errors::RepoError;
 
@@ -30,16 +31,36 @@ impl<'a> CustomFieldService<'a> {
         self.state.repo_read().get_custom_field_definition_by_id(id)
     }
 
+    fn require_manage(&self, actor: &User, project_id: i32) -> Result<(), RepoError> {
+        crate::authorization::require_project_permission_for_service(
+            &*self.state.repo_read(),
+            actor,
+            project_id,
+            Permission::ManageCustomFields,
+        )
+    }
+
+    /// Requires `ManageCustomFields` on `project_id`.
     pub fn create(
         &self,
+        actor: &User,
         project_id: i32,
         payload: CustomFieldDefinitionPayload,
     ) -> Result<i32, RepoError> {
+        self.require_manage(actor, project_id)?;
         let mut repo = self.state.repo_write();
         repo.create_custom_field_definition(project_id, &payload)
     }
 
-    pub fn update(&self, id: i32, payload: CustomFieldDefinitionPayload) -> Result<(), RepoError> {
+    /// Authorized against the field's stored project.
+    pub fn update(
+        &self,
+        actor: &User,
+        id: i32,
+        payload: CustomFieldDefinitionPayload,
+    ) -> Result<(), RepoError> {
+        let existing = self.get_by_id(id)?;
+        self.require_manage(actor, existing.project_id)?;
         let mut repo = self.state.repo_write();
         repo.update_custom_field_definition(id, &payload)
     }
@@ -50,7 +71,10 @@ impl<'a> CustomFieldService<'a> {
             .count_requirement_versions_using_field(field_id)
     }
 
-    pub fn delete(&self, id: i32) -> Result<(), RepoError> {
+    /// Authorized against the field's stored project.
+    pub fn delete(&self, actor: &User, id: i32) -> Result<(), RepoError> {
+        let existing = self.get_by_id(id)?;
+        self.require_manage(actor, existing.project_id)?;
         let mut repo = self.state.repo_write();
         repo.delete_custom_field_definition(id)
     }

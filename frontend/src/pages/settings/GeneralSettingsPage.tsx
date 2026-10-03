@@ -46,14 +46,24 @@ export default function GeneralSettingsPage() {
           <div className="flex flex-wrap gap-2">
             <PermPill label="View requirements" on={perms.view_requirements} />
             <PermPill label="Edit requirements" on={perms.edit_requirements} />
-            <PermPill label="Approve versions (role)" on={perms.approve_versions} />
+            <PermPill label="Reviewer role capability" on={perms.approve_versions} />
             <PermPill
               label="Project reviewer (status / approval)"
               on={perms.is_project_reviewer}
             />
             <PermPill label="Manage custom fields" on={perms.manage_custom_fields} />
+            <PermPill
+              label="Manage project configuration"
+              on={Boolean(perms.manage_project_configuration)}
+            />
             <PermPill label="Manage members" on={perms.manage_project_members} />
           </div>
+        ) : null}
+        {perms ? (
+          <p className="mt-3 text-xs text-stitch-muted">
+            Changing requirement or verification status and approving versions needs membership in the
+            project reviewer pool; the reviewer role alone does not grant it.
+          </p>
         ) : null}
       </section>
 

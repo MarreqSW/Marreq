@@ -5,9 +5,11 @@
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{Category, NewCategory, User};
+use crate::permissions::Permission;
 use crate::repository::LookupRepository;
 use crate::repository::errors::RepoError;
 use crate::services::AuditLog;
+use crate::services::project_service::ProjectBootstrap;
 
 pub struct CategoryService<'a> {
     state: &'a AppState<DieselCachedRepo>,
@@ -39,8 +41,34 @@ impl<'a> CategoryService<'a> {
         Ok(category.title)
     }
 
-    /// Create a new Category entry and log the action.
+    fn require_manage(&self, actor: &User, project_id: i32) -> Result<(), RepoError> {
+        crate::authorization::require_project_permission_for_service(
+            &*self.state.repo_read(),
+            actor,
+            project_id,
+            Permission::ManageProjectConfiguration,
+        )
+    }
+
+    /// Create a new Category entry and log the action. Requires
+    /// `ManageProjectConfiguration` on the target project.
     pub fn create(&self, user: &User, new_cat: NewCategory) -> Result<i32, RepoError> {
+        self.require_manage(user, new_cat.project_id)?;
+        self.insert(user, new_cat)
+    }
+
+    /// Seed a default Category for a project that was just created.
+    pub(crate) fn create_bootstrap(
+        &self,
+        bootstrap: &ProjectBootstrap,
+        user: &User,
+        new_cat: NewCategory,
+    ) -> Result<i32, RepoError> {
+        bootstrap.check(new_cat.project_id)?;
+        self.insert(user, new_cat)
+    }
+
+    fn insert(&self, user: &User, new_cat: NewCategory) -> Result<i32, RepoError> {
         let id = {
             let mut repo = self.state.repo_write();
             repo.insert_new_category(&new_cat)?
@@ -50,7 +78,8 @@ impl<'a> CategoryService<'a> {
         Ok(id)
     }
 
-    /// Update an existing Category entry and log the change.
+    /// Update an existing Category entry and log the change. Authorized
+    /// against the stored project, which cannot be changed.
     pub fn update(
         &self,
         user: &User,
@@ -58,6 +87,12 @@ impl<'a> CategoryService<'a> {
         mut updated_cat: NewCategory,
     ) -> Result<Category, RepoError> {
         let before = self.get_by_id(id)?;
+        self.require_manage(user, before.project_id)?;
+        if updated_cat.project_id != before.project_id {
+            return Err(RepoError::CrossProjectViolation(
+                "category project cannot be changed".into(),
+            ));
+        }
 
         updated_cat.id = Some(id);
 
@@ -74,8 +109,11 @@ impl<'a> CategoryService<'a> {
         Ok(after)
     }
 
-    /// Delete an Category entry and log the removal.
+    /// Delete a Category entry and log the removal. Authorized against the
+    /// stored project.
     pub fn delete(&self, user: &User, id: i32) -> Result<Category, RepoError> {
+        let existing = self.get_by_id(id)?;
+        self.require_manage(user, existing.project_id)?;
         let deleted = {
             let mut repo = self.state.repo_write();
             repo.delete_category(id)?
@@ -104,8 +142,12 @@ mod tests {
         }
     }
 
+    /// Site admin: passes the project permission checks (see
+    /// `services/config_authorization_tests.rs` for the authorization cases).
     fn actor() -> User {
-        DieselRepoMock::make_user(1, "actor", "")
+        let mut user = DieselRepoMock::make_user(1, "actor", "");
+        user.is_admin = true;
+        user
     }
 
     fn category(id: i32, title: &str, project_id: i32) -> Category {
@@ -149,14 +191,14 @@ mod tests {
             title: "Updated".into(),
             description: "New description".into(),
             tag: "NEW".into(),
-            project_id: 5,
+            project_id: 1,
         };
 
         let updated = service.update(&actor(), 1, payload).unwrap();
         assert_eq!(updated.title, "Updated");
         assert_eq!(updated.description, "New description");
         assert_eq!(updated.tag, "NEW");
-        assert_eq!(updated.project_id, 5);
+        assert_eq!(updated.project_id, 1);
     }
 
     #[test]

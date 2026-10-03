@@ -39,6 +39,23 @@ where
     }
 }
 
+/// Service-boundary variant of [`require_project_permission`]: a denial becomes
+/// `RepoError::Unauthorized` (HTTP 403) so services can return it with `?`.
+pub fn require_project_permission_for_service<R>(
+    repo: &R,
+    actor: &User,
+    project_id: i32,
+    permission: Permission,
+) -> Result<(), crate::repository::errors::RepoError>
+where
+    R: ProjectMembersRepository,
+{
+    require_project_permission(repo, actor, project_id, permission).map_err(|error| match error {
+        AuthorizationError::Forbidden => crate::repository::errors::RepoError::Unauthorized,
+        AuthorizationError::Repository(error) => error,
+    })
+}
+
 /// Validate that a user may access an entity belonging to `entity_project_id`.
 pub fn validate_entity_access<R>(
     repo: &R,

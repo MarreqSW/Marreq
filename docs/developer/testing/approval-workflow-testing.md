@@ -6,7 +6,7 @@ This guide explains how to test the **approval workflow** for requirement versio
 
 - Each **requirement version** has an **approval state**: `draft` → `reviewed` → `approved`.
 - **Transitions**: only `draft`→`reviewed` and `reviewed`→`approved` are allowed (no backwards steps).
-- **Who can transition approval / change requirement status**: users listed in **`project_reviewers`** for that project (see `GET/PUT /api/projects/<project_id>/reviewers`), or any **global admin**. The old rule “Owner or Manager role only” is replaced by this reviewer list (roles still control other permissions such as **Edit requirements**). If the reviewer list is **empty**, only admins can perform those transitions until someone with **Manage members** adds reviewers.
+- **Who can transition approval / change requirement status**: users listed in **`project_reviewers`** for that project (see `GET/PUT /api/projects/<project_id>/reviewers`). Once that list is **non-empty**, explicit membership is required: being a site admin does **not** bypass it. The old rule “Owner or Manager role only” is replaced by this reviewer list (roles still control other permissions such as **Edit requirements**). If the reviewer list is **empty**, only site admins can perform those transitions until someone with **Manage members** adds reviewers.
 - **Baselines**: when you create a baseline, **all** requirements in the project are included (current version snapshot). Approval state is tracked for workflow/reporting but does not filter baseline contents.
 
 ## Prerequisites
@@ -17,7 +17,7 @@ This guide explains how to test the **approval workflow** for requirement versio
 
 2. **Logged-in session**  
    - Open http://localhost:8000 (or your base URL) and log in (e.g. **alice** / **ChangeMe123!**).  
-   - You need a user that appears in **`GET /api/projects/<id>/reviewers`** for that project (or **admin**). After migrations, Admin/Reviewer roles are **seeded** into `project_reviewers`; adjust with `PUT /api/projects/<id>/reviewers` and body `{"user_ids":[...]}` if your test user is not listed.
+   - You need a user that appears in **`GET /api/projects/<id>/reviewers`** for that project (or a site **admin**, only while the project has no reviewers). After migrations, Admin/Reviewer roles are **seeded** into `project_reviewers`; adjust with `PUT /api/projects/<id>/reviewers` and body `{"user_ids":[...]}` if your test user is not listed.
 
 ## Step 1: Get requirement and version IDs
 
@@ -49,7 +49,7 @@ Example: for requirement `1`, you might get `version_id = 1`. Use that `requirem
 
 ## Step 2: Set version to “reviewed”
 
-Only a **project reviewer** (or **admin**) can call this. Replace `REQ_ID` and `VERSION_ID` (e.g. `1` and `1`):
+Only a **project reviewer** can call this (a site **admin** only while the project has no reviewers). Replace `REQ_ID` and `VERSION_ID` (e.g. `1` and `1`):
 
 ```bash
 curl -s -X PUT -b cookies.txt \

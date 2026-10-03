@@ -68,7 +68,7 @@ pub async fn create_verification_status(
         Permission::ManageProjectConfiguration,
     )?;
     check_outcome(&payload)?;
-    let id = service.create_verification_status(payload)?;
+    let id = service.create_verification_status(user.user(), payload)?;
     Ok((Status::Created, json!({ "status": "ok", "id": id })))
 }
 
@@ -94,7 +94,7 @@ pub async fn update_verification_status(
         ));
     }
     check_outcome(&payload)?;
-    service.update_verification_status(id, &payload)?;
+    service.update_verification_status(user.user(), id, &payload)?;
     Ok(json!({ "status": "ok" }))
 }
 
@@ -112,7 +112,7 @@ pub async fn delete_verification_status(
         status.project_id,
         Permission::ManageProjectConfiguration,
     )?;
-    service.delete_verification_status(id)?;
+    service.delete_verification_status(user.user(), id)?;
     Ok(Status::NoContent)
 }
 

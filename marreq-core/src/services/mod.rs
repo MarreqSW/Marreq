@@ -98,8 +98,11 @@ pub mod user_provisioning_service;
 pub mod user_service;
 pub mod verification_control_service;
 pub mod verification_diff_service;
+pub mod verification_method_service;
 pub mod verification_service;
 
+#[cfg(test)]
+mod config_authorization_tests;
 #[cfg(test)]
 mod tests;
 
@@ -127,4 +130,5 @@ pub use status_service::*;
 pub use user_provisioning_service::*;
 pub use user_service::*;
 pub use verification_diff_service::*;
+pub use verification_method_service::*;
 pub use verification_service::*;

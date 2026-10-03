@@ -11,7 +11,6 @@
 //! embedding generation on create/update operations.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::authorization::AuthorizationError;
 use crate::logger::Loggable;
 use crate::models::{
     CustomFieldValueInput, EntityType, NewRequirement, NewRequirementVersionLink, Requirement,
@@ -87,16 +86,12 @@ impl<'a> RequirementService<'a> {
     }
 
     fn require_write_access(&self, actor: &User, project_id: i32) -> Result<(), RepoError> {
-        crate::authorization::require_project_permission(
+        crate::authorization::require_project_permission_for_service(
             &*self.repo_read(),
             actor,
             project_id,
             Permission::EditRequirements,
         )
-        .map_err(|error| match error {
-            AuthorizationError::Forbidden => RepoError::Unauthorized,
-            AuthorizationError::Repository(error) => error,
-        })
     }
 
     /// Retrieve all requirements (with custom fields attached).

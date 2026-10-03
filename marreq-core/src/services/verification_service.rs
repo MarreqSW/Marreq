@@ -7,7 +7,6 @@
 //! validation, caching, and audit logging.
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::authorization::AuthorizationError;
 use crate::models::{NewVerification, User, Verification};
 use crate::permissions::Permission;
 use crate::repository::LookupRepository;
@@ -27,16 +26,12 @@ impl<'a> VerificationService<'a> {
     }
 
     fn require_write_access(&self, actor: &User, project_id: i32) -> Result<(), RepoError> {
-        crate::authorization::require_project_permission(
+        crate::authorization::require_project_permission_for_service(
             &*self.state.repo_read(),
             actor,
             project_id,
             Permission::EditRequirements,
         )
-        .map_err(|error| match error {
-            AuthorizationError::Forbidden => RepoError::Unauthorized,
-            AuthorizationError::Repository(error) => error,
-        })
     }
 
     /// Retrieve all Verification entries.

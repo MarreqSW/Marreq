@@ -8,7 +8,7 @@ import {
   type GridLayout,
   type GridScrollTarget,
 } from '@/components/grid/gridShared';
-import type { StatusSemanticGroup } from '@/lib/verificationStatusSemantic';
+import { GROUP_TEXT_CLASS, type StatusSemanticGroup } from '@/lib/verificationStatusSemantic';
 
 /** Cell edge in px (same density as the DSM). */
 export const MATRIX_CELL = 26;
@@ -48,15 +48,8 @@ export interface MatrixFocus extends GridScrollTarget {
   kind: 'suspect' | 'row' | 'column';
 }
 
-/** Theme-aware colours per status group (the shared glyph classes target the dark theme only). */
-const GROUP_CLASS: Record<StatusSemanticGroup, string> = {
-  pass: 'text-emerald-600 dark:text-emerald-400',
-  verified: 'text-amber-600 dark:text-amber-300',
-  pending: 'text-amber-500 dark:text-amber-200',
-  draft: 'text-stitch-muted',
-  fail: 'text-red-600 dark:text-red-300',
-  other: 'text-stitch-muted',
-};
+/** Theme-aware colours per status group, shared with the legend and glyphs. */
+const GROUP_CLASS = GROUP_TEXT_CLASS;
 
 const APPROVAL_DOT: Record<string, string> = {
   approved: 'bg-green-600',

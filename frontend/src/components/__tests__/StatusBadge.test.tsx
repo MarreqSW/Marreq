@@ -44,6 +44,39 @@ describe('StatusBadge', () => {
     expect(screen.getByText('Verified').className).toMatch(/bg-amber-500/);
   });
 
+  // Issue #363: keyword chips were dark-theme shades only.
+  it('gives keyword chips a light-theme and a dark-theme text shade', () => {
+    const { rerender } = render(<StatusBadge title="Accepted" />);
+    expect(screen.getByText('Accepted')).toHaveClass('text-amber-800', 'dark:text-amber-200');
+    rerender(<StatusBadge title="Pending" />);
+    expect(screen.getByText('Pending')).toHaveClass('text-amber-800', 'dark:text-amber-200');
+    rerender(<StatusBadge title="Rejected" />);
+    expect(screen.getByText('Rejected')).toHaveClass('text-red-700', 'dark:text-red-300');
+    rerender(<StatusBadge title="Failed" />);
+    expect(screen.getByText('Failed')).toHaveClass('text-red-700', 'dark:text-red-300');
+    rerender(<StatusBadge title="Draft" />);
+    expect(screen.getByText('Draft')).toHaveClass('bg-black/5', 'dark:bg-white/8');
+  });
+
+  // Issue #363: a fixed luminance cut-off put white text on mid-tone catalog colours.
+  it('picks the text colour with the higher contrast on catalog colours', () => {
+    const dark = '#0f172a';
+    const light = '#f8fafc';
+    const cases: [string, string][] = [
+      ['#f97316', dark], // orange
+      ['#f59e0b', dark], // amber
+      ['#eab308', dark], // yellow
+      ['#22c55e', dark], // green
+      ['#112233', light], // navy
+      ['#7f1d1d', light], // dark red
+    ];
+    for (const [color, text] of cases) {
+      const { unmount } = render(<StatusBadge title={color} tagColor={color} />);
+      expect(screen.getByText(color)).toHaveStyle({ color: text });
+      unmount();
+    }
+  });
+
   it('falls back to a hashed hue style for unknown titles', () => {
     render(<StatusBadge title="CustomStatusXYZ" />);
     const el = screen.getByText('CustomStatusXYZ');

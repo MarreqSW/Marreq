@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-/** Dark-theme status chips; uses catalog `tag_color` (#RRGGBB) when set. */
+/** Status chips for both themes; uses catalog `tag_color` (#RRGGBB) when set. */
 const HEX6 = /^#[0-9A-Fa-f]{6}$/;
 
 function parseHex6(hex: string): { r: number; g: number; b: number } | null {
@@ -25,9 +25,18 @@ function relLuminance(r: number, g: number, b: number): number {
   return 0.2126 * R + 0.7152 * G + 0.0722 * B;
 }
 
+/** WCAG contrast ratio between two relative luminances. */
+function contrastRatio(a: number, b: number): number {
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+const DARK_TEXT = { hex: '#0f172a', luminance: relLuminance(0x0f, 0x17, 0x2a) };
+const LIGHT_TEXT = { hex: '#f8fafc', luminance: relLuminance(0xf8, 0xfa, 0xfc) };
+
 /**
  * Keyword-based styling when catalog `tag_color` is unset. Only titles containing
  * these English substrings get semantic colors; others used to all look identical (gray).
+ * Each text colour has a light-theme and a dark-theme shade (issue #363).
  */
 function classesForTitle(title: string): string | null {
   const t = title.toLowerCase();
@@ -35,16 +44,16 @@ function classesForTitle(title: string): string | null {
     return 'bg-stitch-accent-dim text-stitch-on-accent border-transparent';
   }
   if (t.includes('verified') || t.includes('accepted')) {
-    return 'bg-amber-500/20 text-amber-200 border-amber-500/30';
+    return 'bg-amber-500/20 text-amber-800 dark:text-amber-200 border-amber-500/30';
   }
   if (t.includes('fail') || t.includes('reject')) {
-    return 'bg-red-500/15 text-red-300 border-red-500/25';
+    return 'bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/25';
   }
   if (t.includes('review') || t.includes('pending')) {
-    return 'bg-amber-500/15 text-amber-200 border-amber-500/25';
+    return 'bg-amber-500/15 text-amber-800 dark:text-amber-200 border-amber-500/25';
   }
   if (t.includes('draft')) {
-    return 'bg-white/8 text-stitch-muted border-stitch-border';
+    return 'bg-black/5 dark:bg-white/8 text-stitch-muted border-stitch-border';
   }
   return null;
 }
@@ -87,9 +96,13 @@ export function StatusBadge({
   const raw = (tagColor ?? '').trim();
   const rgb = parseHex6(raw);
   if (rgb) {
+    // The text colour with the higher contrast on the catalog colour (a fixed
+    // luminance cut-off put white text on mid-tones such as orange or amber).
     const L = relLuminance(rgb.r, rgb.g, rgb.b);
-    const fg = L > 0.55 ? '#0f172a' : '#f8fafc';
-    const border = L > 0.55 ? 'rgba(15,23,42,0.2)' : 'rgba(248,250,252,0.25)';
+    const darkText =
+      contrastRatio(L, DARK_TEXT.luminance) >= contrastRatio(L, LIGHT_TEXT.luminance);
+    const fg = darkText ? DARK_TEXT.hex : LIGHT_TEXT.hex;
+    const border = darkText ? 'rgba(15,23,42,0.2)' : 'rgba(248,250,252,0.25)';
     return (
       <span
         className="px-2 py-0.5 rounded-md text-[11px] font-semibold border"

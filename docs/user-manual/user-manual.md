@@ -425,7 +425,12 @@ The matrix uses the same layout as the dependency structure matrix (§6.4).
 - **Rows:** grouped by **category** (separated by a line, with the category name on the first row), in reference-code order. Click the corner header to reverse the order, and drag its right edge to resize the requirement column.
 - **Sort by a verification:** click a verification's code in the column header to list the requirements it verifies first (suspect links first among them). Click again to reverse. The **↗** below the code opens the verification.
 - **Hover** a requirement, a verification or a cell to see its details: title, category, status, approval state, link counts and, for suspect links, the reason and date.
-- **Filters:** *Suspect only*, *Status groups*, *Requirement status* and *Verification status* chips, plus the global search. Filters and sort are kept in the page URL, so a filtered view can be bookmarked or shared.
+- **Filters** (above the matrix, together with the global search):
+  - **Suspect only:** a switch that keeps only suspect links.
+  - **Status groups:** buttons for the high-level groups (pass, verified, pending, draft, fail, other). Select one or more to show only verifications in those groups.
+  - **Requirement status** and **Verification status:** each selected status appears as a chip in its own colour. Select **×** on a chip to remove it. **Add status** opens a list of the project's statuses; tick one or several, then press Escape or click outside the list to close it. With the keyboard, use the arrow keys, Home and End to move, and Space or Enter to tick.
+  - **Clear all filters** removes every filter at once and keeps the sort.
+  - Filters and sort are kept in the page URL, so a filtered view can be bookmarked or shared.
 - **Suspect links:** shown with a red frame. The side panel lists them.
   - Click a suspect link in the panel to scroll the matrix to its cell.
   - **Review** compares the requirement version that triggered the flag with its preceding version.

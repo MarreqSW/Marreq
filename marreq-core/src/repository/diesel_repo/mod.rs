@@ -266,6 +266,7 @@ pub(crate) mod lookups;
 pub(crate) mod matrix;
 pub(crate) mod notifications;
 pub(crate) mod projects;
+pub(crate) mod report_templates;
 pub(crate) mod requirement_links;
 pub(crate) mod requirements;
 pub(crate) mod saved_views;

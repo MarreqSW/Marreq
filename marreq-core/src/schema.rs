@@ -424,6 +424,26 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    report_templates (id) {
+        id -> Int4,
+        project_id -> Int4,
+        owner_id -> Int4,
+        #[max_length = 120]
+        name -> Varchar,
+        #[max_length = 20]
+        report_type -> Varchar,
+        #[max_length = 20]
+        visibility -> Varchar,
+        definition -> Jsonb,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     requirement_comments (id) {
         id -> Int4,
         requirement_id -> Int4,
@@ -803,6 +823,8 @@ diesel::joinable!(verifications -> verification_methods (verification_method_id)
 diesel::joinable!(verifications -> verification_status (status_id));
 diesel::joinable!(workspaces -> users (owner_user_id));
 
+// Report templates (issue #354).
+diesel::joinable!(report_templates -> projects (project_id));
 // Verification control data (issue #353).
 diesel::joinable!(requirement_compliance -> projects (project_id));
 diesel::joinable!(requirement_compliance -> requirements (requirement_id));
@@ -837,6 +859,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     project_reviewers,
     project_storage_quotas,
     projects,
+    report_templates,
     requirement_comments,
     requirement_compliance,
     requirement_embeddings,

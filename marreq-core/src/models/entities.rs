@@ -489,6 +489,36 @@ pub struct VerificationStatus {
     pub outcome: String,
 }
 
+/// A saved report template (issue #354). `definition` is a
+/// [`crate::reports::definition::ReportDefinition`] as JSON.
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone, PartialEq)]
+#[diesel(table_name = crate::schema::report_templates)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct ReportTemplate {
+    pub id: i32,
+    pub project_id: i32,
+    pub owner_id: i32,
+    pub name: String,
+    pub report_type: String,
+    pub visibility: String,
+    pub definition: serde_json::Value,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+/// Insert / update payload for [`ReportTemplate`].
+#[derive(Debug, Insertable, AsChangeset, Clone)]
+#[diesel(table_name = crate::schema::report_templates)]
+pub struct ReportTemplateWrite {
+    pub project_id: i32,
+    pub owner_id: i32,
+    pub name: String,
+    pub report_type: String,
+    pub visibility: String,
+    pub definition: serde_json::Value,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
 /// Level, stage and close-out evidence of one verification (issue #353).
 #[derive(Debug, Serialize, Deserialize, Queryable, Insertable, AsChangeset, Clone, PartialEq)]
 #[diesel(table_name = crate::schema::verification_control)]
@@ -651,6 +681,8 @@ pub enum EntityType {
     Notification,
     /// File attached to a requirement or verification.
     Attachment,
+    /// Saved report template (issue #354).
+    ReportTemplate,
 }
 
 impl std::fmt::Display for EntityType {
@@ -668,6 +700,7 @@ impl std::fmt::Display for EntityType {
             EntityType::Comment => write!(f, "COMMENT"),
             EntityType::Notification => write!(f, "NOTIFICATION"),
             EntityType::Attachment => write!(f, "ATTACHMENT"),
+            EntityType::ReportTemplate => write!(f, "REPORT_TEMPLATE"),
         }
     }
 }
@@ -688,6 +721,7 @@ impl EntityType {
             EntityType::Comment => "comment",
             EntityType::Notification => "notification",
             EntityType::Attachment => "attachment",
+            EntityType::ReportTemplate => "report template",
         }
     }
 }

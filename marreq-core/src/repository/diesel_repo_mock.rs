@@ -73,6 +73,8 @@ pub struct DieselRepoMock {
     /// project_id -> quota override in bytes
     pub project_storage_quotas: HashMap<i32, i64>,
     pub verification_controls: HashMap<i32, VerificationControl>,
+    pub report_templates: Vec<ReportTemplate>,
+    pub next_report_template_id: i32,
     pub requirement_compliance: HashMap<i32, RequirementCompliance>,
     pub oauth_clients: HashMap<String, OAuthClient>,
     pub oauth_grants: HashMap<i32, OAuthGrant>,
@@ -157,6 +159,8 @@ impl Default for DieselRepoMock {
             baseline_attachments: Vec::new(),
             project_storage_quotas: HashMap::new(),
             verification_controls: HashMap::new(),
+            report_templates: Vec::new(),
+            next_report_template_id: 1,
             requirement_compliance: HashMap::new(),
         }
     }
@@ -552,6 +556,8 @@ impl DieselRepoMock {
             baseline_attachments: Vec::new(),
             project_storage_quotas: HashMap::new(),
             verification_controls: HashMap::new(),
+            report_templates: Vec::new(),
+            next_report_template_id: 1,
             requirement_compliance: HashMap::new(),
             oauth_clients: HashMap::new(),
             oauth_grants: HashMap::new(),
@@ -615,6 +621,8 @@ impl DieselRepoMock {
             baseline_attachments: Vec::new(),
             project_storage_quotas: HashMap::new(),
             verification_controls: HashMap::new(),
+            report_templates: Vec::new(),
+            next_report_template_id: 1,
             requirement_compliance: HashMap::new(),
             oauth_clients: HashMap::new(),
             oauth_grants: HashMap::new(),
@@ -3917,6 +3925,95 @@ impl crate::repository::VerificationControlRepository for DieselRepoMock {
             .requirement_compliance
             .remove(&requirement_id)
             .is_some())
+    }
+}
+
+impl crate::repository::ReportTemplateRepository for DieselRepoMock {
+    fn list_report_templates(&self, project_id: i32) -> Result<Vec<ReportTemplate>, RepoError> {
+        let mut rows: Vec<_> = self
+            .report_templates
+            .iter()
+            .filter(|t| t.project_id == project_id)
+            .cloned()
+            .collect();
+        rows.sort_by(|a, b| a.name.cmp(&b.name).then(a.id.cmp(&b.id)));
+        Ok(rows)
+    }
+
+    fn get_report_template(&self, id: i32) -> Result<ReportTemplate, RepoError> {
+        self.report_templates
+            .iter()
+            .find(|t| t.id == id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn create_report_template(
+        &mut self,
+        template: &ReportTemplateWrite,
+    ) -> Result<ReportTemplate, RepoError> {
+        let clash = self.report_templates.iter().any(|t| {
+            t.project_id == template.project_id
+                && t.owner_id == template.owner_id
+                && t.name.to_lowercase() == template.name.to_lowercase()
+        });
+        if clash {
+            return Err(RepoError::Duplicate(
+                "you already have a report template with this name".into(),
+            ));
+        }
+        let row = ReportTemplate {
+            id: self.next_report_template_id,
+            project_id: template.project_id,
+            owner_id: template.owner_id,
+            name: template.name.clone(),
+            report_type: template.report_type.clone(),
+            visibility: template.visibility.clone(),
+            definition: template.definition.clone(),
+            created_at: template.updated_at,
+            updated_at: template.updated_at,
+        };
+        self.next_report_template_id += 1;
+        self.report_templates.push(row.clone());
+        Ok(row)
+    }
+
+    fn update_report_template(
+        &mut self,
+        id: i32,
+        template: &ReportTemplateWrite,
+    ) -> Result<ReportTemplate, RepoError> {
+        let clash = self.report_templates.iter().any(|t| {
+            t.id != id
+                && t.project_id == template.project_id
+                && t.owner_id == template.owner_id
+                && t.name.to_lowercase() == template.name.to_lowercase()
+        });
+        if clash {
+            return Err(RepoError::Duplicate(
+                "you already have a report template with this name".into(),
+            ));
+        }
+        let row = self
+            .report_templates
+            .iter_mut()
+            .find(|t| t.id == id)
+            .ok_or(RepoError::NotFound)?;
+        row.name = template.name.clone();
+        row.report_type = template.report_type.clone();
+        row.visibility = template.visibility.clone();
+        row.definition = template.definition.clone();
+        row.updated_at = template.updated_at;
+        Ok(row.clone())
+    }
+
+    fn delete_report_template(&mut self, id: i32) -> Result<(), RepoError> {
+        let before = self.report_templates.len();
+        self.report_templates.retain(|t| t.id != id);
+        if self.report_templates.len() == before {
+            return Err(RepoError::NotFound);
+        }
+        Ok(())
     }
 }
 

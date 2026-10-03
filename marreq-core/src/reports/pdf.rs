@@ -18,6 +18,8 @@ use typst_layout::PagedDocument;
 use super::model::Document;
 
 const LIBRARY: &str = include_str!("typst/marreq.typ");
+/// The Marreq logo (gear and check mark), on a transparent background.
+pub(crate) const LOGO_PNG: &[u8] = include_bytes!("assets/logo.png");
 const MAIN: &str = "#import \"marreq.typ\": render\n#render(json(\"data.json\"))\n";
 
 const FONT_FILES: [&[u8]; 5] = [
@@ -62,6 +64,7 @@ struct ReportWorld {
     library_source: Source,
     data_id: FileId,
     data: Bytes,
+    logo_id: FileId,
     today: Option<Datetime>,
 }
 
@@ -91,6 +94,8 @@ impl World for ReportWorld {
     fn file(&self, id: FileId) -> FileResult<Bytes> {
         if id == self.data_id {
             Ok(self.data.clone())
+        } else if id == self.logo_id {
+            Ok(Bytes::new(LOGO_PNG))
         } else {
             Err(FileError::AccessDenied)
         }
@@ -125,6 +130,7 @@ pub fn render(doc: &Document, pdf_a: bool) -> Result<Vec<u8>, String> {
         library_source: Source::new(file_id("marreq.typ"), LIBRARY.to_string()),
         data_id: file_id("data.json"),
         data: Bytes::new(data),
+        logo_id: file_id("logo.png"),
         today,
     };
     let compiled = typst::compile::<PagedDocument>(&world);

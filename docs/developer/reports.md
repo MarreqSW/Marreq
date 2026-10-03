@@ -36,9 +36,9 @@ Report documents (issue #354) are PDF or ODT files built from a **template**. Th
 
 Every user string reaches Typst as a JSON string, so it is printed literally (see `user_text_with_typst_syntax_is_printed_literally`). Don't build Typst markup from user text. The ODT writer escapes XML and drops control characters.
 
-### Fonts
+### Fonts and logo
 
-`fonts/` holds Inter (SIL OFL 1.1) and DejaVu Sans Mono (Bitstream Vera licence); the licence texts are next to them. The PDF embeds the subsets it uses. The ODT names the fonts; LibreOffice substitutes them when they are not installed.
+`fonts/` holds Inter (SIL OFL 1.1) and DejaVu Sans Mono (Bitstream Vera licence); the licence texts are next to them. `assets/logo.png` is the Marreq logo (`frontend/static/logo.png` with its outer background made transparent); it appears on the cover and in the running header of both formats. The PDF embeds the subsets it uses. The ODT names the fonts; LibreOffice substitutes them when they are not installed.
 
 ## API
 

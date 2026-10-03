@@ -116,7 +116,7 @@ export default function DashboardPage() {
 
   if (err) {
     return (
-      <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-200 text-sm">
+      <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/25 text-red-800 dark:text-red-200 text-sm">
         {err}
       </div>
     );
@@ -157,7 +157,7 @@ export default function DashboardPage() {
             to={`${basePath}/reports#gaps`}
             className="rounded-xl border border-amber-500/25 bg-amber-500/10 p-4 block hover:bg-amber-500/15 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-stitch-accent"
           >
-            <p className="text-xs font-bold text-amber-200 uppercase tracking-wide">Gaps</p>
+            <p className="text-xs font-bold text-amber-800 dark:text-amber-200 uppercase tracking-wide">Gaps</p>
             <p className="text-2xl font-bold text-stitch-fg mt-1">{coverage.reqNoTest}</p>
             <p className="text-xs text-stitch-muted mt-1">Requirements without tests</p>
             <p className="text-[10px] text-stitch-accent font-bold mt-2 uppercase tracking-wider">
@@ -179,7 +179,7 @@ export default function DashboardPage() {
             to={`${basePath}/reports#suspect`}
             className="rounded-xl border border-red-500/25 bg-red-500/10 p-4 block hover:bg-red-500/15 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-stitch-accent"
           >
-            <p className="text-xs font-bold text-red-200 uppercase tracking-wide">Suspect</p>
+            <p className="text-xs font-bold text-red-700 dark:text-red-200 uppercase tracking-wide">Suspect</p>
             <p className="text-2xl font-bold text-stitch-fg mt-1">{coverage.suspect}</p>
             <p className="text-xs text-stitch-muted mt-1">Links flagged as suspect</p>
             <p className="text-[10px] text-stitch-accent font-bold mt-2 uppercase tracking-wider">

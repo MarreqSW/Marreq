@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { StatusBadge, statusTagColorSwatchStyle } from '../StatusBadge';
+import { StatusBadge, statusChipAppearance, statusTagColorSwatchStyle } from '../StatusBadge';
 
 describe('statusTagColorSwatchStyle', () => {
   it('returns undefined for missing or invalid colors', () => {
@@ -84,5 +84,25 @@ describe('StatusBadge', () => {
     // Keyword path would add semantic utility classes; hash fallback does not.
     expect(el.className).not.toMatch(/bg-red-500|bg-amber-500|bg-stitch-accent/);
     expect(el.getAttribute('style')).toBeTruthy();
+  });
+});
+
+describe('statusChipAppearance (shared with the matrix filter chips, issue #361)', () => {
+  it('matches what StatusBadge renders', () => {
+    for (const [title, tagColor] of [
+      ['Accepted', null],
+      ['Failed', null],
+      ['Draft', null],
+      ['Custom', '#f97316'],
+      ['Navy', '#112233'],
+      ['SomethingElse', null],
+    ] as const) {
+      const { className, style } = statusChipAppearance(title, tagColor);
+      const { unmount } = render(<StatusBadge title={title} tagColor={tagColor} />);
+      const el = screen.getByText(title);
+      for (const cls of className.split(' ').filter(Boolean)) expect(el).toHaveClass(cls);
+      if (style) expect(el).toHaveStyle(style as Record<string, string>);
+      unmount();
+    }
   });
 });

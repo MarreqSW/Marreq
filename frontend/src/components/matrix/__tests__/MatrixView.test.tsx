@@ -192,10 +192,13 @@ describe('MatrixView (DSM-style grid)', () => {
     const user = userEvent.setup();
     renderPage();
     await screen.findByTestId('matrix-body');
-    await user.click(screen.getByRole('button', { name: /Suspect only/ }));
+    const suspect = screen.getByRole('switch', { name: /Suspect only/ });
+    expect(suspect).toHaveAttribute('aria-checked', 'false');
+    await user.click(suspect);
     await waitFor(() => expect(screen.getByTestId('location').textContent).toContain('mx_suspect=1'));
+    expect(suspect).toHaveAttribute('aria-checked', 'true');
     expect(rowCodes()).toEqual(['REQ-COM-1']);
-    await user.click(screen.getByRole('button', { name: /Suspect only/ }));
+    await user.click(suspect);
 
     // Sorting by a verification column: linked rows first, no category bands.
     await user.click(screen.getByRole('button', { name: 'Sort rows by TEST-A' }));
@@ -230,5 +233,112 @@ describe('MatrixView (DSM-style grid)', () => {
     expect(apiClient.downloadMatrixXlsx).toHaveBeenCalledWith(5);
     fireEvent.click(screen.getByTestId('matrix-body'), { clientX: 0 * MATRIX_CELL + 5, clientY: 2 * MATRIX_CELL + 5 });
     expect(await screen.findByText('requirement page')).toBeInTheDocument();
+  });
+
+  describe('filter toolbar (issue #361)', () => {
+    const location = () => screen.getByTestId('location').textContent ?? '';
+    const reqGroup = () => screen.getByRole('group', { name: 'Requirement status' });
+
+    it('shows exact statuses only when selected, added from an accessible menu', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await screen.findByTestId('matrix-body');
+      // No status chips until a status is chosen; no badge nested in a toggle button.
+      expect(within(reqGroup()).queryByRole('button', { name: /Remove requirement status filter/ })).toBeNull();
+      expect(document.querySelectorAll('button[aria-pressed] span.border').length).toBe(0);
+
+      const add = within(reqGroup()).getByRole('button', { name: 'Add requirement status filter' });
+      expect(add).toHaveAttribute('aria-haspopup', 'menu');
+      await user.click(add);
+      const menu = screen.getByRole('menu', { name: 'Requirement status filters' });
+      const items = within(menu).getAllByRole('menuitemcheckbox');
+      expect(items.map((i) => i.textContent)).toEqual(['checkAccepted', 'checkDraft']);
+      expect(items[0]).toHaveFocus();
+
+      await user.click(items[0]);
+      await user.click(within(menu).getByRole('menuitemcheckbox', { name: /Draft/ }));
+      await waitFor(() => expect(location()).toContain('mx_rs=2%2C1'));
+      expect(within(menu).getByRole('menuitemcheckbox', { name: /Accepted/ })).toHaveAttribute('aria-checked', 'true');
+      expect(rowCodes().sort()).toEqual(['REQ-COM-1', 'REQ-PWR-1', 'REQ-PWR-2']);
+
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('menu')).toBeNull();
+      expect(add).toHaveFocus();
+
+      // Each selected status is one removable chip.
+      const accepted = within(reqGroup()).getByRole('button', { name: 'Remove requirement status filter: Accepted' });
+      expect(accepted).not.toHaveAttribute('aria-pressed');
+      await user.click(accepted);
+      await waitFor(() => expect(location()).toContain('mx_rs=1'));
+      expect(location()).not.toContain('mx_rs=2');
+      expect(rowCodes().sort()).toEqual(['REQ-PWR-1', 'REQ-PWR-2']);
+    });
+
+    it('moves through the menu with the keyboard and closes on an outside click', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await screen.findByTestId('matrix-body');
+      const add = within(screen.getByRole('group', { name: 'Verification status' })).getByRole('button', {
+        name: 'Add verification status filter',
+      });
+      add.focus();
+      await user.keyboard('{ArrowDown}');
+      const menu = screen.getByRole('menu', { name: 'Verification status filters' });
+      const [failed, passed] = within(menu).getAllByRole('menuitemcheckbox');
+      expect(failed).toHaveFocus();
+      await user.keyboard('{ArrowDown}');
+      expect(passed).toHaveFocus();
+      await user.keyboard('{ArrowDown}');
+      expect(failed).toHaveFocus();
+      await user.keyboard('{End}');
+      expect(passed).toHaveFocus();
+      await user.keyboard('{Home}');
+      expect(failed).toHaveFocus();
+      await user.keyboard(' ');
+      await waitFor(() => expect(location()).toContain('mx_vs=2'));
+      await user.click(screen.getByTestId('matrix-stats'));
+      expect(screen.queryByRole('menu')).toBeNull();
+      expect(
+        within(screen.getByRole('group', { name: 'Verification status' })).getByRole('button', {
+          name: 'Remove verification status filter: Failed',
+        }),
+      ).toBeInTheDocument();
+    });
+
+    it('keeps status groups as neutral toggles and clears every filter at once', async () => {
+      const user = userEvent.setup();
+      renderPage('?mx_sort=ver%3A10');
+      await screen.findByTestId('matrix-body');
+      const clearAll = screen.getByRole('button', { name: /Clear all filters/ });
+      expect(clearAll).toBeDisabled();
+      const toolbar = screen.getByRole('region', { name: 'Matrix filters' });
+      expect(within(toolbar).queryByRole('button', { name: 'Clear' })).toBeNull();
+
+      const fail = within(screen.getByRole('group', { name: 'Status groups' })).getByRole('button', { name: /Fail \/ reject/ });
+      expect(fail).toHaveAttribute('aria-pressed', 'false');
+      await user.click(fail);
+      await waitFor(() => expect(location()).toContain('mx_groups=fail'));
+      expect(fail).toHaveAttribute('aria-pressed', 'true');
+      await user.click(screen.getByRole('switch', { name: /Suspect only/ }));
+      await waitFor(() => expect(location()).toContain('mx_suspect=1'));
+
+      expect(clearAll).toBeEnabled();
+      await user.click(clearAll);
+      await waitFor(() => expect(location()).not.toContain('mx_groups'));
+      expect(location()).not.toContain('mx_suspect');
+      expect(location()).toContain('mx_sort=ver%3A10');
+      expect(clearAll).toBeDisabled();
+    });
+
+    it('restores the toolbar from a bookmarked URL', async () => {
+      // Filters that match nothing still show in the toolbar.
+      renderPage('?mx_suspect=1&mx_groups=pass&mx_rs=2&mx_vs=2');
+      await screen.findByRole('switch', { name: /Suspect only/ });
+      expect(screen.getByRole('switch', { name: /Suspect only/ })).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByRole('button', { name: /Pass \/ complete/ })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'Remove requirement status filter: Accepted' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Remove verification status filter: Failed' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Clear all filters/ })).toBeEnabled();
+    });
   });
 });

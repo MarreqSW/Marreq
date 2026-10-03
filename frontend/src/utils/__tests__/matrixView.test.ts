@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_MATRIX_PARAMS, groupRuns, nextSort, readMatrixParams, toggleIn, writeMatrixParams } from '../matrixView';
+import {
+  DEFAULT_MATRIX_PARAMS,
+  clearMatrixFilters,
+  groupRuns,
+  hasMatrixFilters,
+  nextSort,
+  readMatrixParams,
+  toggleIn,
+  writeMatrixParams,
+} from '../matrixView';
 import { centreScrollPosition } from '@/components/grid/gridShared';
 
 describe('matrix URL params', () => {
@@ -67,5 +76,34 @@ describe('helpers', () => {
     const layout = { rowHeaderWidth: 300, columnHeaderHeight: 124, cellWidth: 26, cellHeight: 26 };
     const pos = centreScrollPosition({ rows: [50, 50], cols: null }, { width: 1000, height: 700 }, { left: 77, top: 0 }, layout);
     expect(pos).toEqual({ left: 77, top: Math.round(50.5 * 26 - (700 - 124) / 2) });
+  });
+});
+
+describe('clear all filters (issue #361)', () => {
+  const filtered = {
+    ...DEFAULT_MATRIX_PARAMS,
+    suspectOnly: true,
+    statusGroups: ['fail' as const],
+    reqStatusIds: [2],
+    verStatusIds: [3, 4],
+    sort: { kind: 'verification' as const, verId: 7 },
+    dir: 'desc' as const,
+  };
+
+  it('knows when any filter is set, ignoring the sort', () => {
+    expect(hasMatrixFilters(DEFAULT_MATRIX_PARAMS)).toBe(false);
+    expect(hasMatrixFilters({ ...DEFAULT_MATRIX_PARAMS, sort: filtered.sort, dir: 'desc' })).toBe(false);
+    for (const patch of [{ suspectOnly: true }, { statusGroups: ['draft' as const] }, { reqStatusIds: [1] }, { verStatusIds: [1] }]) {
+      expect(hasMatrixFilters({ ...DEFAULT_MATRIX_PARAMS, ...patch })).toBe(true);
+    }
+  });
+
+  it('clears the four filters and keeps the sort', () => {
+    const cleared = clearMatrixFilters(filtered);
+    expect(hasMatrixFilters(cleared)).toBe(false);
+    expect(cleared.sort).toEqual(filtered.sort);
+    expect(cleared.dir).toBe('desc');
+    const url = writeMatrixParams(new URLSearchParams('mx_suspect=1&mx_rs=2&other=x'), cleared).toString();
+    expect(url).toBe('other=x&mx_sort=ver%3A7&mx_dir=desc');
   });
 });

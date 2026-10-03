@@ -100,3 +100,18 @@ export function groupRuns(labels: string[]): { label: string; start: number; end
   });
   return runs;
 }
+
+/** Whether any matrix filter is set (sort does not count). */
+export function hasMatrixFilters(params: MatrixParams): boolean {
+  return (
+    params.suspectOnly ||
+    params.statusGroups.length > 0 ||
+    params.reqStatusIds.length > 0 ||
+    params.verStatusIds.length > 0
+  );
+}
+
+/** The same parameters with every filter cleared; the sort is kept. */
+export function clearMatrixFilters(params: MatrixParams): MatrixParams {
+  return { ...params, suspectOnly: false, statusGroups: [], reqStatusIds: [], verStatusIds: [] };
+}

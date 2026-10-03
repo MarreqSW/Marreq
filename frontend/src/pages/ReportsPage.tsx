@@ -30,6 +30,7 @@ import type {
   User,
   Verification,
 } from '@/api/types';
+import ReportDocumentsCard from '@/components/reports/ReportDocumentsCard';
 import { ReportSection } from '@/components/reports/ReportSection';
 import { useDashboard } from '@/context/DashboardContext';
 import StitchPageHeader from '@/components/StitchPageHeader';
@@ -71,7 +72,7 @@ const PROJECT_EXPORTS = [
 export default function ReportsPage() {
   const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();
   const location = useLocation();
-  const { dashboard } = useDashboard();
+  const { dashboard, csrfToken } = useDashboard();
 
   const [report, setReport] = useState<Awaited<ReturnType<typeof getCoverageReport>> | null>(null);
   const [matrix, setMatrix] = useState<MatrixLink[]>([]);
@@ -586,6 +587,8 @@ export default function ReportsPage() {
             </table>
           </div>
         </ReportSection>
+
+        <ReportDocumentsCard projectId={pid} basePath={basePath} csrfToken={csrfToken ?? ''} />
 
         <ReportSection
           title="Exports"

@@ -566,6 +566,27 @@ You see:
 - The file is a portable snapshot of the project catalog, current requirements, verifications, matrix links, comments, and members (by username). It does not include version history, baselines, attachments, or passwords.
 - Anyone who can view the project can export the bundle.
 
+### 9.6 Report documents (VCD and coverage report)
+
+The **Report documents** card on the Reports page produces formatted documents:
+
+- **Verification Control Document (VCD)**: for every requirement, its verification method, the level and stage and evidence recorded on its verifications, the compliance assessment and whether it is closed ([§5.7](#57-verification-control-and-close-out)). It follows ECSS-E-ST-10-02C Annex B.
+- **Traceability & coverage report**: coverage figures, coverage by group, requirements without verification, verifications without requirements, suspect links and data quality. *Report PDF* in the exports list is this report with its default settings.
+
+Choose the **report**, a **template** (*Default* or a saved one) and the **format**, then select **Generate**.
+
+- **PDF**: page numbers, a table of contents with page numbers, the matrix on landscape pages, and optionally an archival PDF/A file.
+- **ODT** (OpenDocument, for LibreOffice or Word): the same content, ready to edit. To fill in page numbers in its table of contents, right-click the contents in LibreOffice and choose **Update Index**.
+
+**Customize…** opens the report builder (`/<project-slug>/reports/builder`):
+
+- **Sections**: tick a section to include it. Reorder with the arrow buttons or by dragging. Some sections have options (the tune icon), for example how the matrix is grouped and which columns it shows, or your own introduction text.
+- **Document**: document ID, title, issue and revision, classification, a watermark such as *DRAFT* (PDF only), page size, PDF/A, and the signatories, change record and reference documents printed in the front matter.
+- **Preview PDF** opens the result in a new tab. **Download PDF** and **Download ODT** save it.
+- **Save as…** stores the settings as a named template, private or shared with all project members. **Save** updates the selected template and **Delete** removes it. Only the template's owner, a project Admin or an instance administrator can change or delete it; anyone can still use it, or save their own copy. **Reset to default** returns to the built-in settings.
+
+When a later version of Marreq adds a section, your saved templates show it switched off, so they keep producing the same document.
+
 ---
 
 ## 10. Import

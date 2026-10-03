@@ -39,6 +39,7 @@ import NotificationSettingsPage from '@/pages/settings/NotificationSettingsPage'
 import StorageSettingsPage from '@/pages/settings/StorageSettingsPage';
 import ProjectCreatePage from '@/pages/ProjectCreatePage';
 import ProjectBundleImportPage from '@/pages/ProjectBundleImportPage';
+import ReportBuilderPage from '@/pages/ReportBuilderPage';
 import ReportsPage from '@/pages/ReportsPage';
 import RequirementsPage from '@/pages/RequirementsPage';
 import TraceabilityPage from '@/pages/TraceabilityPage';
@@ -160,6 +161,7 @@ export default function App() {
           <Route path="matrix" element={<MatrixRedirect />} />
           <Route path="baselines/:baselineId" element={<BaselineDetailPage />} />
           <Route path="baselines" element={<BaselinesPage />} />
+          <Route path="reports/builder" element={<ReportBuilderPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="settings" element={<ProjectSettingsLayout />}>
             <Route index element={<Navigate to="general" replace />} />

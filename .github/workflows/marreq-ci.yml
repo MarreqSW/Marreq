@@ -309,7 +309,14 @@ jobs:
 
       - name: Run verification control PostgreSQL integration tests
         run: |
-          cargo test -p marreq-core --test verification_control_postgres_integration -- --nocapture
+          # TEMPORARY (debug branch only): backtrace of the exit-time SIGSEGV.
+          sudo apt-get install -y -qq gdb >/dev/null
+          BIN=$(cargo test -p marreq-core --test verification_control_postgres_integration --no-run --message-format=json 2>/dev/null | jq -r 'select(.executable != null) | .executable' | tail -1)
+          echo "binary: $BIN"
+          for i in 1 2 3; do
+            echo "=== attempt $i"
+            gdb -q -batch -ex "set pagination off" -ex "handle SIGPIPE nostop noprint" -ex run -ex "info threads" -ex "thread apply all bt 40" --args "$BIN" --nocapture || true
+          done
 
       - name: Generate coverage reports
         run: |

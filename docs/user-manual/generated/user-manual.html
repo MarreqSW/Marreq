@@ -352,6 +352,9 @@ ReqIF</a></li>
 <li><a href="#exporting-a-project-bundle-json"
 id="toc-exporting-a-project-bundle-json">9.5 Exporting a project bundle
 (JSON)</a></li>
+<li><a href="#report-documents-vcd-and-coverage-report"
+id="toc-report-documents-vcd-and-coverage-report">9.6 Report documents
+(VCD and coverage report)</a></li>
 </ul></li>
 <li><a href="#import" id="toc-import">10. Import</a>
 <ul>
@@ -1543,6 +1546,58 @@ username). It does not include version history, baselines, attachments,
 or passwords.</li>
 <li>Anyone who can view the project can export the bundle.</li>
 </ul>
+<h3 id="report-documents-vcd-and-coverage-report">9.6 Report documents
+(VCD and coverage report)</h3>
+<p>The <strong>Report documents</strong> card on the Reports page
+produces formatted documents:</p>
+<ul>
+<li><strong>Verification Control Document (VCD)</strong>: for every
+requirement, its verification method, the level and stage and evidence
+recorded on its verifications, the compliance assessment and whether it
+is closed (<a href="#57-verification-control-and-close-out">§5.7</a>).
+It follows ECSS-E-ST-10-02C Annex B.</li>
+<li><strong>Traceability &amp; coverage report</strong>: coverage
+figures, coverage by group, requirements without verification,
+verifications without requirements, suspect links and data quality.
+<em>Report PDF</em> in the exports list is this report with its default
+settings.</li>
+</ul>
+<p>Choose the <strong>report</strong>, a <strong>template</strong>
+(<em>Default</em> or a saved one) and the <strong>format</strong>, then
+select <strong>Generate</strong>.</p>
+<ul>
+<li><strong>PDF</strong>: page numbers, a table of contents with page
+numbers, the matrix on landscape pages, and optionally an archival PDF/A
+file.</li>
+<li><strong>ODT</strong> (OpenDocument, for LibreOffice or Word): the
+same content, ready to edit. To fill in page numbers in its table of
+contents, right-click the contents in LibreOffice and choose
+<strong>Update Index</strong>.</li>
+</ul>
+<p><strong>Customize…</strong> opens the report builder
+(<code>/&lt;project-slug&gt;/reports/builder</code>):</p>
+<ul>
+<li><strong>Sections</strong>: tick a section to include it. Reorder
+with the arrow buttons or by dragging. Some sections have options (the
+tune icon), for example how the matrix is grouped and which columns it
+shows, or your own introduction text.</li>
+<li><strong>Document</strong>: document ID, title, issue and revision,
+classification, a watermark such as <em>DRAFT</em> (PDF only), page
+size, PDF/A, and the signatories, change record and reference documents
+printed in the front matter.</li>
+<li><strong>Preview PDF</strong> opens the result in a new tab.
+<strong>Download PDF</strong> and <strong>Download ODT</strong> save
+it.</li>
+<li><strong>Save as…</strong> stores the settings as a named template,
+private or shared with all project members. <strong>Save</strong>
+updates the selected template and <strong>Delete</strong> removes it.
+Only the template’s owner, a project Admin or an instance administrator
+can change or delete it; anyone can still use it, or save their own
+copy. <strong>Reset to default</strong> returns to the built-in
+settings.</li>
+</ul>
+<p>When a later version of Marreq adds a section, your saved templates
+show it switched off, so they keep producing the same document.</p>
 <hr />
 <h2 id="import">10. Import</h2>
 <h3 id="importing-from-excel-or-csv">10.1 Importing from Excel or

@@ -13,14 +13,16 @@ import {
   listVerifications,
 } from '@/api/client';
 import RequirementVersionDiffDialog from '@/components/RequirementVersionDiffDialog';
-import { StatusBadge } from '@/components/StatusBadge';
 import MatrixGrid, {
   type MatrixCellItem,
   type MatrixColItem,
   type MatrixFocus,
   type MatrixRowItem,
 } from '@/components/matrix/MatrixGrid';
+import AddStatusMenu from '@/components/matrix/AddStatusMenu';
 import MatrixSidePanel, { type GapItem, type SuspectItem } from '@/components/matrix/MatrixSidePanel';
+import StatusFilterChip from '@/components/matrix/StatusFilterChip';
+import SuspectSwitch from '@/components/matrix/SuspectSwitch';
 import { useDashboard } from '@/context/DashboardContext';
 import type {
   Category,
@@ -34,13 +36,16 @@ import type {
 } from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import {
+  GROUP_TEXT_CLASS,
   STATUS_GROUP_OPTIONS,
   statusGlyph,
   statusSemanticGroup,
   type StatusSemanticGroup,
 } from '@/lib/verificationStatusSemantic';
 import {
+  clearMatrixFilters,
   groupRuns,
+  hasMatrixFilters,
   nextSort,
   readMatrixParams,
   toggleIn,
@@ -82,8 +87,9 @@ function compareByVerificationColumn(
   return compareRefCode(a, b);
 }
 
-const chipOn = 'border-stitch-accent bg-stitch-accent/15 text-stitch-fg';
-const chipOff = 'border-stitch-border bg-stitch-elevated/50 text-stitch-muted hover:bg-stitch-higher hover:text-stitch-fg';
+/** Status-group buttons: neutral ghost style; the selected state is restrained (issue #361). */
+const groupOn = 'bg-stitch-higher text-stitch-fg font-semibold shadow-[inset_0_-2px_0_var(--color-stitch-accent)]';
+const groupOff = 'text-stitch-muted hover:bg-stitch-higher hover:text-stitch-fg';
 const label = 'text-[10px] uppercase tracking-widest text-stitch-muted font-bold mr-1 shrink-0';
 const headerButton =
   'text-xs font-bold uppercase tracking-wider text-stitch-accent border border-stitch-border rounded-md px-3 py-2 hover:bg-stitch-higher disabled:opacity-50';
@@ -511,28 +517,59 @@ export default function MatrixView() {
     );
   }
 
-  const chip = (active: boolean, onClick: () => void, children: React.ReactNode, title: string) => (
-    <button
-      type="button"
-      aria-pressed={active}
-      title={title}
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-[11px] font-medium ${
-        active ? chipOn : chipOff
-      }`}
-    >
-      {children}
-    </button>
-  );
-  const clear = (onClick: () => void) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className="text-[10px] font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-accent px-2 py-1"
-    >
-      Clear
-    </button>
-  );
+  const filtersActive = hasMatrixFilters(params);
+  const groupButton = (id: StatusSemanticGroup, text: string, symbol: string) => {
+    const active = statusGroups.has(id);
+    return (
+      <button
+        key={id}
+        type="button"
+        aria-pressed={active}
+        title={`${active ? 'Remove' : 'Show'} ${text}`}
+        onClick={() => update({ statusGroups: toggleIn<StatusSemanticGroup>(params.statusGroups, id) })}
+        className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] focus:outline-hidden focus-visible:ring-2 focus-visible:ring-stitch-accent ${
+          active ? groupOn : groupOff
+        }`}
+      >
+        <span className={`font-semibold ${GROUP_TEXT_CLASS[id]}`} aria-hidden>
+          {symbol}
+        </span>
+        {text}
+      </button>
+    );
+  };
+  const statusCategory = (
+    category: string,
+    heading: string,
+    options: { id: number; title: string; tag_color: string | null }[],
+    selectedIds: number[],
+    key: 'reqStatusIds' | 'verStatusIds',
+  ) => {
+    const byId = new Map(options.map((o) => [o.id, o]));
+    return (
+      <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={heading}>
+        <span className={label}>{heading}</span>
+        {selectedIds
+          .map((id) => byId.get(id))
+          .filter((st): st is (typeof options)[number] => st != null)
+          .map((st) => (
+            <StatusFilterChip
+              key={st.id}
+              title={st.title}
+              tagColor={st.tag_color}
+              category={category}
+              onRemove={() => update({ [key]: toggleIn(params[key], st.id) })}
+            />
+          ))}
+        <AddStatusMenu
+          category={category}
+          options={options}
+          selected={selectedIds}
+          onToggle={(id) => update({ [key]: toggleIn(params[key], id) })}
+        />
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
@@ -545,60 +582,39 @@ export default function MatrixView() {
         </button>
       </div>
 
-      <div className="rounded-xl border border-stitch-border bg-stitch-surface p-4 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={label}>Links</span>
-          {chip(
-            suspectOnly,
-            () => update({ suspectOnly: !suspectOnly }),
-            <>
-              <span className="h-3 w-3 rounded-sm shadow-[inset_0_0_0_2px_var(--color-stitch-danger)]" aria-hidden />
-              Suspect only
-            </>,
-            'Show only suspect links (rows and columns filtered)',
-          )}
-          <span className={`${label} ml-3`}>Status groups</span>
-          {STATUS_GROUP_OPTIONS.map(({ id, label: text, symbol }) =>
-            chip(
-              statusGroups.has(id),
-              () => update({ statusGroups: toggleIn<StatusSemanticGroup>(params.statusGroups, id) }),
-              <>
-                <span className="font-semibold" aria-hidden>
-                  {symbol}
-                </span>
-                {text}
-              </>,
-              `${statusGroups.has(id) ? 'Remove' : 'Show'} ${text}`,
-            ),
-          )}
-          {statusGroups.size > 0 ? clear(() => update({ statusGroups: [] })) : null}
-        </div>
-        {reqStatusOptions.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={label}>Requirement status</span>
-            {reqStatusOptions.map((st) =>
-              chip(
-                reqStatusFilter.has(st.id),
-                () => update({ reqStatusIds: toggleIn(params.reqStatusIds, st.id) }),
-                <StatusBadge title={st.title} tagColor={st.tag_color} />,
-                `${reqStatusFilter.has(st.id) ? 'Remove' : 'Show'} requirements with status ${st.title}`,
-              ),
-            )}
-            {reqStatusFilter.size > 0 ? clear(() => update({ reqStatusIds: [] })) : null}
+      <section
+        aria-label="Matrix filters"
+        className="rounded-xl border border-stitch-border bg-stitch-surface px-4 py-3 space-y-2.5"
+      >
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <div className="flex items-center gap-1.5">
+            <span className={label}>Links</span>
+            <SuspectSwitch checked={suspectOnly} onChange={(v) => update({ suspectOnly: v })} />
           </div>
-        ) : null}
-        {verStatusOptions.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className={label}>Verification status</span>
-            {verStatusOptions.map((st) =>
-              chip(
-                verStatusFilter.has(st.id),
-                () => update({ verStatusIds: toggleIn(params.verStatusIds, st.id) }),
-                <StatusBadge title={st.title} tagColor={st.tag_color} />,
-                `${verStatusFilter.has(st.id) ? 'Remove' : 'Show'} verifications with status ${st.title}`,
-              ),
-            )}
-            {verStatusFilter.size > 0 ? clear(() => update({ verStatusIds: [] })) : null}
+          <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Status groups">
+            <span className={label}>Status groups</span>
+            {STATUS_GROUP_OPTIONS.map(({ id, label: text, symbol }) => groupButton(id, text, symbol))}
+          </div>
+          <button
+            type="button"
+            onClick={() => update(clearMatrixFilters(params))}
+            disabled={!filtersActive}
+            className="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-stitch-accent hover:bg-stitch-higher disabled:cursor-default disabled:text-stitch-muted disabled:opacity-60 disabled:hover:bg-transparent focus:outline-hidden focus-visible:ring-2 focus-visible:ring-stitch-accent"
+          >
+            <span aria-hidden className="text-[13px] leading-none">
+              ×
+            </span>
+            Clear all filters
+          </button>
+        </div>
+        {reqStatusOptions.length > 0 || verStatusOptions.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            {reqStatusOptions.length > 0
+              ? statusCategory('requirement status', 'Requirement status', reqStatusOptions, params.reqStatusIds, 'reqStatusIds')
+              : null}
+            {verStatusOptions.length > 0
+              ? statusCategory('verification status', 'Verification status', verStatusOptions, params.verStatusIds, 'verStatusIds')
+              : null}
           </div>
         ) : null}
         <p className="font-mono text-[11px] text-stitch-muted" data-testid="matrix-stats">
@@ -606,7 +622,7 @@ export default function MatrixView() {
           {suspects.length} suspect · {reqsWithoutVerification.length + versWithoutRequirement.length} coverage gap
           {reqsWithoutVerification.length + versWithoutRequirement.length === 1 ? '' : 's'}
         </p>
-      </div>
+      </section>
 
       {err ? (
         <p role="alert" className="rounded-lg border border-stitch-danger/40 bg-stitch-danger/10 px-3 py-2 text-sm text-stitch-fg">

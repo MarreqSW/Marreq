@@ -85,14 +85,15 @@ export function statusTagColorSwatchStyle(
   return { backgroundColor: raw };
 }
 
-export function StatusBadge({
-  title,
-  tagColor,
-}: {
-  title: string;
-  /** Requirement / verification status catalog color (#RRGGBB). */
-  tagColor?: string | null;
-}) {
+/**
+ * Colours of a status chip: the catalog colour (with the better-contrast
+ * text), else keyword classes, else a hashed hue. Shared by `StatusBadge` and
+ * the matrix status filter chips so both always look the same.
+ */
+export function statusChipAppearance(
+  title: string,
+  tagColor?: string | null,
+): { className: string; style?: CSSProperties } {
   const raw = (tagColor ?? '').trim();
   const rgb = parseHex6(raw);
   if (rgb) {
@@ -101,31 +102,33 @@ export function StatusBadge({
     const L = relLuminance(rgb.r, rgb.g, rgb.b);
     const darkText =
       contrastRatio(L, DARK_TEXT.luminance) >= contrastRatio(L, LIGHT_TEXT.luminance);
-    const fg = darkText ? DARK_TEXT.hex : LIGHT_TEXT.hex;
-    const border = darkText ? 'rgba(15,23,42,0.2)' : 'rgba(248,250,252,0.25)';
-    return (
-      <span
-        className="px-2 py-0.5 rounded-md text-[11px] font-semibold border"
-        style={{
-          backgroundColor: raw,
-          color: fg,
-          borderColor: border,
-        }}
-      >
-        {title}
-      </span>
-    );
+    return {
+      className: '',
+      style: {
+        backgroundColor: raw,
+        color: darkText ? DARK_TEXT.hex : LIGHT_TEXT.hex,
+        borderColor: darkText ? 'rgba(15,23,42,0.2)' : 'rgba(248,250,252,0.25)',
+      },
+    };
   }
   const cls = classesForTitle(title);
-  if (cls) {
-    return (
-      <span className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border ${cls}`}>{title}</span>
-    );
-  }
+  if (cls) return { className: cls };
+  return { className: '', style: hashFallbackStyle(title) };
+}
+
+export function StatusBadge({
+  title,
+  tagColor,
+}: {
+  title: string;
+  /** Requirement / verification status catalog color (#RRGGBB). */
+  tagColor?: string | null;
+}) {
+  const { className, style } = statusChipAppearance(title, tagColor);
   return (
     <span
-      className="px-2 py-0.5 rounded-md text-[11px] font-semibold border"
-      style={hashFallbackStyle(title)}
+      className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border ${className}`.trim()}
+      style={style}
     >
       {title}
     </span>

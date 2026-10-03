@@ -19,4 +19,11 @@ ignore = [
     # operations; no fixed release exists. Marreq only verifies RS256 ID-token
     # signatures with providers' public keys, which the attack does not target.
     { id = "RUSTSEC-2023-0071", reason = "openidconnect only uses rsa for public-key signature verification; no patched rsa release yet" },
+    # quick-xml 0.38 (via typst-library -> hayagriva -> citationberg): DoS
+    # when parsing untrusted XML. citationberg parses CSL XML only for
+    # Typst's bibliography(); Marreq's report layout never calls it, user text
+    # reaches Typst as JSON data (never markup), and the report World denies
+    # all file access. No citationberg release with quick-xml >= 0.41 yet.
+    { id = "RUSTSEC-2026-0194", reason = "quick-xml 0.38 only via typst's CSL parser, which report rendering never reaches; no patched citationberg yet" },
+    { id = "RUSTSEC-2026-0195", reason = "quick-xml 0.38 only via typst's CSL parser, which report rendering never reaches; no patched citationberg yet" },
 ]

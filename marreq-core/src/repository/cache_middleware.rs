@@ -1529,6 +1529,35 @@ impl<R: Repository> SavedViewRepository for CacheRepository<R> {
 }
 
 // Attachments are not cached: listings are small and per entity.
+impl<R: Repository> crate::repository::ReportTemplateRepository for CacheRepository<R> {
+    fn list_report_templates(&self, project_id: i32) -> Result<Vec<ReportTemplate>, RepoError> {
+        self.inner.list_report_templates(project_id)
+    }
+
+    fn get_report_template(&self, id: i32) -> Result<ReportTemplate, RepoError> {
+        self.inner.get_report_template(id)
+    }
+
+    fn create_report_template(
+        &mut self,
+        template: &ReportTemplateWrite,
+    ) -> Result<ReportTemplate, RepoError> {
+        self.inner.create_report_template(template)
+    }
+
+    fn update_report_template(
+        &mut self,
+        id: i32,
+        template: &ReportTemplateWrite,
+    ) -> Result<ReportTemplate, RepoError> {
+        self.inner.update_report_template(id, template)
+    }
+
+    fn delete_report_template(&mut self, id: i32) -> Result<(), RepoError> {
+        self.inner.delete_report_template(id)
+    }
+}
+
 impl<R: Repository> VerificationControlRepository for CacheRepository<R> {
     fn get_verification_control(
         &self,
@@ -1990,6 +2019,8 @@ mod tests {
             baseline_attachments: Vec::new(),
             project_storage_quotas: HashMap::new(),
             verification_controls: HashMap::new(),
+            report_templates: Vec::new(),
+            next_report_template_id: 1,
             requirement_compliance: HashMap::new(),
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),

@@ -30,6 +30,7 @@ pub mod oauth;
 pub mod prelude;
 pub mod projects;
 pub mod projects_session;
+pub mod reports;
 pub mod requirement_diff;
 pub mod requirement_version_links;
 pub mod requirements;
@@ -141,6 +142,10 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         verification_control::get_verification_control,
         verification_control::get_requirement_close_out,
         verification_control::get_project_close_out,
+        reports::list_types,
+        reports::list_templates,
+        reports::get_template,
+        reports::generate,
         activity::verification_activity_by_project,
         verification_methods::list_by_project,
         verification_diff::list_snapshots_by_project,
@@ -205,6 +210,9 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         verifications::update_field_by_project,
         verification_control::put_verification_control,
         verification_control::put_requirement_compliance,
+        reports::create_template,
+        reports::update_template,
+        reports::delete_template,
         verification_methods::create_by_project,
         verification_methods::update_by_project,
         verification_methods::delete_by_project,

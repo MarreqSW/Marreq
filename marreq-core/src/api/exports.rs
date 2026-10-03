@@ -25,7 +25,7 @@ pub struct FileDownload {
 }
 
 impl FileDownload {
-    fn new(bytes: Vec<u8>, content_type: &'static str, filename: String) -> Self {
+    pub(crate) fn new(bytes: Vec<u8>, content_type: &'static str, filename: String) -> Self {
         Self {
             bytes,
             content_type: Header::new("Content-Type", content_type),
@@ -197,10 +197,27 @@ pub async fn export_report_pdf(
         project_id,
         Permission::ViewRequirements,
     )?;
-    let bytes = reports::project_report_pdf_with_repo(&*state.repo_read(), project_id)
-        .map_err(build_failed)?;
+    // The built-in Traceability & coverage report (issue #354).
+    let definition = crate::api::reports::default_definition(
+        state,
+        access.user(),
+        project_id,
+        crate::reports::definition::ReportType::Coverage,
+    )?;
+    let owned = state.inner().clone();
+    let report = rocket::tokio::task::spawn_blocking(move || {
+        crate::reports::generate(
+            &owned,
+            project_id,
+            definition,
+            crate::reports::ReportFormat::Pdf,
+        )
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(crate::api::reports::report_error)?;
     Ok(FileDownload::pdf(
-        bytes,
+        report.bytes,
         format!("report-project-{project_id}.pdf"),
     ))
 }

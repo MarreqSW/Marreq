@@ -50,6 +50,9 @@ tokio = { workspace = true, features = ["fs", "io-util"] }
 urlencoding = { workspace = true }
 url = { workspace = true }
 rust_xlsxwriter = { workspace = true }
+typst = { workspace = true }
+typst-layout = { workspace = true }
+typst-pdf = { workspace = true }
 zip = { workspace = true }
 
 [dev-dependencies]

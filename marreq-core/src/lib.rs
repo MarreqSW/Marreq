@@ -29,6 +29,7 @@ pub mod logger;
 pub mod models;
 pub mod namespaces;
 pub mod permissions;
+pub mod reports;
 pub mod repository;
 pub mod reqif;
 pub mod rich_text;

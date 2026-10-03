@@ -814,6 +814,23 @@ pub trait NotificationRepository {
     ) -> Result<Vec<NotificationPreference>, RepoError>;
 }
 
+/// Saved report templates (issue #354).
+pub trait ReportTemplateRepository {
+    fn list_report_templates(&self, project_id: i32) -> Result<Vec<ReportTemplate>, RepoError>;
+    fn get_report_template(&self, id: i32) -> Result<ReportTemplate, RepoError>;
+    /// `Duplicate` when the owner already has a template with that name.
+    fn create_report_template(
+        &mut self,
+        template: &ReportTemplateWrite,
+    ) -> Result<ReportTemplate, RepoError>;
+    fn update_report_template(
+        &mut self,
+        id: i32,
+        template: &ReportTemplateWrite,
+    ) -> Result<ReportTemplate, RepoError>;
+    fn delete_report_template(&mut self, id: i32) -> Result<(), RepoError>;
+}
+
 /// Verification control data for the VCD (issue #353): level, stage and
 /// evidence per verification, and the compliance assessment per requirement.
 pub trait VerificationControlRepository {
@@ -874,6 +891,7 @@ pub trait Repository:
     + EmailTokensRepository
     + SessionRepository
     + VerificationControlRepository
+    + ReportTemplateRepository
 {
 }
 
@@ -904,6 +922,7 @@ impl<T> Repository for T where
         + EmailTokensRepository
         + SessionRepository
         + VerificationControlRepository
+        + ReportTemplateRepository
 {
 }
 

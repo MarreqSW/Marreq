@@ -47,6 +47,10 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "proce
 urlencoding = "2.1"
 url = "2.5"
 rust_xlsxwriter = "0.99"
+# Report documents rendered to PDF (issue #354).
+typst = "0.15.1"
+typst-layout = "0.15.1"
+typst-pdf = "0.15.1"
 # ReqIFZ archives. Same version and features calamine/rust_xlsxwriter already pull in.
 zip = { version = "8.6", default-features = false, features = ["deflate"] }
 

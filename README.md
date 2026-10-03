@@ -298,6 +298,9 @@ Behind the Docker frontend (or Vite dev), use the **same origin** as the SPA (e.
 - `GET|PUT /projects/{project_id}/verifications/{id}/control` - Verification level, stage and evidence reference (issue #353)
 - `GET /projects/{project_id}/requirements/{id}/close_out`, `GET /projects/{project_id}/close_out` - Compliance assessment and derived close-out (open/closed with a reason)
 - `PUT /projects/{project_id}/requirements/{id}/compliance` - Set C / PC / NC or clear it (project reviewers)
+- `GET /projects/{project_id}/reports/types` - Report document types (VCD, traceability & coverage), their sections and default templates
+- `GET|POST /projects/{project_id}/report_templates`, `GET|PATCH|DELETE /projects/{project_id}/report_templates/{id}` - Saved report templates (section order, on/off, options, document fields)
+- `POST /projects/{project_id}/reports/{vcd|coverage}.{pdf|odt}` - Generate a report document (body: optional `template_id` or `definition`)
 - `GET /projects/{project_id}/dsm` - Dependency structure matrix: requirement × requirement links, loops and upstream changes (query: `link_types`, `order=hierarchy|partition`, `category_id`, `root_id`; session or Bearer)
 - `GET /projects/{project_id}/exports/dsm.xlsx` - The same matrix as an Excel workbook (DSM, Loops and Legend sheets)
 - `POST /traceability/clear_suspect` - Clear suspect flag for a traceability link (body: `req_id`, `test_id`; records current user and timestamp)

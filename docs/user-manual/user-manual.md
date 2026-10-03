@@ -537,7 +537,7 @@ You see:
 
 - **Executive summary**: Total requirements, total verifications, coverage %, average verifications per requirement.
 - **Coverage analysis**: Covered vs uncovered requirements, requirements without verifications, verifications without requirements, suspect links. Verification status distribution (e.g. Passed/Failed/Pending) may be shown.
-- **Generate PDF Report**: Button to open/download a full project report PDF.
+- **Generate PDF Report** (*Report PDF*): the **Traceability & coverage report**: cover page, contents, coverage figures, coverage by reference-code prefix, requirements without verification, verifications without requirements, suspect links and data quality.
 - **Download requirements (PDF)**: Link to requirements-only PDF.
 - **Excel downloads**: Requirements, Verifications, **Matrix** (coverage grid), and **Matrix links** (two code columns for import).
 

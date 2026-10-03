@@ -247,4 +247,21 @@ fn deleting_a_project_removes_everything_and_keeps_baselines_immutable_elsewhere
         ),
         2
     );
+
+    wait_for_quiet_pool(&repo);
+}
+
+/// r2d2 opens connections in the background to keep `min_idle` after
+/// checkouts. Exiting while one is still being established can crash in
+/// libpq / OpenSSL teardown (seen in CI as SIGSEGV after the test passed), so
+/// wait until every connection the pool counts is established and idle.
+fn wait_for_quiet_pool(repo: &DieselRepo) {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(15);
+    while std::time::Instant::now() < deadline {
+        let s = repo.pool_stats();
+        if s.available == s.current_size && s.available >= s.min_idle {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(25));
+    }
 }

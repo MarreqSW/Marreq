@@ -483,6 +483,39 @@ pub struct VerificationStatus {
     pub project_id: i32,
     pub is_system: bool,
     pub tag_color: Option<String>,
+    /// What the status means for close-out: `passed`, `failed`, `in_progress`
+    /// or `not_run` (see [`crate::status_enums::VerificationOutcome`]).
+    #[serde(default = "crate::status_enums::default_outcome")]
+    pub outcome: String,
+}
+
+/// Level, stage and close-out evidence of one verification (issue #353).
+#[derive(Debug, Serialize, Deserialize, Queryable, Insertable, AsChangeset, Clone, PartialEq)]
+#[diesel(table_name = crate::schema::verification_control)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(treat_none_as_null = true)]
+pub struct VerificationControl {
+    pub verification_id: i32,
+    pub project_id: i32,
+    pub verification_level: Option<String>,
+    pub verification_stage: Option<String>,
+    pub evidence_reference: Option<String>,
+    pub updated_by: Option<i32>,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+/// A reviewer's compliance assessment of one requirement: `C`, `PC` or `NC`.
+#[derive(Debug, Serialize, Deserialize, Queryable, Insertable, AsChangeset, Clone, PartialEq)]
+#[diesel(table_name = crate::schema::requirement_compliance)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+#[diesel(treat_none_as_null = true)]
+pub struct RequirementCompliance {
+    pub requirement_id: i32,
+    pub project_id: i32,
+    pub compliance: String,
+    pub note: Option<String>,
+    pub set_by: Option<i32>,
+    pub set_at: chrono::NaiveDateTime,
 }
 
 #[derive(Serialize, Deserialize, Queryable, Clone)]

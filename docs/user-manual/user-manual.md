@@ -377,6 +377,33 @@ Update status from the **Verification detail** page (Edit), **inline from the ve
 
 Verifications can have a **parent verification** (e.g. a test suite or feature area). Set the parent when creating or editing a verification. The verifications list and tree views (if available) reflect this hierarchy; reporting and traceability still work at the level of individual verifications linked to requirements.
 
+### 5.7 Verification Control and Close-out
+
+Marreq tracks how far each requirement's verification has gone, for the Verification Control Document (VCD).
+
+**On a verification** (its detail page, **Verification control** card), anyone who can edit requirements records:
+
+- **Level**: where it is verified, e.g. *Equipment*, *Subsystem* or *System*.
+- **Stage**: when it is verified, e.g. *QUAL* (qualification) or *ACC* (acceptance).
+- **Evidence**: the document that proves the result, e.g. a test report number.
+
+Level and stage are free text. The fields suggest the values already used in the project, so the same terms are reused.
+
+**On a requirement** (its detail page, **Verification close-out** card), a **project reviewer** records the **compliance** assessment: **C** (compliant), **PC** (partially compliant, e.g. accepted with a waiver) or **NC** (non-compliant), with an optional note such as the waiver or nonconformance number. Choosing **Not assessed** removes it. Each change is recorded in **System logs**.
+
+The card shows whether the requirement is **Closed** or **Open**, and why:
+
+| Situation | Close-out |
+| --- | --- |
+| No verification linked | Open: *No verification linked* |
+| A linked verification failed | Open: *VER-x failed* |
+| A linked verification has not passed yet | Open: *VER-x not run* or *in progress* |
+| All linked verifications passed, no assessment | Open: *Compliance not assessed* |
+| All passed, assessed NC | Open: *Non-compliant* (and the note) |
+| All passed, assessed C or PC | **Closed** |
+
+Whether a verification "passed" comes from the **outcome** of its status, set in **Project settings › Catalog › Verification statuses** ([§8](#8-categories-applicability--verification)).
+
 ---
 
 ## 6. Traceability Matrix
@@ -492,6 +519,8 @@ These are **project-level** configuration entities used to classify and manage r
 | **Verification methods** | How requirements are verified (e.g. Test, Analysis, Review) | `…/settings/catalog/verification-methods` |
 
 Each tab lists the entries with their title, description and tag, and lets you add, edit and delete them. The old `/<project-slug>/catalog/…` URLs redirect here.
+
+Each verification status also has an **outcome**: *Passed*, *Failed*, *In progress* or *Not run*. The outcome tells Marreq what the status means for requirement close-out ([§5.7](#57-verification-control-and-close-out)). New statuses get it from their title (a status called "Passed" is *Passed*; an unknown title is *Not run*), and you can change it for your own statuses.
 
 ---
 

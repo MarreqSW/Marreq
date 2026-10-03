@@ -440,6 +440,21 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    requirement_compliance (requirement_id) {
+        requirement_id -> Int4,
+        project_id -> Int4,
+        #[max_length = 2]
+        compliance -> Bpchar,
+        note -> Nullable<Text>,
+        set_by -> Nullable<Int4>,
+        set_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     requirement_embeddings (requirement_id) {
         requirement_id -> Int4,
         project_id -> Int4,
@@ -639,6 +654,23 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    verification_control (verification_id) {
+        verification_id -> Int4,
+        project_id -> Int4,
+        #[max_length = 40]
+        verification_level -> Nullable<Varchar>,
+        #[max_length = 40]
+        verification_stage -> Nullable<Varchar>,
+        evidence_reference -> Nullable<Text>,
+        updated_by -> Nullable<Int4>,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     verification_status (id) {
         id -> Int4,
         title -> Varchar,
@@ -648,6 +680,8 @@ diesel::table! {
         is_system -> Bool,
         #[max_length = 20]
         tag_color -> Nullable<Varchar>,
+        #[max_length = 12]
+        outcome -> Varchar,
     }
 }
 
@@ -769,6 +803,12 @@ diesel::joinable!(verifications -> verification_methods (verification_method_id)
 diesel::joinable!(verifications -> verification_status (status_id));
 diesel::joinable!(workspaces -> users (owner_user_id));
 
+// Verification control data (issue #353).
+diesel::joinable!(requirement_compliance -> projects (project_id));
+diesel::joinable!(requirement_compliance -> requirements (requirement_id));
+diesel::joinable!(verification_control -> projects (project_id));
+diesel::joinable!(verification_control -> verifications (verification_id));
+
 diesel::allow_tables_to_appear_in_same_query!(
     applicability,
     attachments,
@@ -798,6 +838,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     project_storage_quotas,
     projects,
     requirement_comments,
+    requirement_compliance,
     requirement_embeddings,
     requirement_status,
     requirement_version_links,
@@ -810,6 +851,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     user_identities,
     users,
     verification_methods,
+    verification_control,
     verification_status,
     verifications,
     workspaces,

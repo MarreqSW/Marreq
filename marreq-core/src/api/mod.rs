@@ -38,6 +38,7 @@ pub mod semantic_search;
 pub mod status;
 pub mod traceability;
 pub mod users;
+pub mod verification_control;
 pub mod verification_diff;
 pub mod verification_methods;
 pub mod verification_status;
@@ -137,6 +138,9 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         verifications::list_by_project,
         verifications::get,
         verifications::get_by_project,
+        verification_control::get_verification_control,
+        verification_control::get_requirement_close_out,
+        verification_control::get_project_close_out,
         activity::verification_activity_by_project,
         verification_methods::list_by_project,
         verification_diff::list_snapshots_by_project,
@@ -199,6 +203,8 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         verifications::delete,
         verifications::update_field,
         verifications::update_field_by_project,
+        verification_control::put_verification_control,
+        verification_control::put_requirement_compliance,
         verification_methods::create_by_project,
         verification_methods::update_by_project,
         verification_methods::delete_by_project,

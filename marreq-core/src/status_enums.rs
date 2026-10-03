@@ -498,6 +498,54 @@ impl<'r> rocket::form::FromFormField<'r> for ProjectStatus {
     }
 }
 
+/// What a verification status means for requirement close-out (issue #353).
+/// Stored in `verification_status.outcome`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VerificationOutcome {
+    Passed,
+    Failed,
+    InProgress,
+    NotRun,
+}
+
+impl VerificationOutcome {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            VerificationOutcome::Passed => "passed",
+            VerificationOutcome::Failed => "failed",
+            VerificationOutcome::InProgress => "in_progress",
+            VerificationOutcome::NotRun => "not_run",
+        }
+    }
+
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "passed" => Some(VerificationOutcome::Passed),
+            "failed" => Some(VerificationOutcome::Failed),
+            "in_progress" => Some(VerificationOutcome::InProgress),
+            "not_run" => Some(VerificationOutcome::NotRun),
+            _ => None,
+        }
+    }
+
+    /// Best guess from a status title, used when a status is created without
+    /// an explicit outcome (same rule as the migration backfill).
+    pub fn infer_from_title(title: &str) -> Self {
+        match title.trim().to_lowercase().as_str() {
+            "passed" | "pass" => VerificationOutcome::Passed,
+            "failed" | "fail" => VerificationOutcome::Failed,
+            "in progress" | "in-progress" | "running" => VerificationOutcome::InProgress,
+            _ => VerificationOutcome::NotRun,
+        }
+    }
+}
+
+/// Serde default for `VerificationStatus::outcome`.
+pub fn default_outcome() -> String {
+    VerificationOutcome::NotRun.as_str().to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -657,5 +705,34 @@ mod tests {
         assert_eq!(ProjectStatus::from_db_string("invalid"), None);
         assert_eq!(ProjectStatus::from_db_string(""), None);
         assert_eq!(ProjectStatus::from_db_string("pending"), None);
+    }
+
+    #[test]
+    fn verification_outcome_round_trips_and_is_inferred_from_titles() {
+        for o in [
+            VerificationOutcome::Passed,
+            VerificationOutcome::Failed,
+            VerificationOutcome::InProgress,
+            VerificationOutcome::NotRun,
+        ] {
+            assert_eq!(VerificationOutcome::parse(o.as_str()), Some(o));
+        }
+        assert_eq!(VerificationOutcome::parse("ok"), None);
+        assert_eq!(
+            VerificationOutcome::infer_from_title(" Passed "),
+            VerificationOutcome::Passed
+        );
+        assert_eq!(
+            VerificationOutcome::infer_from_title("FAILED"),
+            VerificationOutcome::Failed
+        );
+        assert_eq!(
+            VerificationOutcome::infer_from_title("In Progress"),
+            VerificationOutcome::InProgress
+        );
+        assert_eq!(
+            VerificationOutcome::infer_from_title("Pending"),
+            VerificationOutcome::NotRun
+        );
     }
 }

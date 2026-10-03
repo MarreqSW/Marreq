@@ -15,6 +15,7 @@ import {
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import AttachmentsPanel from '@/components/AttachmentsPanel';
+import VerificationControlPanel from '@/components/VerificationControlPanel';
 import { StatusBadge } from '@/components/StatusBadge';
 import VerificationVersionDiffDialog from '@/components/VerificationVersionDiffDialog';
 import { formatUserLabel } from '@/utils/userLabel';
@@ -391,6 +392,14 @@ export default function ViewVerificationPage() {
           </ul>
         )}
       </section>
+
+      <VerificationControlPanel
+        className="mt-8"
+        projectId={pid}
+        verificationId={vid}
+        canEdit={canEdit}
+        csrfToken={csrfToken ?? ''}
+      />
 
       <AttachmentsPanel
         className="mt-8"

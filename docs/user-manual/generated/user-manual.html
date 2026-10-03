@@ -304,6 +304,9 @@ id="toc-updating-verification-status">5.5 Updating Verification
 Status</a></li>
 <li><a href="#verification-hierarchy"
 id="toc-verification-hierarchy">5.6 Verification Hierarchy</a></li>
+<li><a href="#verification-control-and-close-out"
+id="toc-verification-control-and-close-out">5.7 Verification Control and
+Close-out</a></li>
 </ul></li>
 <li><a href="#traceability-matrix" id="toc-traceability-matrix">6.
 Traceability Matrix</a>
@@ -1120,6 +1123,75 @@ test suite or feature area). Set the parent when creating or editing a
 verification. The verifications list and tree views (if available)
 reflect this hierarchy; reporting and traceability still work at the
 level of individual verifications linked to requirements.</p>
+<h3 id="verification-control-and-close-out">5.7 Verification Control and
+Close-out</h3>
+<p>Marreq tracks how far each requirement’s verification has gone, for
+the Verification Control Document (VCD).</p>
+<p><strong>On a verification</strong> (its detail page,
+<strong>Verification control</strong> card), anyone who can edit
+requirements records:</p>
+<ul>
+<li><strong>Level</strong>: where it is verified,
+e.g. <em>Equipment</em>, <em>Subsystem</em> or <em>System</em>.</li>
+<li><strong>Stage</strong>: when it is verified, e.g. <em>QUAL</em>
+(qualification) or <em>ACC</em> (acceptance).</li>
+<li><strong>Evidence</strong>: the document that proves the result,
+e.g. a test report number.</li>
+</ul>
+<p>Level and stage are free text. The fields suggest the values already
+used in the project, so the same terms are reused.</p>
+<p><strong>On a requirement</strong> (its detail page,
+<strong>Verification close-out</strong> card), a <strong>project
+reviewer</strong> records the <strong>compliance</strong> assessment:
+<strong>C</strong> (compliant), <strong>PC</strong> (partially
+compliant, e.g. accepted with a waiver) or <strong>NC</strong>
+(non-compliant), with an optional note such as the waiver or
+nonconformance number. Choosing <strong>Not assessed</strong> removes
+it. Each change is recorded in <strong>System logs</strong>.</p>
+<p>The card shows whether the requirement is <strong>Closed</strong> or
+<strong>Open</strong>, and why:</p>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Close-out</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No verification linked</td>
+<td>Open: <em>No verification linked</em></td>
+</tr>
+<tr>
+<td>A linked verification failed</td>
+<td>Open: <em>VER-x failed</em></td>
+</tr>
+<tr>
+<td>A linked verification has not passed yet</td>
+<td>Open: <em>VER-x not run</em> or <em>in progress</em></td>
+</tr>
+<tr>
+<td>All linked verifications passed, no assessment</td>
+<td>Open: <em>Compliance not assessed</em></td>
+</tr>
+<tr>
+<td>All passed, assessed NC</td>
+<td>Open: <em>Non-compliant</em> (and the note)</td>
+</tr>
+<tr>
+<td>All passed, assessed C or PC</td>
+<td><strong>Closed</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Whether a verification “passed” comes from the
+<strong>outcome</strong> of its status, set in <strong>Project settings
+› Catalog › Verification statuses</strong> (<a
+href="#8-categories-applicability--verification">§8</a>).</p>
 <hr />
 <h2 id="traceability-matrix">6. Traceability Matrix</h2>
 <p>The traceability matrix is central to <strong>test
@@ -1381,6 +1453,13 @@ need <strong>Edit requirements</strong> permission to change them.</p>
 <p>Each tab lists the entries with their title, description and tag, and
 lets you add, edit and delete them. The old
 <code>/&lt;project-slug&gt;/catalog/…</code> URLs redirect here.</p>
+<p>Each verification status also has an <strong>outcome</strong>:
+<em>Passed</em>, <em>Failed</em>, <em>In progress</em> or <em>Not
+run</em>. The outcome tells Marreq what the status means for requirement
+close-out (<a href="#57-verification-control-and-close-out">§5.7</a>).
+New statuses get it from their title (a status called “Passed” is
+<em>Passed</em>; an unknown title is <em>Not run</em>), and you can
+change it for your own statuses.</p>
 <hr />
 <h2 id="reports-export">9. Reports &amp; Export</h2>
 <h3 id="reports-page">9.1 Reports Page</h3>

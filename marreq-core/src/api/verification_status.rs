@@ -49,6 +49,7 @@ pub async fn get_verification_status(
         "project_id": status.project_id,
         "is_system": status.is_system,
         "tag_color": status.tag_color,
+        "outcome": status.outcome,
     })))
 }
 
@@ -66,6 +67,7 @@ pub async fn create_verification_status(
         payload.project_id,
         Permission::ManageProjectConfiguration,
     )?;
+    check_outcome(&payload)?;
     let id = service.create_verification_status(payload)?;
     Ok((Status::Created, json!({ "status": "ok", "id": id })))
 }
@@ -91,6 +93,7 @@ pub async fn update_verification_status(
             "verification status project cannot be changed".into(),
         ));
     }
+    check_outcome(&payload)?;
     service.update_verification_status(id, &payload)?;
     Ok(json!({ "status": "ok" }))
 }
@@ -111,4 +114,14 @@ pub async fn delete_verification_status(
     )?;
     service.delete_verification_status(id)?;
     Ok(Status::NoContent)
+}
+
+/// `outcome`, when given, must be one of the close-out outcomes (issue #353).
+fn check_outcome(payload: &NewVerificationStatus) -> ApiResult<()> {
+    match payload.outcome.as_deref() {
+        Some(o) if crate::status_enums::VerificationOutcome::parse(o).is_none() => Err(
+            ApiError::BadRequest("outcome must be passed, failed, in_progress or not_run".into()),
+        ),
+        _ => Ok(()),
+    }
 }

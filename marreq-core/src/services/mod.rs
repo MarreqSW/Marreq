@@ -96,6 +96,7 @@ pub mod semantic_search;
 pub mod status_service;
 pub mod user_provisioning_service;
 pub mod user_service;
+pub mod verification_control_service;
 pub mod verification_diff_service;
 pub mod verification_service;
 

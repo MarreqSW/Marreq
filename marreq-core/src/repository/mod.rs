@@ -814,6 +814,39 @@ pub trait NotificationRepository {
     ) -> Result<Vec<NotificationPreference>, RepoError>;
 }
 
+/// Verification control data for the VCD (issue #353): level, stage and
+/// evidence per verification, and the compliance assessment per requirement.
+pub trait VerificationControlRepository {
+    fn get_verification_control(
+        &self,
+        verification_id: i32,
+    ) -> Result<Option<VerificationControl>, RepoError>;
+    fn list_verification_control_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<VerificationControl>, RepoError>;
+    /// Insert or replace the row of `control.verification_id`.
+    fn upsert_verification_control(
+        &mut self,
+        control: &VerificationControl,
+    ) -> Result<VerificationControl, RepoError>;
+    fn get_requirement_compliance(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Option<RequirementCompliance>, RepoError>;
+    fn list_requirement_compliance_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<RequirementCompliance>, RepoError>;
+    /// Insert or replace the assessment of `compliance.requirement_id`.
+    fn set_requirement_compliance(
+        &mut self,
+        compliance: &RequirementCompliance,
+    ) -> Result<RequirementCompliance, RepoError>;
+    /// Remove the assessment; `false` if there was none.
+    fn clear_requirement_compliance(&mut self, requirement_id: i32) -> Result<bool, RepoError>;
+}
+
 pub trait Repository:
     ApiTokensRepository
     + DelegatedOAuthRepository
@@ -840,6 +873,7 @@ pub trait Repository:
     + WorkspacesRepository
     + EmailTokensRepository
     + SessionRepository
+    + VerificationControlRepository
 {
 }
 
@@ -869,6 +903,7 @@ impl<T> Repository for T where
         + WorkspacesRepository
         + EmailTokensRepository
         + SessionRepository
+        + VerificationControlRepository
 {
 }
 

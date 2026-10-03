@@ -11,7 +11,7 @@ use crate::repository::{
     ExternalIdentityRepository, LogRepository, LookupRepository, MatrixRepository,
     ProjectMembersRepository, ProjectReviewersRepository, ProjectsRepository, Repository,
     RequirementCommentsRepository, RequirementVersionLinksRepository, RequirementsRepository,
-    SavedViewRepository, UserRepository, VerificationsRepository,
+    SavedViewRepository, UserRepository, VerificationControlRepository, VerificationsRepository,
 };
 use serde::{Serialize, de::DeserializeOwned};
 use std::sync::Arc;
@@ -1529,6 +1529,55 @@ impl<R: Repository> SavedViewRepository for CacheRepository<R> {
 }
 
 // Attachments are not cached: listings are small and per entity.
+impl<R: Repository> VerificationControlRepository for CacheRepository<R> {
+    fn get_verification_control(
+        &self,
+        verification_id: i32,
+    ) -> Result<Option<VerificationControl>, RepoError> {
+        self.inner.get_verification_control(verification_id)
+    }
+
+    fn list_verification_control_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<VerificationControl>, RepoError> {
+        self.inner.list_verification_control_by_project(project_id)
+    }
+
+    fn upsert_verification_control(
+        &mut self,
+        control: &VerificationControl,
+    ) -> Result<VerificationControl, RepoError> {
+        self.inner.upsert_verification_control(control)
+    }
+
+    fn get_requirement_compliance(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Option<RequirementCompliance>, RepoError> {
+        self.inner.get_requirement_compliance(requirement_id)
+    }
+
+    fn list_requirement_compliance_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<RequirementCompliance>, RepoError> {
+        self.inner
+            .list_requirement_compliance_by_project(project_id)
+    }
+
+    fn set_requirement_compliance(
+        &mut self,
+        compliance: &RequirementCompliance,
+    ) -> Result<RequirementCompliance, RepoError> {
+        self.inner.set_requirement_compliance(compliance)
+    }
+
+    fn clear_requirement_compliance(&mut self, requirement_id: i32) -> Result<bool, RepoError> {
+        self.inner.clear_requirement_compliance(requirement_id)
+    }
+}
+
 impl<R: Repository> AttachmentsRepository for CacheRepository<R> {
     fn list_attachments(
         &self,
@@ -1940,6 +1989,8 @@ mod tests {
             next_attachment_id: 1,
             baseline_attachments: Vec::new(),
             project_storage_quotas: HashMap::new(),
+            verification_controls: HashMap::new(),
+            requirement_compliance: HashMap::new(),
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),
             next_custom_field_id: 1,

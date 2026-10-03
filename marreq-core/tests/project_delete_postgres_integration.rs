@@ -65,6 +65,8 @@ fn seed_project(project: i32, base: i32, slug: &str) -> String {
          INSERT INTO baseline_verifications (baseline_id,verification_id,name,reference_code,status_id,project_id,author_id,reviewer_id)
            VALUES ({b},{b}+1,'Parent test','VER-{b}-1',{b},{project},1,1);
          INSERT INTO baseline_attachments (baseline_id,attachment_id) VALUES ({b},{b});
+         INSERT INTO verification_control (verification_id,project_id,verification_level,evidence_reference) VALUES ({b}+1,{project},'System','TR-{b}');
+         INSERT INTO requirement_compliance (requirement_id,project_id,compliance,note) VALUES ({b}+1,{project},'C','accepted');
          INSERT INTO notifications (user_id,project_id,notification_type,title) VALUES (2,{project},'requirement_updated','Changed');
          INSERT INTO notification_preferences (user_id,project_id) VALUES (2,{project});
          INSERT INTO user_api_tokens (user_id,token_hash,project_id) VALUES (2,'token-{b}',{project});
@@ -97,6 +99,8 @@ fn project_rows(conn: &mut PgConnection, p: i32) -> Vec<(&'static str, i64)> {
         "notifications",
         "notification_preferences",
         "user_api_tokens",
+        "verification_control",
+        "requirement_compliance",
     ];
     let mut out: Vec<(&'static str, i64)> = by_project
         .iter()
@@ -243,4 +247,21 @@ fn deleting_a_project_removes_everything_and_keeps_baselines_immutable_elsewhere
         ),
         2
     );
+
+    wait_for_quiet_pool(&repo);
+}
+
+/// r2d2 opens connections in the background to keep `min_idle` after
+/// checkouts. Exiting while one is still being established can crash in
+/// libpq / OpenSSL teardown (seen in CI as SIGSEGV after the test passed), so
+/// wait until every connection the pool counts is established and idle.
+fn wait_for_quiet_pool(repo: &DieselRepo) {
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(15);
+    while std::time::Instant::now() < deadline {
+        let s = repo.pool_stats();
+        if s.available == s.current_size && s.available >= s.min_idle {
+            return;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(25));
+    }
 }

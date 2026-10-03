@@ -206,6 +206,7 @@ mod test_support {
                 project_id,
                 is_system: false,
                 tag_color: None,
+                outcome: marreq_core::status_enums::default_outcome(),
             },
         );
         repo.verification_statuses.insert(
@@ -218,6 +219,7 @@ mod test_support {
                 project_id,
                 is_system: false,
                 tag_color: None,
+                outcome: marreq_core::status_enums::default_outcome(),
             },
         );
         repo.verifications.insert(

@@ -274,6 +274,7 @@ mod test_support {
                 project_id: 3,
                 is_system: false,
                 tag_color: None,
+                outcome: marreq_core::status_enums::default_outcome(),
             },
         );
 
@@ -971,6 +972,7 @@ async fn list_verification_statuses_returns_only_user_projects() {
             project_id: 1,
             is_system: false,
             tag_color: None,
+            outcome: marreq_core::status_enums::default_outcome(),
         },
     );
     repo.verification_statuses.insert(
@@ -983,6 +985,7 @@ async fn list_verification_statuses_returns_only_user_projects() {
             project_id: 2,
             is_system: false,
             tag_color: None,
+            outcome: marreq_core::status_enums::default_outcome(),
         },
     );
     let client = test_client(repo).await;

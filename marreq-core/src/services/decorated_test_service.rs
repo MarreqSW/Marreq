@@ -233,6 +233,7 @@ mod tests {
                 project_id: 1,
                 is_system: false,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
         repo.verifications.insert(1, make_test(1, 0, 1));
@@ -273,6 +274,7 @@ mod tests {
                 project_id: 1,
                 is_system: false,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
         repo.verifications.insert(10, make_test(10, 0, 1));
@@ -338,6 +340,7 @@ mod tests {
                 project_id: 1,
                 is_system: false,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
         repo.verifications.insert(1, make_test(1, 0, 1));
@@ -367,6 +370,7 @@ mod tests {
                 project_id: 1,
                 is_system: false,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
         let mut test1 = make_test(1, 0, 1);
@@ -398,6 +402,7 @@ mod tests {
                 project_id: 1,
                 is_system: false,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
         repo.verifications.insert(1, make_test(1, 0, 1));
@@ -426,6 +431,7 @@ mod tests {
                 project_id: 1,
                 is_system: false,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
         repo.verifications.insert(1, make_test(1, 0, 1));
@@ -450,6 +456,7 @@ mod tests {
                 project_id: 1,
                 is_system: false,
                 tag_color: None,
+                outcome: crate::status_enums::default_outcome(),
             },
         );
         let mut test = make_test(1, 0, 1);

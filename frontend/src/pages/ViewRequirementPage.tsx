@@ -24,6 +24,7 @@ import {
   listVerifications,
 } from '@/api/client';
 import AttachmentsPanel from '@/components/AttachmentsPanel';
+import RequirementCloseOutPanel from '@/components/RequirementCloseOutPanel';
 import RequirementVersionDiffDialog from '@/components/RequirementVersionDiffDialog';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatUserLabel } from '@/utils/userLabel';
@@ -838,6 +839,15 @@ export default function ViewRequirementPage() {
               )}
             </div>
           </div>
+          {/* Close-out reflects live verification status, so historical snapshots don't show it. */}
+          {detail && !isHistorical ? (
+            <RequirementCloseOutPanel
+              projectId={pid}
+              requirementId={detail.id}
+              canAssess={Boolean(perms?.is_project_reviewer)}
+              csrfToken={csrfToken ?? ''}
+            />
+          ) : null}
           {/* Attachments are not versioned, so historical snapshots don't show them. */}
           {detail && !isHistorical ? (
             <AttachmentsPanel

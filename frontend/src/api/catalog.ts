@@ -161,6 +161,7 @@ export async function createVerificationStatus(
       tag: body.tag,
       project_id: body.project_id,
       tag_color: body.tag_color ?? null,
+      ...(body.outcome ? { outcome: body.outcome } : {}),
     }),
   });
   if (!res.ok) {
@@ -187,6 +188,7 @@ export async function updateVerificationStatus(
       project_id: body.project_id,
       is_system: body.is_system ?? false,
       tag_color: body.tag_color ?? null,
+      ...(body.outcome ? { outcome: body.outcome } : {}),
     }),
   });
 }

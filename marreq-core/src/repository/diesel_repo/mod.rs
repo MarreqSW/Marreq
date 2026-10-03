@@ -270,6 +270,7 @@ pub(crate) mod requirement_links;
 pub(crate) mod requirements;
 pub(crate) mod saved_views;
 pub(crate) mod users;
+pub(crate) mod verification_control;
 pub(crate) mod verifications;
 pub(crate) mod workspaces;
 

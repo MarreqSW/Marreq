@@ -17,3 +17,4 @@ export * from './imports';
 export * from './exports';
 export * from './logs';
 export * from './attachments';
+export * from './verificationControl';

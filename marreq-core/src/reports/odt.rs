@@ -89,6 +89,17 @@ const TONES: [(Tone, &str, &str); 5] = [
     (Tone::None, "#f1f5f9", "#475569"),
 ];
 
+/// Width / height of the logo image (254 × 169 px).
+const LOGO_RATIO: f32 = 254.0 / 169.0;
+
+/// The Marreq logo as an inline picture `height_cm` tall.
+fn logo(name: &str, height_cm: f32) -> String {
+    format!(
+        "<draw:frame draw:name=\"{name}\" text:anchor-type=\"as-char\" svg:width=\"{:.2}cm\" svg:height=\"{height_cm:.2}cm\" draw:z-index=\"0\"><draw:image xlink:href=\"Pictures/logo.png\" xlink:type=\"simple\" xlink:show=\"embed\" xlink:actuate=\"onLoad\"/></draw:frame>",
+        height_cm * LOGO_RATIO
+    )
+}
+
 fn inline(i: &Inline) -> String {
     match i {
         Inline::Text { text } => text_runs(text),
@@ -243,6 +254,13 @@ impl Writer {
                     signatories,
                     note,
                 } => {
+                    self.p(
+                        "Cover_20_Brand",
+                        &format!(
+                            "{} <text:span text:style-name=\"T_bold\">Marreq</text:span>",
+                            logo("Logo", 1.0)
+                        ),
+                    );
                     self.p("Cover_20_Kicker", &esc(&kicker.to_uppercase()));
                     self.p("Title", &esc(title));
                     self.p("Subtitle", &esc(subtitle));
@@ -468,9 +486,15 @@ fn styles_xml(meta: &DocMeta) -> String {
         "fo:font-size=\"11pt\" fo:color=\"#475569\"",
     ));
     paras.push_str(&para(
+        "Cover_20_Brand",
+        "Standard",
+        "fo:margin-bottom=\"4cm\"",
+        "fo:font-size=\"14pt\" fo:color=\"#0b1d4d\"",
+    ));
+    paras.push_str(&para(
         "Cover_20_Kicker",
         "Standard",
-        "fo:margin-top=\"5cm\"",
+        "",
         "fo:font-size=\"8.5pt\" fo:color=\"#1d4ed8\" fo:letter-spacing=\"0.05cm\"",
     ));
     for (level, size, above) in [
@@ -568,12 +592,15 @@ fn styles_xml(meta: &DocMeta) -> String {
             "<style:paragraph-properties><style:tab-stops><style:tab-stop style:position=\"{w}cm\" style:type=\"right\"/></style:tab-stops></style:paragraph-properties>"
         )
     };
-    let master_content = |w: f32| {
+    let master_content = |w: f32, n: u8| {
         format!(
             "<style:header>{}</style:header><style:footer>{}</style:footer>",
             header.replacen(
                 "<text:p text:style-name=\"Header\">",
-                &format!("<text:p text:style-name=\"Header_{w}\">"),
+                &format!(
+                    "<text:p text:style-name=\"Header_{w}\">{} ",
+                    logo(&format!("HeaderLogo{n}"), 0.32)
+                ),
                 1
             ),
             footer.replacen(
@@ -600,7 +627,7 @@ fn styles_xml(meta: &DocMeta) -> String {
     };
     format!(
         r##"<?xml version="1.0" encoding="UTF-8"?>
-<office:document-styles xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" office:version="1.3">
+<office:document-styles xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:xlink="http://www.w3.org/1999/xlink" office:version="1.3">
 <office:font-face-decls><style:font-face style:name="Inter" svg:font-family="Inter" style:font-family-generic="swiss"/><style:font-face style:name="DejaVu Sans Mono" svg:font-family="'DejaVu Sans Mono'" style:font-pitch="fixed"/></office:font-face-decls>
 <office:styles>
 <style:default-style style:family="paragraph"><style:paragraph-properties fo:hyphenation-ladder-count="no-limit"/><style:text-properties style:font-name="Inter" fo:font-size="9pt" fo:color="#0f172a" fo:language="en"/></style:default-style>
@@ -621,8 +648,8 @@ fn styles_xml(meta: &DocMeta) -> String {
 </office:document-styles>"##,
         portrait = layout("PM_portrait", w, h, "portrait"),
         landscape = layout("PM_landscape", h, w, "landscape"),
-        master_portrait = master_content(PORTRAIT_WIDTH_CM),
-        master_landscape = master_content(LANDSCAPE_WIDTH_CM),
+        master_portrait = master_content(PORTRAIT_WIDTH_CM, 1),
+        master_landscape = master_content(LANDSCAPE_WIDTH_CM, 2),
     )
 }
 
@@ -650,7 +677,7 @@ fn content_xml(doc: &Document) -> String {
     w.blocks(&doc.blocks, &toc);
     format!(
         r##"<?xml version="1.0" encoding="UTF-8"?>
-<office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" office:version="1.3">
+<office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:xlink="http://www.w3.org/1999/xlink" office:version="1.3">
 <office:automatic-styles>
 <style:style style:name="P_break" style:family="paragraph" style:parent-style-name="Standard"><style:paragraph-properties fo:break-before="page"/></style:style>
 <style:style style:name="P_landscape" style:family="paragraph" style:parent-style-name="Standard" style:master-page-name="Landscape"/>
@@ -679,7 +706,7 @@ fn meta_xml(meta: &DocMeta) -> String {
 }
 
 const MANIFEST: &str = r##"<?xml version="1.0" encoding="UTF-8"?>
-<manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.3"><manifest:file-entry manifest:full-path="/" manifest:version="1.3" manifest:media-type="application/vnd.oasis.opendocument.text"/><manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="styles.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="meta.xml" manifest:media-type="text/xml"/></manifest:manifest>"##;
+<manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.3"><manifest:file-entry manifest:full-path="/" manifest:version="1.3" manifest:media-type="application/vnd.oasis.opendocument.text"/><manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="styles.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="meta.xml" manifest:media-type="text/xml"/><manifest:file-entry manifest:full-path="Pictures/logo.png" manifest:media-type="image/png"/></manifest:manifest>"##;
 
 /// Render `doc` as an ODT file.
 pub fn render(doc: &Document) -> Result<Vec<u8>, String> {
@@ -700,5 +727,8 @@ pub fn render(doc: &Document) -> Result<Vec<u8>, String> {
         zip.start_file(name, deflated).map_err(zerr)?;
         zip.write_all(body.as_bytes()).map_err(io)?;
     }
+    // PNG data is already compressed.
+    zip.start_file("Pictures/logo.png", stored).map_err(zerr)?;
+    zip.write_all(super::pdf::LOGO_PNG).map_err(io)?;
     Ok(zip.finish().map_err(zerr)?.into_inner())
 }

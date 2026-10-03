@@ -127,8 +127,8 @@
     inset: (x: 22mm, top: 24mm, bottom: 16mm),
   )[
     #set text(fill: white)
-    #box(fill: white, radius: 5pt, inset: (x: 5pt, y: 3pt), text(13pt, weight: "bold", fill: brand, "M"))
-    #h(5pt)
+    #box(image("logo.png", height: 30pt), baseline: 35%)
+    #h(6pt)
     #text(14pt, weight: "bold", "Marreq")
     #v(1fr)
     #text(8.5pt, tracking: 1.5pt, upper(b.kicker))
@@ -198,7 +198,7 @@
     margin: (x: 18mm, top: 22mm, bottom: 20mm),
     header: context {
       set text(7.5pt, fill: muted)
-      [#meta.project · #meta.title #h(1fr) #header-right]
+      [#box(image("logo.png", height: 9pt), baseline: 15%) #h(3pt) #meta.project · #meta.title #h(1fr) #header-right]
     },
     footer: context {
       set text(7pt, fill: muted)

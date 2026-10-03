@@ -262,6 +262,7 @@ mod tests {
             "meta.xml",
             "styles.xml",
             "content.xml",
+            "Pictures/logo.png",
         ] {
             assert!(names.contains(&n.to_string()), "{n}");
         }
@@ -271,6 +272,11 @@ mod tests {
         assert!(content.contains("table:table-header-rows"));
         assert!(content.contains("style:master-page-name=\"Landscape\""));
         assert!(styles.contains("<text:page-number"));
+        assert!(
+            content.contains("xlink:href=\"Pictures/logo.png\""),
+            "cover logo"
+        );
+        assert!(styles.contains("draw:name=\"HeaderLogo1\""), "header logo");
         let pos = |s: &str| content.find(s).unwrap_or_else(|| panic!("{s} missing"));
         assert!(
             pos("Traceability checks") < pos("Verification control matrix"),

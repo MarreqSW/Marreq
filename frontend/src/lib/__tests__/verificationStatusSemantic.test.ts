@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { statusGlyph, statusSemanticGroup } from '../verificationStatusSemantic';
+import {
+  GROUP_TEXT_CLASS,
+  STATUS_GROUP_OPTIONS,
+  statusGlyph,
+  statusSemanticGroup,
+} from '../verificationStatusSemantic';
 
 describe('statusSemanticGroup', () => {
   it('classifies fail and reject', () => {
@@ -47,12 +52,22 @@ describe('statusGlyph', () => {
   it('returns semantic glyph classes for known groups', () => {
     expect(statusGlyph('Passed', null)).toEqual({
       symbol: '✓',
-      className: 'text-emerald-400',
+      className: 'text-emerald-700 dark:text-emerald-400',
     });
     expect(statusGlyph('Failed', null)).toEqual({
       symbol: '✗',
-      className: 'text-red-300',
+      className: 'text-red-700 dark:text-red-300',
     });
+  });
+
+  // Issue #363: every coloured group has a light-theme and a dark-theme shade.
+  it('gives every coloured group a shade for each theme', () => {
+    for (const group of ['pass', 'verified', 'pending', 'fail'] as const) {
+      expect(GROUP_TEXT_CLASS[group]).toMatch(/^text-\w+-[6-8]00 dark:text-\w+-[2-4]00$/);
+    }
+    for (const option of STATUS_GROUP_OPTIONS) {
+      expect(option.symbolClass).toBe(GROUP_TEXT_CLASS[option.id]);
+    }
   });
 
   it('clears className for other statuses with a valid hex tag color', () => {

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useOutletContext } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -28,7 +28,13 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
-describe('EditRequirementPage rationale', () => {
+/**
+ * The page loads about ten resources before it renders, which can take more
+ * than Testing Library's default 1 s on a busy CI runner (issue #345).
+ */
+const LOADED = { timeout: 5000 };
+
+describe('EditRequirementPage rationale', { timeout: 15_000 }, () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(apiClient.listAttachments).mockResolvedValue([]);
@@ -111,6 +117,9 @@ describe('EditRequirementPage rationale', () => {
   });
 
   afterEach(() => {
+    // Unmount first: Testing Library's own cleanup runs after this hook, and a
+    // still-mounted page could mark the requirement as prompted after the reset.
+    cleanup();
     sessionStorage.clear();
     resetApprovedEditPromptsForTests();
   });
@@ -128,7 +137,7 @@ describe('EditRequirementPage rationale', () => {
       </MemoryRouter>,
     );
 
-    const rationale = await screen.findByLabelText('Rationale (optional)');
+    const rationale = await screen.findByLabelText('Rationale (optional)', {}, LOADED);
     expect(rationale).toHaveValue('Customer power budget');
 
     await user.clear(rationale);
@@ -142,6 +151,7 @@ describe('EditRequirementPage rationale', () => {
         { justification: 'From analysis' },
         'csrf-test',
       ),
+      LOADED,
     );
   });
 
@@ -208,10 +218,12 @@ describe('EditRequirementPage rationale', () => {
     );
 
     expect(
-      await screen.findByText('Comments are locked on this approved version.'),
+      await screen.findByText('Comments are locked on this approved version.', {}, LOADED),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /add comment/i })).not.toBeInTheDocument();
-    expect(window.confirm).toHaveBeenCalledWith(EDIT_APPROVED_CONFIRM_MESSAGE);
+    // The prompt comes from a passive effect that can run after the text is
+    // on screen, so wait for it rather than asserting at once (issue #345).
+    await waitFor(() => expect(window.confirm).toHaveBeenCalledWith(EDIT_APPROVED_CONFIRM_MESSAGE), LOADED);
   });
 
   it('leaves the editor when the approved-edit warning is cancelled', async () => {
@@ -260,7 +272,7 @@ describe('EditRequirementPage rationale', () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByText('requirement view')).toBeInTheDocument();
+    expect(await screen.findByText('requirement view', {}, LOADED)).toBeInTheDocument();
     expect(window.confirm).toHaveBeenCalledWith(EDIT_APPROVED_CONFIRM_MESSAGE);
   });
 
@@ -307,8 +319,11 @@ describe('EditRequirementPage rationale', () => {
     );
 
     expect(
-      await screen.findByText('Comments are locked on this approved version.'),
+      await screen.findByText('Comments are locked on this approved version.', {}, LOADED),
     ).toBeInTheDocument();
+    // Wait until the prompt effect has run (it consumes the ack); only then
+    // does "not called" show the ack skipped the prompt (issue #345).
+    await waitFor(() => expect(sessionStorage.getItem('marreq-edit-approved-ack:4')).toBeNull(), LOADED);
     expect(window.confirm).not.toHaveBeenCalled();
   });
 });

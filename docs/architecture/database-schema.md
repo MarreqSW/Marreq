@@ -6,7 +6,7 @@ Source file: `docs/architecture/diagrams/database-schema.mmd`.
 
 **Recent additions (not yet fully reflected in every diagram block):**
 
-- **`project_reviewers`**: composite primary key `(project_id, user_id)` with a foreign key to `project_members` so only project members can be designated. Used for authorization: only these users (plus global admins) may change requirement **status**, verification **status**, and requirement version **approval** transitions.
+- **`project_reviewers`**: composite primary key `(project_id, user_id)` with a foreign key to `project_members` so only project members can be designated. Used for authorization: only these users may change requirement **status**, verification **status**, and requirement version **approval** transitions. Site admins may do so only while the project's pool is empty.
 - **`requirement_versions`**: optional `reviewed_by`, `reviewed_at` when a version moves to **reviewed** (in addition to existing `approved_by` / `approved_at` for **approved**).
 - **`verifications`**: `author_id`, `reviewer_id` (assigned users), and optional `status_set_by`, `status_set_at` for the last verification status change.
 - **`baseline_verifications`**: snapshot includes `author_id` and `reviewer_id` aligned with live verifications.

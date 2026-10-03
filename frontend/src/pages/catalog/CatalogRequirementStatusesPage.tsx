@@ -39,7 +39,7 @@ export default function CatalogRequirementStatusesPage() {
         getMyPermissions(pid).catch(() => null),
       ]);
       setRows(all.filter((s) => s.project_id === pid));
-      setCanEdit(Boolean(perms?.edit_requirements && (csrfToken ?? '').length));
+      setCanEdit(Boolean(perms?.manage_project_configuration && (csrfToken ?? '').length));
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Load failed');
     } finally {
@@ -135,7 +135,8 @@ export default function CatalogRequirementStatusesPage() {
       ) : null}
       {!canEdit ? (
         <p className="text-xs text-stitch-muted">
-          You need <strong className="text-stitch-accent">edit requirements</strong> permission.
+          You need <strong className="text-stitch-accent">manage project configuration</strong> permission
+          (project admin).
         </p>
       ) : null}
 

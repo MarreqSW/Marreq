@@ -46,7 +46,7 @@ describe('CatalogVerificationStatusesPage outcome (issue #353)', () => {
       status({ id: 2, title: 'Waived', tag: 'W', is_system: false, outcome: 'not_run' }),
       status({ id: 3, title: 'Other project', project_id: 6 }),
     ]);
-    vi.mocked(apiClient.getMyPermissions).mockResolvedValue({ edit_requirements: true } as EffectivePermissions);
+    vi.mocked(apiClient.getMyPermissions).mockResolvedValue({ manage_project_configuration: true } as EffectivePermissions);
     vi.mocked(apiClient.updateVerificationStatus).mockResolvedValue(undefined);
     vi.mocked(apiClient.createVerificationStatus).mockResolvedValue({ id: 4 });
   });

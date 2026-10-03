@@ -33,7 +33,7 @@ export default function CatalogVerificationMethodsPage() {
         getMyPermissions(pid).catch(() => null),
       ]);
       setRows(list);
-      setCanEdit(Boolean(perms?.edit_requirements && (csrfToken ?? '').length));
+      setCanEdit(Boolean(perms?.manage_project_configuration && (csrfToken ?? '').length));
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Load failed');
     } finally {
@@ -125,7 +125,8 @@ export default function CatalogVerificationMethodsPage() {
       ) : null}
       {!canEdit ? (
         <p className="text-xs text-stitch-muted">
-          You need <strong className="text-stitch-accent">edit requirements</strong> permission.
+          You need <strong className="text-stitch-accent">manage project configuration</strong> permission
+          (project admin).
         </p>
       ) : null}
 

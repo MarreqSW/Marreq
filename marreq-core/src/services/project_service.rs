@@ -14,15 +14,46 @@ use crate::models::{
 use crate::namespaces::{NamespaceEntity, resolve_project_namespace_entity};
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    AttachmentsRepository, LogRepository, LookupRepository, ProjectMembersRepository, ProjectPurge,
+    AttachmentsRepository, LogRepository, ProjectMembersRepository, ProjectPurge,
     ProjectsRepository,
 };
 use crate::services::AuditLog;
 use crate::services::status_service::StatusService;
-use crate::services::{ApplicabilityService, CategoryService};
+use crate::services::{ApplicabilityService, CategoryService, VerificationMethodService};
 use crate::validation::{sanitize_optional_string, sanitize_string, validate_project};
 
 /// High level project operations backed by the shared [`AppState`].
+/// Proof that a project was just created by [`ProjectService::create`].
+///
+/// Only this module can build one, so the `*_bootstrap` methods of the
+/// configuration services (which seed defaults without a permission check)
+/// cannot be reached from any other path (issue #288).
+pub struct ProjectBootstrap {
+    project_id: i32,
+}
+
+impl ProjectBootstrap {
+    pub fn project_id(&self) -> i32 {
+        self.project_id
+    }
+
+    /// Fail unless `project_id` is the project this bootstrap is for.
+    pub(crate) fn check(&self, project_id: i32) -> Result<(), RepoError> {
+        if project_id == self.project_id {
+            Ok(())
+        } else {
+            Err(RepoError::CrossProjectViolation(
+                "bootstrap payload targets another project".into(),
+            ))
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn for_tests(project_id: i32) -> Self {
+        Self { project_id }
+    }
+}
+
 pub struct ProjectService<'a> {
     state: &'a AppState<DieselCachedRepo>,
 }
@@ -136,11 +167,11 @@ impl<'a> ProjectService<'a> {
             id
         };
 
-        // Initialize default statuses for the new project
-        let status_service = StatusService::new(self.state);
-        status_service.initialize_default_statuses(id)?;
+        // Seed the project defaults through the explicit trusted path: the
+        // actor need not be a member (e.g. `owner_id` names someone else).
+        let bootstrap = ProjectBootstrap { project_id: id };
+        StatusService::new(self.state).initialize_default_statuses(&bootstrap)?;
 
-        // Initialize default verification methods for the new project
         let default_methods = [
             (
                 "Inspection",
@@ -151,22 +182,23 @@ impl<'a> ProjectService<'a> {
             ("Analysis", "Analysis-based verification", "ANALYSIS"),
             ("Review", "Review-based verification", "REVIEW"),
         ];
-        {
-            let mut repo = self.state.repo_write();
-            for (title, description, tag) in default_methods {
-                repo.insert_new_verification_method(&NewVerificationMethod {
+        let method_service = VerificationMethodService::new(self.state);
+        for (title, description, tag) in default_methods {
+            method_service.create_bootstrap(
+                &bootstrap,
+                NewVerificationMethod {
                     id: None,
                     title: title.to_string(),
                     description: description.to_string(),
                     tag: tag.to_string(),
                     project_id: id,
-                })?;
-            }
+                },
+            )?;
         }
 
         // One default category and applicability so the new-requirement form can be submitted
-        let category_service = CategoryService::new(self.state);
-        category_service.create(
+        CategoryService::new(self.state).create_bootstrap(
+            &bootstrap,
             actor,
             NewCategory {
                 id: None,
@@ -176,8 +208,8 @@ impl<'a> ProjectService<'a> {
                 project_id: id,
             },
         )?;
-        let applicability_service = ApplicabilityService::new(self.state);
-        applicability_service.create(
+        ApplicabilityService::new(self.state).create_bootstrap(
+            &bootstrap,
             actor,
             NewApplicability {
                 id: None,

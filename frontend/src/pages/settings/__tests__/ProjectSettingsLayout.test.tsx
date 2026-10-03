@@ -95,6 +95,11 @@ describe('ProjectSettingsLayout', () => {
       '/space/settings/import',
     ]);
     expect(screen.getByText('Edit requirements')).toBeInTheDocument();
+    // Issue #288: the role capability alone does not grant approvals.
+    expect(screen.getByText('Reviewer role capability')).toBeInTheDocument();
+    expect(screen.queryByText('Approve versions (role)')).not.toBeInTheDocument();
+    expect(screen.getByText('Manage project configuration')).toBeInTheDocument();
+    expect(screen.getByText(/needs membership in the\s+project reviewer pool/)).toBeInTheDocument();
   });
 
   it('loads shared data once while moving between tabs', async () => {

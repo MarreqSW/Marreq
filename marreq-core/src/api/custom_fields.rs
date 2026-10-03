@@ -67,7 +67,7 @@ pub async fn create(
         Permission::ManageCustomFields,
     )?;
     let service = CustomFieldService::new(state.inner());
-    let id = service.create(project_id, payload.into_inner())?;
+    let id = service.create(access.user(), project_id, payload.into_inner())?;
     Ok(json!({ "status": "ok", "id": id }))
 }
 
@@ -86,11 +86,12 @@ pub async fn update(
         Permission::ManageCustomFields,
     )?;
     let service = CustomFieldService::new(state.inner());
-    service.update(field_id, payload.into_inner())?;
+    // Check the field belongs to this project before writing (issue #288).
     let def = service.get_by_id(field_id)?;
     if def.project_id != project_id {
         return Err(ApiError::NotFound("custom field not in project".into()));
     }
+    service.update(access.user(), field_id, payload.into_inner())?;
     Ok(json!({
         "status": "ok",
         "message": "Custom field updated successfully"
@@ -116,7 +117,7 @@ pub async fn delete(
         return Err(ApiError::NotFound("custom field not in project".into()));
     }
     // Delete the definition; DB ON DELETE CASCADE removes all custom_field_values for this field.
-    service.delete(field_id)?;
+    service.delete(access.user(), field_id)?;
     Ok(json!({
         "status": "ok",
         "message": "Custom field deleted"

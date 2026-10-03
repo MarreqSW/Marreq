@@ -32,6 +32,7 @@ use crate::services::matrix_service::MatrixService;
 use crate::services::project_service::ProjectService;
 use crate::services::requirement_service::RequirementService;
 use crate::services::status_service::StatusService;
+use crate::services::verification_method_service::VerificationMethodService;
 use crate::services::verification_service::VerificationService;
 use crate::status_enums::ProjectStatus;
 
@@ -610,6 +611,7 @@ fn import_catalog(
     let applicability_service = ApplicabilityService::new(state);
     let status_service = StatusService::new(state);
     let custom_service = CustomFieldService::new(state);
+    let method_service = VerificationMethodService::new(state);
 
     for item in &catalog.categories {
         let existing = state.repo_read().get_categories_by_project(project_id)?;
@@ -652,15 +654,18 @@ fn import_catalog(
         if lookup_tagged(&existing, |c| &c.tag, |c| &c.title, &item.tag, &item.title).is_some() {
             continue;
         }
-        status_service.create_requirement_status(NewRequirementStatus {
-            id: None,
-            title: item.title.clone(),
-            description: item.description.clone(),
-            tag: item.tag.clone(),
-            project_id,
-            is_system: false,
-            tag_color: item.tag_color.clone(),
-        })?;
+        status_service.create_requirement_status(
+            actor,
+            NewRequirementStatus {
+                id: None,
+                title: item.title.clone(),
+                description: item.description.clone(),
+                tag: item.tag.clone(),
+                project_id,
+                is_system: false,
+                tag_color: item.tag_color.clone(),
+            },
+        )?;
         counts.requirement_statuses += 1;
     }
     for item in &catalog.verification_statuses {
@@ -670,16 +675,19 @@ fn import_catalog(
         if lookup_tagged(&existing, |c| &c.tag, |c| &c.title, &item.tag, &item.title).is_some() {
             continue;
         }
-        status_service.create_verification_status(NewVerificationStatus {
-            id: None,
-            title: item.title.clone(),
-            description: item.description.clone(),
-            tag: item.tag.clone(),
-            project_id,
-            is_system: false,
-            tag_color: item.tag_color.clone(),
-            outcome: None,
-        })?;
+        status_service.create_verification_status(
+            actor,
+            NewVerificationStatus {
+                id: None,
+                title: item.title.clone(),
+                description: item.description.clone(),
+                tag: item.tag.clone(),
+                project_id,
+                is_system: false,
+                tag_color: item.tag_color.clone(),
+                outcome: None,
+            },
+        )?;
         counts.verification_statuses += 1;
     }
     for item in &catalog.verification_methods {
@@ -689,14 +697,16 @@ fn import_catalog(
         if lookup_tagged(&existing, |c| &c.tag, |c| &c.title, &item.tag, &item.title).is_some() {
             continue;
         }
-        let mut repo = state.repo_write();
-        repo.insert_new_verification_method(&NewVerificationMethod {
-            id: None,
-            title: item.title.clone(),
-            description: item.description.clone(),
-            tag: item.tag.clone(),
-            project_id,
-        })?;
+        method_service.create(
+            actor,
+            NewVerificationMethod {
+                id: None,
+                title: item.title.clone(),
+                description: item.description.clone(),
+                tag: item.tag.clone(),
+                project_id,
+            },
+        )?;
         counts.verification_methods += 1;
     }
     for item in &catalog.custom_fields {
@@ -710,6 +720,7 @@ fn import_catalog(
             continue;
         }
         custom_service.create(
+            actor,
             project_id,
             CustomFieldDefinitionPayload {
                 label: item.label.clone(),

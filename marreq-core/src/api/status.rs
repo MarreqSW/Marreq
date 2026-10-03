@@ -71,7 +71,7 @@ pub async fn update_requirement_status(
             "requirement status project cannot be changed".into(),
         ));
     }
-    service.update_requirement_status(id, &payload)?;
+    service.update_requirement_status(user.user(), id, &payload)?;
     Ok(json!({ "status": "ok" }))
 }
 
@@ -89,7 +89,7 @@ pub async fn delete_requirement_status(
         status.project_id,
         Permission::ManageProjectConfiguration,
     )?;
-    service.delete_requirement_status(id)?;
+    service.delete_requirement_status(user.user(), id)?;
     Ok(Status::NoContent)
 }
 
@@ -107,7 +107,7 @@ pub async fn create_requirement_status(
         payload.project_id,
         Permission::ManageProjectConfiguration,
     )?;
-    let id = service.create_requirement_status(payload)?;
+    let id = service.create_requirement_status(user.user(), payload)?;
 
     Ok((Status::Created, json!({ "status": "ok", "id": id })))
 }

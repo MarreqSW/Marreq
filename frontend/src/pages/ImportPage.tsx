@@ -369,7 +369,7 @@ export default function ImportPage({ embedded = false }: { embedded?: boolean })
           projectName={projectName}
           section="Import"
           title="Import"
-          subtitle="Upload Excel/CSV with column mapping, or ReqIF 1.2 XML using project catalog defaults."
+          subtitle="Upload Excel/CSV with column mapping, or ReqIF 1.2 XML / ReqIFZ using project catalog defaults."
         />
       )}
 

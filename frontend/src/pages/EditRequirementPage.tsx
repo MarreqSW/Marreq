@@ -1217,8 +1217,8 @@ export default function EditRequirementPage() {
               disabled={deleteBusy || !(csrfToken ?? '').length}
               onClick={() => void deleteRequirement()}
             >
-              <span className="material-symbols-outlined text-lg">archive</span>
-              Archive requirement
+              <span className="material-symbols-outlined text-lg">delete</span>
+              Delete requirement
             </button>
             <button
               type="button"

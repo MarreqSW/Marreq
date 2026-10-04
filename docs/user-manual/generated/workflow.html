@@ -4,153 +4,8 @@
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>workflow</title>
+  <title>Typical Workflow with Marreq</title>
   <style>
-    html {
-      color: #1a1a1a;
-      background-color: #fdfdfd;
-    }
-    body {
-      margin: 0 auto;
-      max-width: 36em;
-      padding-left: 50px;
-      padding-right: 50px;
-      padding-top: 50px;
-      padding-bottom: 50px;
-      hyphens: auto;
-      overflow-wrap: break-word;
-      text-rendering: optimizeLegibility;
-      font-kerning: normal;
-    }
-    @media (max-width: 600px) {
-      body {
-        font-size: 0.9em;
-        padding: 12px;
-      }
-      h1 {
-        font-size: 1.8em;
-      }
-    }
-    @media print {
-      html {
-        background-color: white;
-      }
-      body {
-        background-color: transparent;
-        color: black;
-        font-size: 12pt;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
-      }
-    }
-    p {
-      margin: 1em 0;
-    }
-    a {
-      color: #1a1a1a;
-    }
-    a:visited {
-      color: #1a1a1a;
-    }
-    img {
-      max-width: 100%;
-    }
-    svg {
-      height: auto;
-      max-width: 100%;
-    }
-    h1, h2, h3, h4, h5, h6 {
-      margin-top: 1.4em;
-    }
-    h5, h6 {
-      font-size: 1em;
-      font-style: italic;
-    }
-    h6 {
-      font-weight: normal;
-    }
-    ol, ul {
-      padding-left: 1.7em;
-      margin-top: 1em;
-    }
-    li > ol, li > ul {
-      margin-top: 0;
-    }
-    blockquote {
-      margin: 1em 0 1em 1.7em;
-      padding-left: 1em;
-      border-left: 2px solid #e6e6e6;
-      color: #606060;
-    }
-    code {
-      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
-      font-size: 85%;
-      margin: 0;
-      hyphens: manual;
-    }
-    pre {
-      margin: 1em 0;
-      overflow: auto;
-    }
-    pre code {
-      padding: 0;
-      overflow: visible;
-      overflow-wrap: normal;
-    }
-    .sourceCode {
-     background-color: transparent;
-     overflow: visible;
-    }
-    hr {
-      border: none;
-      border-top: 1px solid #1a1a1a;
-      height: 1px;
-      margin: 1em 0;
-    }
-    table {
-      margin: 1em 0;
-      border-collapse: collapse;
-      width: 100%;
-      overflow-x: auto;
-      display: block;
-      font-variant-numeric: lining-nums tabular-nums;
-    }
-    table caption {
-      margin-bottom: 0.75em;
-    }
-    tbody {
-      margin-top: 0.5em;
-      border-top: 1px solid #1a1a1a;
-      border-bottom: 1px solid #1a1a1a;
-    }
-    th {
-      border-top: 1px solid #1a1a1a;
-      padding: 0.25em 0.5em 0.25em 0.5em;
-    }
-    td {
-      padding: 0.125em 0.5em 0.25em 0.5em;
-    }
-    header {
-      margin-bottom: 4em;
-      text-align: center;
-    }
-    #TOC li {
-      list-style: none;
-    }
-    #TOC ul {
-      padding-left: 1.3em;
-    }
-    #TOC > ul {
-      padding-left: 0;
-    }
-    #TOC a:not(:hover) {
-      text-decoration: none;
-    }
     code{white-space: pre-wrap;}
     span.smallcaps{font-variant: small-caps;}
     div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -167,91 +22,49 @@
     }
     .display.math{display: block; text-align: center; margin: 0.5rem auto;}
   </style>
+  <link rel="stylesheet" href="../styles.css" />
 </head>
 <body>
-<nav id="TOC" role="doc-toc">
-<ul>
-<li><a href="#typical-workflow-with-marreq"
-id="toc-typical-workflow-with-marreq">Typical Workflow with Marreq</a>
-<ul>
-<li><a href="#overview" id="toc-overview">Overview</a>
-<ul>
-<li><a href="#workflow-diagram" id="toc-workflow-diagram">Workflow
-diagram</a></li>
-</ul></li>
-<li><a href="#set-up-the-project" id="toc-set-up-the-project">1. Set Up
-the Project</a></li>
-<li><a href="#capture-requirements" id="toc-capture-requirements">2.
-Capture Requirements</a></li>
-<li><a href="#test-management-and-traceability"
-id="toc-test-management-and-traceability">3. Test Management and
-Traceability</a>
-<ul>
-<li><a href="#define-and-organize-verifications"
-id="toc-define-and-organize-verifications">3.1 Define and Organize
-Verifications</a></li>
-<li><a href="#link-verifications-to-requirements-traceability"
-id="toc-link-verifications-to-requirements-traceability">3.2 Link
-Verifications to Requirements (Traceability)</a></li>
-<li><a href="#track-test-execution-verification-status"
-id="toc-track-test-execution-verification-status">3.3 Track Test
-Execution (Verification Status)</a></li>
-</ul></li>
-<li><a href="#review-and-approve-requirements"
-id="toc-review-and-approve-requirements">4. Review and Approve
-Requirements</a></li>
-<li><a href="#create-baselines" id="toc-create-baselines">5. Create
-Baselines</a></li>
-<li><a href="#export-for-audits-and-documentation"
-id="toc-export-for-audits-and-documentation">6. Export for Audits and
-Documentation</a></li>
-<li><a href="#iteration-and-maintenance"
-id="toc-iteration-and-maintenance">Iteration and Maintenance</a></li>
-</ul></li>
-</ul>
-</nav>
 <h1 id="typical-workflow-with-marreq">Typical Workflow with Marreq</h1>
 <p>This document describes a <strong>typical end-to-end
 workflow</strong> for using Marreq: from project setup through
 requirements, <strong>verification management</strong>, traceability,
 approval, baselines, and export. For detailed steps on each screen, see
-the <a href="user-manual.md">User Manual</a>, in particular <a
-href="user-manual.md#5-test-management-verifications">Test Management
+the <a href="user-manual.html">User Manual</a>, in particular <a
+href="user-manual.html#5-test-management-verifications">Test Management
 (Verifications)</a> and <a
-href="user-manual.md#6-traceability-matrix">Traceability Matrix</a>.</p>
+href="user-manual.html#6-traceability">Traceability</a>.</p>
 <hr />
 <h2 id="overview">Overview</h2>
 <p>A common Marreq workflow follows this sequence:</p>
 <ol type="1">
-<li><strong>Set up the project</strong> and configuration (categories,
-applicability, verification methods, requirement and
-<strong>verification statuses</strong>), and designate <strong>project
-reviewers</strong> in <strong>Project settings › Members &amp;
-reviewers</strong> (who may change requirement/verification
-<strong>status</strong> and requirement <strong>version
-approval</strong>).</li>
-<li><strong>Capture requirements</strong> (create, optionally import,
-organize in hierarchy).</li>
-<li><strong>Verification management</strong>: define verifications (test
-cases), organize (e.g. hierarchy), link to requirements in the
-traceability matrix, and track verification status (Pass/Fail/Pending)
-as tests are run.</li>
+<li><strong>Set up the project</strong>: members, <strong>project
+reviewers</strong> (who may change requirement and verification
+<strong>status</strong> and approve requirement
+<strong>versions</strong>), and the catalog (categories, applicability,
+verification methods, requirement and <strong>verification
+statuses</strong>).</li>
+<li><strong>Capture requirements</strong> (create, import, organise in a
+hierarchy).</li>
+<li><strong>Verification management</strong>: define verifications
+(tests, analyses, …), organise them in a hierarchy, link them to the
+requirements they verify, and track their status (Passed/Failed/Pending)
+as they are run.</li>
 <li><strong>Review and approve</strong> requirements (draft → reviewed →
 approved).</li>
 <li><strong>Create baselines</strong> for milestones or releases.</li>
 <li><strong>Export</strong> for audits, documentation, or tooling
-(requirements Excel, <strong>verifications Excel</strong>, matrix
-Excel/CSV, ReqIF, PDF).</li>
+(Excel, ReqIF/ReqIFZ, PDF/ODT report documents, project bundles).</li>
 </ol>
-<p>You can adapt the order (e.g. import requirements first, then
+<p>You can adapt the order (e.g. import requirements first, then
 configure categories) or iterate (add requirements and verifications
-over time, update verification status as you execute tests).</p>
+over time, update verification status as you run them).</p>
 <h3 id="workflow-diagram">Workflow diagram</h3>
 <pre class="mermaid"><code>flowchart LR
   subgraph setup [1. Set up]
     A[Create project]
-    B[Members]
-    C[Categories / Applicability / Verification / Statuses]
+    B[Members and reviewers]
+    C[Catalog]
   end
   subgraph capture [2. Capture]
     D[Create or import requirements]
@@ -259,7 +72,7 @@ over time, update verification status as you execute tests).</p>
   end
   subgraph test [3. Verification management]
     F[Define verifications]
-    G[Link in matrix]
+    G[Link to requirements]
     H[Track status]
   end
   subgraph approve [4. Approve]
@@ -268,223 +81,218 @@ over time, update verification status as you execute tests).</p>
     K[Approve]
   end
   subgraph baseline [5. Baseline]
-    L[New Baseline]
+    L[Create baseline]
   end
   subgraph export [6. Export]
-    M[Excel / ReqIF / PDF]
+    M[Excel / ReqIF / PDF / ODT]
   end
   setup --&gt; capture --&gt; test --&gt; approve --&gt; baseline --&gt; export
   export -.-&gt;|&quot;Iterate&quot;| capture</code></pre>
 <hr />
-<h2 id="set-up-the-project">1. Set Up the Project</h2>
+<h2 id="1-set-up-the-project">1. Set Up the Project</h2>
 <ul>
-<li><strong>Create the project</strong> (Admin: <strong>Projects → New
-Project</strong>). Enter name and description.</li>
-<li><strong>Add project members</strong> (<strong>Members</strong>):
-assign users and roles (e.g. owner, manager) so the right people can
-edit and manage the project.</li>
-<li><strong>Designate project reviewers</strong> (<strong>Project
-settings › Members &amp; reviewers</strong> in the SPA, or via API
-<code>GET</code>/<code>PUT /api/projects/&lt;id&gt;/reviewers</code>):
-choose which members may change <strong>requirement status</strong>,
-<strong>verification status</strong>, and <strong>version
-approval</strong> (draft / reviewed / approved). Do this early if you
-use strict workflow gates.</li>
-<li><strong>Configure project-level data</strong> (Admin or project
-<strong>Quick Actions</strong>):
+<li><strong>Create the project</strong>: <strong>Projects → New
+project</strong>. Choose the namespace (personal or a group), enter the
+name and an optional description. Any user can create a project and
+becomes its Admin. The project starts with default statuses,
+verification methods (Inspection, Test, Analysis, Review), one category
+and one applicability value.</li>
+<li><strong>Add project members</strong> (<strong>Project settings ›
+Members &amp; reviewers</strong>): add users with a role:
+<strong>Admin</strong> (manages the project), <strong>Reviewer</strong>
+and <strong>Author</strong> (edit requirements and verifications), or
+<strong>Viewer</strong> (read only).</li>
+<li><strong>Designate project reviewers</strong> on the same page, then
+<strong>Save reviewer list</strong>. Reviewers alone may change
+<strong>requirement status</strong>, <strong>verification
+status</strong>, and <strong>version approval</strong> (draft / reviewed
+/ approved). Do this first: until the project has a reviewer, nobody can
+create requirements or verifications.</li>
+<li><strong>Configure the catalog</strong> (<strong>Project settings ›
+Catalog</strong>, project Admins):
 <ul>
-<li><strong>Categories</strong> (e.g. Safety, Performance, Usability) —
+<li><strong>Categories</strong> (e.g. Safety, Performance, Usability),
 used to tag requirements.</li>
-<li><strong>Applicability</strong> (e.g. Product A, Product B, All) —
-used for product line or scope.</li>
-<li><strong>Verification methods</strong> (e.g. Test, Analysis, Review,
-Inspection) — used to state how each requirement will be verified.</li>
-<li><strong>Requirement statuses</strong> (e.g. Draft, Accepted,
-Rejected) — lifecycle of requirements.</li>
-<li><strong>Verification statuses</strong> (e.g. Pass, Fail, Not Run,
-Blocked) — for test execution.</li>
+<li><strong>Applicability</strong> (e.g. Product A, Product B, All), for
+product lines or scope.</li>
+<li><strong>Verification methods</strong> (e.g. Test, Analysis, Review,
+Inspection), how each requirement will be verified. At least one is
+needed to create requirements.</li>
+<li><strong>Requirement statuses</strong> (e.g. Draft, Accepted,
+Rejected), the requirement lifecycle.</li>
+<li><strong>Verification statuses</strong> (e.g. Passed, Failed, Not
+run, Blocked), each with an <strong>outcome</strong> that drives
+requirement close-out.</li>
+<li><strong>Custom fields</strong> for extra requirement
+attributes.</li>
 </ul></li>
 </ul>
 <p>Having these in place before bulk-adding requirements keeps data
 consistent and makes filtering and reporting more useful.</p>
 <hr />
-<h2 id="capture-requirements">2. Capture Requirements</h2>
+<h2 id="2-capture-requirements">2. Capture Requirements</h2>
 <ul>
-<li><strong>Create requirements</strong> one by one:
-<strong>Requirements → New Requirement</strong>. Fill in title,
+<li><strong>Create requirements</strong> one by one: <strong>Create
+requirement</strong> in the top bar. Fill in the reference code, title,
 statement, rationale, category, status, applicability, verification
-method(s), and optionally parent requirement (for hierarchy) and
-reviewer.</li>
-<li><strong>Or import</strong> existing data:
-<ul>
-<li><strong>Import File</strong>: <strong>Project settings ›
-Import</strong> (or <strong>Create → Import</strong>); upload Excel/CSV,
-map columns to Marreq fields, then run the import (see <a
-href="user-manual.md#10-import">User Manual – Import</a>).</li>
-</ul></li>
-<li><strong>Refine</strong>: use the <strong>Requirements</strong> list
-in card/table/tree view, filter by status/category/applicability, and
-<strong>Edit</strong> requirements to adjust content or set parent/child
-relationships.</li>
-<li><strong>Optional</strong>: use <strong>Semantic Search (AI)</strong>
-(if enabled) to find related requirements or answer questions over the
-requirement set.</li>
+method(s), author, reviewer and, optionally, parent requirements. To
+start from an existing requirement, use <strong>Duplicate</strong>; to
+add a child, select the parent in <strong>Traceability ›
+Hierarchy</strong> and use <strong>Add child</strong>.</li>
+<li><strong>Or import</strong> existing data from <strong>Project
+settings › Import</strong> (or <strong>Create → Import</strong>):
+Excel/CSV with column mapping, or ReqIF / ReqIFZ (see <a
+href="user-manual.html#10-import">User Manual – Import</a>).</li>
+<li><strong>Refine</strong> in the <strong>Requirements</strong> list:
+the <strong>Table</strong> view (with inline editing) or the
+<strong>List</strong> view, filtered by status, category or approval and
+searched with Global Search. Save useful filters as <strong>saved
+views</strong>. <strong>Edit</strong> requirements to adjust content or
+parent links.</li>
+<li><strong>AI search</strong>: when embeddings are enabled, AI
+assistants connected through Marreq's MCP server can search requirements
+by meaning; the web pages have no AI search.</li>
 </ul>
 <hr />
-<h2 id="test-management-and-traceability">3. Test Management and
+<h2 id="3-test-management-and-traceability">3. Test Management and
 Traceability</h2>
-<h3 id="define-and-organize-verifications">3.1 Define and Organize
+<h3 id="31-define-and-organize-verifications">3.1 Define and Organize
 Verifications</h3>
 <ul>
-<li><strong>Create verifications</strong>: <strong>Verifications → New
-Verification</strong>. Enter name, description, <strong>Source</strong>
-(e.g. test file or document), <strong>Status</strong> (e.g. Pending, Not
-Run), and <strong>Reference code</strong> (e.g. TEST-PWR-001). Use
-<strong>Parent verification</strong> to build a hierarchy (suites,
-feature areas) if needed.</li>
+<li><strong>Create verifications</strong>: <strong>Create
+verification</strong> in the top bar. Enter the reference code (e.g.
+VER-PWR-001), name, description, <strong>Source</strong> (e.g. a test
+procedure), <strong>Status</strong>, verification method, author and
+reviewer, and tick the requirements it verifies. Use <strong>Parent
+verification</strong> to build a hierarchy (campaigns, feature
+areas).</li>
 <li><strong>Manage verifications</strong> from the
-<strong>Verifications</strong> list: filter by verification status,
-verification method, category, search; switch between card and table
-view; view metrics (total verifications, by status). Edit verifications
-to change name, description, source, verification method, or
-parent.</li>
-<li><strong>Export verifications</strong>: From the Verifications list
-or Reports, <strong>Export Excel</strong> (verifications) to get all
-verifications in <code>.xls</code> for external reporting or test
-management.</li>
+<strong>Verifications</strong> list (Table or List view): filter by
+status and method, use the status chips and pass rate, and edit
+inline.</li>
+<li><strong>Export verifications</strong>: the <strong>Excel</strong>
+button on the list, or <strong>Reports &amp; exports → Verifications
+(.xlsx)</strong>; <strong>CSV</strong> exports the rows shown.</li>
 </ul>
-<h3 id="link-verifications-to-requirements-traceability">3.2 Link
+<h3 id="32-link-verifications-to-requirements-traceability">3.2 Link
 Verifications to Requirements (Traceability)</h3>
 <ul>
-<li>Open the <strong>Traceability Matrix</strong> for the project.</li>
-<li><strong>Add links</strong> between requirements and verifications
-(via the matrix UI: e.g. select requirement and verification, then add
-link).</li>
-<li>The matrix shows <strong>coverage</strong>; requirements without
-verifications and verifications without requirements are visible in
-<strong>Reports</strong> (Coverage analysis) and on requirement detail
-pages (<strong>Verified by</strong> section,
-<strong>Verification</strong> panel).</li>
+<li>Links are set on the verification: tick the requirements under
+<strong>Traceability (requirements)</strong> when creating or editing it
+(<strong>Edit links</strong> on its page).</li>
+<li><strong>Traceability › Matrix</strong> then shows requirements ×
+verifications with the status of each link, and lists <strong>coverage
+gaps</strong>: requirements without verifications and verifications
+without requirements. The <strong>Dashboard</strong> (Gaps, Orphans) and
+<strong>Reports &amp; exports</strong> (Coverage &amp; gaps) show the
+same, and each requirement page lists its verifications under
+<strong>Downstream (verifications)</strong>.</li>
 </ul>
-<h3 id="track-test-execution-verification-status">3.3 Track Test
+<h3 id="33-track-test-execution-verification-status">3.3 Track Test
 Execution (Verification Status)</h3>
 <ul>
-<li><strong>Update verification status</strong> as tests are run
-(e.g. Pass, Fail, Pending, In Progress) from the <strong>Verification
-detail</strong> page or, when available, inline from the verifications
-list or matrix.</li>
-<li>Requirement detail pages then show the <strong>Verification</strong>
-panel: passed/failed/pending counts and overall pass rate for linked
-verifications.</li>
-<li><strong>Reports</strong> and the <strong>Matrix</strong> reflect
-current coverage and test results; filter the matrix by verification
-status (e.g. show only Failed) for test management and defect
-follow-up.</li>
+<li><strong>Update verification status</strong> as verifications are run
+(e.g. Passed, Failed, Pending, In progress): in the verification editor
+or inline in the verifications list. Only project reviewers can do
+this.</li>
+<li>Requirement pages show each linked verification's status, and the
+<strong>Verification close-out</strong> card shows whether the
+requirement can be closed.</li>
+<li>Filter the <strong>Matrix</strong> by verification status (e.g. only
+<em>Fail / reject</em>) for follow-up.</li>
 </ul>
 <hr />
-<h2 id="review-and-approve-requirements">4. Review and Approve
+<h2 id="4-review-and-approve-requirements">4. Review and Approve
 Requirements</h2>
 <ul>
-<li><strong>Review</strong>: Authors and reviewers use the
-<strong>Requirement detail</strong> page to read the requirement, check
-linked tests and verification status, and use the
-<strong>Comments</strong> section to discuss.</li>
-<li><strong>Who can change status and approval</strong>: Only users
-listed as <strong>project reviewers</strong> (see <strong>Project
-settings › Members &amp; reviewers</strong>) or
-<strong>administrators</strong> can change <strong>requirement
-status</strong> in the table/editor, <strong>verification
-status</strong>, and move the current version through <strong>draft →
-reviewed → approved</strong>. Others with <strong>Edit
-requirements</strong> can still edit text and most metadata.</li>
-<li><strong>Mark as Reviewed</strong>: A <strong>project
-reviewer</strong> (or admin) uses <strong>Mark as Reviewed</strong> on
-the requirement (with confirmation). This moves the requirement along
-the approval workflow.</li>
-<li><strong>Approve</strong>: When the requirement is ready for release
-or baseline, a <strong>project reviewer</strong> (or admin) uses
-<strong>Approve Requirement</strong> (with confirmation). The
-requirement then shows as <strong>Approved</strong> with approver and
-date; editing it later creates a new <strong>Draft</strong>
+<li><strong>Review</strong>: authors and reviewers read the requirement
+on its page, check the linked verifications and their status, and
+discuss in the <strong>Discussion</strong> section.</li>
+<li><strong>Who can change status and approval</strong>: only
+<strong>project reviewers</strong> can change <strong>requirement
+status</strong>, <strong>verification status</strong>, and move the
+current version through <strong>draft → reviewed → approved</strong>.
+While the reviewer list is empty, site administrators can; once it has
+members, administrators must be on it too. Others with edit rights can
+still edit text and most metadata.</li>
+<li><strong>Mark as Reviewed</strong>, then <strong>Approve
+Requirement</strong> (each with a confirmation) on the requirement page.
+An approved requirement shows the approver and date; comments on it are
+locked, and editing it creates a new <strong>Draft</strong>
 version.</li>
-<li><strong>Filter by approval</strong>: On the Requirements list, use
-filters such as <strong>Approved only</strong> or <strong>Not
-approved</strong> to focus on what still needs review.</li>
+<li><strong>Filter by approval</strong>: on the Requirements list, set
+<strong>Approval</strong> to Draft, Reviewed or Approved to focus on
+what still needs review.</li>
 </ul>
 <hr />
-<h2 id="create-baselines">5. Create Baselines</h2>
+<h2 id="5-create-baselines">5. Create Baselines</h2>
 <ul>
-<li>When the requirement set (and optionally approvals) are at a
-<strong>milestone</strong> (e.g. release or audit point), create a
-<strong>baseline</strong>:
-<ul>
-<li><strong>Baselines → New Baseline</strong>. Enter name and optional
-description, then submit.</li>
-</ul></li>
+<li>When the requirement set (and its approvals) reach a
+<strong>milestone</strong> (e.g. a release or an audit point), create a
+<strong>baseline</strong>: <strong>Baselines → Create baseline</strong>.
+Enter a name and optional description, optionally restrict it to a
+<strong>saved view</strong>, then <strong>Create</strong>.</li>
 <li>The baseline is <strong>immutable</strong>: it stores the current
-requirement version for each requirement, the traceability matrix, and a
-snapshot of verification statuses at that moment. You cannot edit or
-delete a baseline.</li>
+version of each included requirement, the traceability links, a snapshot
+of each verification and the list of attached files at that moment.</li>
 <li>Use baselines to:
 <ul>
-<li><strong>Export ReqIF</strong> for that exact snapshot (e.g. for
-auditors or downstream tools).</li>
-<li><strong>Compare</strong> later: open the baseline and use
-<strong>Diff vs current</strong> on individual requirements to see what
-changed since that snapshot.</li>
+<li><strong>Export ReqIF</strong> or <strong>Export ReqIFZ (with
+files)</strong> for that exact snapshot (e.g. for auditors or downstream
+tools).</li>
+<li><strong>Compare</strong> later: <strong>Diff vs current</strong>
+shows what changed in a requirement since the baseline, and
+<strong>Compare with baseline</strong> compares two baselines.</li>
 </ul></li>
 </ul>
 <hr />
-<h2 id="export-for-audits-and-documentation">6. Export for Audits and
+<h2 id="6-export-for-audits-and-documentation">6. Export for Audits and
 Documentation</h2>
+<p>All of these are on <strong>Reports &amp; exports</strong>:</p>
 <ul>
-<li><strong>Requirements</strong>: From <strong>Requirements</strong> or
-<strong>Reports</strong>, <strong>Export Excel</strong> to get all
-requirements (and a Comments sheet) in <code>.xls</code>.</li>
-<li><strong>Verifications</strong> (test management): From
-<strong>Verifications</strong> list or <strong>Reports</strong>,
-<strong>Export Excel</strong> (verifications) to get all verifications
-in <code>.xls</code> (name, description, source, status, reference code,
-etc.).</li>
-<li><strong>Traceability matrix</strong>: From <strong>Matrix</strong>,
-<strong>Export Excel</strong> (or CSV) for the requirement–verification
-mapping; optionally filter by verification status before export.</li>
-<li><strong>ReqIF</strong>:
-<ul>
-<li><strong>Current project</strong>: <strong>Reports → Requirements
-(.reqif)</strong> for the latest state.</li>
-<li><strong>From a baseline</strong>: Open the baseline and use
-<strong>Export ReqIF</strong> — use this for audits or release
-packages.</li>
-</ul></li>
-<li><strong>Reports</strong>: From <strong>Reports</strong>, use
-<strong>Generate PDF Report</strong> or <strong>Download requirements
-(PDF)</strong> for human-readable summaries, coverage, and test-related
-metrics.</li>
+<li><strong>Requirements (.xlsx)</strong> (with a Comments sheet) and
+<strong>Verifications (.xlsx)</strong>; the list pages also export their
+visible rows as CSV.</li>
+<li><strong>Matrix (.xlsx)</strong> (coverage grid) and <strong>Matrix
+links (.xlsx)</strong> (for re-import); the Matrix tab has its own
+<strong>Export Excel</strong>.</li>
+<li><strong>ReqIF</strong>: <strong>Requirements (.reqif)</strong> for
+the current state, or <strong>Requirements with files (.reqifz)</strong>
+to include the attachments. From a baseline, use <strong>Export
+ReqIF</strong> / <strong>Export ReqIFZ</strong> on its page.</li>
+<li><strong>Report documents</strong>: the <strong>Verification Control
+Document (VCD)</strong> and the <strong>traceability &amp; coverage
+report</strong>, as PDF or ODT, from a default or saved template
+(<strong>Customize…</strong> opens the report builder). <strong>Report
+PDF</strong> is the coverage report with default settings, and
+<strong>Requirements PDF</strong> lists the requirements.</li>
+<li><strong>Project bundle (.json)</strong> or <strong>Project bundle
+with files (.zip)</strong> to move a whole project to another Marreq
+instance.</li>
 </ul>
 <hr />
 <h2 id="iteration-and-maintenance">Iteration and Maintenance</h2>
 <ul>
-<li><strong>Ongoing</strong>: Add or edit requirements and
-verifications, update traceability, <strong>run tests and update
-verification status</strong> (Pass/Fail/Pending), and add comments.
-Create new baselines at each major milestone.</li>
-<li><strong>Test management</strong>: Use the Verifications list and
-Matrix to track which verifications are passing or failing; use Reports
-for coverage and verification status distribution. Export verifications
-to Excel when you need to share test data or integrate with other test
-tools.</li>
-<li><strong>After changes</strong>: Traceability links may be marked
-<strong>suspect</strong> when a requirement or test changes; review and
-<strong>Clear suspect</strong> from the matrix when the link is still
-valid (user and timestamp are recorded).</li>
-<li><strong>History</strong>: Use <strong>Version history</strong> on
-requirements and <strong>Diff</strong> (between versions or baseline vs
-current) to see what changed and when.</li>
+<li><strong>Ongoing</strong>: add or edit requirements and
+verifications, update links, <strong>run verifications and update their
+status</strong>, and discuss in comments. Create new baselines at each
+major milestone.</li>
+<li><strong>Test management</strong>: use the Verifications list (status
+chips, pass rate) and the Matrix to track which verifications pass or
+fail; use Reports &amp; exports for coverage and the VCD.</li>
+<li><strong>After changes</strong>: when a requirement changes, its
+links to verifications are marked <strong>suspect</strong>. Review them
+in the Matrix side panel (<strong>Review</strong> compares the versions)
+and <strong>Clear</strong> the flag when the link still holds; the user
+and time are recorded.</li>
+<li><strong>History</strong>: use the <strong>Changelog</strong> and
+<strong>Compare versions</strong> on requirements and verifications, and
+<strong>Diff vs current</strong> on baselines, to see what changed and
+when.</li>
 </ul>
 <p>For detailed instructions on each action, see the <a
-href="user-manual.md">User Manual</a>, including <a
-href="user-manual.md#5-test-management-verifications">Test Management
+href="user-manual.html">User Manual</a>, including <a
+href="user-manual.html#5-test-management-verifications">Test Management
 (Verifications)</a>.</p>
 </body>
 </html>

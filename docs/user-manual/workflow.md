@@ -1,6 +1,6 @@
 # Typical Workflow with Marreq
 
-This document describes a **typical end-to-end workflow** for using Marreq: from project setup through requirements, **verification management**, traceability, approval, baselines, and export. For detailed steps on each screen, see the [User Manual](user-manual.md), in particular [Test Management (Verifications)](user-manual.md#5-test-management-verifications) and [Traceability Matrix](user-manual.md#6-traceability-matrix).
+This document describes a **typical end-to-end workflow** for using Marreq: from project setup through requirements, **verification management**, traceability, approval, baselines, and export. For detailed steps on each screen, see the [User Manual](user-manual.md), in particular [Test Management (Verifications)](user-manual.md#5-test-management-verifications) and [Traceability](user-manual.md#6-traceability).
 
 ---
 
@@ -8,14 +8,14 @@ This document describes a **typical end-to-end workflow** for using Marreq: from
 
 A common Marreq workflow follows this sequence:
 
-1. **Set up the project** and configuration (categories, applicability, verification methods, requirement and **verification statuses**), and designate **project reviewers** in **Project settings › Members & reviewers** (who may change requirement/verification **status** and requirement **version approval**).
-2. **Capture requirements** (create, optionally import, organize in hierarchy).
-3. **Verification management**: define verifications (test cases), organize (e.g. hierarchy), link to requirements in the traceability matrix, and track verification status (Pass/Fail/Pending) as tests are run.
+1. **Set up the project**: members, **project reviewers** (who may change requirement and verification **status** and approve requirement **versions**), and the catalog (categories, applicability, verification methods, requirement and **verification statuses**).
+2. **Capture requirements** (create, import, organise in a hierarchy).
+3. **Verification management**: define verifications (tests, analyses, …), organise them in a hierarchy, link them to the requirements they verify, and track their status (Passed/Failed/Pending) as they are run.
 4. **Review and approve** requirements (draft → reviewed → approved).
 5. **Create baselines** for milestones or releases.
-6. **Export** for audits, documentation, or tooling (requirements Excel, **verifications Excel**, matrix Excel/CSV, ReqIF, PDF).
+6. **Export** for audits, documentation, or tooling (Excel, ReqIF/ReqIFZ, PDF/ODT report documents, project bundles).
 
-You can adapt the order (e.g. import requirements first, then configure categories) or iterate (add requirements and verifications over time, update verification status as you execute tests).
+You can adapt the order (e.g. import requirements first, then configure categories) or iterate (add requirements and verifications over time, update verification status as you run them).
 
 ### Workflow diagram
 
@@ -23,8 +23,8 @@ You can adapt the order (e.g. import requirements first, then configure categori
 flowchart LR
   subgraph setup [1. Set up]
     A[Create project]
-    B[Members]
-    C[Categories / Applicability / Verification / Statuses]
+    B[Members and reviewers]
+    C[Catalog]
   end
   subgraph capture [2. Capture]
     D[Create or import requirements]
@@ -32,7 +32,7 @@ flowchart LR
   end
   subgraph test [3. Verification management]
     F[Define verifications]
-    G[Link in matrix]
+    G[Link to requirements]
     H[Track status]
   end
   subgraph approve [4. Approve]
@@ -41,10 +41,10 @@ flowchart LR
     K[Approve]
   end
   subgraph baseline [5. Baseline]
-    L[New Baseline]
+    L[Create baseline]
   end
   subgraph export [6. Export]
-    M[Excel / ReqIF / PDF]
+    M[Excel / ReqIF / PDF / ODT]
   end
   setup --> capture --> test --> approve --> baseline --> export
   export -.->|"Iterate"| capture
@@ -54,15 +54,16 @@ flowchart LR
 
 ## 1. Set Up the Project
 
-- **Create the project** (Admin: **Projects → New Project**). Enter name and description.
-- **Add project members** (**Members**): assign users and roles (e.g. owner, manager) so the right people can edit and manage the project.
-- **Designate project reviewers** (**Project settings › Members & reviewers** in the SPA, or via API `GET`/`PUT /api/projects/<id>/reviewers`): choose which members may change **requirement status**, **verification status**, and **version approval** (draft / reviewed / approved). Do this early if you use strict workflow gates.
-- **Configure project-level data** (Admin or project **Quick Actions**):
-  - **Categories** (e.g. Safety, Performance, Usability) — used to tag requirements.
-  - **Applicability** (e.g. Product A, Product B, All) — used for product line or scope.
-  - **Verification methods** (e.g. Test, Analysis, Review, Inspection) — used to state how each requirement will be verified.
-  - **Requirement statuses** (e.g. Draft, Accepted, Rejected) — lifecycle of requirements.
-  - **Verification statuses** (e.g. Pass, Fail, Not Run, Blocked) — for test execution.
+- **Create the project**: **Projects → New project**. Choose the namespace (personal or a group), enter the name and an optional description. Any user can create a project and becomes its Admin. The project starts with default statuses, verification methods (Inspection, Test, Analysis, Review), one category and one applicability value.
+- **Add project members** (**Project settings › Members & reviewers**): add users with a role: **Admin** (manages the project), **Reviewer** and **Author** (edit requirements and verifications), or **Viewer** (read only).
+- **Designate project reviewers** on the same page, then **Save reviewer list**. Reviewers alone may change **requirement status**, **verification status**, and **version approval** (draft / reviewed / approved). Do this first: until the project has a reviewer, nobody can create requirements or verifications.
+- **Configure the catalog** (**Project settings › Catalog**, project Admins):
+  - **Categories** (e.g. Safety, Performance, Usability), used to tag requirements.
+  - **Applicability** (e.g. Product A, Product B, All), for product lines or scope.
+  - **Verification methods** (e.g. Test, Analysis, Review, Inspection), how each requirement will be verified. At least one is needed to create requirements.
+  - **Requirement statuses** (e.g. Draft, Accepted, Rejected), the requirement lifecycle.
+  - **Verification statuses** (e.g. Passed, Failed, Not run, Blocked), each with an **outcome** that drives requirement close-out.
+  - **Custom fields** for extra requirement attributes.
 
 Having these in place before bulk-adding requirements keeps data consistent and makes filtering and reporting more useful.
 
@@ -70,11 +71,10 @@ Having these in place before bulk-adding requirements keeps data consistent and 
 
 ## 2. Capture Requirements
 
-- **Create requirements** one by one: **Requirements → New Requirement**. Fill in title, statement, rationale, category, status, applicability, verification method(s), and optionally parent requirement (for hierarchy) and reviewer.
-- **Or import** existing data:
-  - **Import File**: **Project settings › Import** (or **Create → Import**); upload Excel/CSV, map columns to Marreq fields, then run the import (see [User Manual – Import](user-manual.md#10-import)).
-- **Refine**: use the **Requirements** list in card/table/tree view, filter by status/category/applicability, and **Edit** requirements to adjust content or set parent/child relationships.
-- **Optional**: use **Semantic Search (AI)** (if enabled) to find related requirements or answer questions over the requirement set.
+- **Create requirements** one by one: **Create requirement** in the top bar. Fill in the reference code, title, statement, rationale, category, status, applicability, verification method(s), author, reviewer and, optionally, parent requirements. To start from an existing requirement, use **Duplicate**; to add a child, select the parent in **Traceability › Hierarchy** and use **Add child**.
+- **Or import** existing data from **Project settings › Import** (or **Create → Import**): Excel/CSV with column mapping, or ReqIF / ReqIFZ (see [User Manual – Import](user-manual.md#10-import)).
+- **Refine** in the **Requirements** list: the **Table** view (with inline editing) or the **List** view, filtered by status, category or approval and searched with Global Search. Save useful filters as **saved views**. **Edit** requirements to adjust content or parent links.
+- **AI search**: when embeddings are enabled, AI assistants connected through Marreq's MCP server can search requirements by meaning; the web pages have no AI search.
 
 ---
 
@@ -82,62 +82,59 @@ Having these in place before bulk-adding requirements keeps data consistent and 
 
 ### 3.1 Define and Organize Verifications
 
-- **Create verifications**: **Verifications → New Verification**. Enter name, description, **Source** (e.g. test file or document), **Status** (e.g. Pending, Not Run), and **Reference code** (e.g. TEST-PWR-001). Use **Parent verification** to build a hierarchy (suites, feature areas) if needed.
-- **Manage verifications** from the **Verifications** list: filter by verification status, verification method, category, search; switch between card and table view; view metrics (total verifications, by status). Edit verifications to change name, description, source, verification method, or parent.
-- **Export verifications**: From the Verifications list or Reports, **Export Excel** (verifications) to get all verifications in `.xls` for external reporting or test management.
+- **Create verifications**: **Create verification** in the top bar. Enter the reference code (e.g. VER-PWR-001), name, description, **Source** (e.g. a test procedure), **Status**, verification method, author and reviewer, and tick the requirements it verifies. Use **Parent verification** to build a hierarchy (campaigns, feature areas).
+- **Manage verifications** from the **Verifications** list (Table or List view): filter by status and method, use the status chips and pass rate, and edit inline.
+- **Export verifications**: the **Excel** button on the list, or **Reports & exports → Verifications (.xlsx)**; **CSV** exports the rows shown.
 
 ### 3.2 Link Verifications to Requirements (Traceability)
 
-- Open the **Traceability Matrix** for the project.
-- **Add links** between requirements and verifications (via the matrix UI: e.g. select requirement and verification, then add link).
-- The matrix shows **coverage**; requirements without verifications and verifications without requirements are visible in **Reports** (Coverage analysis) and on requirement detail pages (**Verified by** section, **Verification** panel).
+- Links are set on the verification: tick the requirements under **Traceability (requirements)** when creating or editing it (**Edit links** on its page).
+- **Traceability › Matrix** then shows requirements × verifications with the status of each link, and lists **coverage gaps**: requirements without verifications and verifications without requirements. The **Dashboard** (Gaps, Orphans) and **Reports & exports** (Coverage & gaps) show the same, and each requirement page lists its verifications under **Downstream (verifications)**.
 
 ### 3.3 Track Test Execution (Verification Status)
 
-- **Update verification status** as tests are run (e.g. Pass, Fail, Pending, In Progress) from the **Verification detail** page or, when available, inline from the verifications list or matrix.
-- Requirement detail pages then show the **Verification** panel: passed/failed/pending counts and overall pass rate for linked verifications.
-- **Reports** and the **Matrix** reflect current coverage and test results; filter the matrix by verification status (e.g. show only Failed) for test management and defect follow-up.
+- **Update verification status** as verifications are run (e.g. Passed, Failed, Pending, In progress): in the verification editor or inline in the verifications list. Only project reviewers can do this.
+- Requirement pages show each linked verification's status, and the **Verification close-out** card shows whether the requirement can be closed.
+- Filter the **Matrix** by verification status (e.g. only *Fail / reject*) for follow-up.
 
 ---
 
 ## 4. Review and Approve Requirements
 
-- **Review**: Authors and reviewers use the **Requirement detail** page to read the requirement, check linked tests and verification status, and use the **Comments** section to discuss.
-- **Who can change status and approval**: Only users listed as **project reviewers** (see **Project settings › Members & reviewers**) or **administrators** can change **requirement status** in the table/editor, **verification status**, and move the current version through **draft → reviewed → approved**. Others with **Edit requirements** can still edit text and most metadata.
-- **Mark as Reviewed**: A **project reviewer** (or admin) uses **Mark as Reviewed** on the requirement (with confirmation). This moves the requirement along the approval workflow.
-- **Approve**: When the requirement is ready for release or baseline, a **project reviewer** (or admin) uses **Approve Requirement** (with confirmation). The requirement then shows as **Approved** with approver and date; editing it later creates a new **Draft** version.
-- **Filter by approval**: On the Requirements list, use filters such as **Approved only** or **Not approved** to focus on what still needs review.
+- **Review**: authors and reviewers read the requirement on its page, check the linked verifications and their status, and discuss in the **Discussion** section.
+- **Who can change status and approval**: only **project reviewers** can change **requirement status**, **verification status**, and move the current version through **draft → reviewed → approved**. While the reviewer list is empty, site administrators can; once it has members, administrators must be on it too. Others with edit rights can still edit text and most metadata.
+- **Mark as Reviewed**, then **Approve Requirement** (each with a confirmation) on the requirement page. An approved requirement shows the approver and date; comments on it are locked, and editing it creates a new **Draft** version.
+- **Filter by approval**: on the Requirements list, set **Approval** to Draft, Reviewed or Approved to focus on what still needs review.
 
 ---
 
 ## 5. Create Baselines
 
-- When the requirement set (and optionally approvals) are at a **milestone** (e.g. release or audit point), create a **baseline**:
-  - **Baselines → New Baseline**. Enter name and optional description, then submit.
-- The baseline is **immutable**: it stores the current requirement version for each requirement, the traceability matrix, and a snapshot of verification statuses at that moment. You cannot edit or delete a baseline.
+- When the requirement set (and its approvals) reach a **milestone** (e.g. a release or an audit point), create a **baseline**: **Baselines → Create baseline**. Enter a name and optional description, optionally restrict it to a **saved view**, then **Create**.
+- The baseline is **immutable**: it stores the current version of each included requirement, the traceability links, a snapshot of each verification and the list of attached files at that moment.
 - Use baselines to:
-  - **Export ReqIF** for that exact snapshot (e.g. for auditors or downstream tools).
-  - **Compare** later: open the baseline and use **Diff vs current** on individual requirements to see what changed since that snapshot.
+  - **Export ReqIF** or **Export ReqIFZ (with files)** for that exact snapshot (e.g. for auditors or downstream tools).
+  - **Compare** later: **Diff vs current** shows what changed in a requirement since the baseline, and **Compare with baseline** compares two baselines.
 
 ---
 
 ## 6. Export for Audits and Documentation
 
-- **Requirements**: From **Requirements** or **Reports**, **Export Excel** to get all requirements (and a Comments sheet) in `.xls`.
-- **Verifications** (test management): From **Verifications** list or **Reports**, **Export Excel** (verifications) to get all verifications in `.xls` (name, description, source, status, reference code, etc.).
-- **Traceability matrix**: From **Matrix**, **Export Excel** (or CSV) for the requirement–verification mapping; optionally filter by verification status before export.
-- **ReqIF**:
-  - **Current project**: **Reports → Requirements (.reqif)** for the latest state.
-  - **From a baseline**: Open the baseline and use **Export ReqIF** — use this for audits or release packages.
-- **Reports**: From **Reports**, use **Generate PDF Report** or **Download requirements (PDF)** for human-readable summaries, coverage, and test-related metrics.
+All of these are on **Reports & exports**:
+
+- **Requirements (.xlsx)** (with a Comments sheet) and **Verifications (.xlsx)**; the list pages also export their visible rows as CSV.
+- **Matrix (.xlsx)** (coverage grid) and **Matrix links (.xlsx)** (for re-import); the Matrix tab has its own **Export Excel**.
+- **ReqIF**: **Requirements (.reqif)** for the current state, or **Requirements with files (.reqifz)** to include the attachments. From a baseline, use **Export ReqIF** / **Export ReqIFZ** on its page.
+- **Report documents**: the **Verification Control Document (VCD)** and the **traceability & coverage report**, as PDF or ODT, from a default or saved template (**Customize…** opens the report builder). **Report PDF** is the coverage report with default settings, and **Requirements PDF** lists the requirements.
+- **Project bundle (.json)** or **Project bundle with files (.zip)** to move a whole project to another Marreq instance.
 
 ---
 
 ## Iteration and Maintenance
 
-- **Ongoing**: Add or edit requirements and verifications, update traceability, **run tests and update verification status** (Pass/Fail/Pending), and add comments. Create new baselines at each major milestone.
-- **Test management**: Use the Verifications list and Matrix to track which verifications are passing or failing; use Reports for coverage and verification status distribution. Export verifications to Excel when you need to share test data or integrate with other test tools.
-- **After changes**: Traceability links may be marked **suspect** when a requirement or test changes; review and **Clear suspect** from the matrix when the link is still valid (user and timestamp are recorded).
-- **History**: Use **Version history** on requirements and **Diff** (between versions or baseline vs current) to see what changed and when.
+- **Ongoing**: add or edit requirements and verifications, update links, **run verifications and update their status**, and discuss in comments. Create new baselines at each major milestone.
+- **Test management**: use the Verifications list (status chips, pass rate) and the Matrix to track which verifications pass or fail; use Reports & exports for coverage and the VCD.
+- **After changes**: when a requirement changes, its links to verifications are marked **suspect**. Review them in the Matrix side panel (**Review** compares the versions) and **Clear** the flag when the link still holds; the user and time are recorded.
+- **History**: use the **Changelog** and **Compare versions** on requirements and verifications, and **Diff vs current** on baselines, to see what changed and when.
 
 For detailed instructions on each action, see the [User Manual](user-manual.md), including [Test Management (Verifications)](user-manual.md#5-test-management-verifications).

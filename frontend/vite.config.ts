@@ -27,7 +27,8 @@ const frontendGitSha = process.env.MARREQ_GIT_SHA ?? 'unknown';
 /** Shared by dev server and `vite preview` so `/api/*` always reaches Rocket when testing a production build locally. */
 const apiProxy = {
   '/api': {
-    target: 'http://127.0.0.1:8000',
+    // Override to run against another backend (e.g. a throwaway one for screenshots).
+    target: process.env.MARREQ_API_PROXY_TARGET || 'http://127.0.0.1:8000',
     changeOrigin: true,
     // Rocket may emit Set-Cookie with Domain/Secure derived from the proxied host.
     // Strip those so the browser stores session/csrf cookies for the Vite origin (e.g. :5173 / :4173).

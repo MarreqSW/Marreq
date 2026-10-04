@@ -1,6 +1,7 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import {
+  ApiError,
   createRequirementByProject,
   getMyPermissions,
   getProjectReviewers,
@@ -38,6 +39,45 @@ import {
 } from '@/utils/duplicateRequirement';
 import { duplicateSourceQueryId, parsePositiveQueryId } from '@/utils/createQueryParams';
 import StatementEditor from '@/components/StatementEditor';
+import DraftStatus from '@/components/DraftStatus';
+import { useDraftAutosave } from '@/hooks/useDraftAutosave';
+import {
+  clearDraft,
+  formatDraftTime,
+  readDraft,
+  requirementDraftKey,
+  type RequirementDraft,
+} from '@/utils/requirementDraft';
+
+type ParentLinkDraft = { target_version_id: number; link_type: string; rationale: string | null };
+
+/** The form fields kept in a local draft of a new requirement (issue #255). */
+type CreateDraftValues = {
+  title: string;
+  description: string;
+  referenceCode: string;
+  justification: string;
+  categoryId: number;
+  applicabilityId: number;
+  reviewerId: number;
+  methodIds: number[];
+  customFieldValues: Record<number, string>;
+  parentLinks: ParentLinkDraft[];
+};
+
+/** The typed text of the form, compared to decide whether there is anything to keep. */
+function typedText(v: {
+  title: string;
+  description: string;
+  referenceCode: string;
+  justification: string;
+  customFieldValues: Record<number, string>;
+}): string {
+  const custom = Object.entries(v.customFieldValues)
+    .filter(([, value]) => value.trim() !== '')
+    .sort(([a], [b]) => Number(a) - Number(b));
+  return JSON.stringify([v.title, v.description, v.referenceCode, v.justification, custom]);
+}
 
 const selectClass =
   'w-full text-sm font-medium bg-stitch-elevated border border-stitch-border rounded-md px-2 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/40 outline-hidden transition-colors';
@@ -89,9 +129,14 @@ export default function CreateRequirementPage() {
   >([]);
   const [newParentId, setNewParentId] = useState<number | ''>('');
   const [newLinkType, setNewLinkType] = useState('');
+  /** The typed text right after loading (empty, or the copied template); `null` while loading. */
+  const [pristineText, setPristineText] = useState<string | null>(null);
 
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
     if (!Number.isFinite(pid)) return;
+    // Only the latest load may fill the form (StrictMode runs the effect twice).
+    const seq = ++loadSeq.current;
     setLoadError(null);
     setQueryWarning(null);
     try {
@@ -108,6 +153,7 @@ export default function CreateRequirementPage() {
         listCustomFieldsByProject(pid),
         listRequirementVersionLinkTypes(pid),
       ]);
+      if (seq !== loadSeq.current) return;
       setPerms(p);
       setStatuses(st);
       setCategories(cat.filter((c) => c.project_id === pid));
@@ -131,11 +177,14 @@ export default function CreateRequirementPage() {
 
       const warnings: string[] = [];
       const defaultLinkType = types[0] ?? 'derives-from';
-      let links: Array<{
-        target_version_id: number;
-        link_type: string;
-        rationale: string | null;
-      }> = [];
+      let links: ParentLinkDraft[] = [];
+      let loadedText = typedText({
+        title: '',
+        description: '',
+        referenceCode: '',
+        justification: '',
+        customFieldValues: {},
+      });
 
       if (duplicateFrom != null) {
         const listed = reqs.find((requirement) => requirement.id === duplicateFrom);
@@ -144,6 +193,7 @@ export default function CreateRequirementPage() {
         } else {
           try {
             const source = await getRequirementByProject(pid, duplicateFrom);
+            if (seq !== loadSeq.current) return;
             if (source.project_id !== pid) {
               warnings.push(`Template requirement ${duplicateFrom} is not in this project`);
             } else {
@@ -156,11 +206,17 @@ export default function CreateRequirementPage() {
               setReviewerId(source.reviewer_id);
               setJustification(source.justification ?? '');
               setMethodIds(source.verification_method_ids ?? []);
-              setCustomFieldValues(
-                Object.fromEntries(
-                  (source.custom_fields ?? []).map((field) => [field.field_id, field.value ?? '']),
-                ),
+              const copiedFields: Record<number, string> = Object.fromEntries(
+                (source.custom_fields ?? []).map((field) => [field.field_id, field.value ?? '']),
               );
+              setCustomFieldValues(copiedFields);
+              loadedText = typedText({
+                title: duplicateRequirementTitle(source.title),
+                description: source.description,
+                referenceCode: nextDuplicateReference(source.reference_code, reqs),
+                justification: source.justification ?? '',
+                customFieldValues: copiedFields,
+              });
               links = source.trace_summary.parent_links.map((link) => ({
                 target_version_id: link.target_version_id,
                 link_type: link.link_type,
@@ -193,6 +249,7 @@ export default function CreateRequirementPage() {
 
       setParentLinks(links);
       setQueryWarning(warnings.length > 0 ? warnings.join(' ') : null);
+      setPristineText(loadedText);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load form data');
     }
@@ -307,6 +364,96 @@ export default function CreateRequirementPage() {
           }
         : null;
 
+  // ---- Local draft (issue #255) -------------------------------------------
+  const draftKey = me && Number.isFinite(pid) ? requirementDraftKey(me.id, pid, 'new') : null;
+  const [draftChecked, setDraftChecked] = useState(false);
+  const [draftOffer, setDraftOffer] = useState<RequirementDraft<CreateDraftValues> | null>(null);
+
+  const draftValues = useMemo<CreateDraftValues>(
+    () => ({
+      title,
+      description,
+      referenceCode,
+      justification,
+      categoryId,
+      applicabilityId,
+      reviewerId,
+      methodIds,
+      customFieldValues,
+      parentLinks,
+    }),
+    [
+      title,
+      description,
+      referenceCode,
+      justification,
+      categoryId,
+      applicabilityId,
+      reviewerId,
+      methodIds,
+      customFieldValues,
+      parentLinks,
+    ],
+  );
+
+  const dirty =
+    pristineText != null &&
+    typedText({ title, description, referenceCode, justification, customFieldValues }) !== pristineText;
+
+  const autosave = useDraftAutosave({
+    key: draftChecked ? draftKey : null,
+    dirty,
+    values: draftValues,
+    baseVersionId: null,
+    // Never overwrite a stored draft while it is still on offer.
+    paused: draftOffer != null,
+  });
+
+  // After loading, offer a draft left by an earlier visit (never applied by itself:
+  // the defaults and any ?from= / ?parent= prefill are already in the form).
+  useEffect(() => {
+    if (draftChecked || pristineText == null || !draftKey) return;
+    setDraftChecked(true);
+    const stored = readDraft<CreateDraftValues>(draftKey);
+    if (stored) setDraftOffer(stored);
+  }, [draftChecked, pristineText, draftKey]);
+
+  function restoreDraft() {
+    if (!draftOffer) return;
+    const v = draftOffer.values;
+    setTitle(v.title);
+    setDescription(v.description);
+    setReferenceCode(v.referenceCode);
+    setJustification(v.justification);
+    if (categories.some((c) => c.id === v.categoryId)) setCategoryId(v.categoryId);
+    if (applicability.some((a) => a.id === v.applicabilityId)) setApplicabilityId(v.applicabilityId);
+    if (projectReviewerIds.includes(v.reviewerId)) setReviewerId(v.reviewerId);
+    const knownMethods = v.methodIds.filter((id) => methods.some((m) => m.id === id));
+    if (knownMethods.length > 0) setMethodIds(knownMethods);
+    setCustomFieldValues(
+      Object.fromEntries(
+        Object.entries(v.customFieldValues).filter(([id]) =>
+          customFields.some((field) => field.id === Number(id)),
+        ),
+      ),
+    );
+    setParentLinks(v.parentLinks.filter((link) => requirementByVersionId.has(link.target_version_id)));
+    setDraftOffer(null);
+  }
+
+  function discardDraft() {
+    if (draftKey) clearDraft(draftKey);
+    setDraftOffer(null);
+  }
+
+  function cancelCreating(e: React.MouseEvent) {
+    if (dirty && !window.confirm('Discard unsaved changes?')) {
+      e.preventDefault();
+      return;
+    }
+    autosave.discard();
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     const token = csrfToken ?? '';
@@ -347,10 +494,18 @@ export default function CreateRequirementPage() {
         },
         token,
       );
+      // Created: the local draft has done its job.
+      autosave.discard();
       await refreshDashboard();
       navigate(`${basePath}/requirements/${id}/edit`);
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Create failed');
+      if (err instanceof ApiError && err.status === 401) {
+        setSaveError(
+          'Your session has expired. Your draft is kept on this device: sign in again and open New requirement to restore it.',
+        );
+      } else {
+        setSaveError(err instanceof Error ? err.message : 'Create failed');
+      }
     } finally {
       setSaving(false);
     }
@@ -407,6 +562,35 @@ export default function CreateRequirementPage() {
           className="mb-6 rounded-xl border border-amber-500/25 bg-amber-500/10 p-3 text-sm text-amber-100"
         >
           {queryWarning}
+        </div>
+      ) : null}
+
+      {draftOffer ? (
+        <div
+          role="region"
+          aria-label="Unsaved draft"
+          className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-600/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100"
+        >
+          <p>
+            You have an unsaved new requirement from {formatDraftTime(draftOffer.savedAt)}
+            {draftOffer.values.title.trim() ? `: “${draftOffer.values.title.trim()}”` : ''}. Restore it?
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={restoreDraft}
+              className="rounded-md border border-amber-700/40 px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-amber-500/15"
+            >
+              Restore draft
+            </button>
+            <button
+              type="button"
+              onClick={discardDraft}
+              className="rounded-md px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-amber-500/15"
+            >
+              Discard draft
+            </button>
+          </div>
         </div>
       ) : null}
 
@@ -757,11 +941,13 @@ export default function CreateRequirementPage() {
         <footer className="sticky bottom-0 z-30 bg-stitch-surface/85 backdrop-blur-md border-t border-stitch-border px-4 md:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
           <Link
             to={`${basePath}/requirements`}
+            onClick={cancelCreating}
             className="text-xs font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-danger transition-colors px-2 py-2"
           >
             Cancel
           </Link>
           <div className="flex flex-wrap items-center justify-end gap-3">
+            <DraftStatus status={autosave.status} savedAt={autosave.savedAt} dirty={dirty} saving={saving} />
             {blocker ? (
               <p className="text-xs text-amber-200/90 max-w-md">
                 {blocker.message}{' '}

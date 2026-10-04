@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes, useOutletContext } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as apiClient from '@/api/client';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
+import { readDraft, requirementDraftKey, writeDraft } from '@/utils/requirementDraft';
 import CreateRequirementPage from '../CreateRequirementPage';
 
 vi.mock('@/api/client');
@@ -30,6 +31,7 @@ vi.mock('react-router-dom', async () => {
 describe('CreateRequirementPage duplication', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    localStorage.clear();
     vi.mocked(useOutletContext).mockReturnValue({
       projectId: 5,
       basePath: '/space-project',
@@ -306,5 +308,99 @@ describe('CreateRequirementPage duplication', () => {
       'Parent requirement 99 is not in this project',
     );
     expect(screen.getByText('No parent requirements selected.')).toBeInTheDocument();
+  });
+
+  describe('local draft (issue #255)', () => {
+    const KEY = requirementDraftKey(7, 5, 'new');
+
+    function renderNew(path = '/space-project/requirements/new') {
+      return render(
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route path="/:projectSlug/requirements/new" element={<CreateRequirementPage />} />
+            <Route path="/:projectSlug/requirements/:id/edit" element={<p>edit page</p>} />
+          </Routes>
+        </MemoryRouter>,
+      );
+    }
+
+    function storeDraft() {
+      writeDraft(KEY, {
+        savedAt: new Date().toISOString(),
+        baseVersionId: null,
+        values: {
+          title: 'Battery autonomy',
+          description: 'The battery shall last 90 minutes in eclipse.',
+          referenceCode: 'REQ-PWR-010',
+          justification: 'Longest eclipse',
+          categoryId: 11,
+          applicabilityId: 12,
+          reviewerId: 9,
+          methodIds: [14, 999],
+          customFieldValues: { 21: 'High', 404: 'gone' },
+          parentLinks: [
+            { target_version_id: 22, link_type: 'derives-from', rationale: null },
+            { target_version_id: 777, link_type: 'derives-from', rationale: null },
+          ],
+        },
+      });
+    }
+
+    it('offers a stored draft without applying it, then restores it and creates from it', async () => {
+      const user = userEvent.setup();
+      storeDraft();
+      renderNew();
+      expect(await screen.findByText(/unsaved new requirement from .*Battery autonomy/)).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Short title')).toHaveValue('');
+
+      await user.click(screen.getByRole('button', { name: 'Restore draft' }));
+      expect(screen.getByPlaceholderText('Short title')).toHaveValue('Battery autonomy');
+      expect(screen.getByPlaceholderText('REQ-0001')).toHaveValue('REQ-PWR-010');
+      expect(screen.getByLabelText('Rationale (optional)')).toHaveValue('Longest eclipse');
+
+      await user.click(screen.getByRole('button', { name: /create requirement/i }));
+      await waitFor(() =>
+        expect(apiClient.createRequirementByProject).toHaveBeenCalledWith(
+          5,
+          expect.objectContaining({
+            title: 'Battery autonomy',
+            description: 'The battery shall last 90 minutes in eclipse.',
+            verification_method_ids: [14],
+            custom_fields: [{ field_id: 21, value: 'High' }],
+            parent_links: [{ target_version_id: 22, link_type: 'derives-from', rationale: null }],
+          }),
+          'csrf-test',
+        ),
+      );
+      expect(await screen.findByText('edit page')).toBeInTheDocument();
+      expect(readDraft(KEY)).toBeNull();
+    });
+
+    it('discards a stored draft', async () => {
+      const user = userEvent.setup();
+      storeDraft();
+      renderNew();
+      await user.click(await screen.findByRole('button', { name: 'Discard draft' }));
+      expect(screen.queryByRole('region', { name: 'Unsaved draft' })).not.toBeInTheDocument();
+      expect(readDraft(KEY)).toBeNull();
+    });
+
+    it('keeps what is typed, and offers nothing when there is no draft', async () => {
+      const user = userEvent.setup();
+      renderNew();
+      await user.type(await screen.findByPlaceholderText('Short title'), 'Thermal margin');
+      expect(screen.queryByRole('region', { name: 'Unsaved draft' })).not.toBeInTheDocument();
+      await waitFor(() =>
+        expect(readDraft<{ title: string }>(KEY)?.values.title).toBe('Thermal margin'),
+      );
+      expect(screen.getByTestId('draft-status')).toHaveTextContent('Draft kept on this device');
+    });
+
+    it('does not take an untouched copy for a draft', async () => {
+      renderNew('/space-project/requirements/new?from=1');
+      expect(await screen.findByDisplayValue('Power mode (Copy)')).toBeInTheDocument();
+      expect(screen.getByTestId('draft-status')).toHaveTextContent('');
+      expect(readDraft(KEY)).toBeNull();
+    });
   });
 });

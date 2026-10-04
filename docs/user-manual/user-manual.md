@@ -240,8 +240,18 @@ You can optionally pass a parent or template via query parameters (`parent`, `te
 1. Open the requirement detail page.
 2. Click **Edit**.
 3. URL: `/<project-slug>/requirements/<requirement_id>/edit`.
-4. Change title, statement, rationale, category, status, applicability, verification, reviewer, parent, and custom fields as needed.
-5. Use **Save** to create a new version. **Cancel** returns to the detail view.
+4. Change title, statement, rationale, category, status (project reviewers only), applicability, author and reviewer as needed. Parent links are added and removed at once, without Save. Verification methods and custom fields are not edited on this page.
+5. Use **Save** to create a new version. **Cancel** returns to the requirements list; if you have unsaved changes it asks first and then discards them.
+
+#### Unsaved changes and drafts
+
+While you type, the editor keeps a **draft in this browser**, so a reload, a closed tab, a laptop that went to sleep or an expired session does not lose your text. The footer shows the state: **Unsaved changes**, then **Draft kept on this device** with the time.
+
+- A draft is **not** a version: nothing is sent to the server, and only **Save** creates a new version.
+- When you open the requirement again, the draft is put back and a banner says so; **Discard draft** returns to the saved text. If the requirement has been saved again since your draft (for example by someone else), the draft is only offered: choose **Restore draft** if it still applies.
+- The **New requirement** page keeps a draft in the same way and offers **Restore draft** the next time you open it.
+- If your session expires, Save tells you so; sign in again and reopen the requirement: the draft is still there.
+- Drafts belong to your user in this browser only (they do not follow you to another computer), are removed when you save, discard or sign out, and expire after 30 days.
 
 #### Formatting the statement
 

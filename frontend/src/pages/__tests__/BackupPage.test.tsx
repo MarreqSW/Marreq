@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   getDeploymentInfo: vi.fn(),
   getCsrfToken: vi.fn(),
   downloadDatabaseBackup: vi.fn(),
+  getBackupInfo: vi.fn(),
 }));
 
 vi.mock('@/api/client', () => mocks);
@@ -66,6 +67,11 @@ describe('BackupPage', () => {
     vi.clearAllMocks();
     mocks.listUsersOptional.mockResolvedValue([{ id: 1, username: 'alice' }]);
     mocks.getDeploymentInfo.mockResolvedValue(serverDeployment);
+    mocks.getBackupInfo.mockResolvedValue({
+      attachments_available: true,
+      attachment_files: 12,
+      attachment_bytes: 3 * 1024 * 1024,
+    });
   });
 
   it('shows access denied for non-admins', async () => {
@@ -86,14 +92,41 @@ describe('BackupPage', () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Download backup' }));
 
-    expect(mocks.downloadDatabaseBackup).toHaveBeenCalledWith('csrf-token');
+    expect(mocks.downloadDatabaseBackup).toHaveBeenCalledWith('csrf-token', { attachments: true });
     expect(screen.getByRole('button', { name: 'Generating backup…' })).toBeDisabled();
 
-    finish('marreq-backup_20260926_101500.sql.gz');
+    finish('marreq-backup_20260926_101500.tar.gz');
     expect(
-      await screen.findByText('Downloaded marreq-backup_20260926_101500.sql.gz.'),
+      await screen.findByText('Downloaded marreq-backup_20260926_101500.tar.gz.'),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Download backup' })).toBeEnabled();
+  });
+
+  // Issue #341: files are included by default, with their size, and can be left out.
+  it('includes the attachment files unless unticked', async () => {
+    mocks.downloadDatabaseBackup.mockResolvedValue('marreq-backup.tar.gz');
+    renderPage();
+    const user = userEvent.setup();
+    const box = await screen.findByRole('checkbox', { name: /Include attachment files \(12 files, 3(\.0)? MB\)/ });
+    expect(box).toBeChecked();
+
+    await user.click(box);
+    await user.click(screen.getByRole('button', { name: 'Download backup' }));
+    expect(mocks.downloadDatabaseBackup).toHaveBeenCalledWith('csrf-token', { attachments: false });
+  });
+
+  it('explains a database-only backup when the server has no attachment storage', async () => {
+    mocks.getBackupInfo.mockResolvedValue({
+      attachments_available: false,
+      attachment_files: 0,
+      attachment_bytes: 0,
+    });
+    mocks.downloadDatabaseBackup.mockResolvedValue('marreq-backup.tar.gz');
+    renderPage();
+    expect(await screen.findByTestId('backup-no-attachments')).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Download backup' }));
+    expect(mocks.downloadDatabaseBackup).toHaveBeenCalledWith('csrf-token', { attachments: false });
   });
 
   it('shows backend errors', async () => {

@@ -54,9 +54,10 @@ typst = { workspace = true }
 typst-layout = { workspace = true }
 typst-pdf = { workspace = true }
 zip = { workspace = true }
+flate2 = { workspace = true }
+tar = { workspace = true }
 
 [dev-dependencies]
-flate2 = "1"
 # 0.10 is not released yet; its `sha2`/`rand_core` re-exports match rsa's own
 # digest and RNG trait versions.
 rsa = { version = "0.9", features = ["getrandom", "sha2"] }

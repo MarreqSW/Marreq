@@ -56,16 +56,33 @@ export async function getAdminLogStats(params: AdminLogStatsParams = {}): Promis
   return fetchJson<AdminLogStats>(`/api/admin/logs/stats${logsQuery(params)}`);
 }
 
+/** What a backup with attachment files would contain (issue #341). */
+export type BackupInfo = {
+  /** False when the server has no attachment storage (backups hold the database only). */
+  attachments_available: boolean;
+  attachment_files: number;
+  attachment_bytes: number;
+};
+
+export async function getBackupInfo(): Promise<BackupInfo> {
+  return fetchJson<BackupInfo>('/api/admin/backup/info');
+}
+
 /**
- * Runs a whole-database backup on the server (admin only, self-hosted) and saves the
- * gzipped SQL dump. Resolves with the downloaded filename.
+ * Runs a whole-instance backup on the server (admin only, self-hosted) and saves the
+ * `.tar.gz` with the SQL dump and, unless `attachments` is false, the attachment
+ * files. Resolves with the downloaded filename.
  */
-export async function downloadDatabaseBackup(csrfToken: string): Promise<string> {
-  const { blob, filename } = await fetchDownload('/api/admin/backup', {
+export async function downloadDatabaseBackup(
+  csrfToken: string,
+  { attachments = true }: { attachments?: boolean } = {},
+): Promise<string> {
+  const query = attachments ? '' : '?attachments=false';
+  const { blob, filename } = await fetchDownload(`/api/admin/backup${query}`, {
     method: 'POST',
     headers: { 'X-CSRF-Token': csrfToken },
   });
-  const name = filename ?? 'marreq-backup.sql.gz';
+  const name = filename ?? 'marreq-backup.tar.gz';
   triggerDownload(blob, name);
   return name;
 }

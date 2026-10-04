@@ -448,11 +448,15 @@ async fn read_upload(file: &mut TempFile<'_>) -> ApiResult<(String, Vec<u8>)> {
     Ok((filename, bytes))
 }
 
-/// POST /api/projects/imports/bundle — create a new project from a JSON snapshot.
+/// POST /api/projects/imports/bundle — create a new project from a bundle:
+/// `bundle.json`, or a `bundle.zip` (detected by its ZIP signature) whose
+/// attachment files are imported within the new project's quota; files that do
+/// not fit are skipped with a warning (issue #341).
 #[post("/projects/imports/bundle", data = "<form>")]
 pub async fn import_project_bundle(
     auth: ApiUserOrBearer,
     state: &State<AppState>,
+    storage: Option<crate::api::attachments::Storage>,
     mut form: Form<BundleImportForm<'_>>,
 ) -> ApiResult<Json<project_bundle::BundleImportResult>> {
     let user = auth.user();
@@ -463,9 +467,56 @@ pub async fn import_project_bundle(
             .map_err(ApiError::from)?;
         require_group_permission(state, user, group_id, GroupPermission::ManageProjects)?;
     }
-    let (_filename, bytes) = read_upload(&mut form.file).await?;
-    let bundle = project_bundle::parse_bundle(&bytes).map_err(ApiError::BadRequest)?;
-    let result = project_bundle::import_bundle(state.inner(), user, bundle, form.group_id)
-        .map_err(ApiError::from)?;
+    let size = form.file.len();
+    if size == 0 {
+        return Err(ApiError::BadRequest("empty file".into()));
+    }
+    let upload = persist_upload(&mut form.file).await?;
+    let mut head = [0u8; 4];
+    let head_len = std::fs::File::open(&upload.0)
+        .and_then(|mut f| std::io::Read::read(&mut f, &mut head))
+        .map_err(|e| ApiError::Internal(e.to_string()))?;
+    let is_zip = head_len == 4 && (head == *b"PK\x03\x04" || head == *b"PK\x05\x06");
+
+    if !is_zip {
+        if size > MAX_UPLOAD_BYTES {
+            return Err(ApiError::BadRequest("file is larger than 20 MiB".into()));
+        }
+        let bytes = std::fs::read(&upload.0).map_err(|e| ApiError::Internal(e.to_string()))?;
+        let bundle = project_bundle::parse_bundle(&bytes).map_err(ApiError::BadRequest)?;
+        let result = project_bundle::import_bundle(state.inner(), user, bundle, form.group_id)
+            .map_err(ApiError::from)?;
+        return Ok(Json(result));
+    }
+
+    let storage = storage.map(|s| s.0);
+    let max_bytes = storage
+        .as_ref()
+        .map(|s| s.config.max_reqifz_bytes)
+        .unwrap_or_else(|| crate::storage::AttachmentsConfig::default().max_reqifz_bytes);
+    if size > max_bytes {
+        return Err(ApiError::PayloadTooLarge(format!(
+            "the archive is {}; bundle archives can be at most {}",
+            crate::services::attachment_service::format_mib(size as i64),
+            crate::services::attachment_service::format_mib(max_bytes as i64)
+        )));
+    }
+    let app_state = state.inner().clone();
+    let actor = user.clone();
+    let group_id = form.group_id;
+    let result = rocket::tokio::task::spawn_blocking(move || {
+        let outcome = project_bundle::import_bundle_archive(
+            &app_state,
+            storage.as_ref(),
+            &actor,
+            &upload.0,
+            group_id,
+        );
+        drop(upload);
+        outcome
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(crate::api::exports::bundle_archive_error)?;
     Ok(Json(result))
 }

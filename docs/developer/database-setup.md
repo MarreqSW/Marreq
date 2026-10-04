@@ -242,9 +242,21 @@ docker compose -f docker/docker-compose.yml exec -T db psql -U rust -d marreq -c
 
 ### Create Backup
 
-From the SPA (self-hosted, administrators): **Admin → Backup** → **Download backup** downloads `marreq-backup_<timestamp>.sql.gz`. The server runs `pg_dump` against `DATABASE_URL` (the Docker image ships `postgresql-client`; set `MARREQ_PG_DUMP` to use another binary).
+From the SPA (self-hosted, administrators): **Admin → Backup** → **Download backup** downloads `marreq-backup_<timestamp>.tar.gz` (issue #341). The server runs `pg_dump` against `DATABASE_URL` (the Docker image ships `postgresql-client`; set `MARREQ_PG_DUMP` to use another binary) and packs the dump with the attachment files:
 
-From a shell:
+```text
+marreq-backup_<timestamp>/database.sql          plain SQL from pg_dump
+marreq-backup_<timestamp>/attachments/ab/cd/…   the attachment store (MARREQ_ATTACHMENTS_DIR)
+marreq-backup_<timestamp>/manifest.json         format, time, file count and size
+```
+
+Untick **Include attachment files** for a database-only archive
+(`POST /api/admin/backup?attachments=false`). The files are copied right after
+the dump: a file uploaded meanwhile may be extra (harmless), one deleted
+meanwhile is left out. While the archive is built the server needs free space
+in its temp directory for about the dump plus the compressed archive.
+
+From a shell (database only; back up the attachments volume as shown below):
 ```bash
 ./marreq-core/scripts/db_backup.sh
 # Saves to ./backups/marreq_<timestamp>.sql.gz
@@ -252,7 +264,18 @@ From a shell:
 
 ### Restore Backup
 Restore into an **empty** database (the backend runs migrations on start, so
-restore before starting it, or into a freshly created database):
+restore before starting it, or into a freshly created database).
+
+An **Admin → Backup** archive:
+```bash
+tar xzf marreq-backup_<timestamp>.tar.gz
+docker compose -f docker/docker-compose.yml exec -T db \
+   psql -U rust -d marreq -v ON_ERROR_STOP=1 < marreq-backup_<timestamp>/database.sql
+```
+then put `marreq-backup_<timestamp>/attachments/` back into the attachments
+volume ([Attachment files](#attachment-files) below).
+
+A `db_backup.sh` dump:
 ```bash
 gunzip -c backups/marreq_<timestamp>.sql.gz | \
    docker compose -f docker/docker-compose.yml exec -T db \
@@ -263,15 +286,15 @@ Docker image and **Admin → Backup**) can contain commands older clients reject
 
 ### Attachment files
 
-The database dump does not contain attachment files (issue #241). The server
-stores them under `MARREQ_ATTACHMENTS_DIR` (`/var/lib/marreq/attachments` in
+An **Admin → Backup** archive contains the attachment files unless they were
+left out; a `db_backup.sh` dump never does (issue #241). The server stores them under `MARREQ_ATTACHMENTS_DIR` (`/var/lib/marreq/attachments` in
 the Docker image), which the compose files mount from the `marreq_attachments`
 volume (`marreq_attachments_cloud` for `marreq-cloud`). Compose prefixes volume
 names with the project name, so with the default project it is
 `docker_marreq_attachments`; check with `docker volume ls | grep attachments`.
 
-Back up the volume right after the database dump so both describe the same
-moment:
+Without an Admin → Backup archive, back up the volume right after the database
+dump so both describe the same moment:
 
 ```bash
 docker run --rm \
@@ -289,6 +312,15 @@ docker run --rm \
   alpine sh -c 'tar xzf /backup/attachments_<timestamp>.tar.gz -C /data && chown -R 10001:10001 /data'
 ```
 
+From an unpacked Admin → Backup archive:
+
+```bash
+docker run --rm \
+  -v docker_marreq_attachments:/data \
+  -v "$PWD/marreq-backup_<timestamp>/attachments":/backup:ro \
+  alpine sh -c 'cp -a /backup/. /data/ && chown -R 10001:10001 /data'
+```
+
 Files are named by their SHA-256 (`ab/cd/<hash>`), so a restored directory
 can be checked with `sha256sum`. Files that no database row references are
 harmless. A row whose file is missing gives a 404 on download.
@@ -301,7 +333,8 @@ version, so an existing installation moves its data with a dump and restore. The
 old PostgreSQL 15 volume (`pgdata`) is not touched, which keeps rollback simple.
 
 1. **Before updating**, with the old stack still running, take a backup:
-   **Admin → Backup → Download backup**, or
+   **Admin → Backup → Download backup** (a `.tar.gz`; the files can be left
+   out, the attachments volume is not affected by this upgrade), or
    ```bash
    ./marreq-core/scripts/db_backup.sh    # -> backups/marreq_<timestamp>.sql.gz
    ```
@@ -319,6 +352,11 @@ old PostgreSQL 15 volume (`pgdata`) is not touched, which keeps rollback simple.
 4. Restore the backup **before** the backend starts (it would otherwise create
    the tables first and the restore would fail):
    ```bash
+   # Admin → Backup archive:
+   tar xzf marreq-backup_<timestamp>.tar.gz
+   docker compose -f docker/docker-compose.yml exec -T db \
+      psql -U rust -d marreq -v ON_ERROR_STOP=1 < marreq-backup_<timestamp>/database.sql
+   # or a db_backup.sh dump:
    gunzip -c backups/marreq_<timestamp>.sql.gz | \
       docker compose -f docker/docker-compose.yml exec -T db \
       psql -U rust -d marreq -v ON_ERROR_STOP=1

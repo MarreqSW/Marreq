@@ -7,6 +7,10 @@ set -euo pipefail
 # archive to ./backups/.  The output filename includes a timestamp so runs
 # never overwrite each other.
 #
+# Database only: attachment files are not included. Back up the attachments
+# volume separately (see docs/developer/database-setup.md), or use
+# Admin → Backup in the web app, which packs both into one .tar.gz.
+#
 # Usage:
 #   ./marreq-core/scripts/db_backup.sh                      # saves to ./backups/
 #   ./marreq-core/scripts/db_backup.sh /path/to/output.sql.gz  # custom output path

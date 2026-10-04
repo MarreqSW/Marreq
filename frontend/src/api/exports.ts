@@ -1,4 +1,4 @@
-import { fetchBlob } from './transport';
+import { fetchBlob, fetchDownload } from './transport';
 import { triggerDownload } from '@/utils/tableUtils';
 import { dsmQueryString, type DsmParams } from '@/utils/dsm';
 
@@ -84,4 +84,13 @@ export async function downloadBaselineReqifz(
 export async function downloadProjectBundleJson(projectId: number): Promise<void> {
   const blob = await fetchBlob(`/api/projects/${projectId}/exports/bundle.json`);
   triggerDownload(blob, `project-${projectId}-bundle.json`);
+}
+
+/**
+ * Downloads the project bundle with the attachment files of its requirements and
+ * verifications as a ZIP archive (issue #341).
+ */
+export async function downloadProjectBundleZip(projectId: number): Promise<void> {
+  const { blob, filename } = await fetchDownload(`/api/projects/${projectId}/exports/bundle.zip`);
+  triggerDownload(blob, filename ?? `project-${projectId}-bundle.zip`);
 }

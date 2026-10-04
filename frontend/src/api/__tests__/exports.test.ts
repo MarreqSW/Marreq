@@ -5,6 +5,7 @@ import {
   downloadMatrixLinksXlsx,
   downloadMatrixXlsx,
   downloadProjectBundleJson,
+  downloadProjectBundleZip,
   downloadProjectReportPdf,
   downloadRequirementsPdf,
   downloadRequirementsReqif,
@@ -119,6 +120,24 @@ describe('workbook downloads', () => {
       expect.objectContaining({ credentials: 'same-origin' }),
     );
     expect(anchor.download).toBe(filename);
+    expect(anchor.click).toHaveBeenCalled();
+  });
+
+  // Issue #341: the bundle with files keeps the server's file name.
+  it('downloads the project bundle with files under the server file name', async () => {
+    const anchor = stubDownloadEnvironment();
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(new Blob(['zip']), {
+        status: 200,
+        headers: { 'Content-Disposition': 'attachment; filename="project-space-bundle.zip"' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await downloadProjectBundleZip(7);
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/projects/7/exports/bundle.zip', expect.anything());
+    expect(anchor.download).toBe('project-space-bundle.zip');
     expect(anchor.click).toHaveBeenCalled();
   });
 

@@ -17,6 +17,7 @@ import {
   cleanupAdminLogs,
   downloadAdminLogsJson,
   downloadDatabaseBackup,
+  getBackupInfo,
   getAdminLogStats,
   listAdminLogs,
 } from '../logs';
@@ -158,16 +159,30 @@ describe('admin logs API', () => {
   it('downloadDatabaseBackup posts with CSRF and uses the server filename', async () => {
     const fetchMock = stubFetch({
       text: 'dump',
-      headers: { 'Content-Disposition': 'attachment; filename="marreq-2026-10-02.sql.gz"' },
+      headers: { 'Content-Disposition': 'attachment; filename="marreq-2026-10-02.tar.gz"' },
     });
-    await expect(downloadDatabaseBackup(CSRF)).resolves.toBe('marreq-2026-10-02.sql.gz');
+    await expect(downloadDatabaseBackup(CSRF)).resolves.toBe('marreq-2026-10-02.tar.gz');
     const req = lastRequest(fetchMock);
     expect([req.method, req.url, req.headers['X-CSRF-Token']]).toEqual(['POST', '/api/admin/backup', CSRF]);
-    expect(triggerDownload).toHaveBeenCalledWith(expect.any(Blob), 'marreq-2026-10-02.sql.gz');
+    expect(triggerDownload).toHaveBeenCalledWith(expect.any(Blob), 'marreq-2026-10-02.tar.gz');
   });
 
   it('downloadDatabaseBackup falls back to a default filename', async () => {
     stubFetch({ text: 'dump' });
-    await expect(downloadDatabaseBackup(CSRF)).resolves.toBe('marreq-backup.sql.gz');
+    await expect(downloadDatabaseBackup(CSRF)).resolves.toBe('marreq-backup.tar.gz');
+  });
+
+  // Issue #341: attachment files are included unless left out.
+  it('downloadDatabaseBackup can leave the attachment files out', async () => {
+    const fetchMock = stubFetch({ text: 'dump' });
+    await downloadDatabaseBackup(CSRF, { attachments: false });
+    expect(lastRequest(fetchMock).url).toBe('/api/admin/backup?attachments=false');
+  });
+
+  it('getBackupInfo reads the attachment size', async () => {
+    const info = { attachments_available: true, attachment_files: 3, attachment_bytes: 2048 };
+    const fetchMock = stubFetch({ text: JSON.stringify(info) });
+    await expect(getBackupInfo()).resolves.toEqual(info);
+    expect(lastRequest(fetchMock).url).toBe('/api/admin/backup/info');
   });
 });

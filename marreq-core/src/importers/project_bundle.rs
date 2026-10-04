@@ -7,6 +7,8 @@
 #![allow(clippy::too_many_arguments)]
 
 use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use rocket::serde::{Deserialize, Serialize};
 
@@ -20,21 +22,28 @@ use crate::namespaces::project_base_path;
 use crate::permissions::{ROLE_ADMIN, ROLE_AUTHOR, ROLE_REVIEWER, ROLE_VIEWER};
 use crate::repository::errors::RepoError;
 use crate::repository::{
-    CustomFieldRepository, LookupRepository, MatrixRepository, ProjectMembersRepository,
-    ProjectReviewersRepository, ProjectsRepository, RequirementCommentsRepository,
-    RequirementVersionLinksRepository, RequirementsRepository, UserRepository,
-    VerificationsRepository,
+    AttachmentsRepository, CustomFieldRepository, LookupRepository, MatrixRepository,
+    ProjectMembersRepository, ProjectReviewersRepository, ProjectsRepository,
+    RequirementCommentsRepository, RequirementVersionLinksRepository, RequirementsRepository,
+    UserRepository, VerificationsRepository,
+};
+use crate::reqif::archive::{
+    ArchiveFile, ArchiveLimits, ReqifArchive, is_precompressed, write_reqifz,
 };
 use crate::services::applicability_service::ApplicabilityService;
+use crate::services::attachment_service::{AttachmentEntity, AttachmentService};
 use crate::services::category_service::CategoryService;
 use crate::services::custom_field_service::CustomFieldService;
 use crate::services::matrix_service::MatrixService;
 use crate::services::project_service::ProjectService;
+use crate::services::reqif_service::ExportInput;
+use crate::services::reqifz_service::{attach_one, private_temp_path};
 use crate::services::requirement_service::RequirementService;
 use crate::services::status_service::StatusService;
 use crate::services::verification_method_service::VerificationMethodService;
 use crate::services::verification_service::VerificationService;
 use crate::status_enums::ProjectStatus;
+use crate::storage::AttachmentStorage;
 
 pub const FORMAT_V1: &str = "marreq.project-bundle.v1";
 
@@ -57,7 +66,27 @@ pub struct ProjectBundle {
     pub matrix: Vec<BundleMatrixLink>,
     #[serde(default)]
     pub comments: Vec<BundleComment>,
+    /// Attachment files, only in a `bundle.zip` (issue #341); each `path` is an
+    /// entry of that archive. Left out of the JSON-only bundle.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub attachments: Vec<BundleAttachment>,
 }
+
+/// One attachment file of a `bundle.zip`.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct BundleAttachment {
+    /// `requirement` or `verification`.
+    pub entity_type: String,
+    pub entity_reference_code: String,
+    pub filename: String,
+    pub content_type: String,
+    /// Archive entry, e.g. `files/12/report.pdf`.
+    pub path: String,
+}
+
+/// Name of the bundle document inside `bundle.zip`.
+pub const ARCHIVE_DOCUMENT: &str = "bundle.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(crate = "rocket::serde")]
@@ -219,6 +248,7 @@ pub struct BundleImportedCounts {
     pub comments: usize,
     pub members: usize,
     pub reviewers: usize,
+    pub attachments: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -470,6 +500,7 @@ pub fn export_bundle(
         verifications,
         matrix,
         comments,
+        attachments: Vec::new(),
     })
 }
 
@@ -478,6 +509,22 @@ pub fn import_bundle(
     actor: &User,
     bundle: ProjectBundle,
     group_id: Option<i32>,
+) -> Result<BundleImportResult, RepoError> {
+    import_bundle_with_files(state, actor, bundle, group_id, None)
+}
+
+/// The files of a `bundle.zip` and where to store them.
+struct BundleFiles<'a> {
+    archive: &'a mut ReqifArchive,
+    storage: Option<&'a Arc<AttachmentStorage>>,
+}
+
+fn import_bundle_with_files(
+    state: &AppState<DieselCachedRepo>,
+    actor: &User,
+    bundle: ProjectBundle,
+    group_id: Option<i32>,
+    files: Option<BundleFiles<'_>>,
 ) -> Result<BundleImportResult, RepoError> {
     let mut warnings = Vec::new();
     let mut errors = Vec::new();
@@ -574,6 +621,17 @@ pub fn import_bundle(
         &mut errors,
         &mut counts,
     )?;
+    import_attachments(
+        state,
+        actor,
+        project_id,
+        &bundle.attachments,
+        files,
+        &req_ids,
+        &ver_ids,
+        &mut warnings,
+        &mut counts,
+    );
 
     let project = project_service.get_by_id(project_id)?;
     Ok(BundleImportResult {
@@ -584,6 +642,177 @@ pub fn import_bundle(
         warnings,
         errors,
     })
+}
+
+/// Attach the bundle's files to the imported requirements and verifications.
+/// A file that cannot be attached (missing, too large, blocked type, over the
+/// project's quota, unknown reference) is skipped with a warning.
+#[allow(clippy::too_many_arguments)]
+fn import_attachments(
+    state: &AppState<DieselCachedRepo>,
+    actor: &User,
+    project_id: i32,
+    attachments: &[BundleAttachment],
+    files: Option<BundleFiles<'_>>,
+    req_ids: &HashMap<String, i32>,
+    ver_ids: &HashMap<String, i32>,
+    warnings: &mut Vec<String>,
+    counts: &mut BundleImportedCounts,
+) {
+    if attachments.is_empty() {
+        return;
+    }
+    let Some(BundleFiles { archive, storage }) = files else {
+        warnings.push(format!(
+            "{} attachment file(s) are listed but a JSON bundle carries no files; import the .zip bundle to include them",
+            attachments.len()
+        ));
+        return;
+    };
+    let Some(storage) = storage else {
+        warnings.push(format!(
+            "attachment storage is not configured on this server; {} attachment file(s) were not imported",
+            attachments.len()
+        ));
+        return;
+    };
+    let service = AttachmentService::new(state, storage);
+    for attachment in attachments {
+        let target = match attachment.entity_type.as_str() {
+            "requirement" => req_ids
+                .get(&attachment.entity_reference_code)
+                .map(|&id| (AttachmentEntity::Requirement, id)),
+            "verification" => ver_ids
+                .get(&attachment.entity_reference_code)
+                .map(|&id| (AttachmentEntity::Verification, id)),
+            _ => None,
+        };
+        let Some((entity, entity_id)) = target else {
+            warnings.push(format!(
+                "attachment {} of {} {}: not imported, the {0} was not imported",
+                attachment.filename, attachment.entity_type, attachment.entity_reference_code
+            ));
+            continue;
+        };
+        match attach_one(
+            &service,
+            storage,
+            archive,
+            actor,
+            project_id,
+            entity,
+            entity_id,
+            &attachment.path,
+        ) {
+            Ok(()) => counts.attachments += 1,
+            Err(why) => warnings.push(format!(
+                "{} {}: {why}; not attached",
+                attachment.entity_type, attachment.entity_reference_code
+            )),
+        }
+    }
+}
+
+/// Why a `bundle.zip` could not be imported or exported.
+#[derive(Debug, thiserror::Error)]
+pub enum BundleArchiveError {
+    /// The upload is not a usable bundle archive (400).
+    #[error("{0}")]
+    Invalid(String),
+    #[error(transparent)]
+    Repo(#[from] RepoError),
+    #[error("could not write the bundle archive: {0}")]
+    Io(#[from] std::io::Error),
+}
+
+/// Import a `bundle.zip` (issue #341): `bundle.json` plus the attachment
+/// files it lists. Blocking (ZIP and file I/O); call from `spawn_blocking`.
+pub fn import_bundle_archive(
+    state: &AppState<DieselCachedRepo>,
+    storage: Option<&Arc<AttachmentStorage>>,
+    actor: &User,
+    archive_path: &Path,
+    group_id: Option<i32>,
+) -> Result<BundleImportResult, BundleArchiveError> {
+    let mut archive = ReqifArchive::open_with(archive_path, ArchiveLimits::default(), |name| {
+        name == ARCHIVE_DOCUMENT
+    })
+    .map_err(|e| BundleArchiveError::Invalid(e.to_string()))?;
+    if archive.documents().is_empty() {
+        return Err(BundleArchiveError::Invalid(format!(
+            "the archive has no {ARCHIVE_DOCUMENT}"
+        )));
+    }
+    let bytes = archive
+        .read_document(ARCHIVE_DOCUMENT)
+        .map_err(|e| BundleArchiveError::Invalid(e.to_string()))?;
+    let bundle = parse_bundle(&bytes).map_err(BundleArchiveError::Invalid)?;
+    let files = BundleFiles {
+        archive: &mut archive,
+        storage,
+    };
+    Ok(import_bundle_with_files(
+        state,
+        actor,
+        bundle,
+        group_id,
+        Some(files),
+    )?)
+}
+
+/// Write the project as a `bundle.zip` (issue #341) to a private temp file
+/// and return its path (the caller streams and removes it): `bundle.json`
+/// plus the live attachment files of its requirements and verifications. A
+/// file missing from the store is left out. Blocking; call from `spawn_blocking`.
+pub fn export_bundle_archive(
+    state: &AppState<DieselCachedRepo>,
+    storage: &AttachmentStorage,
+    project_id: i32,
+) -> Result<PathBuf, BundleArchiveError> {
+    let mut bundle = export_bundle(state, project_id)?;
+    let mut files = Vec::new();
+    {
+        let repo = state.repo_read();
+        let mut owners: Vec<(&str, i32, String)> = Vec::new();
+        for req in repo.get_requirements_by_project(project_id)? {
+            owners.push(("requirement", req.id, req.reference_code));
+        }
+        for ver in repo.get_verifications_by_project(project_id)? {
+            owners.push(("verification", ver.id, ver.reference_code));
+        }
+        for (entity_type, entity_id, reference_code) in owners {
+            for a in repo.list_attachments(project_id, entity_type, entity_id)? {
+                match storage.store().open(&a.sha256) {
+                    Ok(file) => {
+                        let path = ExportInput::archive_path(&a);
+                        files.push(ArchiveFile {
+                            entry: path.clone(),
+                            file,
+                            compress: !is_precompressed(&a.content_type),
+                        });
+                        bundle.attachments.push(BundleAttachment {
+                            entity_type: entity_type.to_string(),
+                            entity_reference_code: reference_code.clone(),
+                            filename: a.original_filename,
+                            content_type: a.content_type,
+                            path,
+                        });
+                    }
+                    Err(e) => eprintln!(
+                        "[marreq] bundle export: attachment {} ({}) is missing from storage: {e}",
+                        a.id, a.original_filename
+                    ),
+                }
+            }
+        }
+    }
+    let json = serde_json::to_vec_pretty(&bundle).map_err(std::io::Error::other)?;
+    let path = private_temp_path("marreq-bundle", "zip")?;
+    if let Err(e) = write_reqifz(&path, ARCHIVE_DOCUMENT, &json, files) {
+        let _ = std::fs::remove_file(&path);
+        return Err(e.into());
+    }
+    Ok(path)
 }
 
 struct CatalogMaps {

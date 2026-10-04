@@ -4,6 +4,7 @@ import {
   downloadMatrixLinksXlsx,
   downloadMatrixXlsx,
   downloadProjectBundleJson,
+  downloadProjectBundleZip,
   downloadProjectReportPdf,
   downloadRequirementsPdf,
   downloadRequirementsReqif,
@@ -67,6 +68,11 @@ const PROJECT_EXPORTS = [
     run: downloadRequirementsReqifz,
   },
   { key: 'project-bundle-json', label: 'Project bundle (.json)', run: downloadProjectBundleJson },
+  {
+    key: 'project-bundle-zip',
+    label: 'Project bundle with files (.zip)',
+    run: downloadProjectBundleZip,
+  },
 ] as const;
 
 export default function ReportsPage() {

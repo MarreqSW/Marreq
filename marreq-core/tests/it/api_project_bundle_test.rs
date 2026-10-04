@@ -10,7 +10,7 @@ use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
 use serde_json::Value;
 
-mod test_support {
+pub(crate) mod test_support {
     use super::*;
     use chrono::{NaiveDate, NaiveDateTime};
     use marreq_core::app::AppState;

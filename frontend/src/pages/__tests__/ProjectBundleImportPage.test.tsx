@@ -66,4 +66,36 @@ describe('ProjectBundleImportPage', () => {
     );
     expect(mocks.navigate).toHaveBeenCalledWith('/imported/dashboard', { replace: true });
   });
+
+  // Issue #341: a bundle.zip is accepted, and skipped files stay readable.
+  it('accepts a zip bundle and shows its warnings before opening the project', async () => {
+    mocks.importProjectBundle.mockResolvedValue({
+      project_id: 9,
+      slug: 'imported',
+      project_base_path: '/imported',
+      imported_counts: { requirements: 1, attachments: 1 },
+      warnings: ['requirement REQ-1: huge.pdf is larger than the 10 MB per-file limit; not attached'],
+      errors: [],
+    });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ProjectBundleImportPage />
+      </MemoryRouter>,
+    );
+
+    const input = await screen.findByLabelText(/bundle file/i);
+    expect(input).toHaveAttribute('accept', expect.stringContaining('.zip'));
+    const file = new File(['PK'], 'project-bundle.zip', { type: 'application/zip' });
+    await user.upload(input, file);
+    await user.click(screen.getByRole('button', { name: /import bundle/i }));
+
+    expect(await screen.findByText(/imported with 1 warning/)).toBeInTheDocument();
+    expect(screen.getByText(/huge\.pdf is larger than/)).toBeInTheDocument();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /import bundle/i })).toBeDisabled();
+
+    await user.click(screen.getByRole('button', { name: 'Open project' }));
+    expect(mocks.navigate).toHaveBeenCalledWith('/imported/dashboard', { replace: true });
+  });
 });

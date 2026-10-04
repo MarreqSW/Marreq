@@ -28,7 +28,7 @@ use crate::storage::{AttachmentStorage, content_type};
 const EMBEDDED_WARNING: &str =
     "embedded/file content was present in the ReqIF document and was not imported";
 
-fn private_temp_path(prefix: &str, extension: &str) -> io::Result<PathBuf> {
+pub(crate) fn private_temp_path(prefix: &str, extension: &str) -> io::Result<PathBuf> {
     let suffix: u64 = rand::random();
     let path = std::env::temp_dir().join(format!("{prefix}-{suffix:016x}.{extension}"));
     let mut options = std::fs::OpenOptions::new();
@@ -110,14 +110,19 @@ fn read_head(path: &Path) -> io::Result<Vec<u8>> {
     Ok(head)
 }
 
-/// Why one referenced file was not attached (becomes a warning).
-fn attach_one(
+/// Attach the archive entry `entry` to a requirement or verification:
+/// extract it within the per-file limit, check its type, then store it within
+/// the project's quota. The error says why it was not attached (it becomes an
+/// import warning). Also used by project bundle import (issue #341).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn attach_one(
     service: &AttachmentService<'_>,
     storage: &AttachmentStorage,
     archive: &mut ReqifArchive,
     actor: &User,
     project_id: i32,
-    requirement_id: i32,
+    entity: AttachmentEntity,
+    entity_id: i32,
     entry: &str,
 ) -> Result<(), String> {
     let filename = sanitize_filename(entry.rsplit('/').next().unwrap_or(entry))
@@ -156,8 +161,8 @@ fn attach_one(
             actor,
             NewUpload {
                 project_id,
-                entity: AttachmentEntity::Requirement,
-                entity_id: requirement_id,
+                entity,
+                entity_id,
                 filename: filename.clone(),
                 content_type: kind.content_type,
             },
@@ -255,6 +260,7 @@ pub fn import_archive(
                     &mut archive,
                     actor,
                     config.project_id,
+                    AttachmentEntity::Requirement,
                     requirement_id,
                     &entry,
                 ) {

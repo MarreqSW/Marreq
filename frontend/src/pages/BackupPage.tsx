@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
+  type BackupInfo,
   downloadDatabaseBackup,
+  getBackupInfo,
   getCsrfToken,
   getDeploymentInfo,
   listUsersOptional,
@@ -11,6 +13,7 @@ import { useDashboard } from '@/context/DashboardContext';
 import { btnPrimary } from '@/pages/catalog/catalogUi';
 import { parseUser } from '@/utils/parseUser';
 import { ADMIN_BREADCRUMB } from '@/pages/admin/adminArea';
+import { formatBytes } from '@/utils/formatBytes';
 
 
 export default function BackupPage() {
@@ -22,12 +25,23 @@ export default function BackupPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [info, setInfo] = useState<BackupInfo | null>(null);
+  const [includeAttachments, setIncludeAttachments] = useState(true);
 
   useEffect(() => {
     let alive = true;
     // `/api/users` is admin-only, so it doubles as the access check (same as System logs).
     listUsersOptional().then((users) => {
-      if (alive) setAllowed(users !== null);
+      if (!alive) return;
+      setAllowed(users !== null);
+      if (users === null) return;
+      getBackupInfo()
+        .then((i) => {
+          if (alive) setInfo(i);
+        })
+        .catch(() => {
+          if (alive) setInfo(null);
+        });
     });
     getDeploymentInfo()
       .then((info) => {
@@ -49,7 +63,10 @@ export default function BackupPage() {
     setError(null);
     setNotice(null);
     try {
-      const filename = await downloadDatabaseBackup(csrfToken ?? (await getCsrfToken()));
+      const attachments = includeAttachments && info?.attachments_available !== false;
+      const filename = await downloadDatabaseBackup(csrfToken ?? (await getCsrfToken()), {
+        attachments,
+      });
       setNotice(`Downloaded ${filename}.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Backup failed');
@@ -95,7 +112,7 @@ export default function BackupPage() {
         projectName={projectName}
         section="Backup"
         title="Database backup"
-        subtitle="Download a full copy of the Marreq database, e.g. before an upgrade."
+        subtitle="Download a full copy of the Marreq database and attachment files, e.g. before an upgrade."
       />
 
       {error ? (
@@ -131,11 +148,37 @@ export default function BackupPage() {
             </h3>
             <p className="text-sm text-stitch-muted">
               Creates a <code>pg_dump</code> of the whole database (all projects, users, and audit
-              logs) as gzipped SQL and downloads it as{' '}
-              <code>marreq-backup_&lt;date&gt;_&lt;time&gt;.sql.gz</code>. Nothing is kept on the
+              logs) and downloads it, together with the attachment files, as{' '}
+              <code>marreq-backup_&lt;date&gt;_&lt;time&gt;.tar.gz</code>. Nothing is kept on the
               server. The file contains password hashes and all project data, so store it
               securely.
             </p>
+            {info?.attachments_available === false ? (
+              <p className="text-sm text-stitch-muted" data-testid="backup-no-attachments">
+                Attachment storage is not configured on this server, so the backup holds the
+                database only.
+              </p>
+            ) : (
+              <label className="flex items-start gap-2 text-sm text-stitch-fg">
+                <input
+                  type="checkbox"
+                  className="mt-0.5"
+                  checked={includeAttachments}
+                  onChange={(e) => setIncludeAttachments(e.target.checked)}
+                  disabled={busy}
+                />
+                <span>
+                  Include attachment files
+                  {info
+                    ? ` (${info.attachment_files} ${info.attachment_files === 1 ? 'file' : 'files'}, ${formatBytes(info.attachment_bytes)})`
+                    : ''}
+                  <span className="block text-xs text-stitch-muted">
+                    Untick for a smaller, database-only backup; then back up the attachments volume
+                    separately.
+                  </span>
+                </span>
+              </label>
+            )}
             <button
               type="button"
               className={btnPrimary}
@@ -157,10 +200,14 @@ export default function BackupPage() {
             Restoring
           </h3>
           <p className="text-sm text-stitch-muted">
-            Restore into an empty database with <code>psql</code> from PostgreSQL 15 or newer:
+            Unpack the archive, restore <code>database.sql</code> into an empty database with{' '}
+            <code>psql</code> from PostgreSQL 17 or newer, then copy <code>attachments/</code> into
+            the attachments volume (see the database setup guide for the Docker commands):
           </p>
           <pre className="text-xs bg-stitch-elevated border border-stitch-border rounded-md p-3 overflow-x-auto text-stitch-fg">
-            gunzip -c marreq-backup_YYYYMMDD_HHMMSS.sql.gz | psql &quot;$DATABASE_URL&quot;
+            {`tar xzf marreq-backup_YYYYMMDD_HHMMSS.tar.gz
+psql "$DATABASE_URL" < marreq-backup_YYYYMMDD_HHMMSS/database.sql
+cp -a marreq-backup_YYYYMMDD_HHMMSS/attachments/. "$MARREQ_ATTACHMENTS_DIR"/`}
           </pre>
           <p className="text-xs text-stitch-muted">
             Downloads are recorded under System logs as an <code>EXPORT</code> entry.

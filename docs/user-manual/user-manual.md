@@ -575,10 +575,11 @@ You see:
 - **With the files**: download **Requirements with files (.reqifz)** instead. A ReqIFZ archive is a ZIP file holding the `.reqif` document and each requirement's attachments under `files/<attachment id>/<file name>`. The statements link to the files the standard ReqIF way (XHTML objects), so DOORS, Polarion, Codebeamer and Marreq itself can pick them up.
 - **From a baseline**: open the baseline and use **Export ReqIF** for an immutable ReqIF 1.2 snapshot, or **Export ReqIFZ (with files)** to include the files the baseline recorded, including ones deleted since.
 
-### 9.5 Exporting a project bundle (JSON)
+### 9.5 Exporting a project bundle
 
-- Open **Reports** and download **Project bundle (.json)**.
-- The file is a portable snapshot of the project catalog, current requirements, verifications, matrix links, comments, and members (by username). It does not include version history, baselines, attachments, or passwords.
+- Open **Reports** and download **Project bundle (.json)**, or **Project bundle with files (.zip)** to include the attachment files.
+- The bundle is a portable snapshot of the project catalog, current requirements, verifications, matrix links, comments, and members (by username). It does not include version history, baselines or passwords; the `.json` bundle has no attachment files.
+- The `.zip` bundle holds `bundle.json` plus the current attachment files of the requirements and verifications under `files/<attachment id>/<file name>` (deleted files and files only kept by a baseline are left out).
 - Anyone who can view the project can export the bundle.
 
 ### 9.6 Report documents (VCD and coverage report)
@@ -630,12 +631,13 @@ Import creates new requirements; it does not update existing ones. Custom attrib
 
 **ReqIFZ archives.** Every `.reqif` document in the archive is imported into the project. Each file a requirement's text references (an XHTML object) becomes an attachment of that requirement, with the same checks as a manual upload ([§4.9](#49-attachments)): allowed types, the per-file limit and the project's storage limit ([§3.4](#34-project-storage)). A file that fails a check, or that is missing from the archive, is skipped and listed as a warning; its requirement is still imported. Archives can be up to 100 MB (`MARREQ_REQIFZ_MAX_MB`). Archives with unsafe content (paths leading outside the archive, links, extreme compression) are refused as a whole. Files attached in other, tool-specific ways are not imported and are reported as a warning.
 
-### 10.3 Importing a project bundle (JSON)
+### 10.3 Importing a project bundle
 
 1. Go to **New project** (`/projects/new`) and open **Import from JSON bundle**, or visit `/projects/import-bundle`.
-2. Upload a `marreq.project-bundle.v1` file exported from Reports. Optionally choose a group namespace you manage.
+2. Upload a bundle exported from Reports: the `.json` bundle or the `.zip` bundle with files. Optionally choose a group namespace you manage.
 3. Marreq **creates a new project** (it does not merge into an existing one). Catalog tags, requirement and verification reference codes, matrix links, and comments are restored. Authors and members are matched by username or email on this instance; missing users are skipped or mapped to you.
-4. After import, you land on the new project's dashboard.
+4. From a `.zip` bundle, each file is attached to its requirement or verification with the same checks as a manual upload ([§4.9](#49-attachments)): allowed types, the per-file limit and the new project's storage limit ([§3.4](#34-project-storage)). A file that fails a check is skipped and listed as a warning; the rest of the project is imported. Archives can be up to 100 MB (`MARREQ_REQIFZ_MAX_MB`).
+5. Without warnings you land on the new project's dashboard; otherwise the warnings are shown first, with **Open project**.
 
 This is separate from in-project Excel/CSV and ReqIF import, which add records to the project you already have open.
 
@@ -716,15 +718,17 @@ In deployments where users **self-register** (hosted cloud mode), **New user** i
 - **Administration › Backup** (not shown in the hosted cloud mode).
 - URL: `/admin/backup`.
 
-**Download backup** runs `pg_dump` on the server and downloads the whole database (all projects, users, and audit logs) as gzipped SQL named `marreq-backup_<YYYYMMDD>_<HHMMSS>.sql.gz`. Nothing is stored on the server. Large databases can take a few minutes; keep the page open. The file contains password hashes and all project data, so store it securely. Each download (or failure) is recorded in **System logs** as an `EXPORT` entry.
+**Download backup** runs `pg_dump` on the server and downloads the whole database (all projects, users, and audit logs) together with the attachment files, as `marreq-backup_<YYYYMMDD>_<HHMMSS>.tar.gz`. The archive holds `database.sql`, the `attachments/` folder and a `manifest.json`. **Include attachment files** (ticked by default) shows how many files there are and their size; untick it for a smaller, database-only backup. Nothing is stored on the server. Large databases can take a few minutes; keep the page open. The file contains password hashes and all project data, so store it securely. Each download (or failure) is recorded in **System logs** as an `EXPORT` entry.
 
-To restore, load the file into an **empty** database with `psql` from PostgreSQL 17 or newer:
+To restore, unpack the archive, load `database.sql` into an **empty** database with `psql` from PostgreSQL 17 or newer, and copy `attachments/` into the attachment directory (`MARREQ_ATTACHMENTS_DIR`, the `marreq_attachments` Docker volume):
 
 ```bash
-gunzip -c marreq-backup_YYYYMMDD_HHMMSS.sql.gz | psql "$DATABASE_URL"
+tar xzf marreq-backup_YYYYMMDD_HHMMSS.tar.gz
+psql "$DATABASE_URL" < marreq-backup_YYYYMMDD_HHMMSS/database.sql
+cp -a marreq-backup_YYYYMMDD_HHMMSS/attachments/. "$MARREQ_ATTACHMENTS_DIR"/
 ```
 
-The download contains the database only. Attachment files live in the `marreq_attachments` Docker volume (the directory set by `MARREQ_ATTACHMENTS_DIR`). Back that up at the same time; see *Backup and Restore* in the database setup guide.
+For the Docker volume commands (and the file owner), see *Backup and Restore* in the database setup guide. A database-only backup needs the attachments volume backed up separately.
 
 Available on self-hosted (`marreq-server`) installations only. In the hosted cloud mode the page explains that backups are managed by the hosting operator.
 

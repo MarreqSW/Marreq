@@ -133,7 +133,25 @@ pub struct ReqifArchive {
 }
 
 impl ReqifArchive {
+    /// Open a ReqIFZ archive: [`Self::open_with`] for `.reqif` documents,
+    /// requiring at least one.
     pub fn open(path: &Path, limits: ArchiveLimits) -> Result<Self, ArchiveError> {
+        let archive = Self::open_with(path, limits, is_reqif_document)?;
+        if archive.documents.is_empty() {
+            return Err(ArchiveError::NoDocument);
+        }
+        Ok(archive)
+    }
+
+    /// Open any ZIP archive with the same safety checks (paths, symlinks,
+    /// encryption, duplicates, entry count, total size, zip bombs), listing
+    /// the entries `is_document` accepts as documents. Also used for project
+    /// bundles with files (issue #341).
+    pub fn open_with(
+        path: &Path,
+        limits: ArchiveLimits,
+        is_document: impl Fn(&str) -> bool,
+    ) -> Result<Self, ArchiveError> {
         let mut zip = ZipArchive::new(File::open(path)?)?;
         if zip.len() > limits.max_entries {
             return Err(ArchiveError::TooManyEntries(limits.max_entries));
@@ -175,13 +193,10 @@ impl ReqifArchive {
             if folded.insert(name.to_lowercase(), name.clone()).is_some() {
                 return Err(ArchiveError::Duplicate(raw));
             }
-            if is_reqif_document(&name) {
+            if is_document(&name) {
                 documents.push(name.clone());
             }
             entries.insert(name, index);
-        }
-        if documents.is_empty() {
-            return Err(ArchiveError::NoDocument);
         }
         Ok(Self {
             zip,
@@ -291,7 +306,7 @@ pub fn is_precompressed(content_type: &str) -> bool {
         || content_type.starts_with("application/vnd.oasis.opendocument")
 }
 
-/// Write a ReqIFZ archive: the document first, then the files.
+/// Write a ZIP archive (ReqIFZ, project bundle): the document first, then the files.
 pub fn write_reqifz(
     dest: &Path,
     document_name: &str,

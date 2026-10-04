@@ -243,7 +243,7 @@ pub async fn export_requirements_reqif(
     ))
 }
 
-/// A ReqIFZ archive streamed from a temp file that is already unlinked.
+/// A ZIP archive (ReqIFZ, project bundle) streamed from a temp file that is already unlinked.
 #[derive(Responder)]
 #[response(status = 200, content_type = "application/zip")]
 pub struct ArchiveDownload {
@@ -265,6 +265,21 @@ async fn reqifz_download(
     .await
     .map_err(|e| ApiError::Internal(e.to_string()))?
     .map_err(|e| ApiError::Internal(format!("could not build the ReqIFZ archive: {e}")))?;
+    stream_archive(path, filename).await
+}
+
+fn require_storage(
+    storage: Option<crate::api::attachments::Storage>,
+) -> ApiResult<std::sync::Arc<crate::storage::AttachmentStorage>> {
+    storage.map(|s| s.0).ok_or_else(|| {
+        ApiError::Internal(
+            "attachment storage is not configured; exports with files are unavailable".into(),
+        )
+    })
+}
+
+/// Open an archive built in a temp file, unlink it and stream it.
+async fn stream_archive(path: std::path::PathBuf, filename: String) -> ApiResult<ArchiveDownload> {
     let opened = NamedFile::open(&path).await;
     let _ = std::fs::remove_file(&path);
     let file =
@@ -275,16 +290,6 @@ async fn reqifz_download(
             "Content-Disposition",
             format!("attachment; filename=\"{filename}\""),
         ),
-    })
-}
-
-fn require_storage(
-    storage: Option<crate::api::attachments::Storage>,
-) -> ApiResult<std::sync::Arc<crate::storage::AttachmentStorage>> {
-    storage.map(|s| s.0).ok_or_else(|| {
-        ApiError::Internal(
-            "attachment storage is not configured; ReqIFZ export is unavailable".into(),
-        )
     })
 }
 
@@ -391,4 +396,42 @@ pub async fn export_project_bundle(
         bytes,
         format!("project-{}-bundle.json", project.slug),
     ))
+}
+
+/// `GET /projects/<id>/exports/bundle.zip`: the project bundle plus the
+/// attachment files of its requirements and verifications (issue #341).
+#[get("/projects/<project_id>/exports/bundle.zip")]
+pub async fn export_project_bundle_zip(
+    access: ProjectAccessOrBearer,
+    project_id: i32,
+    state: &State<AppState>,
+    storage: Option<crate::api::attachments::Storage>,
+) -> ApiResult<ArchiveDownload> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let storage = require_storage(storage)?;
+    let project = state
+        .repo_read()
+        .get_project_by_id(project_id)
+        .map_err(ApiError::from)?;
+    let app_state = state.inner().clone();
+    let path = rocket::tokio::task::spawn_blocking(move || {
+        project_bundle::export_bundle_archive(&app_state, &storage, project_id)
+    })
+    .await
+    .map_err(|e| ApiError::Internal(e.to_string()))?
+    .map_err(bundle_archive_error)?;
+    stream_archive(path, format!("project-{}-bundle.zip", project.slug)).await
+}
+
+pub(crate) fn bundle_archive_error(error: project_bundle::BundleArchiveError) -> ApiError {
+    match error {
+        project_bundle::BundleArchiveError::Invalid(msg) => ApiError::BadRequest(msg),
+        project_bundle::BundleArchiveError::Repo(e) => ApiError::from(e),
+        project_bundle::BundleArchiveError::Io(e) => ApiError::Internal(e.to_string()),
+    }
 }

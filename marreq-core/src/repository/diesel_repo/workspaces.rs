@@ -141,13 +141,19 @@ impl crate::repository::SessionRepository for DieselRepo {
     fn find_active_session(
         &self,
         token_hash: &str,
-        now: chrono::NaiveDateTime,
+        cutoffs: &crate::repository::SessionCutoffs,
     ) -> Result<Option<crate::models::entities::Session>, RepoError> {
         use schema::sessions::dsl;
         let mut conn = self.get_conn()?;
-        dsl::sessions
+        let mut query = dsl::sessions
             .filter(dsl::token_hash.eq(token_hash))
-            .filter(dsl::expires_at.gt(now))
+            .filter(dsl::expires_at.gt(cutoffs.now))
+            .filter(dsl::created_at.gt(cutoffs.created_after))
+            .into_boxed();
+        if let Some(seen_after) = cutoffs.seen_after {
+            query = query.filter(dsl::last_seen_at.gt(seen_after));
+        }
+        query
             .first::<crate::models::entities::Session>(conn.as_mut())
             .optional()
             .map_err(RepoError::from)
@@ -157,13 +163,18 @@ impl crate::repository::SessionRepository for DieselRepo {
         &mut self,
         token_hash: &str,
         now: chrono::NaiveDateTime,
-    ) -> Result<(), RepoError> {
+        older_than: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError> {
         use schema::sessions::dsl;
         let mut conn = self.get_conn()?;
-        diesel::update(dsl::sessions.filter(dsl::token_hash.eq(token_hash)))
-            .set(dsl::last_seen_at.eq(now))
-            .execute(conn.as_mut())?;
-        Ok(())
+        let touched = diesel::update(
+            dsl::sessions
+                .filter(dsl::token_hash.eq(token_hash))
+                .filter(dsl::last_seen_at.lt(older_than)),
+        )
+        .set(dsl::last_seen_at.eq(now))
+        .execute(conn.as_mut())?;
+        Ok(touched > 0)
     }
 
     fn delete_session(&mut self, token_hash: &str) -> Result<(), RepoError> {
@@ -181,11 +192,31 @@ impl crate::repository::SessionRepository for DieselRepo {
         Ok(())
     }
 
-    fn purge_expired_sessions(&mut self, now: chrono::NaiveDateTime) -> Result<usize, RepoError> {
+    fn purge_expired_sessions(
+        &mut self,
+        cutoffs: &crate::repository::SessionCutoffs,
+    ) -> Result<usize, RepoError> {
         use schema::sessions::dsl;
         let mut conn = self.get_conn()?;
-        let n =
-            diesel::delete(dsl::sessions.filter(dsl::expires_at.le(now))).execute(conn.as_mut())?;
+        let n = match cutoffs.seen_after {
+            Some(seen_after) => diesel::delete(
+                dsl::sessions.filter(
+                    dsl::expires_at
+                        .le(cutoffs.now)
+                        .or(dsl::created_at.le(cutoffs.created_after))
+                        .or(dsl::last_seen_at.le(seen_after)),
+                ),
+            )
+            .execute(conn.as_mut())?,
+            None => diesel::delete(
+                dsl::sessions.filter(
+                    dsl::expires_at
+                        .le(cutoffs.now)
+                        .or(dsl::created_at.le(cutoffs.created_after)),
+                ),
+            )
+            .execute(conn.as_mut())?,
+        };
         Ok(n)
     }
 }

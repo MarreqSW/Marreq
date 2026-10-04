@@ -14,6 +14,7 @@ pub mod password_policy;
 pub mod provider;
 pub mod rate_limiter;
 pub mod session;
+pub mod session_config;
 pub mod transaction_cookie;
 
 pub use config::*;

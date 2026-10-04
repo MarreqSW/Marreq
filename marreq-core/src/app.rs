@@ -194,6 +194,11 @@ pub fn build_with_auth(
         rocket = rocket.attach(sweep);
     }
 
+    #[cfg(not(any(test, feature = "test-helpers")))]
+    {
+        rocket = rocket.attach(crate::auth::session::SessionSweep);
+    }
+
     for fairing in extra_fairings {
         rocket = rocket.attach(fairing);
     }

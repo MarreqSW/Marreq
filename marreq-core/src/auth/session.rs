@@ -10,9 +10,13 @@
 //! works by deleting the row (single-device logout, password change, or
 //! "log out everywhere"). Mirrors the existing [`crate::models::EmailToken`]
 //! design.
+//!
+//! Lifetimes (absolute and idle) come from
+//! [`crate::auth::session_config::SessionConfig`] (issue #285).
 
 use crate::app::AppState;
-use crate::models::entities::NewSession;
+use crate::auth::session_config::SessionConfig;
+use crate::models::entities::{NewSession, Session};
 use crate::repository::SessionRepository;
 use crate::repository::errors::RepoError;
 use base64::Engine;
@@ -25,9 +29,6 @@ pub const SESSION_COOKIE: &str = "__Host-session";
 
 /// Name used when not using HTTPS (e.g. localhost).
 const SESSION_COOKIE_INSECURE: &str = "session";
-
-/// Lifetime of a fresh session.
-const SESSION_TTL_DAYS: i64 = 30;
 
 /// 256 bits of entropy → base64url ≈ 43 chars.
 const TOKEN_BYTES: usize = 32;
@@ -95,7 +96,7 @@ pub fn set_session_cookie<R: SessionRepository>(
 ) -> Result<(), RepoError> {
     let raw = generate_raw_token();
     let token_hash = hash_token(&raw);
-    let expires_at = chrono::Utc::now().naive_utc() + chrono::Duration::days(SESSION_TTL_DAYS);
+    let expires_at = SessionConfig::current().expires_at(chrono::Utc::now().naive_utc());
 
     let new = NewSession {
         token_hash,
@@ -110,26 +111,28 @@ pub fn set_session_cookie<R: SessionRepository>(
     Ok(())
 }
 
-/// Resolve the cookie to a `user_id`, validating the session against the DB.
-/// Returns `None` if no cookie, an unknown token, or expiry.
-///
-/// `last_seen_at` is *not* updated here (would require a write lock from a
-/// read-only guard path); a periodic background job can opportunistically
-/// refresh it via [`SessionRepository::touch_session`].
-pub fn read_session_user_id<R: SessionRepository>(
-    cookies: &CookieJar<'_>,
-    repo: &R,
-) -> Option<i32> {
+fn active_session<R: SessionRepository>(cookies: &CookieJar<'_>, repo: &R) -> Option<Session> {
     let raw = [SESSION_COOKIE, SESSION_COOKIE_INSECURE]
         .into_iter()
         .find_map(|n| cookies.get_private(n).map(|c| c.value().to_owned()))?;
     let token_hash = hash_token(&raw);
-    let now = chrono::Utc::now().naive_utc();
-
-    repo.find_active_session(&token_hash, now)
+    let cutoffs = SessionConfig::current().cutoffs(chrono::Utc::now().naive_utc());
+    repo.find_active_session(&token_hash, &cutoffs)
         .ok()
         .flatten()
-        .map(|s| s.user_id)
+}
+
+/// Resolve the cookie to a `user_id`, validating the session against the DB.
+/// Returns `None` if no cookie, an unknown token, or a session past its
+/// absolute or idle limit.
+///
+/// This does not record activity; the authenticating guards use
+/// [`authenticate_session_via_state`], which does.
+pub fn read_session_user_id<R: SessionRepository>(
+    cookies: &CookieJar<'_>,
+    repo: &R,
+) -> Option<i32> {
+    active_session(cookies, repo).map(|s| s.user_id)
 }
 
 /// Variant for callers that only have an [`AppState`] in hand and don't
@@ -137,6 +140,43 @@ pub fn read_session_user_id<R: SessionRepository>(
 pub fn read_session_user_id_via_state(cookies: &CookieJar<'_>, state: &AppState) -> Option<i32> {
     let repo = state.try_repo_read().ok()?;
     read_session_user_id(cookies, &*repo)
+}
+
+/// Request header that marks automatic requests (e.g. notification polling):
+/// they authenticate as usual but do not count as activity for the idle limit.
+pub const BACKGROUND_REQUEST_HEADER: &str = "X-Marreq-Background";
+
+/// Whether the request carries `X-Marreq-Background: 1`.
+pub fn is_background_request(request: &rocket::Request<'_>) -> bool {
+    request.headers().get_one(BACKGROUND_REQUEST_HEADER) == Some("1")
+}
+
+/// Resolve the cookie to a `user_id` like [`read_session_user_id`] and record
+/// the activity: `last_seen_at` is refreshed when it is older than
+/// [`SessionConfig::touch_interval`] (a write at most once per interval), and
+/// not at all for `background` requests. Touch failures are ignored.
+pub fn authenticate_session_via_state(
+    cookies: &CookieJar<'_>,
+    state: &AppState,
+    background: bool,
+) -> Option<i32> {
+    let session = {
+        let repo = state.try_repo_read().ok()?;
+        active_session(cookies, &*repo)?
+    };
+    if !background {
+        let config = SessionConfig::current();
+        let now = chrono::Utc::now().naive_utc();
+        let older_than = now
+            - chrono::Duration::from_std(config.touch_interval()).unwrap_or(chrono::Duration::MAX);
+        if session.last_seen_at < older_than
+            && let Ok(mut repo) = state.try_repo_write()
+            && let Err(e) = repo.touch_session(&session.token_hash, now, older_than)
+        {
+            eprintln!("[marreq] session: could not record activity ({e})");
+        }
+    }
+    Some(session.user_id)
 }
 
 /// Revoke the current session (if any) and clear the cookies.
@@ -168,6 +208,47 @@ pub fn revoke_all_user_sessions<R: SessionRepository>(repo: &mut R, user_id: i32
     let _ = repo.delete_user_sessions(user_id);
 }
 
+/// How often [`SessionSweep`] deletes expired sessions.
+pub const SESSION_SWEEP_INTERVAL: std::time::Duration = std::time::Duration::from_secs(60 * 60);
+
+/// Liftoff fairing that deletes sessions past their absolute or idle limit
+/// every [`SESSION_SWEEP_INTERVAL`]. Lookups already reject them; this only
+/// keeps the table small. The delete is idempotent, so every replica may run it.
+pub struct SessionSweep;
+
+#[rocket::async_trait]
+impl rocket::fairing::Fairing for SessionSweep {
+    fn info(&self) -> rocket::fairing::Info {
+        rocket::fairing::Info {
+            name: "Expired session sweep",
+            kind: rocket::fairing::Kind::Liftoff,
+        }
+    }
+
+    async fn on_liftoff(&self, rocket: &rocket::Rocket<rocket::Orbit>) {
+        let Some(state) = rocket.state::<AppState>().cloned() else {
+            return;
+        };
+        rocket::tokio::spawn(async move {
+            let mut tick = rocket::tokio::time::interval(SESSION_SWEEP_INTERVAL);
+            loop {
+                tick.tick().await;
+                let state = state.clone();
+                let swept = rocket::tokio::task::spawn_blocking(move || {
+                    let cutoffs = SessionConfig::current().cutoffs(chrono::Utc::now().naive_utc());
+                    let mut repo = state.try_repo_write().map_err(|e| e.to_string())?;
+                    repo.purge_expired_sessions(&cutoffs)
+                        .map_err(|e| e.to_string())
+                })
+                .await;
+                if let Ok(Err(e)) = swept {
+                    eprintln!("[marreq] expired session sweep failed: {e}");
+                }
+            }
+        });
+    }
+}
+
 /// Test helper: insert a session row for `user_id` and return the cookie that
 /// authenticates as that user. Tests call this *after* constructing the
 /// Rocket [`AppState`] but before launching the [`rocket::local::blocking::Client`].
@@ -175,7 +256,7 @@ pub fn revoke_all_user_sessions<R: SessionRepository>(repo: &mut R, user_id: i32
 pub fn test_session_cookie_for(state: &AppState, user_id: i32) -> Cookie<'static> {
     let raw = generate_raw_token();
     let token_hash = hash_token(&raw);
-    let expires_at = chrono::Utc::now().naive_utc() + chrono::Duration::days(SESSION_TTL_DAYS);
+    let expires_at = SessionConfig::current().expires_at(chrono::Utc::now().naive_utc());
     let new = NewSession {
         token_hash,
         user_id,

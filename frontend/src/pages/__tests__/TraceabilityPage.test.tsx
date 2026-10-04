@@ -50,6 +50,17 @@ beforeEach(() => {
 });
 
 describe('TraceabilityPage views', () => {
+  // Issue #377: the heading names the active tab instead of always "Traceability matrix".
+  it.each([
+    ['', 'Coverage graph'],
+    ['?view=hierarchy', 'Hierarchy'],
+    ['?view=dsm', 'Dependency structure matrix'],
+    ['?view=matrix', 'Traceability matrix'],
+  ])('titles %s as %s', (search, title) => {
+    renderPage(search);
+    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent(title);
+  });
+
   it('opens the DSM from ?view=dsm', () => {
     renderPage('?view=dsm');
     expect(screen.getByText('dsm view')).toBeInTheDocument();

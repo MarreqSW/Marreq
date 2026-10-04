@@ -942,7 +942,7 @@ export default function EditRequirementPage() {
             <div className="bg-stitch-surface rounded-xl shadow-xs border border-stitch-border p-6">
               <div className="flex items-center gap-2 mb-6">
                 <span className="material-symbols-outlined text-stitch-accent text-xl">account_tree</span>
-                <h3 className="text-sm font-bold font-headline text-stitch-accent">Traceability matrix</h3>
+                <h3 className="text-sm font-bold font-headline text-stitch-accent">Traceability</h3>
               </div>
               <div className="space-y-6">
                 <div>

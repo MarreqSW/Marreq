@@ -40,6 +40,16 @@ export default function TraceabilityPage() {
     setSearchParams(params, { replace: true });
   };
 
+  // The heading names the active tab (issue #377).
+  const title =
+    view === 'hierarchy'
+      ? 'Hierarchy'
+      : view === 'dsm'
+        ? 'Dependency structure matrix'
+        : view === 'matrix'
+          ? 'Traceability matrix'
+          : 'Coverage graph';
+
   const subtitle =
     view === 'hierarchy'
       ? 'Parent ↔ child links between requirements and between verifications.'
@@ -59,7 +69,7 @@ export default function TraceabilityPage() {
             <span className="text-stitch-accent font-bold">Traceability</span>
           </nav>
           <h2 className="text-2xl md:text-3xl font-extrabold text-stitch-fg tracking-tight font-headline">
-            Traceability matrix
+            {title}
           </h2>
           <p className="text-stitch-muted text-sm mt-2 max-w-2xl">{subtitle}</p>
         </div>

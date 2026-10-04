@@ -158,12 +158,13 @@ pub fn build_with_auth(
         crate::storage::AttachmentStorage::local(attachments_config),
     ));
 
+    let mut sweep = None;
     let mut rocket = rocket::custom(figment)
         .manage(AppState { repo })
         .manage(attachment_storage)
         .manage(auth_config)
         .manage(mode)
-        .manage(crate::auth::rate_limiter::LoginRateLimiter::new())
+        .manage(login_rate_limiter(&mut sweep))
         .manage(crate::api::oauth::OAuthRegistrationRateLimiter::new())
         .mount("/", root_routes)
         .mount("/api", api_routes)
@@ -189,11 +190,52 @@ pub fn build_with_auth(
         rocket = rocket.attach(crate::app::MyDbConn::fairing());
     }
 
+    if let Some(sweep) = sweep {
+        rocket = rocket.attach(sweep);
+    }
+
     for fairing in extra_fairings {
         rocket = rocket.attach(fairing);
     }
 
     rocket
+}
+
+/// The login rate limiter on the configured store (issue #286): the shared
+/// `login_rate_limits` table by default, with its expiry sweep put in `sweep`,
+/// or process-local maps (`MARREQ_RATE_LIMIT_STORE=memory`, and test builds,
+/// which have no database pool).
+fn login_rate_limiter(
+    sweep: &mut Option<crate::auth::rate_limiter::postgres::RateLimitSweep>,
+) -> crate::auth::rate_limiter::LoginRateLimiter {
+    use crate::auth::rate_limiter::LoginRateLimiter;
+    #[cfg(not(any(test, feature = "test-helpers")))]
+    {
+        use crate::auth::rate_limiter::config::{RateLimitConfig, RateLimitStoreKind};
+        use crate::auth::rate_limiter::postgres::{PostgresRateLimitStore, RateLimitSweep};
+
+        let config = crate::config::AppConfig::try_current()
+            .map(|c| c.rate_limit.clone())
+            .unwrap_or_else(|| RateLimitConfig::from_env(&mut Vec::new()));
+        if config.store == RateLimitStoreKind::Postgres {
+            match PostgresRateLimitStore::from_shared_pool() {
+                Ok(store) => {
+                    eprintln!("[marreq] login rate limit store: postgres (shared by all replicas)");
+                    let store = Arc::new(store);
+                    *sweep = Some(RateLimitSweep::new(Arc::clone(&store), config.retention));
+                    return LoginRateLimiter::with_store(store);
+                }
+                Err(e) => eprintln!(
+                    "[marreq] WARNING: login rate limit store: postgres is unavailable ({e}); \
+                     falling back to process-local counters"
+                ),
+            }
+        } else {
+            eprintln!("[marreq] login rate limit store: memory (this process only)");
+        }
+    }
+    let _ = sweep;
+    LoginRateLimiter::new()
 }
 
 /// Rocket's configuration with the upload limits raised, where needed, so a

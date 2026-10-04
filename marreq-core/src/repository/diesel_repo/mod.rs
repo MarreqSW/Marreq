@@ -147,6 +147,12 @@ pub fn init_connection_pool() -> Result<(), Box<dyn std::error::Error>> {
         .map_err(|_| "connection pool already initialized".into())
 }
 
+/// The application's shared connection pool (for stores outside the
+/// repository, e.g. the login rate limiter).
+pub fn shared_pool() -> Result<Arc<ConnectionPool>, Box<dyn std::error::Error>> {
+    get_pool()
+}
+
 fn get_pool() -> Result<Arc<ConnectionPool>, Box<dyn std::error::Error>> {
     CONNECTION_POOL.get().cloned().ok_or_else(|| {
         "connection pool not initialized (call init_connection_pool from app::build_with())".into()

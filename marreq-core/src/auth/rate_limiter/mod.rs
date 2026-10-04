@@ -18,10 +18,11 @@
 //!   delays.  It holds an [`Arc<dyn RateLimitStore>`] and is therefore
 //!   trivially swappable in tests or when running behind an HA proxy.
 //!
-//! The default store is [`store::InMemoryRateLimitStore`], which mirrors the
-//! original two-`Mutex<HashMap>` design.  A future Postgres-backed store can
-//! be plugged in via [`LoginRateLimiter::with_store`] without touching the
-//! login handler or any tests.
+//! Two stores exist: [`postgres::PostgresRateLimitStore`] (the server
+//! default, shared by every replica; issue #286) and
+//! [`store::InMemoryRateLimitStore`] (process-local, `MARREQ_RATE_LIMIT_STORE=memory`
+//! and tests). The store is chosen at startup and plugged in via
+//! [`LoginRateLimiter::with_store`] without touching the login handler.
 //!
 //! ## Policy
 //!
@@ -35,6 +36,8 @@
 //! Delays are applied with `std::thread::sleep`, which is safe inside Rocket's
 //! synchronous route thread pool.
 
+pub mod config;
+pub mod postgres;
 pub mod store;
 
 use std::net::IpAddr;

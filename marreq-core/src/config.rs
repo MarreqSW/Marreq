@@ -11,6 +11,7 @@
 
 use std::sync::OnceLock;
 
+use crate::auth::rate_limiter::config::RateLimitConfig;
 use crate::cors::CorsPolicy;
 use crate::services::semantic_search::config::SemanticSearchConfig;
 use crate::storage::AttachmentsConfig;
@@ -38,6 +39,8 @@ pub struct AppConfig {
     pub semantic: SemanticSearchConfig,
     /// Attachment storage directory and size limits.
     pub attachments: AttachmentsConfig,
+    /// Login rate-limit store (shared Postgres or process-local; issue #286).
+    pub rate_limit: RateLimitConfig,
 }
 
 static CONFIG: OnceLock<AppConfig> = OnceLock::new();
@@ -110,6 +113,7 @@ impl AppConfig {
 
         let semantic = SemanticSearchConfig::from_env();
         let attachments = AttachmentsConfig::from_env(&mut issues);
+        let rate_limit = RateLimitConfig::from_env(&mut issues);
 
         if !issues.is_empty() {
             return Err(ConfigError { issues });
@@ -125,6 +129,7 @@ impl AppConfig {
             csrf_allowed_origins,
             semantic,
             attachments,
+            rate_limit,
         })
     }
 

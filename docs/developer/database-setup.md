@@ -325,6 +325,20 @@ Files are named by their SHA-256 (`ab/cd/<hash>`), so a restored directory
 can be checked with `sha256sum`. Files that no database row references are
 harmless. A row whose file is missing gives a 404 on download.
 
+## Login rate-limit table
+
+`login_rate_limits` (migration `2026-10-06-000001_login_rate_limits`) holds
+the shared failed-login counters and lockouts (issue #286; see *Login rate
+limiting* in [authentication.md](authentication.md)). It needs no maintenance:
+rows are deleted on a successful login and swept after
+`MARREQ_RATE_LIMIT_RETENTION_HOURS`. To lift every lockout at once, for example
+after a misconfigured client locked out an account:
+
+```sql
+DELETE FROM login_rate_limits;                                   -- everything
+DELETE FROM login_rate_limits WHERE scope_key = 'alice';         -- one username (canonical, lower case)
+```
+
 ## Upgrading from PostgreSQL 15
 
 The Compose stack uses PostgreSQL 17 (`pgvector/pgvector:pg17-trixie`) on a new

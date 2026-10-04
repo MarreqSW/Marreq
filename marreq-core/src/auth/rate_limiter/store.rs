@@ -7,11 +7,11 @@
 //! locked_until)` state used by the brute-force limiter so that the policy
 //! layer can run unchanged against:
 //!
-//! * an in-process `Mutex<HashMap>` ([`InMemoryRateLimitStore`], default),
-//!   suitable for single-instance deployments; and
-//! * a future shared backend (e.g. Postgres advisory locks + a TTL table),
-//!   wired in via [`super::LoginRateLimiter::with_store`] without touching
-//!   any callers.
+//! * an in-process `Mutex<HashMap>` ([`InMemoryRateLimitStore`]), suitable
+//!   for a single instance and for tests; and
+//! * the shared PostgreSQL table ([`super::postgres::PostgresRateLimitStore`],
+//!   the server default since issue #286), wired in via
+//!   [`super::LoginRateLimiter::with_store`] without touching any callers.
 //!
 //! ## Atomicity contract
 //!
@@ -60,9 +60,9 @@ pub trait RateLimitStore: Send + Sync {
 
 /// In-process store backed by two mutex-protected hash maps.
 ///
-/// This is the default and is appropriate for single-instance deployments.
-/// For HA deployments a shared backend (e.g. Postgres) should be used so
-/// brute-force counters survive across replicas.
+/// Appropriate for a single instance (`MARREQ_RATE_LIMIT_STORE=memory`) and
+/// tests. Counters are not shared between replicas and are lost on restart;
+/// the server default is [`super::postgres::PostgresRateLimitStore`].
 pub struct InMemoryRateLimitStore {
     by_username: Mutex<HashMap<String, AttemptRecord>>,
     by_ip: Mutex<HashMap<IpAddr, AttemptRecord>>,

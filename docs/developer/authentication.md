@@ -202,8 +202,44 @@ browser session.
 
 Sessions currently have a 30-day absolute expiry stored in `expires_at`.
 `last_seen_at` is recorded but is not an enforced idle timeout and normal reads
-do not write-touch the session. Multi-instance deployments should also replace
-the default in-memory login rate-limit store with a shared `RateLimitStore`
-backend. Idle expiry and throttled session touching are tracked in #285; the
-shared rate-limit backend is tracked in #286. They are not represented as
-stronger guarantees than the current code provides.
+do not write-touch the session. Idle expiry and throttled session touching are
+tracked in #285; they are not represented as stronger guarantees than the
+current code provides.
+
+## Login rate limiting
+
+`POST /api/auth/login` is protected by `LoginRateLimiter`
+(`marreq-core/src/auth/rate_limiter/`), keyed separately by canonical username
+and by client IP: a progressive delay from the 3rd consecutive failure (2 s ×
+(failures − 2), at most 30 s), a 15-minute lockout after 10 failures for a username or
+20 for an IP, and a reset of both on a successful login.
+
+The policy keeps its counters in a `RateLimitStore`, chosen at startup with
+`MARREQ_RATE_LIMIT_STORE` (issue #286):
+
+| Value | Store | Use |
+|---|---|---|
+| `postgres` (default) | `PostgresRateLimitStore`, table `login_rate_limits` | Any deployment; required with more than one backend replica |
+| `memory` | `InMemoryRateLimitStore` | A single process (counters are per process and lost on restart) |
+
+The PostgreSQL store:
+
+- **Shares** counters and lockouts between all replicas that use the same
+  database, and keeps them over restarts.
+- **Updates atomically**: each read-modify-write runs in one transaction that
+  locks the subject's row (`SELECT … FOR UPDATE`), so concurrent failures on
+  different replicas are all counted.
+- **Uses the database clock** for lockout times (`now()`), so clock skew
+  between replicas does not shorten or extend a lockout.
+- **Expires** records: a successful login deletes them, and every replica
+  sweeps the table every 10 minutes, removing records idle for longer than
+  `MARREQ_RATE_LIMIT_RETENTION_HOURS` (default 24) whose lockout, if any, has
+  ended. (In memory, a count below the lockout threshold never decays.)
+- **Fails open** on database errors: the attempt is allowed and the error is
+  logged (`[marreq] login rate limit store: …`). The login itself needs the
+  same database, and failing closed would lock every user out after an outage.
+- Stores the canonical username or the IP address only while a subject has
+  failures or a lockout; no passwords.
+
+Startup logs the active store (`[marreq] login rate limit store: postgres`).
+Test builds always use the in-memory store.

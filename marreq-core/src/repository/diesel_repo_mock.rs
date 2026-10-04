@@ -1818,20 +1818,32 @@ impl RequirementsRepository for DieselRepoMock {
         let next_link_id = self.next_link_id;
 
         let result = (|| {
+            let old_version_id = self
+                .get_requirement_by_id(requirement_id)?
+                .current_version_id;
             let updated = self.edit_requirement(new)?;
             if !updated {
                 return Err(RepoError::NotFound);
             }
             self.set_requirement_verification_methods(requirement_id, verification_method_ids)?;
             let requirement = self.get_requirement_by_id(requirement_id)?;
-            if let Some(values) = custom_fields
-                && let Some(version_id) = requirement.current_version_id
-            {
-                let values: Vec<(i32, Option<String>)> = values
-                    .iter()
-                    .map(|v| (v.field_id, v.value.clone()))
-                    .collect();
-                self.set_custom_field_values_for_version(version_id, &values)?;
+            if let Some(version_id) = requirement.current_version_id {
+                // Without custom fields in the update, keep the previous version's (issue #369).
+                let values: Vec<(i32, Option<String>)> = match custom_fields {
+                    Some(values) => values
+                        .iter()
+                        .map(|v| (v.field_id, v.value.clone()))
+                        .collect(),
+                    None => self
+                        .custom_field_values
+                        .iter()
+                        .filter(|(vid, _, _)| Some(*vid) == old_version_id)
+                        .map(|(_, field_id, value)| (*field_id, value.clone()))
+                        .collect(),
+                };
+                if custom_fields.is_some() || !values.is_empty() {
+                    self.set_custom_field_values_for_version(version_id, &values)?;
+                }
             }
             let requirement = self.get_requirement_by_id(requirement_id)?;
             self.mark_links_suspect_for_requirement(

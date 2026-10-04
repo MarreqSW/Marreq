@@ -1460,6 +1460,74 @@ mod tests {
         assert_eq!(detail.verification_method_ids, vec![1]);
     }
 
+    /// The SPA editor's PATCH never sends custom fields: the new version must
+    /// keep them (issue #369).
+    #[rocket::async_test]
+    async fn patch_without_custom_fields_keeps_them_on_the_new_version() {
+        use crate::models::CustomFieldDefinitionPayload;
+        use crate::repository::CustomFieldRepository;
+
+        let mut repo = DieselRepoMock::default();
+        repo.create_custom_field_definition(
+            1,
+            &CustomFieldDefinitionPayload {
+                label: "Priority".into(),
+                field_type: "text".into(),
+                enum_values: None,
+                sort_order: Some(0),
+            },
+        )
+        .unwrap();
+        let client = client_with_repo(repo).await;
+        let mut req = sample_requirement("Power");
+        req["custom_fields"] = json!([{ "field_id": 1, "value": "High" }]);
+        let created: Value = client
+            .post("/api/requirements")
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(req.to_string())
+            .dispatch()
+            .await
+            .into_json()
+            .await
+            .unwrap();
+        let id = created.get("id").and_then(Value::as_i64).unwrap() as i32;
+
+        let patch = client
+            .patch(format!("/api/requirements/{id}"))
+            .header(ContentType::JSON)
+            .private_cookie(auth_cookie(&client))
+            .body(json!({ "justification": "Customer power budget" }).to_string())
+            .dispatch()
+            .await;
+        assert_eq!(patch.status(), Status::Ok);
+
+        let versions: Vec<RequirementVersion> = client
+            .get(format!("/api/requirements/{id}/versions"))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await
+            .into_json()
+            .await
+            .unwrap();
+        assert_eq!(versions.len(), 2);
+        let latest = versions.iter().map(|v| v.id).max().unwrap();
+        let detail: RequirementVersionDetail = client
+            .get(format!("/api/requirements/{id}/versions/{latest}"))
+            .private_cookie(auth_cookie(&client))
+            .dispatch()
+            .await
+            .into_json()
+            .await
+            .unwrap();
+        assert_eq!(
+            detail.version.justification.as_deref(),
+            Some("Customer power budget")
+        );
+        assert_eq!(detail.custom_fields.len(), 1);
+        assert_eq!(detail.custom_fields[0].value.as_deref(), Some("High"));
+    }
+
     #[rocket::async_test]
     async fn patch_without_fields_returns_bad_request() {
         let client = client_with_repo(DieselRepoMock::default()).await;

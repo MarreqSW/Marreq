@@ -8,6 +8,8 @@ import {
 } from 'react';
 import { getCsrfToken, getDashboard, logoutJson } from '@/api/client';
 import type { DashboardPayload, DashboardProject } from '@/api/types';
+import { parseUser } from '@/utils/parseUser';
+import { allowUserDrafts, clearUserDrafts } from '@/utils/requirementDraft';
 
 type DashboardContextValue = {
   dashboard: DashboardPayload | null;
@@ -32,6 +34,8 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const d = await getDashboard();
+      const user = parseUser(d.user);
+      if (user) allowUserDrafts(user.id);
       setDashboard(d);
       setCsrfToken(d.csrf_token);
     } catch (e) {
@@ -54,9 +58,12 @@ export function DashboardProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     const token = csrfToken ?? (await getCsrfToken());
     await logoutJson(token);
+    // Signing out on a shared browser must not leave unsaved requirement text behind (issue #255).
+    const user = parseUser(dashboard?.user);
+    if (user) clearUserDrafts(user.id);
     setDashboard(null);
     setCsrfToken(null);
-  }, [csrfToken]);
+  }, [csrfToken, dashboard?.user]);
 
   const value = useMemo(
     () => ({

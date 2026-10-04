@@ -1,6 +1,7 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useOutletContext, useParams } from 'react-router-dom';
 import {
+  ApiError,
   createRequirementVersionLink,
   deleteRequirementGlobally,
   deleteRequirementVersionLink,
@@ -53,6 +54,39 @@ import {
   markApprovedEditPrompted,
 } from '@/utils/confirmEditApprovedRequirement';
 import StatementEditor from '@/components/StatementEditor';
+import DraftStatus from '@/components/DraftStatus';
+import { useDraftAutosave } from '@/hooks/useDraftAutosave';
+import { parseUser } from '@/utils/parseUser';
+import {
+  clearDraft,
+  formatDraftTime,
+  readDraft,
+  requirementDraftKey,
+} from '@/utils/requirementDraft';
+
+/** The form fields kept in a local draft (issue #255). */
+type EditDraftValues = {
+  title: string;
+  description: string;
+  justification: string;
+  statusId: number;
+  categoryId: number;
+  applicabilityId: number;
+  authorId: number;
+  reviewerId: number;
+};
+
+/** A stored draft found when the page opened. */
+type DraftOffer = {
+  savedAt: string;
+  values: EditDraftValues;
+  /** The requirement was saved again after the draft was taken. */
+  stale: boolean;
+  applied: boolean;
+};
+
+const SESSION_EXPIRED_MESSAGE =
+  'Your session has expired. Your changes are kept on this device: sign in again and reopen this requirement.';
 
 function approvalLabel(state: string): string {
   return state.replace(/_/g, ' ').toUpperCase();
@@ -130,8 +164,16 @@ export default function EditRequirementPage() {
     reviewer_id: 0,
   });
 
-  const load = useCallback(async () => {
+  /**
+   * Reload the page data. `resetForm: false` keeps the form as typed (used
+   * after parent-link changes, which do not touch the form fields).
+   */
+  const loadSeq = useRef(0);
+  const load = useCallback(async ({ resetForm = true }: { resetForm?: boolean } = {}) => {
     if (!Number.isFinite(pid) || !Number.isFinite(rid)) return;
+    // Only the latest load may fill the form: an overlapping older one (StrictMode
+    // runs the effect twice) would otherwise overwrite a restored draft.
+    const seq = ++loadSeq.current;
     setLoadError(null);
     try {
       const [
@@ -165,6 +207,7 @@ export default function EditRequirementPage() {
         getMyPermissions(pid).catch(() => null),
         getProjectReviewers(pid).catch(() => ({ user_ids: [] as number[] })),
       ]);
+      if (seq !== loadSeq.current) return;
       setProjectReviewerIds(revPool.user_ids);
       setPerms(permRes);
       setDetail(d);
@@ -179,6 +222,8 @@ export default function EditRequirementPage() {
       setVerifications(ver.filter((x) => x.project_id === pid));
       setUsers(u);
       setLinkTypes(lt);
+      setNewLinkType((t) => (t && lt.includes(t) ? t : lt[0] ?? ''));
+      if (!resetForm) return;
 
       setTitle(d.title);
       setDescription(d.description);
@@ -198,7 +243,6 @@ export default function EditRequirementPage() {
         author_id: d.author_id,
         reviewer_id: d.reviewer_id,
       });
-      setNewLinkType((t) => (t && lt.includes(t) ? t : lt[0] ?? ''));
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load requirement');
     }
@@ -341,6 +385,98 @@ export default function EditRequirementPage() {
     setSaveError(null);
   }
 
+  // ---- Local draft (issue #255) -------------------------------------------
+  const me = useMemo(() => parseUser(dashboard?.user), [dashboard?.user]);
+  const draftKey =
+    me && Number.isFinite(pid) && Number.isFinite(rid) ? requirementDraftKey(me.id, pid, rid) : null;
+  const [draftChecked, setDraftChecked] = useState(false);
+  const [draftOffer, setDraftOffer] = useState<DraftOffer | null>(null);
+
+  const draftValues = useMemo<EditDraftValues>(
+    () => ({
+      title,
+      description,
+      justification,
+      statusId,
+      categoryId,
+      applicabilityId,
+      authorId,
+      reviewerId,
+    }),
+    [title, description, justification, statusId, categoryId, applicabilityId, authorId, reviewerId],
+  );
+
+  const autosave = useDraftAutosave({
+    key: draftChecked ? draftKey : null,
+    dirty,
+    values: draftValues,
+    baseVersionId: detail?.current_version_id ?? null,
+    // A draft from an older version stays untouched until the user decides.
+    paused: Boolean(draftOffer && !draftOffer.applied),
+  });
+
+  /** Put draft values into the form, keeping loaded values that are no longer valid. */
+  const applyDraft = useCallback(
+    (v: EditDraftValues) => {
+      setTitle(v.title);
+      setDescription(v.description);
+      setJustification(v.justification);
+      if (perms?.is_project_reviewer && statuses.some((s) => s.id === v.statusId)) {
+        setStatusId(v.statusId);
+      }
+      if (categories.some((c) => c.id === v.categoryId)) setCategoryId(v.categoryId);
+      if (applicability.some((a) => a.id === v.applicabilityId)) {
+        setApplicabilityId(v.applicabilityId);
+      }
+      if (members.some((m) => m.user_id === v.authorId)) setAuthorId(v.authorId);
+      if (members.some((m) => m.user_id === v.reviewerId)) setReviewerId(v.reviewerId);
+    },
+    [perms, statuses, categories, applicability, members],
+  );
+
+  // Once the requirement is loaded, look for a draft left by an earlier visit.
+  useEffect(() => {
+    if (draftChecked || !detail || !draftKey) return;
+    setDraftChecked(true);
+    const stored = readDraft<EditDraftValues>(draftKey);
+    if (!stored) return;
+    const v = stored.values;
+    const unchanged =
+      v.title === baseline.title &&
+      v.description === baseline.description &&
+      v.justification === baseline.justification &&
+      v.statusId === baseline.status_id &&
+      v.categoryId === baseline.category_id &&
+      v.applicabilityId === baseline.applicability_id &&
+      v.authorId === baseline.author_id &&
+      v.reviewerId === baseline.reviewer_id;
+    if (unchanged) {
+      clearDraft(draftKey);
+      return;
+    }
+    const stale = stored.baseVersionId !== detail.current_version_id;
+    if (!stale) applyDraft(v);
+    setDraftOffer({ savedAt: stored.savedAt, values: v, stale, applied: !stale });
+  }, [draftChecked, detail, draftKey, baseline, applyDraft]);
+
+  function restoreDraft() {
+    if (!draftOffer) return;
+    applyDraft(draftOffer.values);
+    setDraftOffer({ ...draftOffer, applied: true });
+  }
+
+  function discardDraft() {
+    if (draftOffer?.applied) revert();
+    if (draftKey) clearDraft(draftKey);
+    setDraftOffer(null);
+  }
+
+  function cancelEditing() {
+    if (dirty && !window.confirm('Discard unsaved changes?')) return;
+    autosave.discard();
+    navigate(`${basePath}/requirements`);
+  }
+
   function formatTs(iso: string): string {
     try {
       const d = new Date(iso);
@@ -371,6 +507,7 @@ export default function EditRequirementPage() {
     setSaveError(null);
     try {
       await deleteRequirementGlobally(rid, token);
+      autosave.discard();
       await refreshDashboard();
       navigate(`${basePath}/requirements`);
     } catch (e) {
@@ -409,11 +546,16 @@ export default function EditRequirementPage() {
       if (authorId !== baseline.author_id) patch.author_id = authorId;
       if (reviewerId !== baseline.reviewer_id) patch.reviewer_id = reviewerId;
       await patchRequirementByProject(pid, rid, patch, token);
+      // Saved as a version: the local draft has done its job.
+      autosave.discard();
+      setDraftOffer(null);
       await refreshDashboard();
       await load();
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : 'Save failed');
+      if (err instanceof ApiError && err.status === 401) setSaveError(SESSION_EXPIRED_MESSAGE);
+      else setSaveError(err instanceof Error ? err.message : 'Save failed');
     } finally {
+      autosave.resume();
       setSaving(false);
     }
   }
@@ -428,7 +570,7 @@ export default function EditRequirementPage() {
     setSaveError(null);
     try {
       await deleteRequirementVersionLink(pid, linkId, token);
-      await load();
+      await load({ resetForm: false });
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'Failed to remove parent link');
     } finally {
@@ -466,7 +608,7 @@ export default function EditRequirementPage() {
         token,
       );
       setNewParentId('');
-      await load();
+      await load({ resetForm: false });
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : 'Failed to add parent link');
     } finally {
@@ -535,6 +677,38 @@ export default function EditRequirementPage() {
           {detail.reference_code || `REQ-${detail.id}`}
         </span>
       </nav>
+
+      {draftOffer ? (
+        <div
+          role="region"
+          aria-label="Unsaved draft"
+          className="max-w-7xl mx-auto mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-600/35 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100"
+        >
+          <p>
+            {draftOffer.stale && !draftOffer.applied
+              ? `You have unsaved changes from ${formatDraftTime(draftOffer.savedAt)}, but this requirement has been saved again since. Restore them only if they still apply.`
+              : `Recovered unsaved changes from ${formatDraftTime(draftOffer.savedAt)}. They are not saved until you press Save.`}
+          </p>
+          <div className="flex items-center gap-2">
+            {draftOffer.stale && !draftOffer.applied ? (
+              <button
+                type="button"
+                onClick={restoreDraft}
+                className="rounded-md border border-amber-700/40 px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-amber-500/15"
+              >
+                Restore draft
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={discardDraft}
+              className="rounded-md px-3 py-1.5 text-xs font-bold uppercase tracking-wider hover:bg-amber-500/15"
+            >
+              Discard draft
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       <form onSubmit={onSave} className="max-w-7xl mx-auto">
         <div className="grid grid-cols-12 gap-8">
@@ -1049,16 +1223,20 @@ export default function EditRequirementPage() {
             <button
               type="button"
               className="text-xs font-bold uppercase tracking-wider text-stitch-muted hover:text-stitch-fg px-3 py-2"
-              onClick={() => navigate(`${basePath}/requirements`)}
+              onClick={cancelEditing}
             >
               Cancel
             </button>
           </div>
           <div className="flex items-center gap-3">
+            <DraftStatus status={autosave.status} savedAt={autosave.savedAt} dirty={dirty} saving={saving} />
             <button
               type="button"
               disabled={!dirty}
-              onClick={revert}
+              onClick={() => {
+                revert();
+                setDraftOffer(null);
+              }}
               className="px-5 py-2 text-xs font-bold uppercase tracking-widest text-stitch-muted hover:bg-stitch-elevated transition-colors rounded-lg disabled:opacity-40"
             >
               Revert changes

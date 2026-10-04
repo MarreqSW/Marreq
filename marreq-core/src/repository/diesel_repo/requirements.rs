@@ -578,6 +578,32 @@ impl RequirementsRepository for DieselRepo {
                             .execute(conn)
                             .map_err(map_db_error)?;
                     }
+                } else {
+                    // An update that does not edit custom fields keeps them on the
+                    // new version, as it keeps parent links (issue #369).
+                    let carried: Vec<(i32, Option<String>)> = custom_field_values::table
+                        .filter(custom_field_values::requirement_version_id.eq(old_version.id))
+                        .select((
+                            custom_field_values::custom_field_definition_id,
+                            custom_field_values::value,
+                        ))
+                        .load(conn)?;
+                    if !carried.is_empty() {
+                        let rows: Vec<_> = carried
+                            .iter()
+                            .map(|(field_id, value)| {
+                                (
+                                    custom_field_values::requirement_version_id.eq(new_version_id),
+                                    custom_field_values::custom_field_definition_id.eq(*field_id),
+                                    custom_field_values::value.eq(value.as_deref()),
+                                )
+                            })
+                            .collect();
+                        diesel::insert_into(custom_field_values::table)
+                            .values(&rows)
+                            .execute(conn)
+                            .map_err(map_db_error)?;
+                    }
                 }
                 let now = chrono::Utc::now().naive_utc();
                 diesel::update(matrix::table.filter(matrix::req_id.eq(requirement_id)))

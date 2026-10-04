@@ -1,11 +1,20 @@
 #!/usr/bin/env node
 /**
- * Capture screenshots for the Marreq User Manual.
- * Run with the Marreq app and DB up: cargo run -p marreq-server (and docker compose -f docker/docker-compose.yml up -d db, ./marreq-core/scripts/db_setup.sh --seed).
- * Then: node docs/user-manual/capture_screenshots.mjs
- * Or: node capture_screenshots.mjs from docs/user-manual.
+ * Capture the screenshots of the Marreq User Manual (docs/user-manual/screenshots/).
  *
- * Requires: npm install -D playwright && npx playwright install chromium
+ * Needs a running SPA with demo data (marreq-core/scripts/init_complete.sql),
+ * e.g. the Vite dev server in front of a backend:
+ *
+ *   MARREQ_API_PROXY_TARGET=http://127.0.0.1:<backend port> npx vite --port <port>   (in frontend/)
+ *   MARREQ_URL=http://127.0.0.1:<port> npm run screenshots:manual
+ *
+ * Environment:
+ *   MARREQ_URL                 SPA address (default http://localhost:5173)
+ *   MARREQ_USER / MARREQ_PASS  account to sign in with (default alice / ChangeMe123!)
+ *   MARREQ_PROJECT_BASE_PATH   project to show (default /space-project)
+ *   MARREQ_CHROME              Chrome/Chromium executable, if Playwright's own browser is not installed
+ *
+ * Use a throwaway database: the script only reads, but it signs in.
  */
 
 import { chromium } from 'playwright';
@@ -15,86 +24,103 @@ import { mkdir } from 'fs/promises';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.join(__dirname, 'screenshots');
-const BASE_URL = process.env.MARREQ_URL || 'http://localhost:8000';
+const BASE_URL = (process.env.MARREQ_URL || 'http://localhost:5173').replace(/\/$/, '');
 const USER = process.env.MARREQ_USER || 'alice';
 const PASS = process.env.MARREQ_PASS || 'ChangeMe123!';
-const PROJECT_BASE_PATH =
-  process.env.MARREQ_PROJECT_BASE_PATH || '/space-project';
+const PROJECT = process.env.MARREQ_PROJECT_BASE_PATH || '/space-project';
 
 async function main() {
   await mkdir(OUT_DIR, { recursive: true });
-
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    executablePath: process.env.MARREQ_CHROME || undefined,
+  });
   const context = await browser.newContext({
-    viewport: { width: 1200, height: 800 },
-    ignoreHTTPSErrors: true,
+    viewport: { width: 1280, height: 800 },
+    colorScheme: 'light',
   });
   const page = await context.newPage();
 
   const shot = async (name) => {
+    // Let fonts, icons and transitions settle before taking the picture.
+    await page.waitForLoadState('networkidle');
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(300);
     const file = path.join(OUT_DIR, `${name}.png`);
     await page.screenshot({ path: file, fullPage: false });
     console.log('Saved', file);
   };
+  const open = async (route, readyText) => {
+    await page.goto(`${BASE_URL}${route}`, { waitUntil: 'domcontentloaded' });
+    if (readyText) await page.getByText(readyText).first().waitFor({ timeout: 15000 });
+  };
 
   try {
-    // Login page (before logging in)
-    await page.goto(BASE_URL, { waitUntil: 'networkidle' });
-    await page.waitForSelector('input[name="username"]', { timeout: 10000 }).catch(() => null);
-    if (await page.locator('input[name="username"]').isVisible()) {
-      await shot('login');
-      await page.fill('input[name="username"]', USER);
-      await page.fill('input[name="password"]', PASS);
-      await page.click('button[type="submit"]');
-      await page.waitForURL(u => !u.pathname.endsWith('/login') || u.search.includes('error'), { timeout: 5000 }).catch(() => {});
-    }
+    await open('/login');
+    await page.locator('#username').waitFor();
+    await shot('login');
+    await page.fill('#username', USER);
+    await page.fill('#password', PASS);
+    await page.click('button[type="submit"]');
+    await page.waitForURL((u) => !u.pathname.startsWith('/login'), { timeout: 15000 });
 
-    // Home (after login)
-    await page.goto(BASE_URL, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(800);
-    await shot('home');
+    await open(`${PROJECT}/dashboard`, 'Project overview');
+    await shot('dashboard');
 
-    // Projects list
-    await page.goto(`${BASE_URL}/projects`, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(500);
-    await shot('projects');
-
-    // Project detail
-    await page.goto(`${BASE_URL}${PROJECT_BASE_PATH}`, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(500);
-    await shot('project-detail');
-
-    // Requirements list
-    await page.goto(`${BASE_URL}${PROJECT_BASE_PATH}/requirements`, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(800);
+    await open(`${PROJECT}/requirements`, /Requirements found/);
     await shot('requirements-list');
 
-    // Requirement detail (assume requirement 1 exists in the selected project)
-    await page.goto(`${BASE_URL}${PROJECT_BASE_PATH}/requirements/show/1`, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(500);
+    await open(`${PROJECT}/requirements/1`, 'Requirement statement');
     await shot('requirement-detail');
 
-    // Verifications list
-    await page.goto(`${BASE_URL}${PROJECT_BASE_PATH}/verifications`, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(500);
-    await shot('tests-list');
+    await open(`${PROJECT}/requirements/new`, 'Create requirement');
+    await page.locator('footer').last().scrollIntoViewIfNeeded();
+    await shot('requirement-create');
 
-    // Matrix
-    await page.goto(`${BASE_URL}${PROJECT_BASE_PATH}/matrix`, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(800);
+    await open(`${PROJECT}/verifications`, 'Pass rate');
+    await shot('verifications-list');
+
+    await open(`${PROJECT}/traceability?view=matrix`, 'Clear all filters');
     await shot('matrix');
 
-    // Baselines list
-    await page.goto(`${BASE_URL}${PROJECT_BASE_PATH}/baselines`, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(500);
+    // Requirements only; select the node nearest the middle of the canvas and
+    // zoom in on it (a whole project is too small to read at fit-to-view).
+    await open(`${PROJECT}/traceability?view=hierarchy&kind=reqs`);
+    const nodes = page.locator('.react-flow__node');
+    await nodes.first().waitFor({ timeout: 15000 });
+    const pane = await page.locator('.react-flow__pane').boundingBox();
+    const middle = pane.y + pane.height / 2;
+    let best = 0;
+    let bestDistance = Infinity;
+    for (let i = 0; i < (await nodes.count()); i += 1) {
+      const box = await nodes.nth(i).boundingBox();
+      const distance = box ? Math.abs(box.y + box.height / 2 - middle) : Infinity;
+      if (distance < bestDistance) [best, bestDistance] = [i, distance];
+    }
+    const node = nodes.nth(best);
+    await node.click({ force: true });
+    await page.getByText('Add child').first().waitFor();
+    const box = await node.boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    for (let i = 0; i < 7; i += 1) {
+      await page.mouse.wheel(0, -300);
+      await page.waitForTimeout(120);
+    }
+    await shot('hierarchy');
+
+    await open(`${PROJECT}/traceability?view=dsm`, 'Link types');
+    await shot('dsm');
+
+    await open(`${PROJECT}/baselines`, 'Create baseline');
     await shot('baselines-list');
 
-    // Reports
-    await page.goto(`${BASE_URL}${PROJECT_BASE_PATH}/reports`, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(500);
+    await open(`${PROJECT}/reports`, 'Coverage & gaps');
     await shot('reports');
-  } catch (e) {
-    console.error(e);
+
+    await open(`${PROJECT}/settings/members`, 'Save reviewer list');
+    await shot('settings-members');
+  } catch (err) {
+    console.error('Capture failed:', err.message);
     process.exitCode = 1;
   } finally {
     await browser.close();

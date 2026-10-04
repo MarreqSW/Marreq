@@ -1,17 +1,35 @@
-# Screenshots for the User Manual
+# User Manual Screenshots
 
-The User Manual references these screenshots. To generate them:
+Screenshots of the SPA for the [User Manual](../user-manual.md), captured with
+`capture_screenshots.mjs` (Playwright, 1280×800, light theme) as `alice` in the
+*Space Project* demo data.
 
-1. **Start Marreq** (database and app):
-   - `docker compose -f docker/docker-compose.yml up -d db`
-   - `./marreq-core/scripts/db_setup.sh --seed` (if needed)
-   - `cargo run --bin marreq`
+To recapture:
 
-2. **Install Playwright** (one-time):
-   - `npm install`
-   - `npx playwright install chromium`
+1. Start a **throwaway** database and backend with the demo data:
+   `marreq-core/scripts/init_complete.sql`, plus
+   `seed_space_project_bulk_requirements.sql` and
+   `seed_space_project_bulk_tests_and_hierarchy.sql` for a fuller project.
+   Add a project reviewer and a couple of baselines.
+2. Start the SPA against that backend (in `frontend/`):
+   `MARREQ_API_PROXY_TARGET=http://127.0.0.1:<backend port> npx vite --port <port>`
+3. From the repository root:
+   `MARREQ_URL=http://127.0.0.1:<port> npm run screenshots:manual`
+   (add `MARREQ_CHROME=/usr/bin/google-chrome` if Playwright's browser is not installed).
 
-3. **Capture screenshots** (from the repo root):
-   - `node docs/user-manual/capture_screenshots.mjs`
+| File | Page |
+|------|------|
+| login.png | Sign-in page |
+| dashboard.png | Project dashboard (Project overview) |
+| requirements-list.png | Requirements, Table view |
+| requirement-detail.png | Requirement detail page |
+| requirement-create.png | Create requirement form (bottom, with the Create button) |
+| verifications-list.png | Verifications list |
+| matrix.png | Traceability › Matrix |
+| hierarchy.png | Traceability › Hierarchy with a selected node and **Add child** |
+| dsm.png | Traceability › DSM |
+| baselines-list.png | Baselines (Create baseline form and list) |
+| reports.png | Reports & exports (Coverage & gaps) |
+| settings-members.png | Project settings › Members & reviewers |
 
-Screenshots are saved here as `login.png`, `home.png`, `projects.png`, `project-detail.png`, `requirements-list.png`, `requirement-detail.png`, `tests-list.png` (verifications list), `matrix.png`, `baselines-list.png`, and `reports.png`. The script uses a project-slug base path and defaults to `/space-project`. Optional env vars: `MARREQ_URL` (default `http://localhost:8000`), `MARREQ_USER`, `MARREQ_PASS`, and `MARREQ_PROJECT_BASE_PATH`.
+After changing screenshots or the manual, rebuild the HTML with `../build.sh`.

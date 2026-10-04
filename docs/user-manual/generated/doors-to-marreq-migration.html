@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <title>Migrating from DOORS to Marreq</title>
+  <style>
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+<h1 id="migrating-from-ibm-doors-to-marreq">Migrating from IBM DOORS to
+Marreq</h1>
+<p>This guide is for teams familiar with <strong>IBM DOORS</strong>
+(DOORS Classic or DOORS Next Generation) who want to move to
+<strong>Marreq</strong>. It compares concepts and workflows between the
+two tools and gives a step-by-step migration path using ReqIF and
+Excel.</p>
+<hr />
+<h2 id="introduction">Introduction</h2>
+<p><strong>Marreq</strong> (Requirement Manager) is a web-based
+requirements and test management system. It provides hierarchical
+requirements, version history, comments, approval workflow,
+requirement–test traceability, immutable baselines, and ReqIF 1.2
+import/export—all self-hosted, with no per-seat licensing.</p>
+<p>If you are moving from DOORS, you can expect:</p>
+<ul>
+<li><strong>Familiar ideas</strong>: Projects, requirements, attributes,
+baselines, and ReqIF interchange.</li>
+<li><strong>Different structure</strong>: Marreq has no “module” entity;
+requirements live in projects. Traceability is centered on
+requirement–test links and parent/child hierarchy.</li>
+<li><strong>Practical migration</strong>: Export from DOORS as ReqIF 1.2
+(or Excel), create a Marreq project, import, then verify and optionally
+re-establish traceability and create baselines.</li>
+</ul>
+<p>For day-to-day use of Marreq after migration, see the <a
+href="user-manual.html">User Manual</a> and <a
+href="workflow.html">Typical Workflow</a>.</p>
+<hr />
+<h2 id="concept-mapping-doors-vs-marreq">Concept mapping: DOORS vs
+Marreq</h2>
+<p>The following diagram and table show how DOORS concepts map to
+Marreq.</p>
+<pre class="mermaid"><code>flowchart LR
+  subgraph doors [DOORS]
+    M[Module]
+    O[Object / Requirement]
+    A[Attributes]
+    L[Links]
+    B[Baseline]
+  end
+  subgraph marreq [Marreq]
+    P[Project]
+    R[Requirement + Versions]
+    C[Categories / Applicability / Custom fields]
+    T[Traceability matrix req-test]
+    B2[Baseline]
+  end
+  M --&gt; P
+  O --&gt; R
+  A --&gt; C
+  L --&gt; T
+  B --&gt; B2</code></pre>
+<table>
+<thead>
+<tr>
+<th>DOORS concept</th>
+<th>Marreq equivalent</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Project / Folder</strong></td>
+<td><strong>Project</strong></td>
+<td>Marreq has a single top-level “project”; there are no nested
+folders. One DOORS project (or set of formal modules) often maps to one
+Marreq project.</td>
+</tr>
+<tr>
+<td><strong>Formal module</strong></td>
+<td><strong>Project</strong> (or one set of requirements in a
+project)</td>
+<td>Marreq has no separate “module” entity; requirements belong directly
+to a project. You can map one DOORS module to one Marreq project, or
+merge several modules into one project.</td>
+</tr>
+<tr>
+<td><strong>Object / requirement</strong></td>
+<td><strong>Requirement</strong> (with <strong>versions</strong>)</td>
+<td>Marreq stores the current content plus full history as immutable
+versions; DOORS object history maps to this version history.</td>
+</tr>
+<tr>
+<td><strong>Attributes</strong></td>
+<td><strong>Category</strong>, <strong>Applicability</strong>,
+<strong>Status</strong>, <strong>Custom fields</strong></td>
+<td>Map DOORS attributes (e.g. Status, Type, Safety) to Marreq’s
+category, applicability, requirement status, and project custom fields.
+Configure these in the project before or after import.</td>
+</tr>
+<tr>
+<td><strong>Links (in-module / cross-module)</strong></td>
+<td><strong>Traceability matrix</strong> (requirement–test) and
+<strong>parent/child</strong> requirement hierarchy</td>
+<td>Marreq emphasizes requirement–test traceability and parent/child
+links. DOORS “satisfied by” / “verifies” style links map to the matrix;
+structural links can map to parent/child.</td>
+</tr>
+<tr>
+<td><strong>Module baseline</strong></td>
+<td><strong>Project baseline</strong></td>
+<td>Both are immutable. A Marreq baseline is a snapshot of requirement
+versions and the traceability matrix at a point in time.</td>
+</tr>
+<tr>
+<td><strong>ReqIF export</strong></td>
+<td><strong>ReqIF 1.2 export</strong> (current or from baseline)</td>
+<td>ReqIF is the preferred interchange format for migrating from DOORS
+to Marreq.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="workflow-comparison">Workflow comparison</h2>
+<table>
+<thead>
+<tr>
+<th>Workflow</th>
+<th>DOORS (typical)</th>
+<th>Marreq (equivalent)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Authoring</strong></td>
+<td>Create and edit objects in modules; set attributes.</td>
+<td>Create and edit requirements in a project; set category,
+applicability, status, verification; optionally set parent requirement.
+See <a href="user-manual.html#4-requirements">User Manual §4
+Requirements</a>.</td>
+</tr>
+<tr>
+<td><strong>Review / approval</strong></td>
+<td>DOORS: change requests, reviews; DNG: lifecycle states.</td>
+<td>Marreq: Draft → Reviewed → Approved, with “Mark as Reviewed” and
+“Approve Requirement” (and comments). See <a
+href="workflow.html#4-review-and-approve-requirements">Workflow §4
+Review and approve</a>.</td>
+</tr>
+<tr>
+<td><strong>Linking / traceability</strong></td>
+<td>Create links between objects (or to test artifacts in DNG).</td>
+<td>Link each verification (test) to the requirements it verifies on the
+verification's edit page; the requirement page lists them under
+“Downstream (verifications)”, and <strong>Traceability › Matrix</strong>
+and Reports show coverage. See <a
+href="user-manual.html#5-test-management-verifications">User Manual §5
+Test Management</a> and <a href="user-manual.html#6-traceability">§6
+Traceability</a>.</td>
+</tr>
+<tr>
+<td><strong>Baselines</strong></td>
+<td>Create module (or stream) baseline; immutable.</td>
+<td>Create a <strong>project baseline</strong> (Baselines → Create
+baseline); immutable; export as ReqIF or use “Diff vs current” on
+requirements. See <a href="user-manual.html#7-baselines">User Manual §7
+Baselines</a>.</td>
+</tr>
+<tr>
+<td><strong>Export</strong></td>
+<td>ReqIF, CSV, PDF, etc.</td>
+<td>ReqIF 1.2 (current or from baseline), Excel (requirements, matrix,
+tests), PDF reports. See <a
+href="user-manual.html#9-reports--export">User Manual §9 Reports &amp;
+Export</a>.</td>
+</tr>
+<tr>
+<td><strong>Import</strong></td>
+<td>ReqIF, CSV into module/project.</td>
+<td><strong>Import ReqIF</strong> or <strong>Import Excel</strong> into
+a project; for Excel, map columns to Marreq fields. See <a
+href="user-manual.html#10-import">User Manual §10 Import</a>.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Authoring:</strong> In DOORS you work in modules and set
+object attributes. In Marreq you work in a project: each requirement has
+title, statement, rationale, category, applicability, status,
+verification methods, and optional parent. Version history is automatic
+on edit.</p>
+<p><strong>Review and approval:</strong> Marreq uses an explicit
+three-state workflow (Draft → Reviewed → Approved) with comments.
+Project owners/managers perform the transitions; the manual describes
+the actions and confirmation dialogs.</p>
+<p><strong>Traceability:</strong> Marreq links requirements to
+verifications (tests); the requirement detail page lists them with their
+status under “Downstream (verifications)”, and the Traceability › Matrix
+tab shows the whole grid. Coverage (requirements without tests, tests
+without requirements) appears in Reports. This is the main place to
+re-create traceability after migration if it was not carried over in
+ReqIF.</p>
+<p><strong>Baselines:</strong> As in DOORS, baselines are immutable. In
+Marreq you create a project baseline at a milestone, then can export it
+as ReqIF or compare individual requirements to the current version via
+“Diff vs current.”</p>
+<hr />
+<h2 id="migration-path">Migration path</h2>
+<ol type="1">
+<li><p><strong>Export from DOORS</strong></p>
+<ul>
+<li>Prefer <strong>ReqIF 1.2</strong> if your DOORS version supports it
+(preserves structure, attributes, and hierarchy where supported).</li>
+<li>Otherwise export to <strong>Excel or CSV</strong> with columns you
+can map to Marreq (e.g. title, description, id, status, parent).</li>
+</ul></li>
+<li><p><strong>Prepare Marreq</strong></p>
+<ul>
+<li>Create a <strong>project</strong> in Marreq (Projects → New project,
+or see <a href="user-manual.html#3-projects">User Manual §3
+Projects</a>).</li>
+<li>Optionally configure <strong>categories</strong>,
+<strong>applicability</strong>, and <strong>requirement
+statuses</strong> to match your DOORS attributes (see <a
+href="user-manual.html#8-categories-applicability--verification">User
+Manual §8</a>).</li>
+<li>Decide mapping: one Marreq project per DOORS module, or one project
+per DOORS project with multiple modules merged.</li>
+</ul></li>
+<li><p><strong>Import into Marreq</strong></p>
+<ul>
+<li><strong>ReqIF</strong>: Open the project, then <strong>Project
+settings › Import</strong> (or <strong>Create → Import</strong>); upload
+the <code>.reqif</code> file (or a <code>.reqifz</code> archive with
+attachments) and select <strong>Import ReqIF</strong>. See <a
+href="user-manual.html#102-importing-reqif">User Manual §10.2 Importing
+ReqIF</a>.</li>
+<li><strong>Excel</strong>: In <strong>Project settings ›
+Import</strong>, upload the file, map columns to Marreq fields (title,
+description, reference, status, category, etc.), then import. See <a
+href="user-manual.html#101-importing-from-excel-or-csv">User Manual
+§10.1 Importing from Excel or CSV</a>.</li>
+</ul></li>
+<li><p><strong>Verify and refine</strong></p>
+<ul>
+<li>Check the <strong>Requirements</strong> list (card/table/tree) and
+requirement detail pages.</li>
+<li>Confirm hierarchy (parent/child) and attributes (category,
+applicability, status). Edit requirements or adjust project
+configuration as needed.</li>
+</ul></li>
+<li><p><strong>Re-establish traceability</strong></p>
+<ul>
+<li>If requirement–test (or requirement–requirement) traceability was
+not brought in via ReqIF/Excel, create <strong>verifications</strong> in
+Marreq and tick the requirements each one verifies on its create or edit
+page (or import a <strong>Matrix links</strong> spreadsheet). See <a
+href="user-manual.html#5-test-management-verifications">User Manual §5
+Test Management</a> and <a href="user-manual.html#6-traceability">§6
+Traceability</a>.</li>
+</ul></li>
+<li><p><strong>Baselines and export</strong></p>
+<ul>
+<li>Create a <strong>baseline</strong> for the migrated state (Baselines
+→ Create baseline). Use <strong>Export ReqIF</strong> (from baseline) or
+Excel/PDF for audits. See <a href="user-manual.html#7-baselines">User
+Manual §7 Baselines</a> and <a
+href="user-manual.html#9-reports--export">§9 Reports &amp;
+Export</a>.</li>
+</ul></li>
+</ol>
+<p>For the full Marreq workflow (including project setup and
+configuration), see <a href="workflow.html">Workflow</a>.</p>
+<hr />
+<h2 id="where-marreq-differs">Where Marreq differs</h2>
+<ul>
+<li><strong>No “module” entity</strong>: Only projects and requirements.
+Multiple DOORS modules become one or more Marreq projects (or one
+project with all requirements).</li>
+<li><strong>Web-only</strong>: No thick client; use a browser. Optional
+REST API and MCP for integration.</li>
+<li><strong>Built-in test management</strong>: Tests and
+requirement–test traceability are first-class; DOORS often relies on
+external test tools or DNG test artifacts.</li>
+<li><strong>Approval workflow</strong>: Explicit Draft / Reviewed /
+Approved with comments; different from DOORS change requests or DNG
+lifecycle.</li>
+<li><strong>ReqIF scope</strong>: Marreq’s ReqIF 1.2 support focuses on
+requirements and comments (as Remarks). Traceability in ReqIF may be
+partial; document what your DOORS export includes and what you may need
+to re-link in Marreq.</li>
+</ul>
+<hr />
+<h2 id="references">References</h2>
+<ul>
+<li><a href="user-manual.html">User Manual</a> — Full Marreq usage:
+projects, requirements, test management, matrix, baselines, categories,
+reports, export/import, profile, administration.</li>
+<li><a href="workflow.html">Typical Workflow with Marreq</a> —
+End-to-end workflow from project setup through baselines and
+export.</li>
+<li><a href="user-manual.html#4-requirements">User Manual §4
+Requirements</a> — Requirements list, detail, create, edit, versions,
+comments, approval.</li>
+<li><a href="user-manual.html#6-traceability">User Manual §6
+Traceability</a> — Linking requirements to tests and coverage.</li>
+<li><a href="user-manual.html#7-baselines">User Manual §7 Baselines</a>
+— Creating baselines and exporting as ReqIF.</li>
+<li><a href="user-manual.html#9-reports--export">User Manual §9 Reports
+&amp; Export</a> — Excel and ReqIF export options.</li>
+<li><a href="user-manual.html#10-import">User Manual §10 Import</a> —
+Import ReqIF and Import Excel.</li>
+</ul>
+</body>
+</html>

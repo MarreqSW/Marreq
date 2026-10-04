@@ -95,15 +95,17 @@ INSERT INTO requirement_status (title, description, tag, project_id, is_system, 
     ('Finished', 'The requirement is finished and completed', 'Fsh', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#0e7490');
 
 -- Verification status definitions (is_system = true: default set, not editable/deletable)
-INSERT INTO verification_status (title, description, tag, project_id, is_system, tag_color) VALUES
-    ('Passed', 'The test has passed all criteria', 'Pass', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#15803d'),
-    ('Failed', 'The test has failed one or more criteria', 'Fail', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#b91c1c'),
-    ('Pending', 'The test is pending execution', 'Pend', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#b45309'),
-    ('In Progress', 'The test is currently being executed', 'Prog', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#1d4ed8'),
-    ('Passed', 'The test has passed all criteria', 'Pass', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#15803d'),
-    ('Failed', 'The test has failed one or more criteria', 'Fail', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#b91c1c'),
-    ('Pending', 'The test is pending execution', 'Pend', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#b45309'),
-    ('In Progress', 'The test is currently being executed', 'Prog', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#1d4ed8');
+-- outcome: what each status means for requirement close-out (see the
+-- 2026-10-04 verification_control migration).
+INSERT INTO verification_status (title, description, tag, project_id, is_system, tag_color, outcome) VALUES
+    ('Passed', 'The test has passed all criteria', 'Pass', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#15803d', 'passed'),
+    ('Failed', 'The test has failed one or more criteria', 'Fail', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#b91c1c', 'failed'),
+    ('Pending', 'The test is pending execution', 'Pend', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#b45309', 'not_run'),
+    ('In Progress', 'The test is currently being executed', 'Prog', (SELECT id FROM projects WHERE name = 'Space Project'), true, '#1d4ed8', 'in_progress'),
+    ('Passed', 'The test has passed all criteria', 'Pass', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#15803d', 'passed'),
+    ('Failed', 'The test has failed one or more criteria', 'Fail', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#b91c1c', 'failed'),
+    ('Pending', 'The test is pending execution', 'Pend', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#b45309', 'not_run'),
+    ('In Progress', 'The test is currently being executed', 'Prog', (SELECT id FROM projects WHERE name = 'Marreq Project'), true, '#1d4ed8', 'in_progress');
 
 -- Users with working passwords (all users have password: ChangeMe123!)
 -- Password hash (Argon2id):

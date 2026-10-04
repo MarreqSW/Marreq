@@ -63,8 +63,8 @@ flowchart LR
 |----------|------------------|----------------------|
 | **Authoring** | Create and edit objects in modules; set attributes. | Create and edit requirements in a project; set category, applicability, status, verification; optionally set parent requirement. See [User Manual §4 Requirements](user-manual.md#4-requirements). |
 | **Review / approval** | DOORS: change requests, reviews; DNG: lifecycle states. | Marreq: Draft → Reviewed → Approved, with “Mark as Reviewed” and “Approve Requirement” (and comments). See [Workflow §4 Review and approve](workflow.md#4-review-and-approve-requirements). |
-| **Linking / traceability** | Create links between objects (or to test artifacts in DNG). | Add links in the **Traceability matrix** (requirement ↔ test); view “Verified by” on the requirement detail page; use Reports for coverage. See [User Manual §5 Test Management](user-manual.md#5-test-management) and [§6 Traceability Matrix](user-manual.md#6-traceability-matrix). |
-| **Baselines** | Create module (or stream) baseline; immutable. | Create a **project baseline** (Baselines → New Baseline); immutable; export as ReqIF or use “Diff vs current” on requirements. See [User Manual §7 Baselines](user-manual.md#7-baselines). |
+| **Linking / traceability** | Create links between objects (or to test artifacts in DNG). | Link each verification (test) to the requirements it verifies on the verification's edit page; the requirement page lists them under “Downstream (verifications)”, and **Traceability › Matrix** and Reports show coverage. See [User Manual §5 Test Management](user-manual.md#5-test-management-verifications) and [§6 Traceability](user-manual.md#6-traceability). |
+| **Baselines** | Create module (or stream) baseline; immutable. | Create a **project baseline** (Baselines → Create baseline); immutable; export as ReqIF or use “Diff vs current” on requirements. See [User Manual §7 Baselines](user-manual.md#7-baselines). |
 | **Export** | ReqIF, CSV, PDF, etc. | ReqIF 1.2 (current or from baseline), Excel (requirements, matrix, tests), PDF reports. See [User Manual §9 Reports & Export](user-manual.md#9-reports--export). |
 | **Import** | ReqIF, CSV into module/project. | **Import ReqIF** or **Import Excel** into a project; for Excel, map columns to Marreq fields. See [User Manual §10 Import](user-manual.md#10-import). |
 
@@ -72,7 +72,7 @@ flowchart LR
 
 **Review and approval:** Marreq uses an explicit three-state workflow (Draft → Reviewed → Approved) with comments. Project owners/managers perform the transitions; the manual describes the actions and confirmation dialogs.
 
-**Traceability:** Marreq’s matrix links requirements to tests; the requirement detail page shows “Verified by” and a verification panel (pass/fail/pending). Coverage (requirements without tests, tests without requirements) appears in Reports. This is the main place to re-create traceability after migration if it was not carried over in ReqIF.
+**Traceability:** Marreq links requirements to verifications (tests); the requirement detail page lists them with their status under “Downstream (verifications)”, and the Traceability › Matrix tab shows the whole grid. Coverage (requirements without tests, tests without requirements) appears in Reports. This is the main place to re-create traceability after migration if it was not carried over in ReqIF.
 
 **Baselines:** As in DOORS, baselines are immutable. In Marreq you create a project baseline at a milestone, then can export it as ReqIF or compare individual requirements to the current version via “Diff vs current.”
 
@@ -85,23 +85,23 @@ flowchart LR
    - Otherwise export to **Excel or CSV** with columns you can map to Marreq (e.g. title, description, id, status, parent).
 
 2. **Prepare Marreq**
-   - Create a **project** in Marreq (Projects → New Project, or see [User Manual §3 Projects](user-manual.md#3-projects)).
+   - Create a **project** in Marreq (Projects → New project, or see [User Manual §3 Projects](user-manual.md#3-projects)).
    - Optionally configure **categories**, **applicability**, and **requirement statuses** to match your DOORS attributes (see [User Manual §8](user-manual.md#8-categories-applicability--verification)).
    - Decide mapping: one Marreq project per DOORS module, or one project per DOORS project with multiple modules merged.
 
 3. **Import into Marreq**
-   - **ReqIF**: Open the project, then **Import ReqIF** (Quick Actions or Admin); upload the ReqIF file and complete the import. See [User Manual §10.2 Importing ReqIF](user-manual.md#102-importing-reqif).
-   - **Excel**: Use **Import File** for the project; upload the file; map columns to Marreq fields (title, description, reference, status, category, etc.); run the import. See [User Manual §10.1 Importing from Excel](user-manual.md#101-importing-from-excel).
+   - **ReqIF**: Open the project, then **Project settings › Import** (or **Create → Import**); upload the `.reqif` file (or a `.reqifz` archive with attachments) and select **Import ReqIF**. See [User Manual §10.2 Importing ReqIF](user-manual.md#102-importing-reqif).
+   - **Excel**: In **Project settings › Import**, upload the file, map columns to Marreq fields (title, description, reference, status, category, etc.), then import. See [User Manual §10.1 Importing from Excel or CSV](user-manual.md#101-importing-from-excel-or-csv).
 
 4. **Verify and refine**
    - Check the **Requirements** list (card/table/tree) and requirement detail pages.
    - Confirm hierarchy (parent/child) and attributes (category, applicability, status). Edit requirements or adjust project configuration as needed.
 
 5. **Re-establish traceability**
-   - If requirement–test (or requirement–requirement) traceability was not brought in via ReqIF/Excel, create **tests** in Marreq and use the **Traceability matrix** to link requirements to tests. See [User Manual §5 Test Management](user-manual.md#5-test-management) and [§6 Traceability Matrix](user-manual.md#6-traceability-matrix).
+   - If requirement–test (or requirement–requirement) traceability was not brought in via ReqIF/Excel, create **verifications** in Marreq and tick the requirements each one verifies on its create or edit page (or import a **Matrix links** spreadsheet). See [User Manual §5 Test Management](user-manual.md#5-test-management-verifications) and [§6 Traceability](user-manual.md#6-traceability).
 
 6. **Baselines and export**
-   - Create a **baseline** for the migrated state (Baselines → New Baseline). Use **Export ReqIF** (from baseline) or Excel/PDF for audits. See [User Manual §7 Baselines](user-manual.md#7-baselines) and [§9 Reports & Export](user-manual.md#9-reports--export).
+   - Create a **baseline** for the migrated state (Baselines → Create baseline). Use **Export ReqIF** (from baseline) or Excel/PDF for audits. See [User Manual §7 Baselines](user-manual.md#7-baselines) and [§9 Reports & Export](user-manual.md#9-reports--export).
 
 For the full Marreq workflow (including project setup and configuration), see [Workflow](workflow.md).
 
@@ -122,7 +122,7 @@ For the full Marreq workflow (including project setup and configuration), see [W
 - [User Manual](user-manual.md) — Full Marreq usage: projects, requirements, test management, matrix, baselines, categories, reports, export/import, profile, administration.
 - [Typical Workflow with Marreq](workflow.md) — End-to-end workflow from project setup through baselines and export.
 - [User Manual §4 Requirements](user-manual.md#4-requirements) — Requirements list, detail, create, edit, versions, comments, approval.
-- [User Manual §6 Traceability Matrix](user-manual.md#6-traceability-matrix) — Linking requirements to tests and coverage.
+- [User Manual §6 Traceability](user-manual.md#6-traceability) — Linking requirements to tests and coverage.
 - [User Manual §7 Baselines](user-manual.md#7-baselines) — Creating baselines and exporting as ReqIF.
 - [User Manual §9 Reports & Export](user-manual.md#9-reports--export) — Excel and ReqIF export options.
 - [User Manual §10 Import](user-manual.md#10-import) — Import ReqIF and Import Excel.

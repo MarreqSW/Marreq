@@ -4,153 +4,8 @@
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
-  <title>user-manual</title>
+  <title>Marreq User Manual</title>
   <style>
-    html {
-      color: #1a1a1a;
-      background-color: #fdfdfd;
-    }
-    body {
-      margin: 0 auto;
-      max-width: 36em;
-      padding-left: 50px;
-      padding-right: 50px;
-      padding-top: 50px;
-      padding-bottom: 50px;
-      hyphens: auto;
-      overflow-wrap: break-word;
-      text-rendering: optimizeLegibility;
-      font-kerning: normal;
-    }
-    @media (max-width: 600px) {
-      body {
-        font-size: 0.9em;
-        padding: 12px;
-      }
-      h1 {
-        font-size: 1.8em;
-      }
-    }
-    @media print {
-      html {
-        background-color: white;
-      }
-      body {
-        background-color: transparent;
-        color: black;
-        font-size: 12pt;
-      }
-      p, h2, h3 {
-        orphans: 3;
-        widows: 3;
-      }
-      h2, h3, h4 {
-        page-break-after: avoid;
-      }
-    }
-    p {
-      margin: 1em 0;
-    }
-    a {
-      color: #1a1a1a;
-    }
-    a:visited {
-      color: #1a1a1a;
-    }
-    img {
-      max-width: 100%;
-    }
-    svg {
-      height: auto;
-      max-width: 100%;
-    }
-    h1, h2, h3, h4, h5, h6 {
-      margin-top: 1.4em;
-    }
-    h5, h6 {
-      font-size: 1em;
-      font-style: italic;
-    }
-    h6 {
-      font-weight: normal;
-    }
-    ol, ul {
-      padding-left: 1.7em;
-      margin-top: 1em;
-    }
-    li > ol, li > ul {
-      margin-top: 0;
-    }
-    blockquote {
-      margin: 1em 0 1em 1.7em;
-      padding-left: 1em;
-      border-left: 2px solid #e6e6e6;
-      color: #606060;
-    }
-    code {
-      font-family: Menlo, Monaco, Consolas, 'Lucida Console', monospace;
-      font-size: 85%;
-      margin: 0;
-      hyphens: manual;
-    }
-    pre {
-      margin: 1em 0;
-      overflow: auto;
-    }
-    pre code {
-      padding: 0;
-      overflow: visible;
-      overflow-wrap: normal;
-    }
-    .sourceCode {
-     background-color: transparent;
-     overflow: visible;
-    }
-    hr {
-      border: none;
-      border-top: 1px solid #1a1a1a;
-      height: 1px;
-      margin: 1em 0;
-    }
-    table {
-      margin: 1em 0;
-      border-collapse: collapse;
-      width: 100%;
-      overflow-x: auto;
-      display: block;
-      font-variant-numeric: lining-nums tabular-nums;
-    }
-    table caption {
-      margin-bottom: 0.75em;
-    }
-    tbody {
-      margin-top: 0.5em;
-      border-top: 1px solid #1a1a1a;
-      border-bottom: 1px solid #1a1a1a;
-    }
-    th {
-      border-top: 1px solid #1a1a1a;
-      padding: 0.25em 0.5em 0.25em 0.5em;
-    }
-    td {
-      padding: 0.125em 0.5em 0.25em 0.5em;
-    }
-    header {
-      margin-bottom: 4em;
-      text-align: center;
-    }
-    #TOC li {
-      list-style: none;
-    }
-    #TOC ul {
-      padding-left: 1.3em;
-    }
-    #TOC > ul {
-      padding-left: 0;
-    }
-    #TOC a:not(:hover) {
-      text-decoration: none;
-    }
     code{white-space: pre-wrap;}
     span.smallcaps{font-variant: small-caps;}
     div.columns{display: flex; gap: min(4vw, 1.5em);}
@@ -232,187 +87,20 @@
     code span.vs { color: #4070a0; } /* VerbatimString */
     code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
   </style>
+  <link rel="stylesheet" href="../styles.css" />
 </head>
 <body>
-<nav id="TOC" role="doc-toc">
-<ul>
-<li><a href="#marreq-user-manual" id="toc-marreq-user-manual">Marreq
-User Manual</a>
-<ul>
-<li><a href="#table-of-contents" id="toc-table-of-contents">Table of
-Contents</a></li>
-<li><a href="#introduction" id="toc-introduction">1.
-Introduction</a></li>
-<li><a href="#getting-started" id="toc-getting-started">2. Getting
-Started</a>
-<ul>
-<li><a href="#logging-in" id="toc-logging-in">2.1 Logging In</a></li>
-<li><a href="#home-page" id="toc-home-page">2.2 Home Page</a></li>
-<li><a href="#navigation" id="toc-navigation">2.3 Navigation</a></li>
-</ul></li>
-<li><a href="#projects" id="toc-projects">3. Projects</a>
-<ul>
-<li><a href="#viewing-projects" id="toc-viewing-projects">3.1 Viewing
-Projects</a></li>
-<li><a href="#creating-a-project-admin"
-id="toc-creating-a-project-admin">3.2 Creating a Project
-(Admin)</a></li>
-<li><a href="#editing-a-project" id="toc-editing-a-project">3.3 Editing
-a Project</a></li>
-<li><a href="#project-storage" id="toc-project-storage">3.4 Project
-Storage</a></li>
-<li><a href="#deleting-a-project" id="toc-deleting-a-project">3.5
-Deleting a Project</a></li>
-</ul></li>
-<li><a href="#requirements" id="toc-requirements">4. Requirements</a>
-<ul>
-<li><a href="#requirements-views" id="toc-requirements-views">4.1
-Requirements Views</a></li>
-<li><a href="#requirement-detail-page"
-id="toc-requirement-detail-page">4.2 Requirement Detail Page</a></li>
-<li><a href="#creating-a-requirement"
-id="toc-creating-a-requirement">4.3 Creating a Requirement</a></li>
-<li><a href="#editing-a-requirement" id="toc-editing-a-requirement">4.4
-Editing a Requirement</a></li>
-<li><a href="#version-history-diff" id="toc-version-history-diff">4.5
-Version History &amp; Diff</a></li>
-<li><a href="#comments" id="toc-comments">4.6 Comments</a></li>
-<li><a href="#duplicating-a-requirement"
-id="toc-duplicating-a-requirement">4.7 Duplicating a
-Requirement</a></li>
-<li><a href="#semantic-search-ai" id="toc-semantic-search-ai">4.8
-Semantic Search (AI)</a></li>
-<li><a href="#attachments" id="toc-attachments">4.9 Attachments</a></li>
-</ul></li>
-<li><a href="#test-management-verifications"
-id="toc-test-management-verifications">5. Test Management
-(Verifications)</a>
-<ul>
-<li><a href="#verifications-list" id="toc-verifications-list">5.1
-Verifications List</a></li>
-<li><a href="#verification-detail-page"
-id="toc-verification-detail-page">5.2 Verification Detail Page</a></li>
-<li><a href="#version-history-and-diff"
-id="toc-version-history-and-diff">5.2.1 Version history and
-diff</a></li>
-<li><a href="#creating-a-verification"
-id="toc-creating-a-verification">5.3 Creating a Verification</a></li>
-<li><a href="#editing-a-verification"
-id="toc-editing-a-verification">5.4 Editing a Verification</a></li>
-<li><a href="#updating-verification-status"
-id="toc-updating-verification-status">5.5 Updating Verification
-Status</a></li>
-<li><a href="#verification-hierarchy"
-id="toc-verification-hierarchy">5.6 Verification Hierarchy</a></li>
-<li><a href="#verification-control-and-close-out"
-id="toc-verification-control-and-close-out">5.7 Verification Control and
-Close-out</a></li>
-</ul></li>
-<li><a href="#traceability-matrix" id="toc-traceability-matrix">6.
-Traceability Matrix</a>
-<ul>
-<li><a href="#opening-the-matrix" id="toc-opening-the-matrix">6.1
-Opening the Matrix</a></li>
-<li><a href="#using-the-matrix" id="toc-using-the-matrix">6.2 Using the
-Matrix</a></li>
-<li><a href="#exporting-the-matrix" id="toc-exporting-the-matrix">6.3
-Exporting the Matrix</a></li>
-<li><a href="#dependency-structure-matrix-dsm"
-id="toc-dependency-structure-matrix-dsm">6.4 Dependency Structure Matrix
-(DSM)</a></li>
-</ul></li>
-<li><a href="#baselines" id="toc-baselines">7. Baselines</a>
-<ul>
-<li><a href="#baselines-list" id="toc-baselines-list">7.1 Baselines
-List</a></li>
-<li><a href="#creating-a-baseline" id="toc-creating-a-baseline">7.2
-Creating a Baseline</a></li>
-<li><a href="#viewing-a-baseline" id="toc-viewing-a-baseline">7.3
-Viewing a Baseline</a></li>
-<li><a href="#exporting-a-baseline-as-reqif"
-id="toc-exporting-a-baseline-as-reqif">7.4 Exporting a Baseline as
-ReqIF</a></li>
-</ul></li>
-<li><a href="#categories-applicability-verification"
-id="toc-categories-applicability-verification">8. Categories,
-Applicability &amp; Verification</a></li>
-<li><a href="#reports-export" id="toc-reports-export">9. Reports &amp;
-Export</a>
-<ul>
-<li><a href="#reports-page" id="toc-reports-page">9.1 Reports
-Page</a></li>
-<li><a href="#exporting-requirements-to-excel"
-id="toc-exporting-requirements-to-excel">9.2 Exporting Requirements to
-Excel</a></li>
-<li><a href="#exporting-verifications-to-excel"
-id="toc-exporting-verifications-to-excel">9.3 Exporting Verifications to
-Excel</a></li>
-<li><a href="#exporting-reqif" id="toc-exporting-reqif">9.4 Exporting
-ReqIF</a></li>
-<li><a href="#exporting-a-project-bundle-json"
-id="toc-exporting-a-project-bundle-json">9.5 Exporting a project bundle
-(JSON)</a></li>
-<li><a href="#report-documents-vcd-and-coverage-report"
-id="toc-report-documents-vcd-and-coverage-report">9.6 Report documents
-(VCD and coverage report)</a></li>
-</ul></li>
-<li><a href="#import" id="toc-import">10. Import</a>
-<ul>
-<li><a href="#importing-from-excel-or-csv"
-id="toc-importing-from-excel-or-csv">10.1 Importing from Excel or
-CSV</a></li>
-<li><a href="#importing-reqif" id="toc-importing-reqif">10.2 Importing
-ReqIF</a></li>
-<li><a href="#importing-a-project-bundle-json"
-id="toc-importing-a-project-bundle-json">10.3 Importing a project bundle
-(JSON)</a></li>
-</ul></li>
-<li><a href="#project-members" id="toc-project-members">11. Project
-Members</a>
-<ul>
-<li><a href="#project-reviewers-workflow-gates"
-id="toc-project-reviewers-workflow-gates">11.1 Project reviewers
-(workflow gates)</a></li>
-</ul></li>
-<li><a href="#profile-account" id="toc-profile-account">12. Profile
-&amp; Account</a>
-<ul>
-<li><a href="#account-settings" id="toc-account-settings">12.1 Account
-Settings</a></li>
-<li><a href="#edit-profile" id="toc-edit-profile">12.2 Edit
-Profile</a></li>
-<li><a href="#change-password" id="toc-change-password">12.3 Change
-Password</a></li>
-</ul></li>
-<li><a href="#administration" id="toc-administration">13.
-Administration</a>
-<ul>
-<li><a href="#user-management" id="toc-user-management">13.1 User
-Management</a></li>
-<li><a href="#database-backup" id="toc-database-backup">13.2 Database
-Backup</a></li>
-<li><a href="#system-logs" id="toc-system-logs">13.3 System
-Logs</a></li>
-<li><a href="#log-analytics" id="toc-log-analytics">13.4 Log
-Analytics</a></li>
-</ul></li>
-<li><a href="#tips-shortcuts" id="toc-tips-shortcuts">14. Tips &amp;
-Shortcuts</a></li>
-<li><a href="#support" id="toc-support">Support</a></li>
-</ul></li>
-</ul>
-</nav>
 <h1 id="marreq-user-manual">Marreq User Manual</h1>
 <p><strong>Requirement Manager (Marreq)</strong> is a web-based
 requirements and test management system. This manual describes how to
 use the application from the end-user perspective.</p>
 <p><strong>IBM DOORS users:</strong> See <strong><a
-href="doors-to-marreq-migration.md">Migrating from DOORS to
+href="doors-to-marreq-migration.html">Migrating from DOORS to
 Marreq</a></strong> for concept mapping, workflow comparison, and
 migration steps.</p>
 <p>For a <strong>typical end-to-end workflow</strong> (project setup →
 requirements → tests → traceability → approval → baselines → export),
-see <strong><a href="workflow.md">Typical Workflow with
+see <strong><a href="workflow.html">Typical Workflow with
 Marreq</a></strong>.</p>
 <hr />
 <h2 id="table-of-contents">Table of Contents</h2>
@@ -423,7 +111,7 @@ Marreq</a></strong>.</p>
 <li><a href="#4-requirements">Requirements</a></li>
 <li><a href="#5-test-management-verifications">Test Management
 (Verifications)</a></li>
-<li><a href="#6-traceability-matrix">Traceability Matrix</a></li>
+<li><a href="#6-traceability">Traceability</a></li>
 <li><a href="#7-baselines">Baselines</a></li>
 <li><a href="#8-categories-applicability--verification">Categories,
 Applicability &amp; Verification</a></li>
@@ -435,75 +123,94 @@ Applicability &amp; Verification</a></li>
 <li><a href="#14-tips--shortcuts">Tips &amp; Shortcuts</a></li>
 </ol>
 <hr />
-<h2 id="introduction">1. Introduction</h2>
+<h2 id="1-introduction">1. Introduction</h2>
 <p>Marreq helps you:</p>
 <ul>
 <li><strong>Manage requirements</strong> in a hierarchy, with version
 history, comments, and approval workflow</li>
-<li><strong>Manage tests</strong> — create and organize tests (including
-hierarchy), track test status (e.g. Pass/Fail/Pending), link tests to
-requirements, and see coverage in reports and on requirement pages</li>
-<li><strong>View and export</strong> traceability matrices and
-reports</li>
+<li><strong>Manage verifications</strong> (tests, analyses, inspections,
+reviews): organise them in a hierarchy, track their status (e.g.
+Passed/Failed/Pending), link them to requirements, and see coverage on
+the dashboard, requirement pages and reports</li>
+<li><strong>Explore traceability</strong> in a coverage graph, a
+hierarchy graph, a dependency structure matrix and the requirement ×
+verification matrix</li>
+<li><strong>Produce documents</strong> such as the Verification Control
+Document (VCD) and a traceability &amp; coverage report, as PDF or
+ODT</li>
 <li><strong>Create immutable baselines</strong> for audits or
 releases</li>
-<li><strong>Import/export</strong> via Excel, ReqIF 1.2, and JSON
-project bundles</li>
+<li><strong>Import/export</strong> via Excel/CSV, ReqIF 1.2 / ReqIFZ
+(with attached files), and project bundles</li>
 </ul>
-<p>Data is organized by <strong>projects</strong>. Each project has its
-own requirements, tests, categories, applicability options, and
-baselines. You must be logged in to use the application.</p>
-<p>See <strong><a href="workflow.md">Typical Workflow with
+<p>Data is organized by <strong>projects</strong>, which can belong to
+<strong>groups</strong>. Each project has its own requirements,
+verifications, catalog (categories, applicability, statuses,
+verification methods, custom fields), members and baselines. You must be
+signed in to use the application.</p>
+<p>See <strong><a href="workflow.html">Typical Workflow with
 Marreq</a></strong> for a step-by-step workflow from project setup
 through baselines and export.</p>
 <hr />
-<h2 id="getting-started">2. Getting Started</h2>
-<h3 id="logging-in">2.1 Logging In</h3>
+<h2 id="2-getting-started">2. Getting Started</h2>
+<h3 id="21-signing-in">2.1 Signing In</h3>
 <ol type="1">
-<li>Open the application in your browser
-(e.g. <strong>http://localhost:8000</strong>).</li>
-<li>You will see the <strong>Welcome to Marreq</strong> login page.</li>
-<li>Enter your <strong>Username</strong> and
-<strong>Password</strong>.</li>
-<li>Click <strong>Sign In</strong>.</li>
+<li>Open the application in your browser (the address your administrator
+gives you).</li>
+<li>Enter your <strong>Username</strong> and <strong>Password</strong>
+and select <strong>Sign in</strong>.</li>
 </ol>
-<figure>
-<img src="screenshots/login.png" alt="Login page" />
-<figcaption aria-hidden="true">Login page</figcaption>
-</figure>
+<p><img src="../screenshots/login.png" alt="Login page" /></p>
+<p>Depending on how Marreq is set up, the login page also offers:</p>
+<ul>
+<li><strong>Continue with …</strong> buttons to sign in with your
+organisation's single sign-on.</li>
+<li><strong>Forgot your password?</strong> and <strong>Create an
+account</strong> (on installations that allow self-registration, such as
+the hosted cloud service). A new account must confirm its email address
+before it can sign in.</li>
+</ul>
+<p>The UI and API versions are shown under the login card. If they do
+not belong together, a banner at the top of the application says so; ask
+your administrator to update.</p>
 <p>If you use a demo setup, typical users include <code>alice</code>,
-<code>dr_smith</code>, <code>eng_jones</code>, <code>tech_lee</code>,
-<code>qa_wilson</code>, and <code>admin</code>; the default password is
+<code>dr_smith</code>, <code>eng_jones</code>, <code>tech_lee</code> and
+<code>qa_wilson</code>; the default password is
 <code>ChangeMe123!</code> unless your administrator changed it.</p>
 <ul>
-<li><strong>Theme</strong>: Use the sun/moon toggle on the login card to
-switch between light and dark mode.</li>
-<li><strong>Logout</strong>: Click your name in the top-right →
-<strong>Logout</strong>.</li>
+<li><strong>Theme</strong>: the <strong>Light / Dark / Auto</strong>
+buttons at the top right of the login page (and in the top bar inside
+the application) switch the colour theme; <em>Auto</em> follows your
+system. The choice is stored in the browser.</li>
+<li><strong>Sign out</strong>: open the user menu (the circle with your
+initials, top right) and select <strong>Sign out</strong>.</li>
 </ul>
-<h3 id="home-page">2.2 Home Page</h3>
-<p>After login you see the <strong>Home</strong> page:</p>
+<h3 id="22-dashboard">2.2 Dashboard</h3>
+<p>After signing in you land on the <strong>Dashboard</strong> of the
+project you used last (or your first project):
+<code>/&lt;project-slug&gt;/dashboard</code>, titled <strong>Project
+overview</strong>.</p>
 <ul>
-<li><strong>Quick Actions</strong>: Browse Projects, (if admin) Create
-Project, Admin Panel</li>
-<li><strong>Your Projects</strong>: Grid of project cards; click a
-project to open its detail page</li>
-<li><strong>Recent Activity</strong>: Placeholder for future activity
-feed</li>
+<li><strong>Counts</strong>: Requirements, Verifications, Matrix links,
+and <strong>Req. with tests</strong> (the share of requirements linked
+to at least one verification).</li>
+<li><strong>Traceability health</strong>: <strong>Gaps</strong>
+(requirements without tests), <strong>Orphans</strong> (tests without
+requirements) and <strong>Suspect</strong> (links flagged as suspect).
+Each card opens the matching list on the Reports page.</li>
+<li><strong>Quick links</strong> to Requirements, Verifications,
+Traceability and Reports.</li>
 </ul>
-<p>Use <strong>Home</strong> in the navbar to return here anytime.</p>
-<figure>
-<img src="screenshots/home.png" alt="Home page after login" />
-<figcaption aria-hidden="true">Home page after login</figcaption>
-</figure>
-<h3 id="navigation">2.3 Navigation</h3>
+<p><img src="../screenshots/dashboard.png"
+alt="Project dashboard" /></p>
+<p>If you are not a member of any project yet, you see <strong>You don't
+have any projects yet</strong> with <strong>New project</strong>,
+<strong>New group</strong>, <strong>Change password</strong> and
+<strong>Sign out</strong>.</p>
+<h3 id="23-navigation">2.3 Navigation</h3>
 <p>Inside a project, the <strong>sidebar</strong> on the left holds the
 pages you work in every day:</p>
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr>
 <th>Item</th>
@@ -557,67 +264,83 @@ versions.</li>
 another project (you stay on the same page), or open
 <strong>Groups</strong>, <strong>New project</strong> or <strong>Import
 project bundle</strong>;</li>
-<li><strong>Global search</strong>, the theme switch (light, dark, match
-system) and notifications;</li>
-<li>the <strong>Create</strong> button: create a requirement or
-verification, or <strong>Import</strong>;</li>
+<li><strong>Global Search</strong>, the theme switch (light, dark, match
+system) and the <strong>notifications</strong> bell (<a
+href="#24-notifications">§2.4</a>);</li>
+<li>the <strong>Create</strong> button: its main part creates a
+requirement (a verification when you are on the Verifications pages);
+the arrow next to it offers <strong>Create requirement</strong>,
+<strong>Create verification</strong> and <strong>Import</strong>;</li>
 <li>the <strong>user menu</strong> (avatar): Account settings,
 <strong>Administration</strong> (instance administrators only, see <a
 href="#13-administration">§13</a>), Change password and Sign out.</li>
 </ul>
 <p>On a narrow screen the sidebar is hidden; open it with the
 <strong>☰</strong> button in the top bar.</p>
+<p><strong>Global Search</strong> filters what is on screen as you type:
+the Requirements table, the Verifications list and the Matrix. It is not
+a full-text search of the whole project.</p>
 <p>Older links keep working: <code>/&lt;project&gt;/matrix</code> opens
 the Matrix tab, <code>/&lt;project&gt;/import</code>,
 <code>/&lt;project&gt;/members</code> and
 <code>/&lt;project&gt;/catalog/…</code> open the matching Project
-settings tab, and <code>/&lt;project&gt;/admin/…</code> opens the
-Administration area.</p>
+settings tab, <code>/&lt;project&gt;/admin/…</code> opens the
+Administration area, and links that still contain an owner or group name
+before the project are redirected.</p>
+<h3 id="24-notifications">2.4 Notifications</h3>
+<p>The bell in the top bar shows how many notifications you have not
+read (up to <em>99+</em>). Open it to see the list; select a
+notification to go to the requirement it is about, or <strong>Mark all
+as read</strong>. The list refreshes on its own.</p>
+<p>You are notified when you are made the <strong>reviewer</strong> of a
+requirement, and, in projects where you turned them on, when
+requirements are created, updated or deleted. Choose per project in
+<strong>Project settings › Notifications</strong>: <strong>In-app
+notifications for this project</strong> and <strong>Email notifications
+for this project</strong>.</p>
+<h3 id="25-help">2.5 Help</h3>
+<p><strong>Help</strong> at the bottom of the sidebar
+(<code>/&lt;project-slug&gt;/help</code>) summarises the main pages and
+shows the versions of the UI and the API with links to the most used
+pages.</p>
 <hr />
-<h2 id="projects">3. Projects</h2>
-<h3 id="viewing-projects">3.1 Viewing Projects</h3>
-<ul>
-<li><strong>All Projects</strong>: <strong>Projects → All
-Projects</strong> or open <strong>Home</strong> and use “View all” under
-Your Projects.</li>
-<li><strong>Project detail</strong>: Click a project card to open
-<strong>Project Detail</strong>
-(<code>/&lt;project-slug&gt;</code>).</li>
-</ul>
+<h2 id="3-projects">3. Projects</h2>
+<h3 id="31-switching-projects">3.1 Switching Projects</h3>
+<p>Open the <strong>Projects</strong> menu (the project name in the top
+bar). It lists your projects: select one to switch to it, staying on the
+same kind of page. The menu also has <strong>Groups</strong> (<a
+href="#36-groups">§3.6</a>), <strong>New project</strong> and
+<strong>Import project bundle</strong> (<a
+href="#103-importing-a-project-bundle">§10.3</a>).</p>
 <p>Project URLs use the project slug only
 (<code>/&lt;project-slug&gt;/dashboard</code>). Owner usernames and
-group names are not part of the path.</p>
-<p>On the project detail page you see:</p>
-<ul>
-<li>Project name, status (e.g. active), description</li>
-<li>Created/Updated dates and owner</li>
-<li><strong>Quick Actions</strong>: View Requirements, View
-Verifications, View Matrix, Baselines, View Reports, View Members</li>
-<li><strong>Project Members</strong> list with names, usernames, roles,
-and email</li>
-</ul>
-<figure>
-<img src="screenshots/projects.png" alt="Projects list" />
-<figcaption aria-hidden="true">Projects list</figcaption>
-</figure>
-<figure>
-<img src="screenshots/project-detail.png" alt="Project detail page" />
-<figcaption aria-hidden="true">Project detail page</figcaption>
-</figure>
-<h3 id="creating-a-project-admin">3.2 Creating a Project (Admin)</h3>
+group names are not part of the path. Opening
+<code>/&lt;project-slug&gt;</code> shows the project's <a
+href="#22-dashboard">Dashboard</a>.</p>
+<h3 id="32-creating-a-project">3.2 Creating a Project</h3>
 <ol type="1">
-<li><strong>Projects → New Project</strong> or <strong>Quick Actions →
-New Project</strong>.</li>
-<li>Enter <strong>Name</strong> (required), optional
+<li><strong>Projects → New project</strong>
+(<code>/projects/new</code>).</li>
+<li>Choose the <strong>Namespace</strong>: <em>Personal</em> or a group
+in which you may manage projects.</li>
+<li>Enter the <strong>Project name</strong> and an optional
 <strong>Description</strong>.</li>
-<li>Submit the form.</li>
+<li>Select <strong>Create project</strong>. You become the project's
+Admin and land on its dashboard.</li>
 </ol>
-<p>You are typically taken to the new project or the project list.</p>
-<h3 id="editing-a-project">3.3 Editing a Project</h3>
+<p>Every new project starts with default statuses, verification methods
+(Inspection, Test, Analysis, Review), one category and one applicability
+value. Before anyone can create requirements, add at least one
+<strong>project reviewer</strong> (<a
+href="#111-project-reviewers-workflow-gates">§11.1</a>). To start from
+an existing project instead, use <strong>Import from JSON
+bundle</strong> on the same page (<a
+href="#103-importing-a-project-bundle">§10.3</a>).</p>
+<h3 id="33-editing-a-project">3.3 Editing a Project</h3>
 <p>Open <strong>Project settings</strong> at the bottom of the sidebar.
 The <strong>General</strong> tab
 (<code>/&lt;project-slug&gt;/settings/general</code>) shows the
-project’s properties:</p>
+project's properties:</p>
 <ul>
 <li><strong>Name</strong> (2–100 characters) and
 <strong>Description</strong> (up to 1000 characters; leave empty to
@@ -629,7 +352,7 @@ Cancelled.</li>
 <em>Personal (no group)</em>. The list shows the groups where you may
 manage projects. Moving a project needs that right in both the current
 and the new group.</li>
-<li><strong>URL</strong>: the project’s address
+<li><strong>URL</strong>: the project's address
 (<code>/&lt;project-slug&gt;</code>). It stays the same when you rename
 the project, so existing links and bookmarks keep working.</li>
 </ul>
@@ -639,9 +362,9 @@ and the change is recorded in <strong>System logs</strong> with the old
 and new values. <strong>Discard</strong> resets the form.</p>
 <p>Only project <strong>Admins</strong> and instance administrators can
 change these properties. Other members see them read-only.</p>
-<h3 id="project-storage">3.4 Project Storage</h3>
+<h3 id="34-project-storage">3.4 Project Storage</h3>
 <p>Files attached to requirements and verifications (<a
-href="#49-attachments">§4.9</a>) count toward the project’s storage
+href="#49-attachments">§4.9</a>) count toward the project's storage
 limit. <strong>Project settings › Storage</strong> shows:</p>
 <ul>
 <li>How much of the limit is used. Each file counts once, even when the
@@ -660,7 +383,7 @@ Storage</strong>, or use <strong>Reset to default</strong> to go back to
 the server-wide value. The change is recorded in <strong>System
 logs</strong>. A limit below the current usage is allowed: it only
 blocks new uploads.</p>
-<h3 id="deleting-a-project">3.5 Deleting a Project</h3>
+<h3 id="35-deleting-a-project">3.5 Deleting a Project</h3>
 <p>The <strong>project owner</strong> and instance administrators can
 delete a project. Open <strong>Project settings › General</strong> and
 select <strong>Delete project…</strong> in the <strong>Danger
@@ -679,59 +402,113 @@ settings.</li>
 </ul>
 <p>To keep a copy, export a project bundle or a ReqIFZ archive from
 <strong>Reports &amp; exports</strong> first (<a
-href="#9-reports--export">§9</a>). To confirm, type the project’s URL
-name (its slug, e.g. <code>satellite-demo</code>) and select
+href="#9-reports--export">§9</a>). To confirm, type the project's URL
+name (its slug, e.g. <code>satellite-demo</code>) and select
 <strong>Delete project</strong>. You are then taken to another project,
 or to the home page if you have none left.</p>
-<p>Users are not deleted. The project’s entries in <strong>System
+<p>Users are not deleted. The project's entries in <strong>System
 logs</strong> are kept, and a new entry records who deleted the project,
 its name and how many requirements, verifications, baselines and
 attachments it had.</p>
+<h3 id="36-groups">3.6 Groups</h3>
+<p>Groups collect projects, for example per team or product line. Open
+<strong>Projects → Groups</strong> (<code>/groups</code>) to see your
+groups; <strong>New group</strong> creates one (name and description),
+and you become its Owner.</p>
+<p>A group page lists its projects and members. Group roles:</p>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Can</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Owner</strong></td>
+<td>Manage the group's members, and create or move projects into the
+group</td>
+</tr>
+<tr>
+<td><strong>Maintainer</strong></td>
+<td>Create or move projects into the group</td>
+</tr>
+<tr>
+<td><strong>Contributor</strong>, <strong>Viewer</strong></td>
+<td>See the group</td>
+</tr>
+</tbody>
+</table>
+<p>Owners manage members on the group's <strong>Members</strong> page
+(add a user with a role, change a role, remove). <strong>Delete
+group</strong> asks for confirmation; projects in the group then need
+another group or none. A project's own members and roles (<a
+href="#11-project-members">§11</a>) are managed in the project,
+separately from the group.</p>
 <hr />
-<h2 id="requirements">4. Requirements</h2>
+<h2 id="4-requirements">4. Requirements</h2>
 <p>Requirements are the core artifact. Each requirement can have
 multiple <strong>versions</strong> (history), <strong>comments</strong>,
-and an <strong>approval</strong> state (draft → reviewed → approved).
-Requirements can be hierarchical (parent/child) and are linked to tests
-via the traceability matrix.</p>
-<h3 id="requirements-views">4.1 Requirements Views</h3>
+attachments and an <strong>approval</strong> state (draft → reviewed →
+approved). Requirements are linked to parent requirements (with a link
+type such as <em>derives from</em>) and to the verifications that verify
+them.</p>
+<h3 id="41-requirements-views">4.1 Requirements Views</h3>
 <ul>
-<li>Open a project, then use <strong>Requirements</strong> in the nav or
-<strong>View Requirements</strong> on the project detail page.</li>
-<li>URL: <code>/&lt;project-slug&gt;/requirements</code>.</li>
+<li><strong>Requirements</strong> in the sidebar, or
+<code>/&lt;project-slug&gt;/requirements</code>.</li>
 </ul>
-<p>You can:</p>
-<ul>
-<li>Switch between three purpose-built views:
+<p>Switch between the views with the tabs above the list:</p>
 <ul>
 <li><strong>Table</strong> for dense scanning, comparison, column
-configuration, and inline editing.</li>
-<li><strong>List</strong> for reading and reviewing requirement
-statements with status, approval, category, hierarchy, verification
-method, author, and modification context.</li>
-<li><strong>Graph</strong> for exploring requirement hierarchy and
-traceability relationships.</li>
-</ul></li>
-<li>The List view is responsive for narrow screens. Its review cards use
-a fixed contextual layout, while the <strong>Columns</strong> control
-remains specific to Table.</li>
-<li><strong>Filter</strong> by status, verification, category,
-applicability, approval (e.g. Approved only / Not approved), and custom
-filters.</li>
-<li><strong>Search</strong> (and use <strong>Semantic Search</strong> if
-enabled).</li>
-<li><strong>Paginate</strong> through results.</li>
-<li><strong>Create</strong> a new requirement (button in header;
-admin/appropriate role).</li>
-<li><strong>Open</strong> a requirement by clicking its title or
-reference to see the <strong>Requirement detail</strong> page.</li>
+configuration and inline editing.</li>
+<li><strong>List</strong> for reading and reviewing: one card per
+requirement with its statement, status, approval, parent, verification
+method, author and last change. It also works on narrow screens.</li>
+<li><strong>Graph</strong> opens <strong>Traceability</strong> (<a
+href="#6-traceability">§6</a>), where the coverage graph, the hierarchy
+graph and the matrices live.</li>
 </ul>
-<p>Metrics (e.g. total count, by status) are shown at the top.</p>
-<figure>
-<img src="screenshots/requirements-list.png" alt="Requirements list" />
-<figcaption aria-hidden="true">Requirements list</figcaption>
-</figure>
-<h3 id="requirement-detail-page">4.2 Requirement Detail Page</h3>
+<p>Above the list:</p>
+<ul>
+<li><strong>Filters</strong>: <strong>Status</strong>,
+<strong>Category</strong> and <strong>Approval</strong> (All, Draft,
+Reviewed, Approved), plus a <strong>Sort</strong> field with a ↑/↓
+direction toggle. <strong>Reset Filters</strong> clears them. To search
+by text, use <strong>Global Search</strong> in the top bar.</li>
+<li><strong>Saved views</strong>: save the current filters and sort as a
+named view with <strong>Save current as…</strong>, either
+<strong>Private</strong> or <strong>Shared</strong> with the project.
+Pick a saved view to apply it, <strong>Update</strong> it with the
+current settings, or <strong>Delete</strong> it. A view used by a
+baseline is marked <em>locked</em> and cannot be changed. A saved view
+has its own link (<code>?saved_view=&lt;id&gt;</code>).</li>
+<li><strong>Columns</strong> (Table only): show or hide Key, Title,
+Category, Parents, Status, Approval, Verification, Modified, Author and
+Actions.</li>
+<li><strong>Downloads</strong>: <strong>CSV</strong> with the rows shown
+(after filters and search) and <strong>Excel</strong> with the whole
+project (<a href="#92-exporting-requirements-to-excel">§9.2</a>).</li>
+<li>The number of requirements found, and <strong>Show rows</strong>
+(25, 50 or 100 per page).</li>
+</ul>
+<p>In the <strong>Table</strong> view:</p>
+<ul>
+<li>Open a requirement with the <strong>View</strong> (eye) icon in the
+Actions column; <strong>Edit</strong> and <strong>Duplicate</strong> are
+next to it. Editing an approved requirement first asks for confirmation,
+because it creates a new Draft version.</li>
+<li><strong>Inline editing</strong>: click a Title, Category, Status,
+Verification or Author cell to change it in place. The change is saved
+straight away as a new version. Only project reviewers can change the
+status (<a href="#111-project-reviewers-workflow-gates">§11.1</a>). Esc
+or a click outside closes the editor.</li>
+</ul>
+<p>In the <strong>List</strong> view, select a card's title to open the
+requirement; its menu has <strong>Duplicate</strong>.</p>
+<p><img src="../screenshots/requirements-list.png"
+alt="Requirements list" /></p>
+<h3 id="42-requirement-detail-page">4.2 Requirement Detail Page</h3>
 <ul>
 <li>URL:
 <code>/&lt;project-slug&gt;/requirements/&lt;requirement_id&gt;</code>.</li>
@@ -741,88 +518,171 @@ reference to see the <strong>Requirement detail</strong> page.</li>
 <code>/&lt;project-slug&gt;/requirements/show/&lt;requirement_id&gt;</code>
 and
 <code>/&lt;project-slug&gt;/requirements/show/&lt;requirement_id&gt;/version/&lt;version_id&gt;</code>
-redirect to those SPA URLs.</li>
+redirect to those URLs.</li>
 </ul>
 <p>On the detail page you see:</p>
 <ul>
-<li><strong>Approval badge</strong>: Draft / Reviewed / Approved, and
-who approved and when.</li>
-<li><strong>Actions</strong> (for <strong>project reviewers</strong>, or
-an administrator when no reviewers are configured): <strong>Mark as
-Reviewed</strong>, <strong>Approve Requirement</strong> (with
-confirmation).</li>
-<li><strong>Content</strong>: Title, reference code, statement,
-rationale, category, status, applicability, verification methods,
-author, reviewer, dates.</li>
-<li><strong>Traceability</strong>: Upstream/downstream requirements and
-<strong>Verified by</strong> — list of linked verifications with links
-to verification detail pages.</li>
-<li><strong>Verification</strong> panel: pass/fail/pending counts and
-overall pass rate; list of linked verifications.</li>
-<li><strong>Version history</strong>: List of versions with approval
-state; click a version to view that snapshot.</li>
-<li><strong>Comments</strong>: Chronological list; form to add a comment
-(optional version reference). On approved versions, comments may be
-locked by policy (<code>LOCK_APPROVED_VERSION_COMMENTS</code>).</li>
-<li><strong>Custom metadata</strong> (if the project uses custom
-fields).</li>
+<li><strong>Header</strong>: reference code, title, approval badge
+(Draft / Reviewed / Approved, with who approved and when) and the
+buttons <strong>Compare versions</strong>, <strong>Duplicate</strong>
+and <strong>Edit</strong>.</li>
+<li><strong>Summary</strong>: priority (when the project has a
+<em>Priority</em> custom field), version, author and reviewer.</li>
+<li><strong>Approval actions</strong> (for <strong>project
+reviewers</strong>, or an administrator when no reviewers are
+configured): <strong>Mark as Reviewed</strong> and <strong>Approve
+Requirement</strong>, each with a confirmation.</li>
+<li><strong>Requirement statement</strong> and
+<strong>Rationale</strong>, then category, applicability, verification
+methods, parents with their link type, and the modified and created
+dates. <strong>Custom metadata</strong> lists the project's custom
+fields.</li>
+<li><strong>Traceability</strong>: <strong>Upstream (parents)</strong>,
+<strong>Child requirements</strong> and <strong>Downstream
+(verifications)</strong>, each verification with its status badge.</li>
+<li><strong>Verification close-out</strong>: the compliance assessment
+and whether the requirement is closed (<a
+href="#57-verification-control-and-close-out">§5.7</a>).</li>
+<li><strong>Attachments</strong> (<a
+href="#49-attachments">§4.9</a>).</li>
+<li><strong>Changelog</strong>: the version snapshots and the historic
+activity from the audit log (<a
+href="#45-version-history--diff">§4.5</a>).</li>
+<li><strong>Discussion</strong>: the comments (<a
+href="#46-comments">§4.6</a>).</li>
 </ul>
-<p><strong>Editing an approved requirement</strong>: Clicking
-<strong>Edit</strong> on an approved requirement shows a warning that
-editing will create a new <strong>Draft</strong> version; you can cancel
-or proceed.</p>
-<figure>
-<img src="screenshots/requirement-detail.png"
-alt="Requirement detail page" />
-<figcaption aria-hidden="true">Requirement detail page</figcaption>
-</figure>
-<h3 id="creating-a-requirement">4.3 Creating a Requirement</h3>
+<p><strong>Editing an approved requirement</strong>:
+<strong>Edit</strong> on an approved requirement first warns that
+editing creates a new <strong>Draft</strong> version; you can cancel or
+continue.</p>
+<p><img src="../screenshots/requirement-detail.png"
+alt="Requirement detail page" /></p>
+<h3 id="43-creating-a-requirement">4.3 Creating a Requirement</h3>
 <ol type="1">
-<li>From the project’s requirements list, click <strong>New
-Requirement</strong> (or <strong>Quick Actions → New
-Requirement</strong> when a project is selected).</li>
+<li>Use <strong>Create requirement</strong> in the top bar,
+<strong>Duplicate</strong> on an existing requirement (<a
+href="#47-duplicating-a-requirement">§4.7</a>), or <strong>Add
+child</strong> in the hierarchy graph (<a
+href="#65-hierarchy-graph">§6.5</a>).</li>
 <li>URL: <code>/&lt;project-slug&gt;/requirements/new</code>.</li>
 <li>Fill in:
 <ul>
-<li><strong>Title</strong> (required)</li>
-<li><strong>Reference</strong> (optional; can be auto-generated)</li>
-<li><strong>Statement</strong> (required; shown as
-<strong>Description</strong> on the form, with the same formatting
-toolbar and preview as in <a
+<li><strong>Reference code</strong> (required, e.g.
+<code>REQ-0001</code>) and <strong>Title</strong> (required)</li>
+<li><strong>Statement</strong> (required; labelled
+<strong>Description</strong> on the form, with the formatting toolbar
+and preview described in <a
 href="#44-editing-a-requirement">§4.4</a>)</li>
 <li><strong>Rationale</strong> (optional)</li>
-<li><strong>Category</strong>, <strong>Status</strong>,
-<strong>Verification methods</strong>, <strong>Applicability</strong>
-(as configured for the project)</li>
-<li><strong>Reviewer</strong>, <strong>Parent requirement</strong>
-(optional)</li>
-<li>Any <strong>Custom fields</strong> if present</li>
+<li><strong>Status</strong>: project reviewers choose any status; other
+users create in the project's default initial status</li>
+<li><strong>Category</strong> and <strong>Applicability</strong></li>
+<li><strong>Verification methods</strong> (at least one)</li>
+<li><strong>Author</strong> and <strong>Reviewer</strong> (the reviewer
+list offers the project reviewers)</li>
+<li><strong>Parent requirements</strong>: pick a requirement and a link
+type, then <strong>Add parent</strong></li>
+<li><strong>Custom fields</strong>, if the project has any</li>
 </ul></li>
-<li>Click <strong>Save</strong>.</li>
+<li>Select <strong>Create requirement</strong> (<strong>Create
+duplicate</strong> when duplicating). The new requirement opens in the
+editor.</li>
 </ol>
-<p>You can optionally pass a parent or template via query parameters
-(<code>parent</code>, <code>template</code>).</p>
-<h3 id="editing-a-requirement">4.4 Editing a Requirement</h3>
+<p><img src="../screenshots/requirement-create.png"
+alt="Create requirement" /></p>
+<p><strong>When creating is blocked.</strong> The button stays disabled,
+with a link next to it, until the project has:</p>
+<ul>
+<li>at least one <strong>verification method</strong> (<strong>Add a
+verification method</strong> opens Project settings › Catalog ›
+Verification methods), and</li>
+<li>at least one <strong>project reviewer</strong> (<strong>Add a
+reviewer in Project settings</strong> opens Members &amp; reviewers, <a
+href="#111-project-reviewers-workflow-gates">§11.1</a>).</li>
+</ul>
+<p><strong>Links that fill in the form.</strong> The page accepts these
+URL parameters:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>?parent=&lt;id&gt;</code></td>
+<td>Adds requirement <code>&lt;id&gt;</code> as a parent (with the first
+link type). The hierarchy graph's <strong>Add child</strong> uses
+it.</td>
+</tr>
+<tr>
+<td><code>?from=&lt;id&gt;</code></td>
+<td>Duplicates requirement <code>&lt;id&gt;</code> (<a
+href="#47-duplicating-a-requirement">§4.7</a>).</td>
+</tr>
+<tr>
+<td><code>?template=&lt;id&gt;</code></td>
+<td>Same as <code>from</code>; when both are given, <code>from</code>
+wins.</td>
+</tr>
+</tbody>
+</table>
+<p>Combine them, e.g. <code>?from=12&amp;parent=3</code>. An id that is
+not a requirement of this project (or a parent with no current version)
+does not stop the page: a warning names it, for example <em>Parent
+requirement 99 is not in this project</em>, and that part is left
+out.</p>
+<h3 id="44-editing-a-requirement">4.4 Editing a Requirement</h3>
 <ol type="1">
 <li>Open the requirement detail page.</li>
 <li>Click <strong>Edit</strong>.</li>
 <li>URL:
 <code>/&lt;project-slug&gt;/requirements/&lt;requirement_id&gt;/edit</code>.</li>
-<li>Change title, statement, rationale, category, status, applicability,
-verification, reviewer, parent, and custom fields as needed.</li>
-<li>Use <strong>Save</strong> to create a new version.
-<strong>Cancel</strong> returns to the detail view.</li>
+<li>Change title, statement, rationale, category, status (project
+reviewers only), applicability, author and reviewer as needed. Parent
+links are added and removed at once, without Save. Verification methods
+and custom fields are not edited on this page.</li>
+<li>Select <strong>Save requirement</strong> to create a new version; it
+is enabled once something changed. <strong>Revert changes</strong> puts
+back the saved values. <strong>Cancel</strong> returns to the
+requirements list; if you have unsaved changes it asks first and then
+discards them.</li>
 </ol>
+<p>Only project reviewers can change the <strong>Status</strong> (<a
+href="#111-project-reviewers-workflow-gates">§11.1</a>). <strong>Delete
+requirement</strong> at the bottom left deletes the requirement
+permanently, with its versions, links, comments and attachments, after a
+confirmation.</p>
+<h4 id="unsaved-changes-and-drafts">Unsaved changes and drafts</h4>
+<p>While you type, the editor keeps a <strong>draft in this
+browser</strong>, so a reload, a closed tab, a laptop that went to sleep
+or an expired session does not lose your text. The footer shows the
+state: <strong>Unsaved changes</strong>, then <strong>Draft kept on this
+device</strong> with the time.</p>
+<ul>
+<li>A draft is <strong>not</strong> a version: nothing is sent to the
+server, and only <strong>Save requirement</strong> creates a new
+version.</li>
+<li>When you open the requirement again, the draft is put back and a
+banner says so; <strong>Discard draft</strong> returns to the saved
+text. If the requirement has been saved again since your draft (for
+example by someone else), the draft is only offered: choose
+<strong>Restore draft</strong> if it still applies.</li>
+<li>The <strong>New requirement</strong> page keeps a draft in the same
+way and offers <strong>Restore draft</strong> the next time you open
+it.</li>
+<li>If your session expires, Save tells you so; sign in again and reopen
+the requirement: the draft is still there.</li>
+<li>Drafts belong to your user in this browser only (they do not follow
+you to another computer), are removed when you save, discard or sign
+out, and expire after 30 days.</li>
+</ul>
 <h4 id="formatting-the-statement">Formatting the statement</h4>
 <p>The statement editor has a formatting toolbar and a <strong>Write /
 Preview</strong> toggle. Statements are stored as a small, documented
 Markdown subset, so they stay readable as plain text in exports:</p>
 <table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
-</colgroup>
 <thead>
 <tr>
 <th>You want</th>
@@ -854,12 +714,12 @@ Markdown subset, so they stay readable as plain text in exports:</p>
 </tr>
 <tr>
 <td>Bulleted list</td>
-<td>a line starting with <code>-</code> (or <code>*</code>)</td>
+<td>a line starting with <code>- </code> (or <code>* </code>)</td>
 <td></td>
 </tr>
 <tr>
 <td>Numbered list</td>
-<td>lines starting with <code>1.</code>, <code>2.</code>, … (the first
+<td>lines starting with <code>1. </code>, <code>2. </code>, … (the first
 number sets the start)</td>
 <td></td>
 </tr>
@@ -884,7 +744,7 @@ turns XHTML lists, emphasis, and links back into this format (see <a
 href="#94-exporting-reqif">§9.4</a> and <a
 href="#102-importing-reqif">§10.2</a>). Excel and JSON exports contain
 the Markdown source.</p>
-<h3 id="version-history-diff">4.5 Version History &amp; Diff</h3>
+<h3 id="45-version-history--diff">4.5 Version History &amp; Diff</h3>
 <ul>
 <li>On the requirement detail page, the <strong>Changelog</strong>
 section lists all versions (newest first); each shows approval state.
@@ -903,26 +763,29 @@ to open that adjacent pair directly.</li>
 <li>When an older approved snapshot exists, use <strong>Compare with
 last approved</strong> beside the approval state before reviewing the
 current draft.</li>
-<li>The comparison dialog shows removed, added, and unchanged title,
-statement, and justification text (line by line; statements are compared
-as their Markdown source, so each list item is its own line). It also
-compares status, category, applicability, verification methods, and
-custom fields.</li>
+<li>The <strong>Compare requirement versions</strong> dialog shows
+removed, added, and unchanged <strong>Title</strong>,
+<strong>Statement</strong> and <strong>Rationale</strong> text (line by
+line; statements are compared as their Markdown source, so each list
+item is its own line). Under <strong>Metadata</strong> it also compares
+status, category, applicability, verification methods, and custom
+fields.</li>
 <li>At least two saved versions are required. Version comparison is
 read-only and is available to anyone who can view the project
 requirements.</li>
 </ul>
-<h3 id="comments">4.6 Comments</h3>
+<h3 id="46-comments">4.6 Comments</h3>
 <ul>
-<li>On the requirement (or version) detail page, use the
-<strong>Comments</strong> section to read existing comments and add new
-ones.</li>
-<li>Comments are immutable once created; they can reference an optional
-requirement version.</li>
-<li>If the current version is approved and the system locks comments on
-approved versions, the add-comment form is hidden.</li>
+<li>The <strong>Discussion</strong> section of the requirement page
+lists the comments and has the form to add one. Each comment is attached
+to the version that was current when it was written.</li>
+<li>Comments cannot be edited or deleted.</li>
+<li>When the current version is <strong>Approved</strong>, the form is
+replaced by <em>Comments are locked on this approved version.</em>
+Editing the requirement creates a new draft version, which can be
+discussed again.</li>
 </ul>
-<h3 id="duplicating-a-requirement">4.7 Duplicating a Requirement</h3>
+<h3 id="47-duplicating-a-requirement">4.7 Duplicating a Requirement</h3>
 <ul>
 <li>From the requirements list, detail, or edit page, select
 <strong>Duplicate</strong>.</li>
@@ -934,20 +797,13 @@ duplicate</strong>. The new requirement is independent: approval state,
 version history, comments, and traceability-matrix links are not
 copied.</li>
 </ul>
-<h3 id="semantic-search-ai">4.8 Semantic Search (AI)</h3>
-<p>If your administrator has enabled semantic search
-(embeddings/RAG):</p>
-<ul>
-<li>Open the <strong>Semantic Search (AI)</strong> modal from the
-requirements list (e.g. search icon or <strong>Ctrl+K</strong>).</li>
-<li>Enter a natural-language question or search phrase; you can restrict
-by status, category, applicability, verification.</li>
-<li>Results show matching requirements; “AI Answer” may appear when
-using the RAG “ask” feature.</li>
-<li>Shortcuts: <strong>Ctrl+K</strong> open, <strong>Enter</strong>
-search, <strong>Esc</strong> close.</li>
-</ul>
-<h3 id="attachments">4.9 Attachments</h3>
+<h3 id="48-semantic-search-ai">4.8 Semantic Search (AI)</h3>
+<p>The web pages have no AI search. When your administrator has turned
+on embeddings, AI assistants connected through Marreq's MCP server can
+search requirements by meaning (the
+<code>semantic_search_requirements</code> tool); see the MCP setup guide
+linked under <a href="#support">Support</a>.</p>
+<h3 id="49-attachments">4.9 Attachments</h3>
 <p>Requirements and verifications can carry files, such as test reports,
 drawings, analysis spreadsheets or photos. The
 <strong>Attachments</strong> card is on the requirement view and edit
@@ -965,7 +821,7 @@ confirm.</li>
 PowerPoint (<code>.docx</code>, <code>.xlsx</code>, <code>.pptx</code>),
 OpenDocument (<code>.odt</code>, <code>.ods</code>, <code>.odp</code>),
 ZIP, plain text (<code>.txt</code>, <code>.log</code>,
-<code>.md</code>), CSV, JSON and XML. The server checks the file’s
+<code>.md</code>), CSV, JSON and XML. The server checks the file's
 contents, not just its name: a file renamed to <code>.pdf</code> that is
 not a PDF is refused. Other types, including HTML, SVG and programs, are
 not accepted.</p>
@@ -979,22 +835,25 @@ historical version snapshots do not show them. Baselines keep their own
 list (<a href="#73-viewing-a-baseline">§7.3</a>). Deleting a requirement
 or verification also deletes its attachments.</p>
 <hr />
-<h2 id="test-management-verifications">5. Test Management
+<h2 id="5-test-management-verifications">5. Test Management
 (Verifications)</h2>
 <p>Test management in Marreq covers creating and organizing
-verifications (test cases), tracking execution status (e.g. Pass, Fail,
-Pending), and linking them to requirements for traceability and
-coverage. In the UI, the nav item and pages are named
-<strong>Verifications</strong>. Verifications are project-scoped and can
-be arranged in a <strong>parent/child hierarchy</strong>. Linking is
-done in the <a href="#6-traceability-matrix">Traceability Matrix</a>;
-once linked, requirement detail pages show a <strong>Verified
-by</strong> section and verification pass/fail summary.</p>
-<h3 id="verifications-list">5.1 Verifications List</h3>
+verifications (tests, analyses, inspections, reviews), tracking their
+status (e.g. Passed, Failed, Pending), and linking them to the
+requirements they verify. In the UI, the sidebar item and pages are
+named <strong>Verifications</strong>. Verifications are project-scoped
+and can be arranged in a <strong>parent/child hierarchy</strong>.</p>
+<p>The links between verifications and requirements are set on the
+verification's <strong>create</strong> and <strong>edit</strong> pages
+(<strong>Traceability (requirements)</strong>). Once linked, a
+requirement's page lists the verification under <strong>Downstream
+(verifications)</strong> with its status, and the <a
+href="#6-traceability">Traceability</a> views and Reports show the
+coverage.</p>
+<h3 id="51-verifications-list">5.1 Verifications List</h3>
 <ul>
-<li>Open a project, then <strong>Verifications</strong> in the nav or
-<strong>View Verifications</strong> on the project detail page.</li>
-<li>URL: <code>/&lt;project-slug&gt;/verifications</code>.</li>
+<li><strong>Verifications</strong> in the sidebar, or
+<code>/&lt;project-slug&gt;/verifications</code>.</li>
 </ul>
 <p>You can:</p>
 <ul>
@@ -1005,29 +864,27 @@ views, reloading, or sharing the link keeps them.</li>
 list: the <strong>Total</strong>, one chip per verification status with
 its count (statuses with no verifications are dimmed;
 <strong>Other</strong> counts verifications whose status is not in the
-project’s list), and a <strong>Pass rate</strong> (“X of Y passed”) when
+project's list), and a <strong>Pass rate</strong> ("X of Y passed") when
 the project has a status named <em>Passed</em>. Click a status chip to
 show only that status; click it again to clear the filter. The metrics
 always cover the whole project, not just the filtered rows.</li>
 <li><strong>Filter</strong> by <strong>Status</strong> and
-<strong>Method</strong> (including <em>No method</em>), and
-<strong>search</strong> with the header search box (reference, title,
+<strong>Method</strong> (including <em>No method</em>), and search with
+<strong>Global Search</strong> in the top bar (reference, title,
 description, source, or parent). <strong>Reset Filters</strong> clears
 status and method.</li>
 <li><strong>Paginate</strong> through results (25, 50, or 100 rows per
 page; controls appear above and below the list when there is more than
 one page).</li>
-<li>Click <strong>New Verification</strong> to create a verification
-(admin/appropriate role).</li>
+<li>Create a verification with <strong>Create verification</strong> in
+the top bar (<a href="#53-creating-a-verification">§5.3</a>).</li>
 <li>Click a verification to open its <strong>Verification
 detail</strong> page.</li>
 </ul>
-<figure>
-<img src="screenshots/tests-list.png" alt="Verifications list" />
-<figcaption aria-hidden="true">Verifications list</figcaption>
-</figure>
+<p><img src="../screenshots/verifications-list.png"
+alt="Verifications list" /></p>
 <ul>
-<li><strong>Update verification status</strong> inline (e.g. set Passed
+<li><strong>Update verification status</strong> inline (e.g. set Passed
 after a lab run): click the status in the table or list. Only
 <strong>project reviewers</strong> with edit rights can change the
 status; other editors can still edit the title, method, and source
@@ -1038,23 +895,34 @@ contains the rows currently shown (after filters and search);
 same workbook as <a href="#93-exporting-verifications-to-excel">§9.3
 Exporting Verifications to Excel</a>).</li>
 </ul>
-<h3 id="verification-detail-page">5.2 Verification Detail Page</h3>
+<h3 id="52-verification-detail-page">5.2 Verification Detail Page</h3>
 <ul>
 <li>URL:
 <code>/&lt;project-slug&gt;/verifications/&lt;verification_id&gt;</code>.</li>
 </ul>
-<p>Shows: <strong>Name</strong>, <strong>Description</strong> (with its
-formatting), <strong>Source</strong> (e.g. test file or document
-reference), <strong>Status</strong>, <strong>Reference code</strong>,
-<strong>Verification type</strong>, <strong>Parent verification</strong>
-(if part of a hierarchy), and <strong>which requirements this
-verification covers</strong> (traceability links). From here you can
-<strong>Edit</strong> the verification (name, description, source,
-status, reference, method, parent) or <strong>update status</strong>
-(e.g. after running the test). Status updates feed into the requirement
-<strong>Verification</strong> panel and into <a
-href="#9-reports--export">Reports</a> (coverage, pass rate).</p>
-<h3 id="version-history-and-diff">5.2.1 Version history and diff</h3>
+<p>The page shows the <strong>Reference</strong>, name,
+<strong>Status</strong>, <strong>Verification type</strong> (method),
+<strong>Source</strong> (e.g. a test procedure or document reference),
+<strong>Parent</strong> verification, <strong>Author</strong>,
+<strong>Reviewer</strong>, the last status change, and the
+<strong>Description</strong> with its formatting. Further sections:</p>
+<ul>
+<li><strong>Linked requirements</strong>: the requirements this
+verification verifies; <strong>Edit links</strong> opens the editor at
+its traceability section.</li>
+<li><strong>Verification control</strong>: level, stage and evidence for
+the VCD (<a
+href="#57-verification-control-and-close-out">§5.7</a>).</li>
+<li><strong>Attachments</strong> (<a href="#49-attachments">§4.9</a>)
+and <strong>Changelog</strong> (<a
+href="#521-version-history-and-diff">§5.2.1</a>).</li>
+</ul>
+<p><strong>Edit</strong> (with edit permission) and <strong>Compare
+versions</strong> are in the header. The status is changed in the editor
+or inline in the list (<a
+href="#55-updating-verification-status">§5.5</a>).</p>
+<h3 id="521-version-history-and-diff">5.2.1 Version history and
+diff</h3>
 <ul>
 <li>The verification detail <strong>Changelog</strong> lists audit-log
 activity (creates and field updates).</li>
@@ -1071,75 +939,134 @@ verification type, and parent.</li>
 edit and save). Comparison is read-only and is available to anyone who
 can view the project.</li>
 </ul>
-<h3 id="creating-a-verification">5.3 Creating a Verification</h3>
+<h3 id="53-creating-a-verification">5.3 Creating a Verification</h3>
 <ol type="1">
-<li>From the project’s verifications list, click <strong>New
-Verification</strong> (or <strong>Quick Actions → New
-Verification</strong>).</li>
+<li>Use <strong>Create verification</strong> in the top bar (on the
+Verifications pages it is the main part of the <strong>Create</strong>
+button), or <strong>Add child</strong> in the hierarchy graph (<a
+href="#65-hierarchy-graph">§6.5</a>).</li>
 <li>URL: <code>/&lt;project-slug&gt;/verifications/new</code>.</li>
-<li>Enter <strong>Name</strong>, <strong>Description</strong>,
-<strong>Source</strong> (e.g. path to test script or doc),
-<strong>Status</strong> (e.g. Pending, Not Run), <strong>Reference
-code</strong> (optional; e.g. TEST-PWR-001), and <strong>Parent
-verification</strong> (optional, for hierarchy). The description has the
-same formatting toolbar, <strong>Write / Preview</strong> toggle, and
-syntax as requirement statements (see <a
-href="#formatting-the-statement">Formatting the statement</a>), for
-example a numbered list of test steps.</li>
-<li>Save.</li>
+<li>Fill in:
+<ul>
+<li><strong>Reference code</strong> (required, e.g.
+<code>VER-0001</code>) and <strong>Name</strong> (required)</li>
+<li><strong>Description</strong> (required). It has the same formatting
+toolbar, <strong>Write / Preview</strong> toggle and syntax as
+requirement statements (<a href="#formatting-the-statement">Formatting
+the statement</a>), for example a numbered list of test steps.</li>
+<li><strong>Source</strong> (e.g. <code>manual</code> or a test rig;
+<code>manual</code> by default)</li>
+<li><strong>Status</strong>: project reviewers choose any status; other
+users create in the project's initial status</li>
+<li><strong>Parent verification (optional)</strong> and
+<strong>Verification method (optional)</strong></li>
+<li><strong>Author</strong> and <strong>Reviewer</strong> (the reviewer
+list offers the project reviewers)</li>
+<li><strong>Traceability (requirements)</strong>: tick the requirements
+this verification verifies (filter by reference, title or id)</li>
+</ul></li>
+<li>Select <strong>Create verification</strong>.</li>
 </ol>
-<p>After creation, link the verification to requirements in the <a
-href="#6-traceability-matrix">Traceability Matrix</a>.</p>
-<h3 id="editing-a-verification">5.4 Editing a Verification</h3>
+<p><strong>When creating is blocked.</strong> Until the project has at
+least one <strong>project reviewer</strong>, the button is disabled with
+<strong>Add a reviewer in Project settings</strong> next to it (<a
+href="#111-project-reviewers-workflow-gates">§11.1</a>).</p>
+<p><strong>Links that fill in the form.</strong> As for requirements (<a
+href="#43-creating-a-requirement">§4.3</a>):</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>?parent=&lt;id&gt;</code></td>
+<td>Sets verification <code>&lt;id&gt;</code> as the parent. The
+hierarchy graph's <strong>Add child</strong> uses it.</td>
+</tr>
+<tr>
+<td><code>?from=&lt;id&gt;</code></td>
+<td>Duplicates verification <code>&lt;id&gt;</code>: name (with a copy
+suffix), description, source, status, method, reviewer and parent are
+copied, and the next free reference code is suggested. The author and
+the requirement links are not copied.</td>
+</tr>
+<tr>
+<td><code>?template=&lt;id&gt;</code></td>
+<td>Same as <code>from</code>; when both are given, <code>from</code>
+wins. A valid <code>parent</code> replaces the copied parent.</td>
+</tr>
+</tbody>
+</table>
+<p>There is no Duplicate button for verifications yet; use the link,
+e.g. <code>/&lt;project-slug&gt;/verifications/new?from=7</code>. An id
+that is not a verification of this project gives a warning, for example
+<em>Template verification 7 is not in this project</em>, and is
+ignored.</p>
+<h3 id="54-editing-a-verification">5.4 Editing a Verification</h3>
 <ol type="1">
-<li>Open the verification detail page.</li>
-<li>Click <strong>Edit</strong>.</li>
+<li>Open the verification detail page and select <strong>Edit</strong>
+(or <strong>Edit links</strong>).</li>
 <li>URL:
 <code>/&lt;project-slug&gt;/verifications/&lt;verification_id&gt;/edit</code>.</li>
-<li>Update name, description, source, status, reference code, parent
-verification, or <strong>verification method</strong>; save. Changing
-the method keeps the same verification identity and matrix links.</li>
+<li>Change the name, description, source, status (project reviewers
+only), reference code, parent verification, verification method, author
+or reviewer. Changing the method keeps the same verification identity
+and its links.</li>
+<li><strong>Traceability (requirements)</strong>: tick or untick the
+requirements this verification verifies. Saving replaces all of its
+links with the ticked ones.</li>
+<li>Select <strong>Save changes</strong>; it is enabled once something
+changed. <strong>Back</strong> leaves without saving.</li>
 </ol>
-<p>Linking or unlinking verifications to/from requirements is done in
-the <strong>Traceability Matrix</strong> (add/remove links there).</p>
-<h3 id="updating-verification-status">5.5 Updating Verification
+<p><strong>Delete verification</strong> deletes it permanently, with its
+links and attachments, after a confirmation.</p>
+<h3 id="55-updating-verification-status">5.5 Updating Verification
 Status</h3>
-<p>As tests are executed, update their status (e.g. Pass, Fail, Pending,
-In Progress) so that:</p>
+<p>As verifications are run, update their status (e.g. Passed, Failed,
+Pending, In progress) so that:</p>
 <ul>
-<li>Requirement detail pages show correct <strong>Verification</strong>
-counts (passed/failed/pending) and overall pass rate.</li>
-<li><strong>Reports</strong> and <strong>Matrix</strong> reflect current
-coverage and test results.</li>
-<li><strong>Matrix</strong> and <strong>Reports</strong> can be filtered
-by verification status (e.g. show only Failed).</li>
+<li>Requirement pages show each linked verification's status under
+<strong>Downstream (verifications)</strong>, and the close-out reflects
+it (<a href="#57-verification-control-and-close-out">§5.7</a>).</li>
+<li>The <strong>Matrix</strong> shows the status symbol in each cell and
+can be filtered by status (<a
+href="#62-using-the-matrix">§6.2</a>).</li>
+<li><strong>Reports</strong> and the <strong>Dashboard</strong> reflect
+current coverage.</li>
 </ul>
-<p>Update status from the <strong>Verification detail</strong> page
-(Edit), <strong>inline from the verifications list</strong> (click the
-status; project reviewers only, see <a
-href="#51-verifications-list">§5.1</a>), or from the matrix.
-Verification statuses are configured per project under <a
-href="#85-verification-statuses">Verification statuses</a>.</p>
-<h3 id="verification-hierarchy">5.6 Verification Hierarchy</h3>
-<p>Verifications can have a <strong>parent verification</strong> (e.g. a
-test suite or feature area). Set the parent when creating or editing a
-verification. The verifications list and tree views (if available)
-reflect this hierarchy; reporting and traceability still work at the
-level of individual verifications linked to requirements.</p>
-<h3 id="verification-control-and-close-out">5.7 Verification Control and
-Close-out</h3>
-<p>Marreq tracks how far each requirement’s verification has gone, for
+<p>Change the status in the <strong>verification editor</strong> or
+<strong>inline from the verifications list</strong> (click the status).
+Only <strong>project reviewers</strong> can change it (<a
+href="#111-project-reviewers-workflow-gates">§11.1</a>). The statuses
+are configured per project in <strong>Project settings › Catalog ›
+Verification statuses</strong> (<a
+href="#8-categories-applicability--verification">§8</a>).</p>
+<h3 id="56-verification-hierarchy">5.6 Verification Hierarchy</h3>
+<p>Verifications can have a <strong>parent verification</strong> (e.g. a
+test campaign or feature area). Set the parent when creating or editing
+a verification. The list shows each verification's parent; the tree
+itself is drawn in <strong>Traceability › Hierarchy</strong> (<a
+href="#65-hierarchy-graph">§6.5</a>), where <strong>Add child</strong>
+creates a verification under the selected one. Coverage and traceability
+still work at the level of individual verifications linked to
+requirements.</p>
+<h3 id="57-verification-control-and-close-out">5.7 Verification Control
+and Close-out</h3>
+<p>Marreq tracks how far each requirement's verification has gone, for
 the Verification Control Document (VCD).</p>
 <p><strong>On a verification</strong> (its detail page,
 <strong>Verification control</strong> card), anyone who can edit
 requirements records:</p>
 <ul>
-<li><strong>Level</strong>: where it is verified,
-e.g. <em>Equipment</em>, <em>Subsystem</em> or <em>System</em>.</li>
-<li><strong>Stage</strong>: when it is verified, e.g. <em>QUAL</em>
+<li><strong>Level</strong>: where it is verified, e.g.
+<em>Equipment</em>, <em>Subsystem</em> or <em>System</em>.</li>
+<li><strong>Stage</strong>: when it is verified, e.g. <em>QUAL</em>
 (qualification) or <em>ACC</em> (acceptance).</li>
-<li><strong>Evidence</strong>: the document that proves the result,
-e.g. a test report number.</li>
+<li><strong>Evidence</strong>: the document that proves the result, e.g.
+a test report number.</li>
 </ul>
 <p>Level and stage are free text. The fields suggest the values already
 used in the project, so the same terms are reused.</p>
@@ -1147,17 +1074,13 @@ used in the project, so the same terms are reused.</p>
 <strong>Verification close-out</strong> card), a <strong>project
 reviewer</strong> records the <strong>compliance</strong> assessment:
 <strong>C</strong> (compliant), <strong>PC</strong> (partially
-compliant, e.g. accepted with a waiver) or <strong>NC</strong>
+compliant, e.g. accepted with a waiver) or <strong>NC</strong>
 (non-compliant), with an optional note such as the waiver or
 nonconformance number. Choosing <strong>Not assessed</strong> removes
 it. Each change is recorded in <strong>System logs</strong>.</p>
 <p>The card shows whether the requirement is <strong>Closed</strong> or
 <strong>Open</strong>, and why:</p>
 <table>
-<colgroup>
-<col style="width: 50%" />
-<col style="width: 50%" />
-</colgroup>
 <thead>
 <tr>
 <th>Situation</th>
@@ -1191,74 +1114,115 @@ it. Each change is recorded in <strong>System logs</strong>.</p>
 </tr>
 </tbody>
 </table>
-<p>Whether a verification “passed” comes from the
+<p>Whether a verification "passed" comes from the
 <strong>outcome</strong> of its status, set in <strong>Project settings
 › Catalog › Verification statuses</strong> (<a
 href="#8-categories-applicability--verification">§8</a>).</p>
 <hr />
-<h2 id="traceability-matrix">6. Traceability Matrix</h2>
-<p>The traceability matrix is central to <strong>test
-management</strong> and coverage: it shows which requirements are linked
-to which tests. You add or remove links here; requirement detail pages
-and reports then show verification status and coverage. The matrix can
-display test status, requirement status, category, applicability, and
-suspect links.</p>
-<h3 id="opening-the-matrix">6.1 Opening the Matrix</h3>
+<h2 id="6-traceability">6. Traceability</h2>
+<p><strong>Traceability</strong> in the sidebar
+(<code>/&lt;project-slug&gt;/traceability</code>) has four tabs:</p>
+<table>
+<thead>
+<tr>
+<th>Tab</th>
+<th>Shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Coverage</strong></td>
+<td>A graph of requirements and the verifications linked to them;
+suspect links are drawn in coral</td>
+</tr>
+<tr>
+<td><strong>Hierarchy</strong></td>
+<td>Parent ↔︎ child links between requirements and between verifications,
+with <strong>Add child</strong> (<a
+href="#65-hierarchy-graph">§6.5</a>)</td>
+</tr>
+<tr>
+<td><strong>DSM</strong></td>
+<td>How requirements depend on each other (<a
+href="#64-dependency-structure-matrix-dsm">§6.4</a>)</td>
+</tr>
+<tr>
+<td><strong>Matrix</strong></td>
+<td>Requirements × verifications with status, suspect links and coverage
+gaps (<a href="#62-using-the-matrix">§6.2</a>)</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>Graph</strong> tab of the Requirements page opens this
+page as well. The matrix only <strong>shows</strong> links: links
+between requirements and verifications are set on the verification's
+create and edit pages (<a href="#54-editing-a-verification">§5.4</a>),
+and parent links on the requirement and verification pages.</p>
+<h3 id="61-opening-the-matrix">6.1 Opening the Matrix</h3>
 <ul>
-<li>From the project: <strong>Traceability</strong> in the sidebar, then
-the <strong>Matrix</strong> tab (next to Coverage, Hierarchy and
-DSM).</li>
+<li><strong>Traceability</strong> in the sidebar, then the
+<strong>Matrix</strong> tab.</li>
 <li>URL: <code>/&lt;project-slug&gt;/traceability?view=matrix</code>
-(the old <code>/&lt;project-slug&gt;/matrix</code> still works). Filters
-and sorting are kept in the URL, so they survive switching tabs.</li>
+(the old <code>/&lt;project-slug&gt;/matrix</code> still works,
+including its filters). Filters and sorting are kept in the URL, so they
+survive switching tabs and can be shared as a link.</li>
 </ul>
-<figure>
-<img src="screenshots/matrix.png" alt="Traceability matrix" />
-<figcaption aria-hidden="true">Traceability matrix</figcaption>
-</figure>
-<h3 id="using-the-matrix">6.2 Using the Matrix</h3>
+<p><img src="../screenshots/matrix.png" alt="Traceability matrix" /></p>
+<h3 id="62-using-the-matrix">6.2 Using the Matrix</h3>
 <p>The matrix uses the same layout as the dependency structure matrix
 (§6.4).</p>
 <ul>
 <li><strong>Grid:</strong> requirements are rows and verifications are
 columns. The header rows stay visible while you scroll in either
 direction. A symbol in a cell means the requirement is verified by that
-verification, and shows the verification’s status: <strong>✓</strong>
+verification, and shows the verification's status: <strong>✓</strong>
 pass/complete, <strong>✓</strong> verified/accepted, <strong>◐</strong>
 pending/review, <strong>○</strong> draft, <strong>✗</strong>
 fail/reject, <strong>●</strong> other (in the status colour). Empty
 cells are not linked.</li>
 <li><strong>Rows:</strong> grouped by <strong>category</strong>
-(separated by a line, with the category name on the first row), in
-reference-code order. Click the corner header to reverse the order, and
-drag its right edge to resize the requirement column.</li>
-<li><strong>Sort by a verification:</strong> click a verification’s code
+(categories in alphabetical order, <em>Uncategorised</em> last; a line
+and the category name separate them), requirements in reference-code
+order. Click the corner header to reverse the order, and drag its right
+edge to resize the requirement column; the width is remembered per
+project. A dot before each requirement shows its approval (Reviewed or
+Approved).</li>
+<li><strong>Sort by a verification:</strong> click a verification's code
 in the column header to list the requirements it verifies first (suspect
-links first among them). Click again to reverse. The <strong>↗</strong>
-below the code opens the verification.</li>
+links first among them); the category grouping is dropped while sorting
+this way. Click again to reverse. The <strong>↗</strong> below the code
+opens the verification.</li>
+<li><strong>Open:</strong> click a linked cell or a requirement's code
+to open the requirement.</li>
 <li><strong>Hover</strong> a requirement, a verification or a cell to
 see its details: title, category, status, approval state, link counts
 and, for suspect links, the reason and date.</li>
 <li><strong>Filters</strong> (above the matrix, together with the global
 search):
 <ul>
-<li><strong>Suspect only:</strong> a switch that keeps only suspect
-links.</li>
-<li><strong>Status groups:</strong> buttons for the high-level groups
-(pass, verified, pending, draft, fail, other). Select one or more to
-show only verifications in those groups.</li>
+<li><strong>Links › Suspect only:</strong> a switch that keeps only
+suspect links.</li>
+<li><strong>Status groups:</strong> <strong>Pass / complete</strong>,
+<strong>Verified / accepted</strong>, <strong>Pending / review</strong>,
+<strong>Draft</strong>, <strong>Fail / reject</strong> and
+<strong>Other</strong>. Select one or more to show only verifications in
+those groups. The group (and the cell symbol) comes from words in the
+status <em>title</em>, such as "pass", "accepted" or "fail", not from
+the status outcome used for close-out.</li>
 <li><strong>Requirement status</strong> and <strong>Verification
 status:</strong> each selected status appears as a chip in its own
 colour. Select <strong>×</strong> on a chip to remove it. <strong>Add
-status</strong> opens a list of the project’s statuses; tick one or
-several, then press Escape or click outside the list to close it. With
-the keyboard, use the arrow keys, Home and End to move, and Space or
-Enter to tick.</li>
+status</strong> opens a list of the project's statuses; tick one or
+several, then press Escape or Tab, or click outside the list, to close
+it. With the keyboard, use the arrow keys, Home and End to move, and
+Space or Enter to tick.</li>
 <li><strong>Clear all filters</strong> removes every filter at once and
-keeps the sort.</li>
-<li>Filters and sort are kept in the page URL, so a filtered view can be
-bookmarked or shared.</li>
+keeps the sort (it is disabled when no filter is set).</li>
+<li>Filters and sort are kept in the page URL (parameters starting with
+<code>mx_</code>), so a filtered view can be bookmarked or shared.</li>
 </ul></li>
+<li><strong>Summary line:</strong> the number of requirements and
+verifications shown, links, suspect links and coverage gaps.</li>
 <li><strong>Suspect links:</strong> shown with a red frame. The side
 panel lists them.
 <ul>
@@ -1266,17 +1230,21 @@ panel lists them.
 cell.</li>
 <li><strong>Review</strong> compares the requirement version that
 triggered the flag with its preceding version.</li>
-<li><strong>Clear</strong> removes the flag; the system records the user
-and timestamp.</li>
+<li><strong>Clear</strong> removes the flag at once (no confirmation);
+the system records the user and timestamp.</li>
 </ul></li>
 <li><strong>Coverage gaps:</strong> the side panel lists requirements
-without any verification and verifications without any requirement.
-Click one to scroll to its row or column.</li>
+without any verification and verifications without any requirement (the
+first eight, then <em>+N more</em>). Click one to scroll to its row or
+column; click it again to deselect it.</li>
 <li><strong>Linked cells by status</strong> in the side panel counts the
 visible links per verification status.</li>
 </ul>
-<h3 id="exporting-the-matrix">6.3 Exporting the Matrix</h3>
-<p>From <strong>Reports</strong>, download:</p>
+<h3 id="63-exporting-the-matrix">6.3 Exporting the Matrix</h3>
+<ul>
+<li><strong>Export Excel</strong> above the matrix downloads the
+coverage grid. <strong>Refresh</strong> reloads the data.</li>
+<li>From <strong>Reports &amp; exports</strong>, download:
 <ul>
 <li><strong>Matrix (.xlsx)</strong>: coverage grid (requirements as
 rows, verifications as columns, <code>Yes</code> where linked). For
@@ -1286,9 +1254,10 @@ review, not for re-import.</li>
 per link. Upload this file on <strong>Import</strong> as <strong>Matrix
 links</strong> (same project is a no-op for existing pairs; use it to
 copy links into another project that already has those codes).</li>
+</ul></li>
 </ul>
-<h3 id="dependency-structure-matrix-dsm">6.4 Dependency Structure Matrix
-(DSM)</h3>
+<h3 id="64-dependency-structure-matrix-dsm">6.4 Dependency Structure
+Matrix (DSM)</h3>
 <p>The DSM shows how <strong>requirements depend on each other</strong>,
 for a whole project on one screen. It complements the requirement ×
 verification matrix above.</p>
@@ -1299,7 +1268,7 @@ verification matrix above.</p>
 <li><strong>How to read it:</strong> rows and columns are the same
 requirements in the same order, and the dark diagonal is the requirement
 itself. A mark in row <em>i</em>, column <em>j</em> means requirement
-<em>i</em>’s current version links to requirement <em>j</em>. The letter
+<em>i</em>'s current version links to requirement <em>j</em>. The letter
 shows the link type: <strong>D</strong> derives from, <strong>R</strong>
 refines, <strong>P</strong> depends on, <strong>S</strong> satisfies,
 <strong>~</strong> relates to. Several letters mean several links
@@ -1316,15 +1285,18 @@ that depend on them. Ordinary dependencies then fall below the diagonal,
 and marks above it point to feedback worth reviewing.</li>
 </ul></li>
 <li><strong>Scope:</strong> limit the matrix to one
-<strong>category</strong> or to the <strong>subtree</strong> of one
-requirement. Links to requirements outside the scope are counted in the
+<strong>Category</strong> (<em>All categories</em> by default) or to the
+<strong>Subtree</strong> of one requirement (<em>Whole project</em> by
+default). Links to requirements outside the scope are counted in the
 summary line but not drawn.</li>
 <li><strong>Loops:</strong> requirements that depend on each other in a
 circle (across any link types) are tinted amber and listed in the side
 panel with the loop path. Hover a loop in the panel to highlight its
-cells. Loops are rare, because Marreq already rejects circular links
-between versions, but they can appear when a link points to an older
-version of a requirement.</li>
+cells; click it to scroll to it. In Hierarchy order, selecting a loop
+may switch to <strong>Partition</strong> so its requirements sit next to
+each other; a notice says so. Loops are rare, because Marreq already
+rejects circular links between versions, but they can appear when a link
+points to an older version of a requirement.</li>
 <li><strong>Upstream changed:</strong> a red frame marks an approved
 requirement whose target was edited <em>after</em> that approval. Review
 whether the approved requirement still holds. The side panel lists all
@@ -1334,101 +1306,126 @@ target title, loop membership and any upstream change. Click a mark, or
 a code in the row header, to open the requirement.</li>
 <li><strong>Export Excel:</strong> downloads the matrix with the current
 filters (sheets <em>DSM</em>, <em>Loops</em> and <em>Legend</em>), for
-offline design reviews.</li>
+offline design reviews. <strong>Refresh</strong> reloads the data.</li>
+<li>The summary line counts requirements, links, loops, upstream changes
+and links outside the scope. Link types, order, category and subtree are
+kept in the URL.</li>
 </ul>
-<figure>
-<img src="screenshots/dsm.png" alt="Dependency structure matrix" />
-<figcaption aria-hidden="true">Dependency structure matrix</figcaption>
-</figure>
+<p><img src="../screenshots/dsm.png"
+alt="Dependency structure matrix" /></p>
+<h3 id="65-hierarchy-graph">6.5 Hierarchy Graph</h3>
+<p><strong>Traceability › Hierarchy</strong>
+(<code>/&lt;project-slug&gt;/traceability?view=hierarchy</code>) draws
+the parent ↔︎ child links: between requirements (solid) and between
+verifications (dashed). Only items that have a parent or a child
+appear.</p>
+<ul>
+<li><strong>Requirements / Verifications / Both</strong> restricts the
+graph; the choice is kept in the URL (<code>?kind=</code>).</li>
+<li><strong>Click</strong> a node to select it and highlight its links.
+<strong>Double-click</strong> opens the requirement or
+verification.</li>
+<li><strong>Add child</strong>, shown once a node is selected, opens the
+create page with that node as the parent
+(<code>requirements/new?parent=&lt;id&gt;</code> or
+<code>verifications/new?parent=&lt;id&gt;</code>; see <a
+href="#43-creating-a-requirement">§4.3</a> and <a
+href="#53-creating-a-verification">§5.3</a>).</li>
+</ul>
+<p><img src="../screenshots/hierarchy.png"
+alt="Hierarchy graph with a selected node" /></p>
 <hr />
-<h2 id="baselines">7. Baselines</h2>
+<h2 id="7-baselines">7. Baselines</h2>
 <p>Baselines are <strong>immutable</strong> point-in-time snapshots of
 requirement versions and traceability for a project. Use them for
 audits, releases, or comparison.</p>
-<h3 id="baselines-list">7.1 Baselines List</h3>
+<h3 id="71-baselines-list">7.1 Baselines List</h3>
 <ul>
-<li>From the project: <strong>Baselines</strong> in the nav or
-<strong>View Baselines</strong> on the project detail page.</li>
-<li>URL: <code>/&lt;project-slug&gt;/baselines</code>.</li>
+<li><strong>Baselines</strong> in the sidebar, or
+<code>/&lt;project-slug&gt;/baselines</code>.</li>
 </ul>
-<p>You see all baselines for the project and can click <strong>New
-Baseline</strong> to create one.</p>
-<figure>
-<img src="screenshots/baselines-list.png" alt="Baselines list" />
-<figcaption aria-hidden="true">Baselines list</figcaption>
-</figure>
-<h3 id="creating-a-baseline">7.2 Creating a Baseline</h3>
+<p>The list shows each baseline's <strong>Name</strong>, <strong>Source
+view</strong> (the saved view it was made from, if any) and
+<strong>Created</strong> date; <strong>Details</strong> opens it. The
+<strong>Create baseline</strong> form is at the top of the page.</p>
+<p><img src="../screenshots/baselines-list.png"
+alt="Baselines list" /></p>
+<h3 id="72-creating-a-baseline">7.2 Creating a Baseline</h3>
+<p>In <strong>Create baseline</strong> on the Baselines page:</p>
 <ol type="1">
-<li>Click <strong>New Baseline</strong>.</li>
-<li>URL: <code>/&lt;project-slug&gt;/baselines/new</code>.</li>
-<li>Enter <strong>Name</strong> and optional
+<li>Enter a <strong>Name</strong> and an optional
 <strong>Description</strong>.</li>
-<li>Submit.</li>
+<li>Optionally choose <strong>From saved view</strong> (<a
+href="#41-requirements-views">§4.1</a>): only the requirements matching
+that view are included, and the view is <strong>locked</strong> so it
+keeps describing the baseline. Views already used by a baseline are not
+offered.</li>
+<li>Select <strong>Create</strong>.</li>
 </ol>
-<p>The system captures the <strong>current</strong> requirement version
-for each requirement, the <strong>current</strong> traceability matrix
-(requirement–verification links), and a <strong>snapshot of verification
-statuses</strong> at that moment. The baseline cannot be edited or
-deleted.</p>
-<h3 id="viewing-a-baseline">7.3 Viewing a Baseline</h3>
+<p>The system captures the <strong>current</strong> version of each
+included requirement, the <strong>current</strong> traceability links
+(requirement–verification), a <strong>snapshot of each
+verification</strong> (name, status, type, …) and the list of attached
+files at that moment. A baseline cannot be edited.</p>
+<h3 id="73-viewing-a-baseline">7.3 Viewing a Baseline</h3>
 <ul>
-<li>Click a baseline in the list.</li>
-<li>URL:
+<li><strong>Details</strong> in the list. URL:
 <code>/&lt;project-slug&gt;/baselines/&lt;baseline_id&gt;</code>.</li>
 </ul>
 <p>You see:</p>
 <ul>
-<li><strong>Metadata</strong>: Name, description, created date, created
-by.</li>
-<li><strong>Requirements in this baseline</strong>: Table with
-requirement ID, reference, title; links to requirement (and version)
-pages.</li>
-<li><strong>Traceability</strong>: List of requirement–verification
-pairs (with references like REQ-PWR-001, TEST-PWR-001). A
-<strong>Verifications</strong> snapshot is also stored so you can see
-which verification status (e.g. Pass/Fail) each linked verification had
-at baseline time.</li>
-<li><strong>Diff vs current</strong>: For each requirement that has
-changed since the baseline, a <strong>Diff vs current</strong> action
-opens a <strong>diff modal</strong> comparing the baseline snapshot to
-the current version. If the requirement is unchanged, this action is
-hidden.</li>
-<li><strong>Diff between baselines</strong>: Select another baseline and
-use <strong>Diff baselines</strong> on requirements whose frozen
-versions differ.</li>
-<li><strong>Verification diff vs current</strong>: Verification rows
-compare the frozen name, description, source, reference, status, type,
-and parent with the current verification.</li>
-<li><strong>Attachments</strong>: The files attached to the included
-requirements and to the verifications when the baseline was taken. Files
+<li>The <strong>name</strong> and <strong>description</strong>, and
+counters for requirements, verifications and traceability rows.</li>
+<li><strong>Requirement snapshots</strong>: reference and title of each
+requirement as frozen, with a <strong>Comparison</strong> column:
+<ul>
+<li><strong>Diff vs current</strong> opens a comparison of the frozen
+version with the current one; <em>Current unchanged</em> means nothing
+changed since.</li>
+<li><strong>Compare with baseline</strong> (above the table) picks
+another baseline; <strong>Diff baselines</strong> then compares the two
+frozen versions of a requirement (the older baseline is shown as the
+"before").</li>
+</ul></li>
+<li><strong>Verification snapshots</strong>: reference, the status and
+type at baseline time next to the current ones, and a comparison of the
+frozen name, description, source, reference, status, type and parent
+with the current verification (<em>Unchanged</em>, or
+<em>Unavailable</em> when the verification was deleted since).</li>
+<li><strong>Sample traceability</strong>: the first rows of the frozen
+requirement–verification links (by requirement and verification number),
+with their suspect flag.</li>
+<li><strong>Attachments</strong>: the files attached to the included
+requirements and verifications when the baseline was taken. Files
 deleted since stay downloadable here and are marked <em>deleted
-since</em>; they keep counting toward the project’s storage until the
+since</em>; they keep counting toward the project's storage until the
 baseline no longer needs them.</li>
-<li><strong>Export ReqIF</strong>: Button to export <strong>this
-baseline</strong> as ReqIF 1.2 XML.</li>
+<li><strong>Export ReqIF</strong> and <strong>Export ReqIFZ (with
+files)</strong> (<a
+href="#74-exporting-a-baseline-as-reqif">§7.4</a>).</li>
 </ul>
-<h3 id="exporting-a-baseline-as-reqif">7.4 Exporting a Baseline as
+<h3 id="74-exporting-a-baseline-as-reqif">7.4 Exporting a Baseline as
 ReqIF</h3>
 <ul>
-<li>On the baseline detail page: <strong>Export ReqIF</strong>.</li>
-<li>The downloaded file is the ReqIF 1.2 snapshot of that baseline.
-Project-wide current-state ReqIF is available from <strong>Reports →
-Requirements (.reqif)</strong>.</li>
+<li>On the baseline detail page: <strong>Export ReqIF</strong> downloads
+the ReqIF 1.2 snapshot of that baseline; <strong>Export ReqIFZ (with
+files)</strong> adds the files the baseline recorded, including ones
+deleted since (<a href="#94-exporting-reqif">§9.4</a>).</li>
+<li>Project-wide current-state ReqIF is available from <strong>Reports
+&amp; exports → Requirements (.reqif)</strong>.</li>
 </ul>
 <hr />
-<h2 id="categories-applicability-verification">8. Categories,
+<h2 id="8-categories-applicability--verification">8. Categories,
 Applicability &amp; Verification</h2>
 <p>These are <strong>project-level</strong> configuration entities used
 to classify and manage requirements and verifications. They are edited
 under <strong>Project settings › Catalog</strong>
-(<code>/&lt;project-slug&gt;/settings/catalog</code>), one tab each; you
-need <strong>Edit requirements</strong> permission to change them.</p>
+(<code>/&lt;project-slug&gt;/settings/catalog</code>), one tab each.
+Only <strong>project administrators</strong> (the project's Admin role,
+or a site administrator) can change them; custom fields need
+<strong>Manage custom fields</strong>, which the same roles have. Other
+members see the tabs read-only.</p>
 <table>
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 33%" />
-<col style="width: 33%" />
-</colgroup>
 <thead>
 <tr>
 <th>Tab</th>
@@ -1439,22 +1436,22 @@ need <strong>Edit requirements</strong> permission to change them.</p>
 <tbody>
 <tr>
 <td><strong>Categories</strong></td>
-<td>Groups of requirements (e.g. “Safety”, “Performance”)</td>
+<td>Groups of requirements (e.g. “Safety”, “Performance”)</td>
 <td><code>…/settings/catalog/categories</code></td>
 </tr>
 <tr>
 <td><strong>Applicability</strong></td>
-<td>Product lines, system types or scope (e.g. “Product A”, “All”)</td>
+<td>Product lines, system types or scope (e.g. “Product A”, “All”)</td>
 <td><code>…/settings/catalog/applicability</code></td>
 </tr>
 <tr>
 <td><strong>Requirement statuses</strong></td>
-<td>e.g. Draft, Accepted, Rejected</td>
+<td>e.g. Draft, Accepted, Rejected</td>
 <td><code>…/settings/catalog/requirement-statuses</code></td>
 </tr>
 <tr>
 <td><strong>Verification statuses</strong></td>
-<td>e.g. Pass, Fail, Not run</td>
+<td>e.g. Pass, Fail, Not run</td>
 <td><code>…/settings/catalog/verification-statuses</code></td>
 </tr>
 <tr>
@@ -1464,75 +1461,102 @@ need <strong>Edit requirements</strong> permission to change them.</p>
 </tr>
 <tr>
 <td><strong>Verification methods</strong></td>
-<td>How requirements are verified (e.g. Test, Analysis, Review)</td>
+<td>How requirements are verified (e.g. Test, Analysis, Review)</td>
 <td><code>…/settings/catalog/verification-methods</code></td>
 </tr>
 </tbody>
 </table>
-<p>Each tab lists the entries with their title, description and tag, and
-lets you add, edit and delete them. The old
+<p>Each tab lists the entries and lets you add, edit and delete
+them:</p>
+<ul>
+<li><strong>Categories</strong>, <strong>Applicability</strong> and
+<strong>Verification methods</strong>: title, description and tag.</li>
+<li><strong>Requirement statuses</strong> and <strong>Verification
+statuses</strong>: also a colour and, for the statuses every project
+starts with, the <em>System</em> flag. System statuses cannot be edited
+or deleted.</li>
+<li><strong>Custom fields</strong>: label, type (<code>text</code>,
+<code>number</code>, <code>boolean</code>, or <code>enum</code> with one
+option per line) and sort order.</li>
+</ul>
+<p>Members without the permission see the tabs read-only, with a note
+saying which permission is needed. The old
 <code>/&lt;project-slug&gt;/catalog/…</code> URLs redirect here.</p>
 <p>Each verification status also has an <strong>outcome</strong>:
 <em>Passed</em>, <em>Failed</em>, <em>In progress</em> or <em>Not
 run</em>. The outcome tells Marreq what the status means for requirement
 close-out (<a href="#57-verification-control-and-close-out">§5.7</a>).
-New statuses get it from their title (a status called “Passed” is
-<em>Passed</em>; an unknown title is <em>Not run</em>), and you can
-change it for your own statuses.</p>
+New statuses get it from their title (a status called "Passed" is
+<em>Passed</em>; an unknown title is <em>Not run</em>) unless you choose
+one in <strong>Outcome</strong> when adding the status; you can change
+it later for your own statuses.</p>
 <hr />
-<h2 id="reports-export">9. Reports &amp; Export</h2>
-<h3 id="reports-page">9.1 Reports Page</h3>
+<h2 id="9-reports--export">9. Reports &amp; Export</h2>
+<h3 id="91-reports-page">9.1 Reports Page</h3>
 <ul>
-<li>From the project: <strong>Reports</strong> in the nav or
-<strong>View Reports</strong> on the project detail page.</li>
-<li>URL: <code>/&lt;project-slug&gt;/reports</code>.</li>
+<li><strong>Reports &amp; exports</strong> in the sidebar, or
+<code>/&lt;project-slug&gt;/reports</code>. The page is titled
+<strong>Coverage &amp; gaps</strong>; a bar at the top jumps to its
+sections, and <strong>Refresh</strong> reloads it.</li>
 </ul>
-<figure>
-<img src="screenshots/reports.png" alt="Reports page" />
-<figcaption aria-hidden="true">Reports page</figcaption>
-</figure>
+<p><img src="../screenshots/reports.png" alt="Reports page" /></p>
 <p>You see:</p>
 <ul>
-<li><strong>Executive summary</strong>: Total requirements, total
-verifications, coverage %, average verifications per requirement.</li>
-<li><strong>Coverage analysis</strong>: Covered vs uncovered
-requirements, requirements without verifications, verifications without
-requirements, suspect links. Verification status distribution
-(e.g. Passed/Failed/Pending) may be shown.</li>
-<li><strong>Generate PDF Report</strong> (<em>Report PDF</em>): the
-<strong>Traceability &amp; coverage report</strong>: cover page,
-contents, coverage figures, coverage by reference-code prefix,
-requirements without verification, verifications without requirements,
-suspect links and data quality.</li>
-<li><strong>Download requirements (PDF)</strong>: Link to
-requirements-only PDF.</li>
-<li><strong>Excel downloads</strong>: Requirements, Verifications,
-<strong>Matrix</strong> (coverage grid), and <strong>Matrix
-links</strong> (two code columns for import).</li>
-</ul>
-<h3 id="exporting-requirements-to-excel">9.2 Exporting Requirements to
-Excel</h3>
+<li><strong>Coverage</strong>: tiles for requirements without tests,
+tests without requirements and suspect links, then each list in full,
+with shortcuts to the Matrix and the graph. The Dashboard's Gaps,
+Orphans and Suspect cards open these lists.</li>
+<li><strong>Report documents</strong>: the VCD and the traceability
+&amp; coverage report as PDF or ODT (<a
+href="#96-report-documents-vcd-and-coverage-report">§9.6</a>).</li>
+<li><strong>Exports</strong>:
 <ul>
-<li>From the <strong>Requirements</strong> list: <strong>Export
-Excel</strong> (or use the project-level export link).</li>
-<li>URL: <code>/&lt;project-slug&gt;/requirements.xls</code>.</li>
-<li>Downloads an <code>.xls</code> file with requirements and all
-configured fields (including a <strong>Comments</strong> sheet when
-applicable).</li>
+<li><strong>Requirements (.xlsx)</strong>, <strong>Verifications
+(.xlsx)</strong>, <strong>Matrix (.xlsx)</strong> and <strong>Matrix
+links (.xlsx)</strong> (<a
+href="#63-exporting-the-matrix">§6.3</a>);</li>
+<li><strong>Requirements PDF</strong> (the requirement list) and
+<strong>Report PDF</strong> (the traceability &amp; coverage report with
+default settings);</li>
+<li><strong>Requirements (.reqif)</strong> and <strong>Requirements with
+files (.reqifz)</strong> (<a href="#94-exporting-reqif">§9.4</a>);</li>
+<li><strong>Project bundle (.json)</strong> and <strong>Project bundle
+with files (.zip)</strong> (<a
+href="#95-exporting-a-project-bundle">§9.5</a>).</li>
+</ul></li>
+<li><strong>Matrix</strong>: requirements whose links are all suspect,
+the verifications linked to the most requirements, requirements by
+number of links, and coverage by category.</li>
+<li><strong>Data quality</strong>: requirements and verifications with
+missing information.</li>
+<li><strong>Workflow</strong>: requirements by approval state, by author
+and by reviewer.</li>
+<li><strong>Baseline diff</strong>: the current traceability compared
+with a baseline you choose.</li>
 </ul>
-<h3 id="exporting-verifications-to-excel">9.3 Exporting Verifications to
-Excel</h3>
+<h3 id="92-exporting-requirements-to-excel">9.2 Exporting Requirements
+to Excel</h3>
 <ul>
-<li>From the <strong>Verifications</strong> list or reports: use
-<strong>Export Excel</strong> (verifications) when available to download
-all project verifications for test management or external
-reporting.</li>
-<li>URL: <code>/&lt;project-slug&gt;/verifications.xls</code>.</li>
-<li>The export includes verification fields (name, description, source,
-status, reference code, etc.) so you can share or analyze test data
-outside Marreq.</li>
+<li><strong>Reports &amp; exports → Requirements (.xlsx)</strong>, or
+the <strong>Excel</strong> button on the Requirements list.</li>
+<li>The workbook (<code>.xlsx</code>) contains every requirement in the
+project with all configured fields, and a <strong>Comments</strong>
+sheet when there are comments.</li>
+<li>The <strong>CSV</strong> button next to it downloads only the rows
+currently shown (after filters and Global Search).</li>
 </ul>
-<h3 id="exporting-reqif">9.4 Exporting ReqIF</h3>
+<h3 id="93-exporting-verifications-to-excel">9.3 Exporting Verifications
+to Excel</h3>
+<ul>
+<li><strong>Reports &amp; exports → Verifications (.xlsx)</strong>, or
+the <strong>Excel</strong> button on the Verifications list.</li>
+<li>The workbook contains every verification in the project (name,
+description, source, status, reference code, …), for test management or
+reporting outside Marreq.</li>
+<li>The <strong>CSV</strong> button downloads only the rows currently
+shown.</li>
+</ul>
+<h3 id="94-exporting-reqif">9.4 Exporting ReqIF</h3>
 <ul>
 <li><strong>Current project</strong>: open <strong>Reports</strong> and
 download <strong>Requirements (.reqif)</strong> for the live requirement
@@ -1542,7 +1566,7 @@ attribute; the files themselves are not included in a
 <code>.reqif</code> file.</li>
 <li><strong>With the files</strong>: download <strong>Requirements with
 files (.reqifz)</strong> instead. A ReqIFZ archive is a ZIP file holding
-the <code>.reqif</code> document and each requirement’s attachments
+the <code>.reqif</code> document and each requirement's attachments
 under <code>files/&lt;attachment id&gt;/&lt;file name&gt;</code>. The
 statements link to the files the standard ReqIF way (XHTML objects), so
 DOORS, Polarion, Codebeamer and Marreq itself can pick them up.</li>
@@ -1551,19 +1575,24 @@ DOORS, Polarion, Codebeamer and Marreq itself can pick them up.</li>
 <strong>Export ReqIFZ (with files)</strong> to include the files the
 baseline recorded, including ones deleted since.</li>
 </ul>
-<h3 id="exporting-a-project-bundle-json">9.5 Exporting a project bundle
-(JSON)</h3>
+<h3 id="95-exporting-a-project-bundle">9.5 Exporting a project
+bundle</h3>
 <ul>
 <li>Open <strong>Reports</strong> and download <strong>Project bundle
-(.json)</strong>.</li>
-<li>The file is a portable snapshot of the project catalog, current
+(.json)</strong>, or <strong>Project bundle with files (.zip)</strong>
+to include the attachment files.</li>
+<li>The bundle is a portable snapshot of the project catalog, current
 requirements, verifications, matrix links, comments, and members (by
-username). It does not include version history, baselines, attachments,
-or passwords.</li>
+username). It does not include version history, baselines or passwords;
+the <code>.json</code> bundle has no attachment files.</li>
+<li>The <code>.zip</code> bundle holds <code>bundle.json</code> plus the
+current attachment files of the requirements and verifications under
+<code>files/&lt;attachment id&gt;/&lt;file name&gt;</code> (deleted
+files and files only kept by a baseline are left out).</li>
 <li>Anyone who can view the project can export the bundle.</li>
 </ul>
-<h3 id="report-documents-vcd-and-coverage-report">9.6 Report documents
-(VCD and coverage report)</h3>
+<h3 id="96-report-documents-vcd-and-coverage-report">9.6 Report
+documents (VCD and coverage report)</h3>
 <p>The <strong>Report documents</strong> card on the Reports page
 produces formatted documents:</p>
 <ul>
@@ -1607,7 +1636,7 @@ it.</li>
 <li><strong>Save as…</strong> stores the settings as a named template,
 private or shared with all project members. <strong>Save</strong>
 updates the selected template and <strong>Delete</strong> removes it.
-Only the template’s owner, a project Admin or an instance administrator
+Only the template's owner, a project Admin or an instance administrator
 can change or delete it; anyone can still use it, or save their own
 copy. <strong>Reset to default</strong> returns to the built-in
 settings.</li>
@@ -1615,16 +1644,17 @@ settings.</li>
 <p>When a later version of Marreq adds a section, your saved templates
 show it switched off, so they keep producing the same document.</p>
 <hr />
-<h2 id="import">10. Import</h2>
-<h3 id="importing-from-excel-or-csv">10.1 Importing from Excel or
+<h2 id="10-import">10. Import</h2>
+<h3 id="101-importing-from-excel-or-csv">10.1 Importing from Excel or
 CSV</h3>
 <ol type="1">
 <li>Open a project and go to <strong>Project settings › Import</strong>,
 <strong>Create → Import</strong>, or
 <code>/{project-slug}/settings/import</code>.</li>
 <li>You need <strong>Edit requirements</strong> permission.</li>
-<li>Upload a <strong><code>.xlsx</code></strong> or
-<strong><code>.csv</code></strong> file (first sheet only).</li>
+<li>Upload a <strong><code>.xlsx</code></strong>,
+<strong><code>.xls</code></strong> or <strong><code>.csv</code></strong>
+file (first sheet only).</li>
 <li>Click <strong>Upload and map columns</strong>.</li>
 <li>Choose <strong>Requirements</strong>,
 <strong>Verifications</strong>, or <strong>Matrix links</strong>, map
@@ -1648,7 +1678,7 @@ requirement and verification <strong>reference codes</strong> (Import as
 (.xlsx)</strong> from Reports. Missing codes are reported; Marreq does
 not invent records. Extra columns are ignored. Re-importing a file
 exported from the same project skips pairs that already exist.</p>
-<h3 id="importing-reqif">10.2 Importing ReqIF</h3>
+<h3 id="102-importing-reqif">10.2 Importing ReqIF</h3>
 <ol type="1">
 <li>Open a project and go to <strong>Project settings › Import</strong>
 (<code>/{project-slug}/settings/import</code>). You need <strong>Edit
@@ -1668,85 +1698,127 @@ Custom attributes and original ReqIF identifiers are not persisted.
 Empty catalogs (especially verification methods) cause the import to
 fail until they exist.</p>
 <p><strong>ReqIFZ archives.</strong> Every <code>.reqif</code> document
-in the archive is imported into the project. Each file a requirement’s
+in the archive is imported into the project. Each file a requirement's
 text references (an XHTML object) becomes an attachment of that
 requirement, with the same checks as a manual upload (<a
 href="#49-attachments">§4.9</a>): allowed types, the per-file limit and
-the project’s storage limit (<a href="#34-project-storage">§3.4</a>). A
+the project's storage limit (<a href="#34-project-storage">§3.4</a>). A
 file that fails a check, or that is missing from the archive, is skipped
 and listed as a warning; its requirement is still imported. Archives can
 be up to 100 MB (<code>MARREQ_REQIFZ_MAX_MB</code>). Archives with
 unsafe content (paths leading outside the archive, links, extreme
 compression) are refused as a whole. Files attached in other,
 tool-specific ways are not imported and are reported as a warning.</p>
-<h3 id="importing-a-project-bundle-json">10.3 Importing a project bundle
-(JSON)</h3>
+<h3 id="103-importing-a-project-bundle">10.3 Importing a project
+bundle</h3>
 <ol type="1">
 <li>Go to <strong>New project</strong> (<code>/projects/new</code>) and
 open <strong>Import from JSON bundle</strong>, or visit
 <code>/projects/import-bundle</code>.</li>
-<li>Upload a <code>marreq.project-bundle.v1</code> file exported from
-Reports. Optionally choose a group namespace you manage.</li>
+<li>Upload a bundle exported from Reports: the <code>.json</code> bundle
+or the <code>.zip</code> bundle with files. Optionally choose a group
+namespace you manage.</li>
 <li>Marreq <strong>creates a new project</strong> (it does not merge
 into an existing one). Catalog tags, requirement and verification
 reference codes, matrix links, and comments are restored. Authors and
 members are matched by username or email on this instance; missing users
 are skipped or mapped to you.</li>
-<li>After import, you land on the new project’s dashboard.</li>
+<li>From a <code>.zip</code> bundle, each file is attached to its
+requirement or verification with the same checks as a manual upload (<a
+href="#49-attachments">§4.9</a>): allowed types, the per-file limit and
+the new project's storage limit (<a
+href="#34-project-storage">§3.4</a>). A file that fails a check is
+skipped and listed as a warning; the rest of the project is imported.
+Archives can be up to 100 MB (<code>MARREQ_REQIFZ_MAX_MB</code>).</li>
+<li>Without warnings you land on the new project's dashboard; otherwise
+the warnings are shown first, with <strong>Open project</strong>.</li>
 </ol>
 <p>This is separate from in-project Excel/CSV and ReqIF import, which
 add records to the project you already have open.</p>
 <hr />
-<h2 id="project-members">11. Project Members</h2>
+<h2 id="11-project-members">11. Project Members</h2>
 <ul>
-<li><strong>View members</strong>: <strong>Project settings › Members
-&amp; reviewers</strong>.</li>
+<li><strong>Project settings › Members &amp; reviewers</strong>.</li>
 <li>URL: <code>/&lt;project-slug&gt;/settings/members</code> (the old
 <code>/&lt;project-slug&gt;/members</code> redirects here).</li>
 </ul>
-<p>You see each member and their role (Admin, Reviewer, Author, Viewer).
-Users with <strong>Manage members</strong> can change roles and remove
+<p>You see each member and their role. Users with <strong>Manage
+members</strong> (the project's Admins) can change roles and remove
 members.</p>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Can</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Admin</strong></td>
+<td>Everything in the project: edit requirements and verifications,
+manage members, the catalog, custom fields and project settings</td>
+</tr>
+<tr>
+<td><strong>Reviewer</strong></td>
+<td>View and edit requirements and verifications</td>
+</tr>
+<tr>
+<td><strong>Author</strong></td>
+<td>View and edit requirements and verifications</td>
+</tr>
+<tr>
+<td><strong>Viewer</strong></td>
+<td>View only</td>
+</tr>
+</tbody>
+</table>
+<p>Approving versions and changing statuses is not part of any role: it
+depends on the <strong>project reviewer</strong> list below.</p>
 <ul>
-<li><strong>Add member</strong>: pick an account and a role, then
-<strong>Add</strong>. Picking from all accounts needs the user
-directory, which only instance administrators can see; other managers
-are asked to have an administrator add people.</li>
-<li><strong>Remove member</strong>: <strong>Remove</strong> next to the
-member, then confirm.</li>
+<li><strong>Add a member</strong>: under <strong>Add user</strong>, pick
+an account and a role, then <strong>Add</strong>. Picking from all
+accounts needs the user directory, which only instance administrators
+can see; other managers are asked to have an administrator add
+people.</li>
+<li><strong>Remove a member</strong>: <strong>Remove</strong> next to
+the member, then confirm.</li>
 </ul>
-<h3 id="project-reviewers-workflow-gates">11.1 Project reviewers
+<p><img src="../screenshots/settings-members.png"
+alt="Members and reviewers" /></p>
+<h3 id="111-project-reviewers-workflow-gates">11.1 Project reviewers
 (workflow gates)</h3>
 <p>Some actions are limited to a <strong>designated reviewer
-list</strong> for the project (not the same as the “Reviewer” role
-alone):</p>
+list</strong> for the project (not the same as the “Reviewer” role):</p>
 <ul>
-<li><strong>Who</strong>: open <strong>Project settings › Members &amp;
-reviewers</strong>. Users with <strong>Manage members</strong> can check
+<li><strong>Who</strong>: on <strong>Project settings › Members &amp;
+reviewers</strong>, users with <strong>Manage members</strong> tick
 which <strong>project members</strong> act as <strong>project
-reviewers</strong>. Only members of the project can be reviewers.</li>
-<li><strong>What they control</strong>: <strong>Requirement
-status</strong> (from the requirements table or requirement editor),
-<strong>verification (test) status</strong>, and <strong>version
-approval</strong> transitions (<strong>draft → reviewed →
-approved</strong>). Other editors can still change most requirement or
-verification fields if they have <strong>Edit requirements</strong>, but
-not those gates unless they are in the reviewer list.</li>
-<li><strong>Verifications</strong>: Each verification has an assigned
-<strong>author</strong> and <strong>reviewer</strong> (users). The
-<strong>status</strong> of the verification is still changed only by
-<strong>project reviewers</strong> (or an administrator).</li>
-<li><strong>Audit</strong>: Version <strong>reviewed</strong> /
-<strong>approved</strong> and verification status changes record
-<strong>who</strong> performed the action where the product exposes it
-(and in server logs).</li>
+reviewers</strong>, then select <strong>Save reviewer list</strong>
+(<strong>Reset</strong> undoes unsaved changes). Only members of the
+project can be reviewers.</li>
+<li><strong>What they control</strong>: <strong>requirement
+status</strong>, <strong>verification status</strong>, and
+<strong>version approval</strong> (<strong>draft → reviewed →
+approved</strong>). Other editors can still change the other fields of
+requirements and verifications, but not those.</li>
+<li><strong>Reviewer fields</strong>: the <strong>Reviewer</strong> of a
+requirement or verification is chosen from this list.</li>
+<li><strong>Audit</strong>: reviews, approvals and status changes record
+<strong>who</strong> made them.</li>
 </ul>
-<p>If <strong>no project reviewers</strong> are configured, only
-<strong>administrators</strong> can change those statuses and approvals
-until at least one reviewer is added.</p>
+<p><strong>No reviewers yet</strong>: while the list is empty, only
+<strong>site administrators</strong> can change statuses and approve,
+and <strong>Create requirement</strong> and <strong>Create
+verification</strong> stay disabled, with <strong>Add a reviewer in
+Project settings</strong> next to the button. Creating requirements also
+needs at least one verification method (<strong>Add a verification
+method</strong>).</p>
+<p><strong>Once the list has members</strong>, being a site
+administrator does not bypass it: an administrator who needs these
+powers must tick themselves too.</p>
 <hr />
-<h2 id="profile-account">12. Profile &amp; Account</h2>
-<h3 id="account-settings">12.1 Account Settings</h3>
+<h2 id="12-profile--account">12. Profile &amp; Account</h2>
+<h3 id="121-account-settings">12.1 Account Settings</h3>
 <ul>
 <li><strong>User menu (avatar, top-right) → Account
 settings</strong>.</li>
@@ -1758,7 +1830,7 @@ such as company SSO; connect or disconnect, plus a <strong>Change
 password</strong> link when your account has a password), and
 <strong>Connected applications</strong> (apps you authorized through
 OAuth, with <strong>Revoke</strong>).</p>
-<h3 id="edit-profile">12.2 Edit Profile</h3>
+<h3 id="122-edit-profile">12.2 Edit Profile</h3>
 <p>In <strong>Account settings → Profile</strong>:</p>
 <ul>
 <li><strong>Username</strong> is shown read-only. It is also your
@@ -1768,15 +1840,15 @@ shown in the header, as author/reviewer, and in logs.</li>
 <li><strong>Email</strong>: must be a valid address not used by another
 account. When you change it, enter your <strong>Current
 password</strong> to confirm. Accounts that only sign in with an
-external provider (no password) don’t need one.</li>
-<li>Click <strong>Save profile</strong>. “Profile updated.” confirms the
+external provider (no password) don't need one.</li>
+<li>Click <strong>Save profile</strong>. "Profile updated." confirms the
 change, and the header shows the new name right away.</li>
 </ul>
 <p>On the hosted cloud service, where email addresses must be verified,
 the email field is read-only; contact your administrator to change it.
 Administrators can also edit any user from <strong>Administration ›
 Users</strong> (see <a href="#131-user-management">§13.1</a>).</p>
-<h3 id="change-password">12.3 Change Password</h3>
+<h3 id="123-change-password">12.3 Change Password</h3>
 <ul>
 <li><strong>User menu (avatar, top-right) → Change password</strong>.
 Users with no projects can use <strong>Change password</strong> on the
@@ -1789,16 +1861,16 @@ must be at least 8 characters and must not be common, breached, or based
 on your name or username. Submit; on success you are signed out and
 redirected to sign in.</p>
 <hr />
-<h2 id="administration">13. Administration</h2>
+<h2 id="13-administration">13. Administration</h2>
 <p>Available only to <strong>instance administrators</strong>
 (<code>is_admin</code>). Open <strong>Administration</strong> from the
-user menu (avatar, top right); other users don’t see the entry. The area
+user menu (avatar, top right); other users don't see the entry. The area
 lives outside any project at <code>/admin</code>, with tabs for
 <strong>Users</strong>, <strong>System logs</strong>, <strong>Log
 analytics</strong> and <strong>Backup</strong>, and a <strong>Back to
 project</strong> link. Old <code>/&lt;project-slug&gt;/admin/…</code>
 links redirect here.</p>
-<h3 id="user-management">13.1 User Management</h3>
+<h3 id="131-user-management">13.1 User Management</h3>
 <ul>
 <li><strong>Administration › Users</strong>.</li>
 <li>URL: <code>/admin</code>.</li>
@@ -1826,7 +1898,7 @@ cloud mode), <strong>New user</strong> is hidden and the <strong>Site
 administrator</strong> flag cannot be changed; the remaining actions
 work the same way. All changes are recorded in <strong>System
 logs</strong>.</p>
-<h3 id="database-backup">13.2 Database Backup</h3>
+<h3 id="132-database-backup">13.2 Database Backup</h3>
 <ul>
 <li><strong>Administration › Backup</strong> (not shown in the hosted
 cloud mode).</li>
@@ -1834,33 +1906,51 @@ cloud mode).</li>
 </ul>
 <p><strong>Download backup</strong> runs <code>pg_dump</code> on the
 server and downloads the whole database (all projects, users, and audit
-logs) as gzipped SQL named
-<code>marreq-backup_&lt;YYYYMMDD&gt;_&lt;HHMMSS&gt;.sql.gz</code>.
-Nothing is stored on the server. Large databases can take a few minutes;
-keep the page open. The file contains password hashes and all project
-data, so store it securely. Each download (or failure) is recorded in
+logs) together with the attachment files, as
+<code>marreq-backup_&lt;YYYYMMDD&gt;_&lt;HHMMSS&gt;.tar.gz</code>. The
+archive holds <code>database.sql</code>, the <code>attachments/</code>
+folder and a <code>manifest.json</code>. <strong>Include attachment
+files</strong> (ticked by default) shows how many files there are and
+their size; untick it for a smaller, database-only backup. Nothing is
+stored on the server. Large databases can take a few minutes; keep the
+page open. The file contains password hashes and all project data, so
+store it securely. Each download (or failure) is recorded in
 <strong>System logs</strong> as an <code>EXPORT</code> entry.</p>
-<p>To restore, load the file into an <strong>empty</strong> database
-with <code>psql</code> from PostgreSQL 17 or newer:</p>
+<p>To restore, unpack the archive, load <code>database.sql</code> into
+an <strong>empty</strong> database with <code>psql</code> from
+PostgreSQL 17 or newer, and copy <code>attachments/</code> into the
+attachment directory (<code>MARREQ_ATTACHMENTS_DIR</code>, the
+<code>marreq_attachments</code> Docker volume):</p>
 <div class="sourceCode" id="cb1"><pre
-class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">gunzip</span> <span class="at">-c</span> marreq-backup_YYYYMMDD_HHMMSS.sql.gz <span class="kw">|</span> <span class="ex">psql</span> <span class="st">&quot;</span><span class="va">$DATABASE_URL</span><span class="st">&quot;</span></span></code></pre></div>
-<p>The download contains the database only. Attachment files live in the
-<code>marreq_attachments</code> Docker volume (the directory set by
-<code>MARREQ_ATTACHMENTS_DIR</code>). Back that up at the same time; see
-<em>Backup and Restore</em> in the database setup guide.</p>
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">tar</span> xzf marreq-backup_YYYYMMDD_HHMMSS.tar.gz</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">psql</span> <span class="st">&quot;</span><span class="va">$DATABASE_URL</span><span class="st">&quot;</span> <span class="op">&lt;</span> marreq-backup_YYYYMMDD_HHMMSS/database.sql</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">cp</span> <span class="at">-a</span> marreq-backup_YYYYMMDD_HHMMSS/attachments/. <span class="st">&quot;</span><span class="va">$MARREQ_ATTACHMENTS_DIR</span><span class="st">&quot;</span>/</span></code></pre></div>
+<p>For the Docker volume commands (and the file owner), see <em>Backup
+and Restore</em> in the database setup guide. A database-only backup
+needs the attachments volume backed up separately.</p>
 <p>Available on self-hosted (<code>marreq-server</code>) installations
 only. In the hosted cloud mode the page explains that backups are
 managed by the hosting operator.</p>
-<h3 id="system-logs">13.3 System Logs</h3>
+<h3 id="133-system-logs">13.3 System Logs</h3>
 <ul>
 <li><strong>Administration › System logs</strong>.</li>
 <li>URL: <code>/admin/logs</code>.</li>
 </ul>
-<p>Browse audit logs (entity type, entity ID, user, action, timestamp).
-You can filter by entity and export logs (e.g. <strong>Export
-logs</strong> with optional filename). <strong>Cleanup logs</strong> (if
-available) removes old entries.</p>
-<h3 id="log-analytics">13.4 Log Analytics</h3>
+<p>The audit log of the whole instance, newest first, with the columns
+<strong>Time</strong>, <strong>User</strong>, <strong>Action</strong>,
+<strong>Entity</strong>, <strong>Project</strong> and
+<strong>Summary</strong>. Open a row to see the changed fields with
+their old and new values.</p>
+<ul>
+<li><strong>Filters</strong>: entity type, entity ID, user ID, action,
+project ID, and a <strong>Since</strong> / <strong>Until</strong> range;
+select <strong>Filter</strong> to apply them. The list is paged.</li>
+<li><strong>Export JSON</strong> downloads the entries matching the
+filters (and is itself recorded as an <code>EXPORT</code> entry).</li>
+<li><strong>Cleanup older than N days</strong> deletes old entries,
+after a confirmation.</li>
+</ul>
+<h3 id="134-log-analytics">13.4 Log Analytics</h3>
 <ul>
 <li><strong>Administration › Log analytics</strong>.</li>
 <li>URL: <code>/admin/logs/analytics</code>.</li>
@@ -1881,39 +1971,47 @@ that action or user for the same period.</li>
 <p>Days are calendar days in <strong>UTC</strong>. Available to
 administrators only.</p>
 <hr />
-<h2 id="tips-shortcuts">14. Tips &amp; Shortcuts</h2>
+<h2 id="14-tips--shortcuts">14. Tips &amp; Shortcuts</h2>
 <ul>
-<li><strong>Theme</strong>: use the light / dark / match-system switch
-in the top bar (on wider screens) or on the login page; the choice is
+<li><strong>Theme</strong>: the light / dark / match-system switch in
+the top bar (on wider screens) or on the login page; the choice is
 stored in the browser.</li>
-<li><strong>Semantic search</strong>: <strong>Ctrl+K</strong> on the
-requirements page (when semantic search is enabled) opens the AI search
-modal; <strong>Enter</strong> runs the search, <strong>Esc</strong>
-closes.</li>
-<li><strong>Requirement diff</strong>: From requirement version history
-or baseline “Diff vs current”, the diff modal uses <strong>red</strong>
-for removed, <strong>green</strong> for added, <strong>gray</strong> for
-unchanged.</li>
-<li><strong>Breadcrumbs</strong>: Requirement and test edit/create pages
-show breadcrumbs (Project → Requirements → …); use them to navigate
-back.</li>
+<li><strong>Keyboard</strong>:
+<ul>
+<li>In the statement and description editor: <strong>Ctrl/Cmd+B</strong>
+bold, <strong>Ctrl/Cmd+I</strong> italic, <strong>Ctrl/Cmd+K</strong>
+link.</li>
+<li><strong>Esc</strong> closes menus, dialogs, the notifications panel,
+the sidebar on narrow screens and inline editors.</li>
+<li><strong>Ctrl/Cmd+click</strong> selects several values in
+multi-select lists, such as verification methods.</li>
+</ul></li>
+<li><strong>Diffs</strong>: requirement, verification and baseline
+comparisons use <strong>red</strong> for removed, <strong>green</strong>
+for added and <strong>gray</strong> for unchanged text.</li>
+<li><strong>Breadcrumbs</strong>: the requirement and verification pages
+show a path (Requirements › …); use it to go back to the list.</li>
+<li><strong>Links keep state</strong>: filters, sorting, saved views,
+the Matrix and DSM settings and the hierarchy filter are part of the
+URL, so a bookmark or a shared link opens the same view.</li>
 <li><strong>Project context</strong>: the sidebar pages and Project
 settings belong to the current project; switch projects with the
 <strong>Projects</strong> menu in the top bar (you stay on the same
 page).</li>
-<li><strong>Export formats</strong>: Requirements, verifications, matrix
-grid, and matrix links export as <strong>Excel</strong>
-(<code>.xlsx</code>) from Reports; ReqIF export is <strong>XML</strong>.
-PDF reports are available from the Reports page.</li>
+<li><strong>Export formats</strong>: requirements, verifications, matrix
+grid and matrix links as Excel (<code>.xlsx</code>), lists as CSV, ReqIF
+as XML (<code>.reqif</code>) or a ZIP with the files
+(<code>.reqifz</code>), project bundles as JSON or ZIP, and report
+documents as PDF or ODT.</li>
 </ul>
 <hr />
 <h2 id="support">Support</h2>
 <p>For installation, database setup, API reference, and MCP (Model
 Context Protocol) integration, see the main project
-<strong>README</strong> and the <a href="../README.md">docs index</a>
-plus the developer docs (e.g. <a
-href="../developer/database-setup.md">database setup</a>, <a
-href="../developer/mcp-setup.md">MCP setup</a>). For bugs or feature
+<strong>README</strong> and the <a href="../../README.md">docs index</a>
+plus the developer docs (e.g. <a
+href="../../developer/database-setup.md">database setup</a>, <a
+href="../../developer/mcp-setup.md">MCP setup</a>). For bugs or feature
 requests, use the project’s issue tracker.</p>
 </body>
 </html>

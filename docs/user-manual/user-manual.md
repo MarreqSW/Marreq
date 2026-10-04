@@ -15,7 +15,7 @@ For a **typical end-to-end workflow** (project setup → requirements → tests 
 3. [Projects](#3-projects)
 4. [Requirements](#4-requirements)
 5. [Test Management (Verifications)](#5-test-management-verifications)
-6. [Traceability Matrix](#6-traceability-matrix)
+6. [Traceability](#6-traceability)
 7. [Baselines](#7-baselines)
 8. [Categories, Applicability & Verification](#8-categories-applicability--verification)
 9. [Reports & Export](#9-reports--export)
@@ -32,12 +32,13 @@ For a **typical end-to-end workflow** (project setup → requirements → tests 
 Marreq helps you:
 
 - **Manage requirements** in a hierarchy, with version history, comments, and approval workflow
-- **Manage tests** — create and organize tests (including hierarchy), track test status (e.g. Pass/Fail/Pending), link tests to requirements, and see coverage in reports and on requirement pages
-- **View and export** traceability matrices and reports
+- **Manage verifications** (tests, analyses, inspections, reviews): organise them in a hierarchy, track their status (e.g. Passed/Failed/Pending), link them to requirements, and see coverage on the dashboard, requirement pages and reports
+- **Explore traceability** in a coverage graph, a hierarchy graph, a dependency structure matrix and the requirement × verification matrix
+- **Produce documents** such as the Verification Control Document (VCD) and a traceability & coverage report, as PDF or ODT
 - **Create immutable baselines** for audits or releases
-- **Import/export** via Excel, ReqIF 1.2, and JSON project bundles
+- **Import/export** via Excel/CSV, ReqIF 1.2 / ReqIFZ (with attached files), and project bundles
 
-Data is organized by **projects**. Each project has its own requirements, tests, categories, applicability options, and baselines. You must be logged in to use the application.
+Data is organized by **projects**, which can belong to **groups**. Each project has its own requirements, verifications, catalog (categories, applicability, statuses, verification methods, custom fields), members and baselines. You must be signed in to use the application.
 
 See **[Typical Workflow with Marreq](workflow.md)** for a step-by-step workflow from project setup through baselines and export.
 
@@ -45,31 +46,36 @@ See **[Typical Workflow with Marreq](workflow.md)** for a step-by-step workflow 
 
 ## 2. Getting Started
 
-### 2.1 Logging In
+### 2.1 Signing In
 
-1. Open the application in your browser (e.g. **http://localhost:8000**).
-2. You will see the **Welcome to Marreq** login page.
-3. Enter your **Username** and **Password**.
-4. Click **Sign In**.
+1. Open the application in your browser (the address your administrator gives you).
+2. Enter your **Username** and **Password** and select **Sign in**.
 
 ![Login page](screenshots/login.png)
 
-If you use a demo setup, typical users include `alice`, `dr_smith`, `eng_jones`, `tech_lee`, `qa_wilson`, and `admin`; the default password is `ChangeMe123!` unless your administrator changed it.
+Depending on how Marreq is set up, the login page also offers:
 
-- **Theme**: Use the sun/moon toggle on the login card to switch between light and dark mode.
-- **Logout**: Click your name in the top-right → **Logout**.
+- **Continue with …** buttons to sign in with your organisation's single sign-on.
+- **Forgot your password?** and **Create an account** (on installations that allow self-registration, such as the hosted cloud service). A new account must confirm its email address before it can sign in.
 
-### 2.2 Home Page
+The UI and API versions are shown under the login card. If they do not belong together, a banner at the top of the application says so; ask your administrator to update.
 
-After login you see the **Home** page:
+If you use a demo setup, typical users include `alice`, `dr_smith`, `eng_jones`, `tech_lee` and `qa_wilson`; the default password is `ChangeMe123!` unless your administrator changed it.
 
-- **Quick Actions**: Browse Projects, (if admin) Create Project, Admin Panel
-- **Your Projects**: Grid of project cards; click a project to open its detail page
-- **Recent Activity**: Placeholder for future activity feed
+- **Theme**: the **Light / Dark / Auto** buttons at the top right of the login page (and in the top bar inside the application) switch the colour theme; *Auto* follows your system. The choice is stored in the browser.
+- **Sign out**: open the user menu (the circle with your initials, top right) and select **Sign out**.
 
-Use **Home** in the navbar to return here anytime.
+### 2.2 Dashboard
 
-![Home page after login](screenshots/home.png)
+After signing in you land on the **Dashboard** of the project you used last (or your first project): `/<project-slug>/dashboard`, titled **Project overview**.
+
+- **Counts**: Requirements, Verifications, Matrix links, and **Req. with tests** (the share of requirements linked to at least one verification).
+- **Traceability health**: **Gaps** (requirements without tests), **Orphans** (tests without requirements) and **Suspect** (links flagged as suspect). Each card opens the matching list on the Reports page.
+- **Quick links** to Requirements, Verifications, Traceability and Reports.
+
+![Project dashboard](screenshots/dashboard.png)
+
+If you are not a member of any project yet, you see **You don't have any projects yet** with **New project**, **New group**, **Change password** and **Sign out**.
 
 ### 2.3 Navigation
 
@@ -92,43 +98,44 @@ At the bottom of the sidebar:
 The top bar holds:
 
 - the project name and the **Projects** menu: switch to another project (you stay on the same page), or open **Groups**, **New project** or **Import project bundle**;
-- **Global search**, the theme switch (light, dark, match system) and notifications;
-- the **Create** button: create a requirement or verification, or **Import**;
+- **Global Search**, the theme switch (light, dark, match system) and the **notifications** bell ([§2.4](#24-notifications));
+- the **Create** button: its main part creates a requirement (a verification when you are on the Verifications pages); the arrow next to it offers **Create requirement**, **Create verification** and **Import**;
 - the **user menu** (avatar): Account settings, **Administration** (instance administrators only, see [§13](#13-administration)), Change password and Sign out.
 
 On a narrow screen the sidebar is hidden; open it with the **☰** button in the top bar.
 
-Older links keep working: `/<project>/matrix` opens the Matrix tab, `/<project>/import`, `/<project>/members` and `/<project>/catalog/…` open the matching Project settings tab, and `/<project>/admin/…` opens the Administration area.
+**Global Search** filters what is on screen as you type: the Requirements table, the Verifications list and the Matrix. It is not a full-text search of the whole project.
+
+Older links keep working: `/<project>/matrix` opens the Matrix tab, `/<project>/import`, `/<project>/members` and `/<project>/catalog/…` open the matching Project settings tab, `/<project>/admin/…` opens the Administration area, and links that still contain an owner or group name before the project are redirected.
+
+### 2.4 Notifications
+
+The bell in the top bar shows how many notifications you have not read (up to *99+*). Open it to see the list; select a notification to go to the requirement it is about, or **Mark all as read**. The list refreshes on its own.
+
+You are notified when you are made the **reviewer** of a requirement, and, in projects where you turned them on, when requirements are created, updated or deleted. Choose per project in **Project settings › Notifications**: **In-app notifications for this project** and **Email notifications for this project**.
+
+### 2.5 Help
+
+**Help** at the bottom of the sidebar (`/<project-slug>/help`) summarises the main pages and shows the versions of the UI and the API with links to the most used pages.
 
 ---
 
 ## 3. Projects
 
-### 3.1 Viewing Projects
+### 3.1 Switching Projects
 
-- **All Projects**: **Projects → All Projects** or open **Home** and use “View all” under Your Projects.
-- **Project detail**: Click a project card to open **Project Detail** (`/<project-slug>`).
+Open the **Projects** menu (the project name in the top bar). It lists your projects: select one to switch to it, staying on the same kind of page. The menu also has **Groups** ([§3.6](#36-groups)), **New project** and **Import project bundle** ([§10.3](#103-importing-a-project-bundle)).
 
-Project URLs use the project slug only (`/<project-slug>/dashboard`). Owner usernames and group names are not part of the path.
+Project URLs use the project slug only (`/<project-slug>/dashboard`). Owner usernames and group names are not part of the path. Opening `/<project-slug>` shows the project's [Dashboard](#22-dashboard).
 
-On the project detail page you see:
+### 3.2 Creating a Project
 
-- Project name, status (e.g. active), description
-- Created/Updated dates and owner
-- **Quick Actions**: View Requirements, View Verifications, View Matrix, Baselines, View Reports, View Members
-- **Project Members** list with names, usernames, roles, and email
+1. **Projects → New project** (`/projects/new`).
+2. Choose the **Namespace**: *Personal* or a group in which you may manage projects.
+3. Enter the **Project name** and an optional **Description**.
+4. Select **Create project**. You become the project's Admin and land on its dashboard.
 
-![Projects list](screenshots/projects.png)
-
-![Project detail page](screenshots/project-detail.png)
-
-### 3.2 Creating a Project (Admin)
-
-1. **Projects → New Project** or **Quick Actions → New Project**.
-2. Enter **Name** (required), optional **Description**.
-3. Submit the form.
-
-You are typically taken to the new project or the project list.
+Every new project starts with default statuses, verification methods (Inspection, Test, Analysis, Review), one category and one applicability value. Before anyone can create requirements, add at least one **project reviewer** ([§11.1](#111-project-reviewers-workflow-gates)). To start from an existing project instead, use **Import from JSON bundle** on the same page ([§10.3](#103-importing-a-project-bundle)).
 
 ### 3.3 Editing a Project
 
@@ -170,31 +177,50 @@ To keep a copy, export a project bundle or a ReqIFZ archive from **Reports & exp
 
 Users are not deleted. The project's entries in **System logs** are kept, and a new entry records who deleted the project, its name and how many requirements, verifications, baselines and attachments it had.
 
+### 3.6 Groups
+
+Groups collect projects, for example per team or product line. Open **Projects → Groups** (`/groups`) to see your groups; **New group** creates one (name and description), and you become its Owner.
+
+A group page lists its projects and members. Group roles:
+
+| Role | Can |
+| --- | --- |
+| **Owner** | Manage the group's members, and create or move projects into the group |
+| **Maintainer** | Create or move projects into the group |
+| **Contributor**, **Viewer** | See the group |
+
+Owners manage members on the group's **Members** page (add a user with a role, change a role, remove). **Delete group** asks for confirmation; projects in the group then need another group or none. A project's own members and roles ([§11](#11-project-members)) are managed in the project, separately from the group.
+
 ---
 
 ## 4. Requirements
 
-Requirements are the core artifact. Each requirement can have multiple **versions** (history), **comments**, and an **approval** state (draft → reviewed → approved). Requirements can be hierarchical (parent/child) and are linked to tests via the traceability matrix.
+Requirements are the core artifact. Each requirement can have multiple **versions** (history), **comments**, attachments and an **approval** state (draft → reviewed → approved). Requirements are linked to parent requirements (with a link type such as *derives from*) and to the verifications that verify them.
 
 ### 4.1 Requirements Views
 
-- Open a project, then use **Requirements** in the nav or **View Requirements** on the project detail page.
-- URL: `/<project-slug>/requirements`.
+- **Requirements** in the sidebar, or `/<project-slug>/requirements`.
 
-You can:
+Switch between the views with the tabs above the list:
 
-- Switch between three purpose-built views:
-  - **Table** for dense scanning, comparison, column configuration, and inline editing.
-  - **List** for reading and reviewing requirement statements with status, approval, category, hierarchy, verification method, author, and modification context.
-  - **Graph** for exploring requirement hierarchy and traceability relationships.
-- The List view is responsive for narrow screens. Its review cards use a fixed contextual layout, while the **Columns** control remains specific to Table.
-- **Filter** by status, verification, category, applicability, approval (e.g. Approved only / Not approved), and custom filters.
-- **Search** (and use **Semantic Search** if enabled).
-- **Paginate** through results.
-- **Create** a new requirement (button in header; admin/appropriate role).
-- **Open** a requirement by clicking its title or reference to see the **Requirement detail** page.
+- **Table** for dense scanning, comparison, column configuration and inline editing.
+- **List** for reading and reviewing: one card per requirement with its statement, status, approval, parent, verification method, author and last change. It also works on narrow screens.
+- **Graph** opens **Traceability** ([§6](#6-traceability)), where the coverage graph, the hierarchy graph and the matrices live.
 
-Metrics (e.g. total count, by status) are shown at the top.
+Above the list:
+
+- **Filters**: **Status**, **Category** and **Approval** (All, Draft, Reviewed, Approved), plus a **Sort** field with a ↑/↓ direction toggle. **Reset Filters** clears them. To search by text, use **Global Search** in the top bar.
+- **Saved views**: save the current filters and sort as a named view with **Save current as…**, either **Private** or **Shared** with the project. Pick a saved view to apply it, **Update** it with the current settings, or **Delete** it. A view used by a baseline is marked *locked* and cannot be changed. A saved view has its own link (`?saved_view=<id>`).
+- **Columns** (Table only): show or hide Key, Title, Category, Parents, Status, Approval, Verification, Modified, Author and Actions.
+- **Downloads**: **CSV** with the rows shown (after filters and search) and **Excel** with the whole project ([§9.2](#92-exporting-requirements-to-excel)).
+- The number of requirements found, and **Show rows** (25, 50 or 100 per page).
+
+In the **Table** view:
+
+- Open a requirement with the **View** (eye) icon in the Actions column; **Edit** and **Duplicate** are next to it. Editing an approved requirement first asks for confirmation, because it creates a new Draft version.
+- **Inline editing**: click a Title, Category, Status, Verification or Author cell to change it in place. The change is saved straight away as a new version. Only project reviewers can change the status ([§11.1](#111-project-reviewers-workflow-gates)). Esc or a click outside closes the editor.
+
+In the **List** view, select a card's title to open the requirement; its menu has **Duplicate**.
 
 ![Requirements list](screenshots/requirements-list.png)
 
@@ -202,38 +228,56 @@ Metrics (e.g. total count, by status) are shown at the top.
 
 - URL: `/<project-slug>/requirements/<requirement_id>`.
 - For a specific version: `/<project-slug>/requirements/<requirement_id>/versions/<version_id>`.
-- Classic bookmarks `/<project-slug>/requirements/show/<requirement_id>` and `/<project-slug>/requirements/show/<requirement_id>/version/<version_id>` redirect to those SPA URLs.
+- Classic bookmarks `/<project-slug>/requirements/show/<requirement_id>` and `/<project-slug>/requirements/show/<requirement_id>/version/<version_id>` redirect to those URLs.
 
 On the detail page you see:
 
-- **Approval badge**: Draft / Reviewed / Approved, and who approved and when.
-- **Actions** (for **project reviewers**, or an administrator when no reviewers are configured): **Mark as Reviewed**, **Approve Requirement** (with confirmation).
-- **Content**: Title, reference code, statement, rationale, category, status, applicability, verification methods, author, reviewer, dates.
-- **Traceability**: Upstream/downstream requirements and **Verified by** — list of linked verifications with links to verification detail pages.
-- **Verification** panel: pass/fail/pending counts and overall pass rate; list of linked verifications.
-- **Version history**: List of versions with approval state; click a version to view that snapshot.
-- **Comments**: Chronological list; form to add a comment (optional version reference). On approved versions, comments may be locked by policy (`LOCK_APPROVED_VERSION_COMMENTS`).
-- **Custom metadata** (if the project uses custom fields).
+- **Header**: reference code, title, approval badge (Draft / Reviewed / Approved, with who approved and when) and the buttons **Compare versions**, **Duplicate** and **Edit**.
+- **Summary**: priority (when the project has a *Priority* custom field), version, author and reviewer.
+- **Approval actions** (for **project reviewers**, or an administrator when no reviewers are configured): **Mark as Reviewed** and **Approve Requirement**, each with a confirmation.
+- **Requirement statement** and **Rationale**, then category, applicability, verification methods, parents with their link type, and the modified and created dates. **Custom metadata** lists the project's custom fields.
+- **Traceability**: **Upstream (parents)**, **Child requirements** and **Downstream (verifications)**, each verification with its status badge.
+- **Verification close-out**: the compliance assessment and whether the requirement is closed ([§5.7](#57-verification-control-and-close-out)).
+- **Attachments** ([§4.9](#49-attachments)).
+- **Changelog**: the version snapshots and the historic activity from the audit log ([§4.5](#45-version-history--diff)).
+- **Discussion**: the comments ([§4.6](#46-comments)).
 
-**Editing an approved requirement**: Clicking **Edit** on an approved requirement shows a warning that editing will create a new **Draft** version; you can cancel or proceed.
+**Editing an approved requirement**: **Edit** on an approved requirement first warns that editing creates a new **Draft** version; you can cancel or continue.
 
 ![Requirement detail page](screenshots/requirement-detail.png)
 
 ### 4.3 Creating a Requirement
 
-1. From the project’s requirements list, click **New Requirement** (or **Quick Actions → New Requirement** when a project is selected).
+1. Use **Create requirement** in the top bar, **Duplicate** on an existing requirement ([§4.7](#47-duplicating-a-requirement)), or **Add child** in the hierarchy graph ([§6.5](#65-hierarchy-graph)).
 2. URL: `/<project-slug>/requirements/new`.
 3. Fill in:
-   - **Title** (required)
-   - **Reference** (optional; can be auto-generated)
-   - **Statement** (required; shown as **Description** on the form, with the same formatting toolbar and preview as in [§4.4](#44-editing-a-requirement))
+   - **Reference code** (required, e.g. `REQ-0001`) and **Title** (required)
+   - **Statement** (required; labelled **Description** on the form, with the formatting toolbar and preview described in [§4.4](#44-editing-a-requirement))
    - **Rationale** (optional)
-   - **Category**, **Status**, **Verification methods**, **Applicability** (as configured for the project)
-   - **Reviewer**, **Parent requirement** (optional)
-   - Any **Custom fields** if present
-4. Click **Save**.
+   - **Status**: project reviewers choose any status; other users create in the project's default initial status
+   - **Category** and **Applicability**
+   - **Verification methods** (at least one)
+   - **Author** and **Reviewer** (the reviewer list offers the project reviewers)
+   - **Parent requirements**: pick a requirement and a link type, then **Add parent**
+   - **Custom fields**, if the project has any
+4. Select **Create requirement** (**Create duplicate** when duplicating). The new requirement opens in the editor.
 
-You can optionally pass a parent or template via query parameters (`parent`, `template`).
+![Create requirement](screenshots/requirement-create.png)
+
+**When creating is blocked.** The button stays disabled, with a link next to it, until the project has:
+
+- at least one **verification method** (**Add a verification method** opens Project settings › Catalog › Verification methods), and
+- at least one **project reviewer** (**Add a reviewer in Project settings** opens Members & reviewers, [§11.1](#111-project-reviewers-workflow-gates)).
+
+**Links that fill in the form.** The page accepts these URL parameters:
+
+| Parameter | Effect |
+| --- | --- |
+| `?parent=<id>` | Adds requirement `<id>` as a parent (with the first link type). The hierarchy graph's **Add child** uses it. |
+| `?from=<id>` | Duplicates requirement `<id>` ([§4.7](#47-duplicating-a-requirement)). |
+| `?template=<id>` | Same as `from`; when both are given, `from` wins. |
+
+Combine them, e.g. `?from=12&parent=3`. An id that is not a requirement of this project (or a parent with no current version) does not stop the page: a warning names it, for example *Parent requirement 99 is not in this project*, and that part is left out.
 
 ### 4.4 Editing a Requirement
 
@@ -241,13 +285,15 @@ You can optionally pass a parent or template via query parameters (`parent`, `te
 2. Click **Edit**.
 3. URL: `/<project-slug>/requirements/<requirement_id>/edit`.
 4. Change title, statement, rationale, category, status (project reviewers only), applicability, author and reviewer as needed. Parent links are added and removed at once, without Save. Verification methods and custom fields are not edited on this page.
-5. Use **Save** to create a new version. **Cancel** returns to the requirements list; if you have unsaved changes it asks first and then discards them.
+5. Select **Save requirement** to create a new version; it is enabled once something changed. **Revert changes** puts back the saved values. **Cancel** returns to the requirements list; if you have unsaved changes it asks first and then discards them.
+
+Only project reviewers can change the **Status** ([§11.1](#111-project-reviewers-workflow-gates)). **Delete requirement** at the bottom left deletes the requirement permanently, with its versions, links, comments and attachments, after a confirmation.
 
 #### Unsaved changes and drafts
 
 While you type, the editor keeps a **draft in this browser**, so a reload, a closed tab, a laptop that went to sleep or an expired session does not lose your text. The footer shows the state: **Unsaved changes**, then **Draft kept on this device** with the time.
 
-- A draft is **not** a version: nothing is sent to the server, and only **Save** creates a new version.
+- A draft is **not** a version: nothing is sent to the server, and only **Save requirement** creates a new version.
 - When you open the requirement again, the draft is put back and a banner says so; **Discard draft** returns to the saved text. If the requirement has been saved again since your draft (for example by someone else), the draft is only offered: choose **Restore draft** if it still applies.
 - The **New requirement** page keeps a draft in the same way and offers **Restore draft** the next time you open it.
 - If your session expires, Save tells you so; sign in again and reopen the requirement: the draft is still there.
@@ -278,14 +324,14 @@ Formatting is shown on the requirement page, and version snapshots and review ca
 - Select **Compare versions** to compare any two saved versions. The latest version and its predecessor are selected by default.
 - Use **Compare with previous** on a version-history row to open that adjacent pair directly.
 - When an older approved snapshot exists, use **Compare with last approved** beside the approval state before reviewing the current draft.
-- The comparison dialog shows removed, added, and unchanged title, statement, and justification text (line by line; statements are compared as their Markdown source, so each list item is its own line). It also compares status, category, applicability, verification methods, and custom fields.
+- The **Compare requirement versions** dialog shows removed, added, and unchanged **Title**, **Statement** and **Rationale** text (line by line; statements are compared as their Markdown source, so each list item is its own line). Under **Metadata** it also compares status, category, applicability, verification methods, and custom fields.
 - At least two saved versions are required. Version comparison is read-only and is available to anyone who can view the project requirements.
 
 ### 4.6 Comments
 
-- On the requirement (or version) detail page, use the **Comments** section to read existing comments and add new ones.
-- Comments are immutable once created; they can reference an optional requirement version.
-- If the current version is approved and the system locks comments on approved versions, the add-comment form is hidden.
+- The **Discussion** section of the requirement page lists the comments and has the form to add one. Each comment is attached to the version that was current when it was written.
+- Comments cannot be edited or deleted.
+- When the current version is **Approved**, the form is replaced by *Comments are locked on this approved version.* Editing the requirement creates a new draft version, which can be discussed again.
 
 ### 4.7 Duplicating a Requirement
 
@@ -295,12 +341,7 @@ Formatting is shown on the requirement page, and version snapshots and review ca
 
 ### 4.8 Semantic Search (AI)
 
-If your administrator has enabled semantic search (embeddings/RAG):
-
-- Open the **Semantic Search (AI)** modal from the requirements list (e.g. search icon or **Ctrl+K**).
-- Enter a natural-language question or search phrase; you can restrict by status, category, applicability, verification.
-- Results show matching requirements; “AI Answer” may appear when using the RAG “ask” feature.
-- Shortcuts: **Ctrl+K** open, **Enter** search, **Esc** close.
+The web pages have no AI search. When your administrator has turned on embeddings, AI assistants connected through Marreq's MCP server can search requirements by meaning (the `semantic_search_requirements` tool); see the MCP setup guide linked under [Support](#support).
 
 ### 4.9 Attachments
 
@@ -320,23 +361,24 @@ Attachments belong to the requirement, not to one version, so historical version
 
 ## 5. Test Management (Verifications)
 
-Test management in Marreq covers creating and organizing verifications (test cases), tracking execution status (e.g. Pass, Fail, Pending), and linking them to requirements for traceability and coverage. In the UI, the nav item and pages are named **Verifications**. Verifications are project-scoped and can be arranged in a **parent/child hierarchy**. Linking is done in the [Traceability Matrix](#6-traceability-matrix); once linked, requirement detail pages show a **Verified by** section and verification pass/fail summary.
+Test management in Marreq covers creating and organizing verifications (tests, analyses, inspections, reviews), tracking their status (e.g. Passed, Failed, Pending), and linking them to the requirements they verify. In the UI, the sidebar item and pages are named **Verifications**. Verifications are project-scoped and can be arranged in a **parent/child hierarchy**.
+
+The links between verifications and requirements are set on the verification's **create** and **edit** pages (**Traceability (requirements)**). Once linked, a requirement's page lists the verification under **Downstream (verifications)** with its status, and the [Traceability](#6-traceability) views and Reports show the coverage.
 
 ### 5.1 Verifications List
 
-- Open a project, then **Verifications** in the nav or **View Verifications** on the project detail page.
-- URL: `/<project-slug>/verifications`.
+- **Verifications** in the sidebar, or `/<project-slug>/verifications`.
 
 You can:
 
 - Switch between **Table** and **List** (card) view. The view and the filters are kept in the URL, so switching views, reloading, or sharing the link keeps them.
 - See **status metrics** for the whole project above the list: the **Total**, one chip per verification status with its count (statuses with no verifications are dimmed; **Other** counts verifications whose status is not in the project's list), and a **Pass rate** ("X of Y passed") when the project has a status named *Passed*. Click a status chip to show only that status; click it again to clear the filter. The metrics always cover the whole project, not just the filtered rows.
-- **Filter** by **Status** and **Method** (including *No method*), and **search** with the header search box (reference, title, description, source, or parent). **Reset Filters** clears status and method.
+- **Filter** by **Status** and **Method** (including *No method*), and search with **Global Search** in the top bar (reference, title, description, source, or parent). **Reset Filters** clears status and method.
 - **Paginate** through results (25, 50, or 100 rows per page; controls appear above and below the list when there is more than one page).
-- Click **New Verification** to create a verification (admin/appropriate role).
+- Create a verification with **Create verification** in the top bar ([§5.3](#53-creating-a-verification)).
 - Click a verification to open its **Verification detail** page.
 
-![Verifications list](screenshots/tests-list.png)
+![Verifications list](screenshots/verifications-list.png)
 
 - **Update verification status** inline (e.g. set Passed after a lab run): click the status in the table or list. Only **project reviewers** with edit rights can change the status; other editors can still edit the title, method, and source inline.
 - **Export** from the filter bar: **CSV** contains the rows currently shown (after filters and search); **Excel** contains every verification in the project (the same workbook as [§9.3 Exporting Verifications to Excel](#93-exporting-verifications-to-excel)).
@@ -345,7 +387,13 @@ You can:
 
 - URL: `/<project-slug>/verifications/<verification_id>`.
 
-Shows: **Name**, **Description** (with its formatting), **Source** (e.g. test file or document reference), **Status**, **Reference code**, **Verification type**, **Parent verification** (if part of a hierarchy), and **which requirements this verification covers** (traceability links). From here you can **Edit** the verification (name, description, source, status, reference, method, parent) or **update status** (e.g. after running the test). Status updates feed into the requirement **Verification** panel and into [Reports](#9-reports--export) (coverage, pass rate).
+The page shows the **Reference**, name, **Status**, **Verification type** (method), **Source** (e.g. a test procedure or document reference), **Parent** verification, **Author**, **Reviewer**, the last status change, and the **Description** with its formatting. Further sections:
+
+- **Linked requirements**: the requirements this verification verifies; **Edit links** opens the editor at its traceability section.
+- **Verification control**: level, stage and evidence for the VCD ([§5.7](#57-verification-control-and-close-out)).
+- **Attachments** ([§4.9](#49-attachments)) and **Changelog** ([§5.2.1](#521-version-history-and-diff)).
+
+**Edit** (with edit permission) and **Compare versions** are in the header. The status is changed in the editor or inline in the list ([§5.5](#55-updating-verification-status)).
 
 ### 5.2.1 Version history and diff
 
@@ -357,35 +405,53 @@ Shows: **Name**, **Description** (with its formatting), **Source** (e.g. test fi
 
 ### 5.3 Creating a Verification
 
-1. From the project’s verifications list, click **New Verification** (or **Quick Actions → New Verification**).
+1. Use **Create verification** in the top bar (on the Verifications pages it is the main part of the **Create** button), or **Add child** in the hierarchy graph ([§6.5](#65-hierarchy-graph)).
 2. URL: `/<project-slug>/verifications/new`.
-3. Enter **Name**, **Description**, **Source** (e.g. path to test script or doc), **Status** (e.g. Pending, Not Run), **Reference code** (optional; e.g. TEST-PWR-001), and **Parent verification** (optional, for hierarchy). The description has the same formatting toolbar, **Write / Preview** toggle, and syntax as requirement statements (see [Formatting the statement](#formatting-the-statement)), for example a numbered list of test steps.
-4. Save.
+3. Fill in:
+   - **Reference code** (required, e.g. `VER-0001`) and **Name** (required)
+   - **Description** (required). It has the same formatting toolbar, **Write / Preview** toggle and syntax as requirement statements ([Formatting the statement](#formatting-the-statement)), for example a numbered list of test steps.
+   - **Source** (e.g. `manual` or a test rig; `manual` by default)
+   - **Status**: project reviewers choose any status; other users create in the project's initial status
+   - **Parent verification (optional)** and **Verification method (optional)**
+   - **Author** and **Reviewer** (the reviewer list offers the project reviewers)
+   - **Traceability (requirements)**: tick the requirements this verification verifies (filter by reference, title or id)
+4. Select **Create verification**.
 
-After creation, link the verification to requirements in the [Traceability Matrix](#6-traceability-matrix).
+**When creating is blocked.** Until the project has at least one **project reviewer**, the button is disabled with **Add a reviewer in Project settings** next to it ([§11.1](#111-project-reviewers-workflow-gates)).
+
+**Links that fill in the form.** As for requirements ([§4.3](#43-creating-a-requirement)):
+
+| Parameter | Effect |
+| --- | --- |
+| `?parent=<id>` | Sets verification `<id>` as the parent. The hierarchy graph's **Add child** uses it. |
+| `?from=<id>` | Duplicates verification `<id>`: name (with a copy suffix), description, source, status, method, reviewer and parent are copied, and the next free reference code is suggested. The author and the requirement links are not copied. |
+| `?template=<id>` | Same as `from`; when both are given, `from` wins. A valid `parent` replaces the copied parent. |
+
+There is no Duplicate button for verifications yet; use the link, e.g. `/<project-slug>/verifications/new?from=7`. An id that is not a verification of this project gives a warning, for example *Template verification 7 is not in this project*, and is ignored.
 
 ### 5.4 Editing a Verification
 
-1. Open the verification detail page.
-2. Click **Edit**.
-3. URL: `/<project-slug>/verifications/<verification_id>/edit`.
-4. Update name, description, source, status, reference code, parent verification, or **verification method**; save. Changing the method keeps the same verification identity and matrix links.
+1. Open the verification detail page and select **Edit** (or **Edit links**).
+2. URL: `/<project-slug>/verifications/<verification_id>/edit`.
+3. Change the name, description, source, status (project reviewers only), reference code, parent verification, verification method, author or reviewer. Changing the method keeps the same verification identity and its links.
+4. **Traceability (requirements)**: tick or untick the requirements this verification verifies. Saving replaces all of its links with the ticked ones.
+5. Select **Save changes**; it is enabled once something changed. **Back** leaves without saving.
 
-Linking or unlinking verifications to/from requirements is done in the **Traceability Matrix** (add/remove links there).
+**Delete verification** deletes it permanently, with its links and attachments, after a confirmation.
 
 ### 5.5 Updating Verification Status
 
-As tests are executed, update their status (e.g. Pass, Fail, Pending, In Progress) so that:
+As verifications are run, update their status (e.g. Passed, Failed, Pending, In progress) so that:
 
-- Requirement detail pages show correct **Verification** counts (passed/failed/pending) and overall pass rate.
-- **Reports** and **Matrix** reflect current coverage and test results.
-- **Matrix** and **Reports** can be filtered by verification status (e.g. show only Failed).
+- Requirement pages show each linked verification's status under **Downstream (verifications)**, and the close-out reflects it ([§5.7](#57-verification-control-and-close-out)).
+- The **Matrix** shows the status symbol in each cell and can be filtered by status ([§6.2](#62-using-the-matrix)).
+- **Reports** and the **Dashboard** reflect current coverage.
 
-Update status from the **Verification detail** page (Edit), **inline from the verifications list** (click the status; project reviewers only, see [§5.1](#51-verifications-list)), or from the matrix. Verification statuses are configured per project under [Verification statuses](#85-verification-statuses).
+Change the status in the **verification editor** or **inline from the verifications list** (click the status). Only **project reviewers** can change it ([§11.1](#111-project-reviewers-workflow-gates)). The statuses are configured per project in **Project settings › Catalog › Verification statuses** ([§8](#8-categories-applicability--verification)).
 
 ### 5.6 Verification Hierarchy
 
-Verifications can have a **parent verification** (e.g. a test suite or feature area). Set the parent when creating or editing a verification. The verifications list and tree views (if available) reflect this hierarchy; reporting and traceability still work at the level of individual verifications linked to requirements.
+Verifications can have a **parent verification** (e.g. a test campaign or feature area). Set the parent when creating or editing a verification. The list shows each verification's parent; the tree itself is drawn in **Traceability › Hierarchy** ([§6.5](#65-hierarchy-graph)), where **Add child** creates a verification under the selected one. Coverage and traceability still work at the level of individual verifications linked to requirements.
 
 ### 5.7 Verification Control and Close-out
 
@@ -416,14 +482,23 @@ Whether a verification "passed" comes from the **outcome** of its status, set in
 
 ---
 
-## 6. Traceability Matrix
+## 6. Traceability
 
-The traceability matrix is central to **test management** and coverage: it shows which requirements are linked to which tests. You add or remove links here; requirement detail pages and reports then show verification status and coverage. The matrix can display test status, requirement status, category, applicability, and suspect links.
+**Traceability** in the sidebar (`/<project-slug>/traceability`) has four tabs:
+
+| Tab | Shows |
+| --- | --- |
+| **Coverage** | A graph of requirements and the verifications linked to them; suspect links are drawn in coral |
+| **Hierarchy** | Parent ↔ child links between requirements and between verifications, with **Add child** ([§6.5](#65-hierarchy-graph)) |
+| **DSM** | How requirements depend on each other ([§6.4](#64-dependency-structure-matrix-dsm)) |
+| **Matrix** | Requirements × verifications with status, suspect links and coverage gaps ([§6.2](#62-using-the-matrix)) |
+
+The **Graph** tab of the Requirements page opens this page as well. The matrix only **shows** links: links between requirements and verifications are set on the verification's create and edit pages ([§5.4](#54-editing-a-verification)), and parent links on the requirement and verification pages.
 
 ### 6.1 Opening the Matrix
 
-- From the project: **Traceability** in the sidebar, then the **Matrix** tab (next to Coverage, Hierarchy and DSM).
-- URL: `/<project-slug>/traceability?view=matrix` (the old `/<project-slug>/matrix` still works). Filters and sorting are kept in the URL, so they survive switching tabs.
+- **Traceability** in the sidebar, then the **Matrix** tab.
+- URL: `/<project-slug>/traceability?view=matrix` (the old `/<project-slug>/matrix` still works, including its filters). Filters and sorting are kept in the URL, so they survive switching tabs and can be shared as a link.
 
 ![Traceability matrix](screenshots/matrix.png)
 
@@ -432,28 +507,30 @@ The traceability matrix is central to **test management** and coverage: it shows
 The matrix uses the same layout as the dependency structure matrix (§6.4).
 
 - **Grid:** requirements are rows and verifications are columns. The header rows stay visible while you scroll in either direction. A symbol in a cell means the requirement is verified by that verification, and shows the verification's status: **✓** pass/complete, **✓** verified/accepted, **◐** pending/review, **○** draft, **✗** fail/reject, **●** other (in the status colour). Empty cells are not linked.
-- **Rows:** grouped by **category** (separated by a line, with the category name on the first row), in reference-code order. Click the corner header to reverse the order, and drag its right edge to resize the requirement column.
-- **Sort by a verification:** click a verification's code in the column header to list the requirements it verifies first (suspect links first among them). Click again to reverse. The **↗** below the code opens the verification.
+- **Rows:** grouped by **category** (categories in alphabetical order, *Uncategorised* last; a line and the category name separate them), requirements in reference-code order. Click the corner header to reverse the order, and drag its right edge to resize the requirement column; the width is remembered per project. A dot before each requirement shows its approval (Reviewed or Approved).
+- **Sort by a verification:** click a verification's code in the column header to list the requirements it verifies first (suspect links first among them); the category grouping is dropped while sorting this way. Click again to reverse. The **↗** below the code opens the verification.
+- **Open:** click a linked cell or a requirement's code to open the requirement.
 - **Hover** a requirement, a verification or a cell to see its details: title, category, status, approval state, link counts and, for suspect links, the reason and date.
 - **Filters** (above the matrix, together with the global search):
-  - **Suspect only:** a switch that keeps only suspect links.
-  - **Status groups:** buttons for the high-level groups (pass, verified, pending, draft, fail, other). Select one or more to show only verifications in those groups.
-  - **Requirement status** and **Verification status:** each selected status appears as a chip in its own colour. Select **×** on a chip to remove it. **Add status** opens a list of the project's statuses; tick one or several, then press Escape or click outside the list to close it. With the keyboard, use the arrow keys, Home and End to move, and Space or Enter to tick.
-  - **Clear all filters** removes every filter at once and keeps the sort.
-  - Filters and sort are kept in the page URL, so a filtered view can be bookmarked or shared.
+  - **Links › Suspect only:** a switch that keeps only suspect links.
+  - **Status groups:** **Pass / complete**, **Verified / accepted**, **Pending / review**, **Draft**, **Fail / reject** and **Other**. Select one or more to show only verifications in those groups. The group (and the cell symbol) comes from words in the status *title*, such as "pass", "accepted" or "fail", not from the status outcome used for close-out.
+  - **Requirement status** and **Verification status:** each selected status appears as a chip in its own colour. Select **×** on a chip to remove it. **Add status** opens a list of the project's statuses; tick one or several, then press Escape or Tab, or click outside the list, to close it. With the keyboard, use the arrow keys, Home and End to move, and Space or Enter to tick.
+  - **Clear all filters** removes every filter at once and keeps the sort (it is disabled when no filter is set).
+  - Filters and sort are kept in the page URL (parameters starting with `mx_`), so a filtered view can be bookmarked or shared.
+- **Summary line:** the number of requirements and verifications shown, links, suspect links and coverage gaps.
 - **Suspect links:** shown with a red frame. The side panel lists them.
   - Click a suspect link in the panel to scroll the matrix to its cell.
   - **Review** compares the requirement version that triggered the flag with its preceding version.
-  - **Clear** removes the flag; the system records the user and timestamp.
-- **Coverage gaps:** the side panel lists requirements without any verification and verifications without any requirement. Click one to scroll to its row or column.
+  - **Clear** removes the flag at once (no confirmation); the system records the user and timestamp.
+- **Coverage gaps:** the side panel lists requirements without any verification and verifications without any requirement (the first eight, then *+N more*). Click one to scroll to its row or column; click it again to deselect it.
 - **Linked cells by status** in the side panel counts the visible links per verification status.
 
 ### 6.3 Exporting the Matrix
 
-From **Reports**, download:
-
-- **Matrix (.xlsx)**: coverage grid (requirements as rows, verifications as columns, `Yes` where linked). For review, not for re-import.
-- **Matrix links (.xlsx)**: two columns (`requirement_code`, `verification_code`), one row per link. Upload this file on **Import** as **Matrix links** (same project is a no-op for existing pairs; use it to copy links into another project that already has those codes).
+- **Export Excel** above the matrix downloads the coverage grid. **Refresh** reloads the data.
+- From **Reports & exports**, download:
+  - **Matrix (.xlsx)**: coverage grid (requirements as rows, verifications as columns, `Yes` where linked). For review, not for re-import.
+  - **Matrix links (.xlsx)**: two columns (`requirement_code`, `verification_code`), one row per link. Upload this file on **Import** as **Matrix links** (same project is a no-op for existing pairs; use it to copy links into another project that already has those codes).
 
 ### 6.4 Dependency Structure Matrix (DSM)
 
@@ -465,13 +542,24 @@ The DSM shows how **requirements depend on each other**, for a whole project on 
 - **Order:**
   - **Hierarchy** (default) groups requirements by category, drawn as framed blocks along the diagonal, and nests children under their parent.
   - **Partition** puts dependencies before the requirements that depend on them. Ordinary dependencies then fall below the diagonal, and marks above it point to feedback worth reviewing.
-- **Scope:** limit the matrix to one **category** or to the **subtree** of one requirement. Links to requirements outside the scope are counted in the summary line but not drawn.
-- **Loops:** requirements that depend on each other in a circle (across any link types) are tinted amber and listed in the side panel with the loop path. Hover a loop in the panel to highlight its cells. Loops are rare, because Marreq already rejects circular links between versions, but they can appear when a link points to an older version of a requirement.
+- **Scope:** limit the matrix to one **Category** (*All categories* by default) or to the **Subtree** of one requirement (*Whole project* by default). Links to requirements outside the scope are counted in the summary line but not drawn.
+- **Loops:** requirements that depend on each other in a circle (across any link types) are tinted amber and listed in the side panel with the loop path. Hover a loop in the panel to highlight its cells; click it to scroll to it. In Hierarchy order, selecting a loop may switch to **Partition** so its requirements sit next to each other; a notice says so. Loops are rare, because Marreq already rejects circular links between versions, but they can appear when a link points to an older version of a requirement.
 - **Upstream changed:** a red frame marks an approved requirement whose target was edited *after* that approval. Review whether the approved requirement still holds. The side panel lists all of them.
 - **Details:** hover a cell to see the link types, the target title, loop membership and any upstream change. Click a mark, or a code in the row header, to open the requirement.
-- **Export Excel:** downloads the matrix with the current filters (sheets *DSM*, *Loops* and *Legend*), for offline design reviews.
+- **Export Excel:** downloads the matrix with the current filters (sheets *DSM*, *Loops* and *Legend*), for offline design reviews. **Refresh** reloads the data.
+- The summary line counts requirements, links, loops, upstream changes and links outside the scope. Link types, order, category and subtree are kept in the URL.
 
 ![Dependency structure matrix](screenshots/dsm.png)
+
+### 6.5 Hierarchy Graph
+
+**Traceability › Hierarchy** (`/<project-slug>/traceability?view=hierarchy`) draws the parent ↔ child links: between requirements (solid) and between verifications (dashed). Only items that have a parent or a child appear.
+
+- **Requirements / Verifications / Both** restricts the graph; the choice is kept in the URL (`?kind=`).
+- **Click** a node to select it and highlight its links. **Double-click** opens the requirement or verification.
+- **Add child**, shown once a node is selected, opens the create page with that node as the parent (`requirements/new?parent=<id>` or `verifications/new?parent=<id>`; see [§4.3](#43-creating-a-requirement) and [§5.3](#53-creating-a-verification)).
+
+![Hierarchy graph with a selected node](screenshots/hierarchy.png)
 
 ---
 
@@ -481,42 +569,41 @@ Baselines are **immutable** point-in-time snapshots of requirement versions and 
 
 ### 7.1 Baselines List
 
-- From the project: **Baselines** in the nav or **View Baselines** on the project detail page.
-- URL: `/<project-slug>/baselines`.
+- **Baselines** in the sidebar, or `/<project-slug>/baselines`.
 
-You see all baselines for the project and can click **New Baseline** to create one.
+The list shows each baseline's **Name**, **Source view** (the saved view it was made from, if any) and **Created** date; **Details** opens it. The **Create baseline** form is at the top of the page.
 
 ![Baselines list](screenshots/baselines-list.png)
 
 ### 7.2 Creating a Baseline
 
-1. Click **New Baseline**.
-2. URL: `/<project-slug>/baselines/new`.
-3. Enter **Name** and optional **Description**.
-4. Submit.
+In **Create baseline** on the Baselines page:
 
-The system captures the **current** requirement version for each requirement, the **current** traceability matrix (requirement–verification links), and a **snapshot of verification statuses** at that moment. The baseline cannot be edited or deleted.
+1. Enter a **Name** and an optional **Description**.
+2. Optionally choose **From saved view** ([§4.1](#41-requirements-views)): only the requirements matching that view are included, and the view is **locked** so it keeps describing the baseline. Views already used by a baseline are not offered.
+3. Select **Create**.
+
+The system captures the **current** version of each included requirement, the **current** traceability links (requirement–verification), a **snapshot of each verification** (name, status, type, …) and the list of attached files at that moment. A baseline cannot be edited.
 
 ### 7.3 Viewing a Baseline
 
-- Click a baseline in the list.
-- URL: `/<project-slug>/baselines/<baseline_id>`.
+- **Details** in the list. URL: `/<project-slug>/baselines/<baseline_id>`.
 
 You see:
 
-- **Metadata**: Name, description, created date, created by.
-- **Requirements in this baseline**: Table with requirement ID, reference, title; links to requirement (and version) pages.
-- **Traceability**: List of requirement–verification pairs (with references like REQ-PWR-001, TEST-PWR-001). A **Verifications** snapshot is also stored so you can see which verification status (e.g. Pass/Fail) each linked verification had at baseline time.
-- **Diff vs current**: For each requirement that has changed since the baseline, a **Diff vs current** action opens a **diff modal** comparing the baseline snapshot to the current version. If the requirement is unchanged, this action is hidden.
-- **Diff between baselines**: Select another baseline and use **Diff baselines** on requirements whose frozen versions differ.
-- **Verification diff vs current**: Verification rows compare the frozen name, description, source, reference, status, type, and parent with the current verification.
-- **Attachments**: The files attached to the included requirements and to the verifications when the baseline was taken. Files deleted since stay downloadable here and are marked *deleted since*; they keep counting toward the project's storage until the baseline no longer needs them.
-- **Export ReqIF**: Button to export **this baseline** as ReqIF 1.2 XML.
+- The **name** and **description**, and counters for requirements, verifications and traceability rows.
+- **Requirement snapshots**: reference and title of each requirement as frozen, with a **Comparison** column:
+  - **Diff vs current** opens a comparison of the frozen version with the current one; *Current unchanged* means nothing changed since.
+  - **Compare with baseline** (above the table) picks another baseline; **Diff baselines** then compares the two frozen versions of a requirement (the older baseline is shown as the "before").
+- **Verification snapshots**: reference, the status and type at baseline time next to the current ones, and a comparison of the frozen name, description, source, reference, status, type and parent with the current verification (*Unchanged*, or *Unavailable* when the verification was deleted since).
+- **Sample traceability**: the first rows of the frozen requirement–verification links (by requirement and verification number), with their suspect flag.
+- **Attachments**: the files attached to the included requirements and verifications when the baseline was taken. Files deleted since stay downloadable here and are marked *deleted since*; they keep counting toward the project's storage until the baseline no longer needs them.
+- **Export ReqIF** and **Export ReqIFZ (with files)** ([§7.4](#74-exporting-a-baseline-as-reqif)).
 
 ### 7.4 Exporting a Baseline as ReqIF
 
-- On the baseline detail page: **Export ReqIF**.
-- The downloaded file is the ReqIF 1.2 snapshot of that baseline. Project-wide current-state ReqIF is available from **Reports → Requirements (.reqif)**.
+- On the baseline detail page: **Export ReqIF** downloads the ReqIF 1.2 snapshot of that baseline; **Export ReqIFZ (with files)** adds the files the baseline recorded, including ones deleted since ([§9.4](#94-exporting-reqif)).
+- Project-wide current-state ReqIF is available from **Reports & exports → Requirements (.reqif)**.
 
 ---
 
@@ -533,9 +620,15 @@ These are **project-level** configuration entities used to classify and manage r
 | **Custom fields** | Extra requirement fields and their types | `…/settings/catalog/custom-fields` |
 | **Verification methods** | How requirements are verified (e.g. Test, Analysis, Review) | `…/settings/catalog/verification-methods` |
 
-Each tab lists the entries with their title, description and tag, and lets you add, edit and delete them. The old `/<project-slug>/catalog/…` URLs redirect here.
+Each tab lists the entries and lets you add, edit and delete them:
 
-Each verification status also has an **outcome**: *Passed*, *Failed*, *In progress* or *Not run*. The outcome tells Marreq what the status means for requirement close-out ([§5.7](#57-verification-control-and-close-out)). New statuses get it from their title (a status called "Passed" is *Passed*; an unknown title is *Not run*), and you can change it for your own statuses.
+- **Categories**, **Applicability** and **Verification methods**: title, description and tag.
+- **Requirement statuses** and **Verification statuses**: also a colour and, for the statuses every project starts with, the *System* flag. System statuses cannot be edited or deleted.
+- **Custom fields**: label, type (`text`, `number`, `boolean`, or `enum` with one option per line) and sort order.
+
+Members without the permission see the tabs read-only, with a note saying which permission is needed. The old `/<project-slug>/catalog/…` URLs redirect here.
+
+Each verification status also has an **outcome**: *Passed*, *Failed*, *In progress* or *Not run*. The outcome tells Marreq what the status means for requirement close-out ([§5.7](#57-verification-control-and-close-out)). New statuses get it from their title (a status called "Passed" is *Passed*; an unknown title is *Not run*) unless you choose one in **Outcome** when adding the status; you can change it later for your own statuses.
 
 ---
 
@@ -543,30 +636,35 @@ Each verification status also has an **outcome**: *Passed*, *Failed*, *In progre
 
 ### 9.1 Reports Page
 
-- From the project: **Reports** in the nav or **View Reports** on the project detail page.
-- URL: `/<project-slug>/reports`.
+- **Reports & exports** in the sidebar, or `/<project-slug>/reports`. The page is titled **Coverage & gaps**; a bar at the top jumps to its sections, and **Refresh** reloads it.
 
 ![Reports page](screenshots/reports.png)
 
 You see:
 
-- **Executive summary**: Total requirements, total verifications, coverage %, average verifications per requirement.
-- **Coverage analysis**: Covered vs uncovered requirements, requirements without verifications, verifications without requirements, suspect links. Verification status distribution (e.g. Passed/Failed/Pending) may be shown.
-- **Generate PDF Report** (*Report PDF*): the **Traceability & coverage report**: cover page, contents, coverage figures, coverage by reference-code prefix, requirements without verification, verifications without requirements, suspect links and data quality.
-- **Download requirements (PDF)**: Link to requirements-only PDF.
-- **Excel downloads**: Requirements, Verifications, **Matrix** (coverage grid), and **Matrix links** (two code columns for import).
+- **Coverage**: tiles for requirements without tests, tests without requirements and suspect links, then each list in full, with shortcuts to the Matrix and the graph. The Dashboard's Gaps, Orphans and Suspect cards open these lists.
+- **Report documents**: the VCD and the traceability & coverage report as PDF or ODT ([§9.6](#96-report-documents-vcd-and-coverage-report)).
+- **Exports**:
+  - **Requirements (.xlsx)**, **Verifications (.xlsx)**, **Matrix (.xlsx)** and **Matrix links (.xlsx)** ([§6.3](#63-exporting-the-matrix));
+  - **Requirements PDF** (the requirement list) and **Report PDF** (the traceability & coverage report with default settings);
+  - **Requirements (.reqif)** and **Requirements with files (.reqifz)** ([§9.4](#94-exporting-reqif));
+  - **Project bundle (.json)** and **Project bundle with files (.zip)** ([§9.5](#95-exporting-a-project-bundle)).
+- **Matrix**: requirements whose links are all suspect, the verifications linked to the most requirements, requirements by number of links, and coverage by category.
+- **Data quality**: requirements and verifications with missing information.
+- **Workflow**: requirements by approval state, by author and by reviewer.
+- **Baseline diff**: the current traceability compared with a baseline you choose.
 
 ### 9.2 Exporting Requirements to Excel
 
-- From the **Requirements** list: **Export Excel** (or use the project-level export link).
-- URL: `/<project-slug>/requirements.xls`.
-- Downloads an `.xls` file with requirements and all configured fields (including a **Comments** sheet when applicable).
+- **Reports & exports → Requirements (.xlsx)**, or the **Excel** button on the Requirements list.
+- The workbook (`.xlsx`) contains every requirement in the project with all configured fields, and a **Comments** sheet when there are comments.
+- The **CSV** button next to it downloads only the rows currently shown (after filters and Global Search).
 
 ### 9.3 Exporting Verifications to Excel
 
-- From the **Verifications** list or reports: use **Export Excel** (verifications) when available to download all project verifications for test management or external reporting.
-- URL: `/<project-slug>/verifications.xls`.
-- The export includes verification fields (name, description, source, status, reference code, etc.) so you can share or analyze test data outside Marreq.
+- **Reports & exports → Verifications (.xlsx)**, or the **Excel** button on the Verifications list.
+- The workbook contains every verification in the project (name, description, source, status, reference code, …), for test management or reporting outside Marreq.
+- The **CSV** button downloads only the rows currently shown.
 
 ### 9.4 Exporting ReqIF
 
@@ -611,7 +709,7 @@ When a later version of Marreq adds a section, your saved templates show it swit
 
 1. Open a project and go to **Project settings › Import**, **Create → Import**, or `/{project-slug}/settings/import`.
 2. You need **Edit requirements** permission.
-3. Upload a **`.xlsx`** or **`.csv`** file (first sheet only).
+3. Upload a **`.xlsx`**, **`.xls`** or **`.csv`** file (first sheet only).
 4. Click **Upload and map columns**.
 5. Choose **Requirements**, **Verifications**, or **Matrix links**, map each column to a Marreq field (or skip it), then **Import**.
 6. Review the count and any per-row errors, then open the requirements or verifications list. After a matrix import, open **Traceability** (Matrix tab) to see coverage.
@@ -645,24 +743,37 @@ This is separate from in-project Excel/CSV and ReqIF import, which add records t
 
 ## 11. Project Members
 
-- **View members**: **Project settings › Members & reviewers**.
+- **Project settings › Members & reviewers**.
 - URL: `/<project-slug>/settings/members` (the old `/<project-slug>/members` redirects here).
 
-You see each member and their role (Admin, Reviewer, Author, Viewer). Users with **Manage members** can change roles and remove members.
+You see each member and their role. Users with **Manage members** (the project's Admins) can change roles and remove members.
 
-- **Add member**: pick an account and a role, then **Add**. Picking from all accounts needs the user directory, which only instance administrators can see; other managers are asked to have an administrator add people.
-- **Remove member**: **Remove** next to the member, then confirm.
+| Role | Can |
+| --- | --- |
+| **Admin** | Everything in the project: edit requirements and verifications, manage members, the catalog, custom fields and project settings |
+| **Reviewer** | View and edit requirements and verifications |
+| **Author** | View and edit requirements and verifications |
+| **Viewer** | View only |
+
+Approving versions and changing statuses is not part of any role: it depends on the **project reviewer** list below.
+
+- **Add a member**: under **Add user**, pick an account and a role, then **Add**. Picking from all accounts needs the user directory, which only instance administrators can see; other managers are asked to have an administrator add people.
+- **Remove a member**: **Remove** next to the member, then confirm.
+
+![Members and reviewers](screenshots/settings-members.png)
 
 ### 11.1 Project reviewers (workflow gates)
 
-Some actions are limited to a **designated reviewer list** for the project (not the same as the “Reviewer” role alone):
+Some actions are limited to a **designated reviewer list** for the project (not the same as the “Reviewer” role):
 
-- **Who**: open **Project settings › Members & reviewers**. Users with **Manage members** can check which **project members** act as **project reviewers**. Only members of the project can be reviewers.
-- **What they control**: **Requirement status** (from the requirements table or requirement editor), **verification (test) status**, and **version approval** transitions (**draft → reviewed → approved**). Other editors can still change most requirement or verification fields if they have **Edit requirements**, but not those gates unless they are in the reviewer list.
-- **Verifications**: Each verification has an assigned **author** and **reviewer** (users). The **status** of the verification is still changed only by **project reviewers** (an administrator only while no reviewers are configured).
-- **Audit**: Version **reviewed** / **approved** and verification status changes record **who** performed the action where the product exposes it (and in server logs).
+- **Who**: on **Project settings › Members & reviewers**, users with **Manage members** tick which **project members** act as **project reviewers**, then select **Save reviewer list** (**Reset** undoes unsaved changes). Only members of the project can be reviewers.
+- **What they control**: **requirement status**, **verification status**, and **version approval** (**draft → reviewed → approved**). Other editors can still change the other fields of requirements and verifications, but not those.
+- **Reviewer fields**: the **Reviewer** of a requirement or verification is chosen from this list.
+- **Audit**: reviews, approvals and status changes record **who** made them.
 
-If **no project reviewers** are configured, only **administrators** can change those statuses and approvals until at least one reviewer is added.
+**No reviewers yet**: while the list is empty, only **site administrators** can change statuses and approve, and **Create requirement** and **Create verification** stay disabled, with **Add a reviewer in Project settings** next to the button. Creating requirements also needs at least one verification method (**Add a verification method**).
+
+**Once the list has members**, being a site administrator does not bypass it: an administrator who needs these powers must tick themselves too.
 
 ---
 
@@ -737,7 +848,11 @@ Available on self-hosted (`marreq-server`) installations only. In the hosted clo
 - **Administration › System logs**.
 - URL: `/admin/logs`.
 
-Browse audit logs (entity type, entity ID, user, action, timestamp). You can filter by entity and export logs (e.g. **Export logs** with optional filename). **Cleanup logs** (if available) removes old entries.
+The audit log of the whole instance, newest first, with the columns **Time**, **User**, **Action**, **Entity**, **Project** and **Summary**. Open a row to see the changed fields with their old and new values.
+
+- **Filters**: entity type, entity ID, user ID, action, project ID, and a **Since** / **Until** range; select **Filter** to apply them. The list is paged.
+- **Export JSON** downloads the entries matching the filters (and is itself recorded as an `EXPORT` entry).
+- **Cleanup older than N days** deletes old entries, after a confirmation.
 
 ### 13.4 Log Analytics
 
@@ -756,12 +871,16 @@ Days are calendar days in **UTC**. Available to administrators only.
 
 ## 14. Tips & Shortcuts
 
-- **Theme**: use the light / dark / match-system switch in the top bar (on wider screens) or on the login page; the choice is stored in the browser.
-- **Semantic search**: **Ctrl+K** on the requirements page (when semantic search is enabled) opens the AI search modal; **Enter** runs the search, **Esc** closes.
-- **Requirement diff**: From requirement version history or baseline “Diff vs current”, the diff modal uses **red** for removed, **green** for added, **gray** for unchanged.
-- **Breadcrumbs**: Requirement and test edit/create pages show breadcrumbs (Project → Requirements → …); use them to navigate back.
+- **Theme**: the light / dark / match-system switch in the top bar (on wider screens) or on the login page; the choice is stored in the browser.
+- **Keyboard**:
+  - In the statement and description editor: **Ctrl/Cmd+B** bold, **Ctrl/Cmd+I** italic, **Ctrl/Cmd+K** link.
+  - **Esc** closes menus, dialogs, the notifications panel, the sidebar on narrow screens and inline editors.
+  - **Ctrl/Cmd+click** selects several values in multi-select lists, such as verification methods.
+- **Diffs**: requirement, verification and baseline comparisons use **red** for removed, **green** for added and **gray** for unchanged text.
+- **Breadcrumbs**: the requirement and verification pages show a path (Requirements › …); use it to go back to the list.
+- **Links keep state**: filters, sorting, saved views, the Matrix and DSM settings and the hierarchy filter are part of the URL, so a bookmark or a shared link opens the same view.
 - **Project context**: the sidebar pages and Project settings belong to the current project; switch projects with the **Projects** menu in the top bar (you stay on the same page).
-- **Export formats**: Requirements, verifications, matrix grid, and matrix links export as **Excel** (`.xlsx`) from Reports; ReqIF export is **XML**. PDF reports are available from the Reports page.
+- **Export formats**: requirements, verifications, matrix grid and matrix links as Excel (`.xlsx`), lists as CSV, ReqIF as XML (`.reqif`) or a ZIP with the files (`.reqifz`), project bundles as JSON or ZIP, and report documents as PDF or ODT.
 
 ---
 

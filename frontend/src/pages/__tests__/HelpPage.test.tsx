@@ -60,6 +60,8 @@ describe('HelpPage', () => {
     expect(screen.getByRole('heading', { name: /help & reference/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^navigation$/i })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /^traceability$/i })).toBeInTheDocument();
+    // Issue #373: no leftovers of the classic UI.
+    expect(screen.queryByText(/classic|legacy/i)).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute(
       'href',
       '/space-project/dashboard',

@@ -659,7 +659,14 @@ export default function CreateRequirementPage() {
             </label>
             {methods.length === 0 ? (
               <p className="text-sm text-amber-200/90 bg-amber-500/10 border border-amber-500/25 rounded-lg p-3">
-                No verification methods in this project. Add methods in the legacy UI, then reload this page.
+                No verification methods in this project.{' '}
+                <Link
+                  to={`${basePath}/settings/catalog/verification-methods`}
+                  className="text-stitch-accent underline font-semibold"
+                >
+                  Add one in Project settings › Catalog
+                </Link>
+                , then reload this page.
               </p>
             ) : (
               <select

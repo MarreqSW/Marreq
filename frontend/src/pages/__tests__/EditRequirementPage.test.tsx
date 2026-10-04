@@ -124,6 +124,24 @@ describe('EditRequirementPage rationale', { timeout: 15_000 }, () => {
     resetApprovedEditPromptsForTests();
   });
 
+  // Issue #373: the button deletes permanently, so it must not say "Archive".
+  it('labels the permanent delete as Delete requirement', async () => {
+    render(
+      <MemoryRouter initialEntries={['/space-project/requirements/4/edit']}>
+        <Routes>
+          <Route
+            path="/:projectSlug/requirements/:requirementId/edit"
+            element={<EditRequirementPage />}
+          />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(
+      await screen.findByRole('button', { name: /delete requirement/i }, LOADED),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /archive/i })).not.toBeInTheDocument();
+  });
+
   it('patches justification when rationale is edited', async () => {
     const user = userEvent.setup();
     render(

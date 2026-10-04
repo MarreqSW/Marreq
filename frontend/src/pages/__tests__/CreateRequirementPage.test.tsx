@@ -216,6 +216,22 @@ describe('CreateRequirementPage duplication', () => {
     expect(payload).not.toHaveProperty('comments');
   });
 
+  // Issue #373: the empty-catalog hint points to Project settings, not a legacy UI.
+  it('links an empty verification method list to the catalog settings', async () => {
+    vi.mocked(apiClient.listVerificationMethodsByProject).mockResolvedValue([]);
+    render(
+      <MemoryRouter initialEntries={['/space-project/requirements/new']}>
+        <Routes>
+          <Route path="/:projectSlug/requirements/new" element={<CreateRequirementPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(
+      await screen.findByRole('link', { name: 'Add one in Project settings › Catalog' }),
+    ).toHaveAttribute('href', '/space-project/settings/catalog/verification-methods');
+    expect(screen.queryByText(/legacy/i)).not.toBeInTheDocument();
+  });
+
   it('explains why creating is blocked when the project has no reviewers', async () => {
     vi.mocked(apiClient.getProjectReviewers).mockResolvedValue({ user_ids: [] });
     render(

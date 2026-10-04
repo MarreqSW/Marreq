@@ -28,10 +28,10 @@ const blocks: { title: string; body: string }[] = [
   {
     title: 'Creating records',
     body:
-      'Use Create Requirement or New verification from the header or list pages. New requirements need at least one verification method configured for the project. Import Excel/CSV (requirements, verifications, or a matrix-links file of codes) or ReqIF (a .reqif file, or a .reqifz archive that also brings its attached files) from Project settings › Import (or Create → Import).',
+      'Use Create requirement or Create verification from the Create button in the header (its menu also has Import). New requirements need at least one verification method configured for the project. Import Excel/CSV (requirements, verifications, or a matrix-links file of codes) or ReqIF (a .reqif file, or a .reqifz archive that also brings its attached files) from Project settings › Import (or Create → Import).',
   },
   {
-    title: 'Classic (legacy) UI',
+    title: 'Administration, reports and import',
     body:
       'Administrators open Administration from the user menu: Users, System logs, Log analytics (events per day, top actions, top users) and, on self-hosted installations, Backup. Reports includes Excel (requirements, verifications, matrix grid, matrix links), PDF, and ReqIF downloads served by the API, including a ReqIFZ archive with the attachment files. Import ReqIF or ReqIFZ from Project settings › Import.',
   },

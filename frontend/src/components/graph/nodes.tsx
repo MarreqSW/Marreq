@@ -39,9 +39,10 @@ export function RequirementFlowNode({ data }: NodeProps<ReqNodeData>) {
       <div className="text-[10px] font-bold text-stitch-accent uppercase mb-1 tracking-tighter">
         {data.id}
       </div>
-      <div className="text-xs font-semibold text-white leading-tight">{data.label}</div>
+      {/* Theme colours: white text was unreadable on the light theme's nodes (issue #376). */}
+      <div className="text-xs font-semibold text-stitch-fg leading-tight">{data.label}</div>
       <div
-        className={`mt-2 h-1 w-full rounded-full ${verified ? 'bg-emerald-400/80' : 'bg-white/20'}`}
+        className={`mt-2 h-1 w-full rounded-full ${verified ? 'bg-emerald-500 dark:bg-emerald-400/80' : 'bg-stitch-border'}`}
       />
       <Handle
         type="source"
@@ -70,7 +71,7 @@ export function VerificationFlowNode({ data }: NodeProps<VerNodeData>) {
         className="bg-stitch-accent/60! w-2! h-2!"
       />
       <div className="text-[10px] font-mono text-stitch-muted">{data.ref}</div>
-      <div className="text-xs font-medium text-white/95 leading-tight">{data.label}</div>
+      <div className="text-xs font-medium text-stitch-fg leading-tight">{data.label}</div>
       <Handle
         type="source"
         position={Position.Right}

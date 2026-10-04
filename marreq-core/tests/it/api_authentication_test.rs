@@ -1146,3 +1146,106 @@ async fn identities_report_password_configured_even_when_user_is_cached() {
         assert_eq!(body["password_configured"], true);
     }
 }
+
+// ============================================================================
+// Session lifetimes (issue #285): absolute and idle limits, throttled touch
+// ============================================================================
+
+mod session_expiry {
+    use super::*;
+    use chrono::{Duration, NaiveDateTime, Utc};
+    use marreq_core::auth::session::{BACKGROUND_REQUEST_HEADER, hash_token};
+    use marreq_core::repository::diesel_repo_mock::DieselRepoMock;
+    use rocket::http::Header;
+
+    const RAW: &str = "session-expiry-test-token";
+
+    /// A session of the admin, created `created_ago` and last seen `seen_ago`,
+    /// with an `expires_at` far in the future (so only the new limits apply).
+    fn repo_with_session(created_ago: Duration, seen_ago: Duration) -> DieselRepoMock {
+        let mut repo = base_repo();
+        let now = Utc::now().naive_utc();
+        repo.sessions.push(Session {
+            token_hash: hash_token(RAW),
+            user_id: 1,
+            created_at: now - created_ago,
+            expires_at: now + Duration::days(365),
+            last_seen_at: now - seen_ago,
+            user_agent: None,
+            ip_addr: None,
+        });
+        repo
+    }
+
+    fn cookie() -> Cookie<'static> {
+        let mut cookie = Cookie::new(session_cookie_name_for_request(), RAW);
+        cookie.set_path("/");
+        cookie
+    }
+
+    async fn get(client: &Client, background: bool) -> Status {
+        let mut request = client.get("/api/requirements").private_cookie(cookie());
+        if background {
+            request = request.header(Header::new(BACKGROUND_REQUEST_HEADER, "1"));
+        }
+        request.dispatch().await.status()
+    }
+
+    fn last_seen(client: &Client) -> Option<NaiveDateTime> {
+        let state = client.rocket().state::<TestAppState>().unwrap();
+        let repo = state.repo.read().unwrap();
+        repo.inner_repo()
+            .sessions
+            .iter()
+            .find(|s| s.token_hash == hash_token(RAW))
+            .map(|s| s.last_seen_at)
+    }
+
+    #[rocket::async_test]
+    async fn an_active_session_is_accepted() {
+        let client = test_client(repo_with_session(Duration::days(2), Duration::minutes(5))).await;
+        assert_eq!(get(&client, false).await, Status::Ok);
+    }
+
+    #[rocket::async_test]
+    async fn an_idle_session_is_rejected_and_removed() {
+        // Default idle limit: 8 hours.
+        let client = test_client(repo_with_session(Duration::days(1), Duration::hours(9))).await;
+        assert_eq!(get(&client, false).await, Status::Unauthorized);
+        assert_eq!(last_seen(&client), None, "the rejected session is deleted");
+    }
+
+    #[rocket::async_test]
+    async fn a_session_past_the_absolute_limit_is_rejected() {
+        // Default absolute limit: 30 days, counted from created_at even though
+        // expires_at is still in the future.
+        let client = test_client(repo_with_session(Duration::days(31), Duration::minutes(1))).await;
+        assert_eq!(get(&client, false).await, Status::Unauthorized);
+    }
+
+    #[rocket::async_test]
+    async fn activity_is_recorded_at_most_once_a_minute() {
+        let client = test_client(repo_with_session(Duration::days(1), Duration::seconds(10))).await;
+        let before = last_seen(&client).unwrap();
+        assert_eq!(get(&client, false).await, Status::Ok);
+        assert_eq!(
+            last_seen(&client),
+            Some(before),
+            "inside the throttle: no write"
+        );
+
+        let client = test_client(repo_with_session(Duration::days(1), Duration::minutes(5))).await;
+        let before = last_seen(&client).unwrap();
+        assert_eq!(get(&client, false).await, Status::Ok);
+        let after = last_seen(&client).unwrap();
+        assert!(after > before + Duration::minutes(4), "refreshed to now");
+    }
+
+    #[rocket::async_test]
+    async fn background_requests_do_not_count_as_activity() {
+        let client = test_client(repo_with_session(Duration::days(1), Duration::minutes(5))).await;
+        let before = last_seen(&client).unwrap();
+        assert_eq!(get(&client, true).await, Status::Ok, "still authenticated");
+        assert_eq!(last_seen(&client), Some(before));
+    }
+}

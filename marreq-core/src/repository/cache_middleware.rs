@@ -684,17 +684,18 @@ impl<R: Repository> super::SessionRepository for CacheRepository<R> {
     fn find_active_session(
         &self,
         token_hash: &str,
-        now: chrono::NaiveDateTime,
+        cutoffs: &crate::repository::SessionCutoffs,
     ) -> Result<Option<crate::models::entities::Session>, RepoError> {
-        self.inner.find_active_session(token_hash, now)
+        self.inner.find_active_session(token_hash, cutoffs)
     }
 
     fn touch_session(
         &mut self,
         token_hash: &str,
         now: chrono::NaiveDateTime,
-    ) -> Result<(), RepoError> {
-        self.inner.touch_session(token_hash, now)
+        older_than: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError> {
+        self.inner.touch_session(token_hash, now, older_than)
     }
 
     fn delete_session(&mut self, token_hash: &str) -> Result<(), RepoError> {
@@ -705,8 +706,11 @@ impl<R: Repository> super::SessionRepository for CacheRepository<R> {
         self.inner.delete_user_sessions(user_id)
     }
 
-    fn purge_expired_sessions(&mut self, now: chrono::NaiveDateTime) -> Result<usize, RepoError> {
-        self.inner.purge_expired_sessions(now)
+    fn purge_expired_sessions(
+        &mut self,
+        cutoffs: &crate::repository::SessionCutoffs,
+    ) -> Result<usize, RepoError> {
+        self.inner.purge_expired_sessions(cutoffs)
     }
 }
 

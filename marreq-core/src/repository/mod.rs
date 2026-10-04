@@ -187,6 +187,27 @@ pub trait IdempotencyRepository {
     }
 }
 
+/// The session limits as points in time (see [`crate::auth::session_config`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SessionCutoffs {
+    pub now: chrono::NaiveDateTime,
+    /// Sessions created at or before this are past the absolute limit.
+    pub created_after: chrono::NaiveDateTime,
+    /// Sessions last seen at or before this are idle-expired (`None`: no idle limit).
+    pub seen_after: Option<chrono::NaiveDateTime>,
+}
+
+impl SessionCutoffs {
+    /// Whether a session row is still within every limit.
+    pub fn allows(&self, session: &Session) -> bool {
+        session.expires_at > self.now
+            && session.created_at > self.created_after
+            && self
+                .seen_after
+                .is_none_or(|seen| session.last_seen_at > seen)
+    }
+}
+
 /// Server-side authenticated sessions backed by `sessions(token_hash, user_id, ...)`.
 ///
 /// The cookie carries a 256-bit base64url **raw** token; the SHA-256 of that
@@ -194,29 +215,32 @@ pub trait IdempotencyRepository {
 ///
 /// 1. login → `create_session(user_id, token_hash, expires_at, ua, ip)` and
 ///    set the cookie to the raw token;
-/// 2. each request → `find_active_session(token_hash, now)` and
-///    `touch_session(token_hash, now)` (best-effort);
+/// 2. each request → `find_active_session(token_hash, cutoffs)`, and
+///    `touch_session` at most once per throttle interval (best-effort);
 /// 3. logout (single device) → `delete_session(token_hash)`;
 /// 4. logout-everywhere / password change → `delete_user_sessions(user_id)`.
 ///
-/// Implementations should treat `find_active_session` as "and not expired";
-/// they may opportunistically delete expired rows on the same call.
+/// `find_active_session` returns only sessions within every limit of
+/// [`SessionCutoffs`] (absolute and idle; issue #285).
 pub trait SessionRepository {
     fn create_session(&mut self, new: &NewSession) -> Result<(), RepoError>;
     fn find_active_session(
         &self,
         token_hash: &str,
-        now: chrono::NaiveDateTime,
+        cutoffs: &SessionCutoffs,
     ) -> Result<Option<Session>, RepoError>;
+    /// Set `last_seen_at = now` if it is older than `older_than` (a conditional
+    /// write, so concurrent requests do not all write). Returns whether it did.
     fn touch_session(
         &mut self,
         token_hash: &str,
         now: chrono::NaiveDateTime,
-    ) -> Result<(), RepoError>;
+        older_than: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError>;
     fn delete_session(&mut self, token_hash: &str) -> Result<(), RepoError>;
     fn delete_user_sessions(&mut self, user_id: i32) -> Result<(), RepoError>;
-    /// Best-effort cleanup of rows past `expires_at`.  Idempotent.
-    fn purge_expired_sessions(&mut self, now: chrono::NaiveDateTime) -> Result<usize, RepoError>;
+    /// Delete sessions past any limit of `cutoffs`.  Idempotent.
+    fn purge_expired_sessions(&mut self, cutoffs: &SessionCutoffs) -> Result<usize, RepoError>;
 }
 
 pub trait RequirementsRepository {

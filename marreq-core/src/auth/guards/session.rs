@@ -8,7 +8,9 @@ use rocket::request::{FromRequest, Outcome};
 use rocket::{Request, async_trait};
 
 use crate::app::AppState;
-use crate::auth::{clear_session_cookie_via_state, read_session_user_id_via_state};
+use crate::auth::{
+    authenticate_session_via_state, clear_session_cookie_via_state, is_background_request,
+};
 use crate::models::User;
 use crate::repository::errors::RepoError;
 use crate::repository::{GroupMembersRepository, ProjectMembersRepository, UserRepository};
@@ -73,13 +75,14 @@ impl<'r> FromRequest<'r> for SessionUser {
             None => return Outcome::Error((Status::InternalServerError, ())),
         };
 
-        let user_id = match read_session_user_id_via_state(cookies, &state) {
-            Some(user_id) => user_id,
-            None => {
-                clear_session_cookie_via_state(cookies, &state);
-                return Outcome::Error((Status::Unauthorized, ()));
-            }
-        };
+        let user_id =
+            match authenticate_session_via_state(cookies, &state, is_background_request(request)) {
+                Some(user_id) => user_id,
+                None => {
+                    clear_session_cookie_via_state(cookies, &state);
+                    return Outcome::Error((Status::Unauthorized, ()));
+                }
+            };
 
         let state_for_lookup = state.clone();
         let result = rocket::tokio::task::spawn_blocking(move || {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CSRF, itSendsEachRequest, stubFetch } from '@/test/apiHarness';
+import { CSRF, itSendsEachRequest, lastRequest, stubFetch } from '@/test/apiHarness';
 import { DEFAULT_DSM_PARAMS } from '@/utils/dsm';
 import {
   createBaseline,
@@ -222,5 +222,16 @@ describe('getDashboard', () => {
       group_slug: 'payload',
     });
     expect(dashboard).toMatchObject({ projects_count: 2, selected_project_id: 5, csrf_token: 'csrf' });
+  });
+});
+
+// Issue #285: the notification poll must not keep an idle session alive.
+describe('notification polling', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('marks the unread-count request as background', async () => {
+    const fetchMock = stubFetch({ json: { count: 1 } });
+    await getUnreadCount();
+    expect(lastRequest(fetchMock).headers['X-Marreq-Background']).toBe('1');
   });
 });

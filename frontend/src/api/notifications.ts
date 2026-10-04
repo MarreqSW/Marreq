@@ -1,5 +1,5 @@
 import type { Notification, NotificationPreference } from './types';
-import { fetchJson, JSON_HEADERS } from './transport';
+import { BACKGROUND_REQUEST_HEADER, fetchJson, JSON_HEADERS } from './transport';
 
 export async function getNotifications(
   unreadOnly = false,
@@ -11,8 +11,15 @@ export async function getNotifications(
   return fetchJson<Notification[]>(`/api/notifications?${params}`);
 }
 
+/**
+ * Unread count, polled in the background: the header tells the server this is
+ * not user activity, so an open tab does not keep an idle session alive
+ * (issue #285).
+ */
 export async function getUnreadCount(): Promise<number> {
-  const data = await fetchJson<{ count: number }>('/api/notifications/unread-count');
+  const data = await fetchJson<{ count: number }>('/api/notifications/unread-count', {
+    headers: { [BACKGROUND_REQUEST_HEADER]: '1' },
+  });
   return data.count;
 }
 

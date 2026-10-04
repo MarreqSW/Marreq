@@ -319,6 +319,10 @@ jobs:
         run: |
           cargo test -p marreq-core --test login_rate_limit_postgres_integration -- --nocapture
 
+      - name: Run session expiry PostgreSQL integration tests
+        run: |
+          cargo test -p marreq-core --test session_expiry_postgres_integration -- --nocapture
+
       - name: Generate coverage reports
         run: |
           cargo cov clean --workspace

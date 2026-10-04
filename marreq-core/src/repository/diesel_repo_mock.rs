@@ -1046,12 +1046,12 @@ impl super::SessionRepository for DieselRepoMock {
     fn find_active_session(
         &self,
         token_hash: &str,
-        now: chrono::NaiveDateTime,
+        cutoffs: &super::SessionCutoffs,
     ) -> Result<Option<crate::models::entities::Session>, RepoError> {
         Ok(self
             .sessions
             .iter()
-            .find(|s| s.token_hash == token_hash && s.expires_at > now)
+            .find(|s| s.token_hash == token_hash && cutoffs.allows(s))
             .cloned())
     }
 
@@ -1059,15 +1059,17 @@ impl super::SessionRepository for DieselRepoMock {
         &mut self,
         token_hash: &str,
         now: chrono::NaiveDateTime,
-    ) -> Result<(), RepoError> {
+        older_than: chrono::NaiveDateTime,
+    ) -> Result<bool, RepoError> {
         if let Some(s) = self
             .sessions
             .iter_mut()
-            .find(|s| s.token_hash == token_hash)
+            .find(|s| s.token_hash == token_hash && s.last_seen_at < older_than)
         {
             s.last_seen_at = now;
+            return Ok(true);
         }
-        Ok(())
+        Ok(false)
     }
 
     fn delete_session(&mut self, token_hash: &str) -> Result<(), RepoError> {
@@ -1080,9 +1082,12 @@ impl super::SessionRepository for DieselRepoMock {
         Ok(())
     }
 
-    fn purge_expired_sessions(&mut self, now: chrono::NaiveDateTime) -> Result<usize, RepoError> {
+    fn purge_expired_sessions(
+        &mut self,
+        cutoffs: &super::SessionCutoffs,
+    ) -> Result<usize, RepoError> {
         let before = self.sessions.len();
-        self.sessions.retain(|s| s.expires_at > now);
+        self.sessions.retain(|s| cutoffs.allows(s));
         Ok(before - self.sessions.len())
     }
 }

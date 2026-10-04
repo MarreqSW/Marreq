@@ -8,7 +8,7 @@ use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 
 use crate::app::AppState;
-use crate::auth::session::read_session_user_id_via_state;
+use crate::auth::session::{authenticate_session_via_state, is_background_request};
 use crate::models::User;
 use crate::repository::UserRepository;
 use crate::repository::errors::RepoError;
@@ -29,10 +29,11 @@ impl<'r> FromRequest<'r> for OptionalSessionUser {
             None => return Outcome::Error((Status::InternalServerError, ())),
         };
 
-        let user_id = match read_session_user_id_via_state(cookies, &state) {
-            Some(id) => id,
-            None => return Outcome::Success(OptionalSessionUser(None)),
-        };
+        let user_id =
+            match authenticate_session_via_state(cookies, &state, is_background_request(request)) {
+                Some(id) => id,
+                None => return Outcome::Success(OptionalSessionUser(None)),
+            };
 
         let result = rocket::tokio::task::spawn_blocking(move || {
             let guard = state.try_repo_read()?;

@@ -200,11 +200,34 @@ browser session.
 
 ## Session lifetime
 
-Sessions currently have a 30-day absolute expiry stored in `expires_at`.
-`last_seen_at` is recorded but is not an enforced idle timeout and normal reads
-do not write-touch the session. Idle expiry and throttled session touching are
-tracked in #285; they are not represented as stronger guarantees than the
-current code provides.
+A browser session (the `__Host-session` / `session` cookie) ends at whichever
+limit comes first (issue #285):
+
+| Limit | Variable | Default | Counted from |
+|---|---|---|---|
+| **Absolute** | `MARREQ_SESSION_ABSOLUTE_HOURS` (1–8760) | 720 (30 days) | sign-in (`created_at`) |
+| **Idle** | `MARREQ_SESSION_IDLE_MINUTES` (≥ 5, or `0` = off; at most the absolute limit) | 480 (8 hours) | the last activity (`last_seen_at`) |
+
+- **Enforcement.** Every session lookup (`SessionRepository::find_active_session`)
+  checks `expires_at`, `created_at` and `last_seen_at` against the current
+  limits in SQL, so lowering a limit also ends existing sessions. A rejected
+  session's row is deleted and the request gets **401**; the SPA then sends the
+  user to sign in (unsaved requirement edits survive as local drafts).
+- **Activity.** Any request authenticated by the session cookie counts, except
+  requests with the header `X-Marreq-Background: 1`. The SPA sends it on the
+  notification poll, so an open but unused tab does not keep a session alive.
+  Other clients should send it for automatic requests. API tokens and OAuth
+  bearer tokens are not sessions and are unaffected.
+- **Throttled touch.** `last_seen_at` is written at most once per minute (or a
+  tenth of a shorter idle limit) per session, with a conditional
+  `UPDATE … WHERE last_seen_at < …`, so concurrent requests do not all write.
+  The idle limit is therefore exact to within that interval.
+- **Cleanup.** Every server deletes sessions past any limit once an hour.
+- **Revocation** is unchanged: sign-out deletes the session; changing your
+  password, or an administrator setting it, deletes all of that user's sessions.
+
+The cookie itself has no `Max-Age`: it is a browser-session cookie, and the
+server-side limits above decide.
 
 ## Login rate limiting
 

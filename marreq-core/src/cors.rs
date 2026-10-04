@@ -132,7 +132,7 @@ impl Fairing for CorsFairing {
             ));
             response.set_header(rocket::http::Header::new(
                 "Access-Control-Allow-Headers",
-                "Authorization, Content-Type, Accept, X-Requested-With, X-CSRF-Token",
+                "Authorization, Content-Type, Accept, X-Requested-With, X-CSRF-Token, X-Marreq-Background",
             ));
             // Cache the preflight result for 1 hour to reduce round-trips.
             response.set_header(rocket::http::Header::new("Access-Control-Max-Age", "3600"));

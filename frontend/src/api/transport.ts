@@ -1,5 +1,8 @@
 const JSON_HEADERS = { 'Content-Type': 'application/json' };
 
+/** Marks automatic requests (polling) that must not count as user activity for the session idle limit. */
+export const BACKGROUND_REQUEST_HEADER = 'X-Marreq-Background';
+
 function friendlyNonJsonError(status: number, text: string): string {
   const t = text.trim();
   if (

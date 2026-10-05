@@ -405,6 +405,18 @@ pub struct Project {
     pub owner_id: Option<i32>,
     pub slug: String,
     pub group_id: Option<i32>,
+    /// When the project was archived (read-only for everyone; issue #381).
+    #[serde(default)]
+    pub archived_at: Option<chrono::NaiveDateTime>,
+    /// Who archived it.
+    #[serde(default)]
+    pub archived_by: Option<i32>,
+}
+
+impl Project {
+    pub fn is_archived(&self) -> bool {
+        self.archived_at.is_some()
+    }
 }
 
 /// Membership that links a user to a project with a specific role.
@@ -630,6 +642,8 @@ pub enum ActionType {
     Export,
     Import,
     StatusChange,
+    Archive,
+    Unarchive,
 }
 
 impl std::fmt::Display for ActionType {
@@ -643,6 +657,8 @@ impl std::fmt::Display for ActionType {
             ActionType::Export => write!(f, "EXPORT"),
             ActionType::Import => write!(f, "IMPORT"),
             ActionType::StatusChange => write!(f, "STATUS_CHANGE"),
+            ActionType::Archive => write!(f, "ARCHIVE"),
+            ActionType::Unarchive => write!(f, "UNARCHIVE"),
         }
     }
 }
@@ -659,6 +675,8 @@ impl ActionType {
             ActionType::Export => "Exported",
             ActionType::Import => "Imported",
             ActionType::StatusChange => "Changed status", // catch-all phrasing
+            ActionType::Archive => "Archived",
+            ActionType::Unarchive => "Unarchived",
         }
     }
 }

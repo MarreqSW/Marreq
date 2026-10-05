@@ -337,6 +337,8 @@ mod tests {
             owner_id: Some(1),
             slug: "space-project".into(),
             group_id: None,
+            archived_at: None,
+            archived_by: None,
         };
         assert_eq!(project_route_slug(&project), "space-project");
         assert_eq!(project_base_path(&project), "/space-project");

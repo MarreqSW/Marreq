@@ -2,6 +2,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as apiClient from '@/api/client';
 import ProjectLayout from '../ProjectLayout';
 
 const dashboard = vi.hoisted(() => ({
@@ -9,16 +10,26 @@ const dashboard = vi.hoisted(() => ({
     projects: [
       { id: 5, name: 'Space Project', slug: 'space-project', project_base_path: '/space-project' },
       { id: 6, name: 'Rover', slug: 'rover', project_base_path: '/rover' },
+      {
+        id: 7,
+        name: 'Old Probe',
+        slug: 'old-probe',
+        project_base_path: '/old-probe',
+        archived: true,
+        owner_id: 2,
+      },
     ],
     user: { id: 1, username: 'alice', name: 'Alice Johnson', is_admin: true },
   },
 }));
 
+const refresh = vi.hoisted(() => vi.fn());
 vi.mock('@/context/DashboardContext', () => ({
   useDashboard: () => ({
     dashboard: dashboard.value,
+    csrfToken: 'csrf',
     setSelectedProjectId: vi.fn(),
-    refresh: vi.fn(),
+    refresh,
     logout: vi.fn(),
   }),
 }));
@@ -27,7 +38,7 @@ vi.mock('@/context/ThemeContext', () => ({
 }));
 vi.mock('@/components/NotificationPanel', () => ({ default: () => null }));
 vi.mock('@/hooks/useBuildInfo', () => ({ useBuildInfo: () => ({ build: null, error: false }) }));
-vi.mock('@/api/client', () => ({ getProjectFromPath: vi.fn() }));
+vi.mock('@/api/client', () => ({ getProjectFromPath: vi.fn(), setProjectArchived: vi.fn() }));
 
 function Where() {
   return <output data-testid="where">{useLocation().pathname}</output>;
@@ -139,5 +150,41 @@ describe('ProjectLayout navigation', () => {
       '/space-project/settings/import',
     );
   });
-});
 
+  it('lists archived projects apart, collapsed until asked', async () => {
+    const user = userEvent.setup();
+    renderAt('/space-project/dashboard');
+    await user.click(screen.getByRole('button', { name: 'Switch project' }));
+    const menu = screen.getByRole('menu', { name: 'Projects' });
+    expect(within(menu).queryByRole('menuitemradio', { name: /old probe/i })).not.toBeInTheDocument();
+    const toggle = within(menu).getByRole('button', { name: /archived \(1\)/i });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await user.click(toggle);
+    await user.click(within(menu).getByRole('menuitemradio', { name: /old probe/i }));
+    expect(screen.getByTestId('where')).toHaveTextContent('/old-probe/dashboard');
+  });
+
+  it('marks an archived project read-only and lets an instance admin unarchive it', async () => {
+    const user = userEvent.setup();
+    vi.mocked(apiClient.setProjectArchived).mockResolvedValue({} as never);
+    renderAt('/old-probe/requirements');
+    expect(screen.getByText('This project is archived.')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /create requirement/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Unarchive' }));
+    expect(apiClient.setProjectArchived).toHaveBeenCalledWith(7, false, 'csrf');
+    expect(refresh).toHaveBeenCalled();
+  });
+
+  it('offers Unarchive only to the owner or an instance admin', () => {
+    dashboard.value.user.is_admin = false;
+    renderAt('/old-probe/dashboard');
+    expect(screen.getByText(/read-only for everyone\.$/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Unarchive' })).not.toBeInTheDocument();
+  });
+
+  it('shows no banner on an active project', () => {
+    renderAt('/space-project/dashboard');
+    expect(screen.queryByText('This project is archived.')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /create requirement/i })).toBeInTheDocument();
+  });
+});

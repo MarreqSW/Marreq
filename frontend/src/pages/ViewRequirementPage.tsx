@@ -4,6 +4,7 @@ import RequirementCommentComposer, {
   commentsLockedForApproval,
 } from '@/components/RequirementCommentComposer';
 import { useDashboard } from '@/context/DashboardContext';
+import { useProjectArchived } from '@/hooks/useProjectArchived';
 import {
   getMyPermissions,
   getRequirementByProject,
@@ -116,6 +117,7 @@ function formatRelativeTime(iso: string): string {
 export default function ViewRequirementPage() {
   const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();
   const { csrfToken } = useDashboard();
+  const archived = useProjectArchived(pid);
   const { requirementId: requirementIdParam, versionId: versionIdParam } = useParams();
   const rid = Number(requirementIdParam);
   const requestedVersionId = versionIdParam != null ? Number(versionIdParam) : NaN;
@@ -907,7 +909,7 @@ export default function ViewRequirementPage() {
               ))
           )}
         </div>
-        {isHistorical ? null : (
+        {isHistorical || archived ? null : (
           <div className="px-4 py-3 border-t border-stitch-border bg-stitch-elevated">
             <RequirementCommentComposer
               requirementId={rid}

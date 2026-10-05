@@ -190,6 +190,8 @@ mod tests {
                 owner_id: Some(ADMIN_ID),
                 slug: "test-project".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
         repo

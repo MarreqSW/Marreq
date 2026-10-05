@@ -256,6 +256,8 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         projects::create,
         projects::update,
         projects::delete,
+        projects::archive,
+        projects::unarchive,
         groups::list,
         groups::list_creatable,
         groups::get,

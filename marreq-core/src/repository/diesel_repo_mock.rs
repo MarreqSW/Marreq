@@ -2369,9 +2369,26 @@ impl ProjectsRepository for DieselRepoMock {
             owner_id: _new.owner_id,
             status: _new.status,
             group_id: _new.group_id,
+            archived_at: None,
+            archived_by: None,
         };
         self.projects.insert(id, proj);
         Ok(id)
+    }
+
+    fn set_project_archived(
+        &mut self,
+        project_id: i32,
+        archived_at: Option<chrono::NaiveDateTime>,
+        archived_by: Option<i32>,
+    ) -> Result<(), RepoError> {
+        let project = self
+            .projects
+            .get_mut(&project_id)
+            .ok_or(RepoError::NotFound)?;
+        project.archived_at = archived_at;
+        project.archived_by = archived_by;
+        Ok(())
     }
 
     fn edit_project(
@@ -3104,6 +3121,13 @@ impl crate::repository::SavedViewRepository for DieselRepoMock {
 }
 
 impl ProjectMembersRepository for DieselRepoMock {
+    fn project_is_archived(&self, project_id: i32) -> Result<bool, RepoError> {
+        Ok(self
+            .projects
+            .get(&project_id)
+            .is_some_and(|p| p.archived_at.is_some()))
+    }
+
     fn get_members_by_project(&self, project_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
         Ok(self
             .project_members

@@ -24,6 +24,7 @@ import MatrixSidePanel, { type GapItem, type SuspectItem } from '@/components/ma
 import StatusFilterChip from '@/components/matrix/StatusFilterChip';
 import SuspectSwitch from '@/components/matrix/SuspectSwitch';
 import { useDashboard } from '@/context/DashboardContext';
+import { useProjectArchived } from '@/hooks/useProjectArchived';
 import type {
   Category,
   MatrixLink,
@@ -106,6 +107,7 @@ type Selection =
 export default function MatrixView() {
   const { globalSearch, basePath, projectId } = useOutletContext<ProjectOutletContext>();
   const pid = projectId;
+  const archived = useProjectArchived(pid);
   const { csrfToken } = useDashboard();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -676,7 +678,7 @@ export default function MatrixView() {
           onReview={(link) => void openSuspectDiff(link)}
           onClear={(link) => void onClearSuspect(link)}
           busyKey={busyKey}
-          canClear={Boolean(csrfToken)}
+          canClear={Boolean(csrfToken) && !archived}
         />
       </div>
 

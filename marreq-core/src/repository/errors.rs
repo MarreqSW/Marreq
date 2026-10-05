@@ -22,7 +22,13 @@ pub enum RepoError {
     /// A row was rejected because it would cross a project boundary.
     #[error("cross-project violation: {0}")]
     CrossProjectViolation(String),
+    /// The project is archived and therefore read-only (issue #381).
+    #[error("{}", ARCHIVED_MESSAGE)]
+    Archived,
 }
+
+/// Message for a change refused because the project is archived.
+pub const ARCHIVED_MESSAGE: &str = "This project is archived; unarchive it to make changes.";
 
 #[cfg(test)]
 mod tests {

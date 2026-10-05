@@ -10,6 +10,7 @@ function normalizeDashboard(wire: DashboardPayloadWire): DashboardPayload {
     group_id: p.group_id ?? null,
     group_name: p.group_name ?? null,
     group_slug: p.group_slug ?? null,
+    archived: p.archived === true,
   }));
   return {
     ...wire,

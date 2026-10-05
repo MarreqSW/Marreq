@@ -485,6 +485,14 @@ pub trait ProjectsRepository {
 
     fn insert_new_project(&mut self, new: &NewProjectRow) -> Result<i32, RepoError>;
     fn edit_project(&mut self, project_id: i32, update: &UpdateProject) -> Result<bool, RepoError>;
+    /// Archive (`Some` time and user) or unarchive (`None`, `None`) the
+    /// project (issue #381). `NotFound` for an unknown project.
+    fn set_project_archived(
+        &mut self,
+        project_id: i32,
+        archived_at: Option<chrono::NaiveDateTime>,
+        archived_by: Option<i32>,
+    ) -> Result<(), RepoError>;
     /// Delete the project and everything in it (issue #349), in one
     /// transaction. Baselines and locked saved views go too. Audit log rows
     /// are kept with `project_id` cleared.
@@ -518,6 +526,8 @@ pub trait ProjectMembersRepository {
         role: i32,
     ) -> Result<(), RepoError>;
     fn remove_project_member(&mut self, project_id: i32, user_id: i32) -> Result<(), RepoError>;
+    /// Whether the project is archived (issue #381). An unknown project is not.
+    fn project_is_archived(&self, project_id: i32) -> Result<bool, RepoError>;
 }
 
 /// Users designated as reviewers for a project (status / approval gates).

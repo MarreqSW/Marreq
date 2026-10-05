@@ -82,6 +82,8 @@ mod test_support {
                 owner_id: Some(1),
                 slug: "test-project".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
         repo.projects.insert(
@@ -96,6 +98,8 @@ mod test_support {
                 owner_id: Some(1),
                 slug: "other-project".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
 

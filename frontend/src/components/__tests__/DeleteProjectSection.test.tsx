@@ -76,7 +76,7 @@ describe('DeleteProjectSection', () => {
     renderSection();
     expect(
       await screen.findByText(
-        'Only the project owner (Alice) or an instance administrator can delete this project.',
+        'Only the project owner (Alice) or an instance administrator can archive or delete this project.',
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText('Danger zone')).not.toBeInTheDocument();
@@ -119,6 +119,35 @@ describe('DeleteProjectSection', () => {
       ),
     );
     expect(screen.queryByText('home page')).not.toBeInTheDocument();
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it('archives after confirming, then offers Unarchive', async () => {
+    const archivedProject = { ...project, archived_at: '2026-10-05T10:00:00', archived_by: 1 };
+    vi.mocked(apiClient.setProjectArchived).mockResolvedValueOnce(archivedProject);
+    renderSection();
+    await userEvent.click(await screen.findByRole('button', { name: 'Archive project…' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('administrators included');
+    await userEvent.click(screen.getByRole('button', { name: 'Archive project' }));
+
+    expect(apiClient.setProjectArchived).toHaveBeenCalledWith(5, true, 'csrf');
+    expect(refresh).toHaveBeenCalled();
+    const unarchive = await screen.findByRole('button', { name: 'Unarchive project' });
+    expect(screen.getByRole('button', { name: 'Delete project…' })).toBeInTheDocument();
+
+    vi.mocked(apiClient.setProjectArchived).mockResolvedValueOnce(project);
+    await userEvent.click(unarchive);
+    expect(apiClient.setProjectArchived).toHaveBeenLastCalledWith(5, false, 'csrf');
+    expect(await screen.findByRole('button', { name: 'Archive project…' })).toBeInTheDocument();
+  });
+
+  it('keeps the archive dialog open on a server error', async () => {
+    vi.mocked(apiClient.setProjectArchived).mockRejectedValue(new ApiError(403, 'not allowed'));
+    renderSection();
+    await userEvent.click(await screen.findByRole('button', { name: 'Archive project…' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Archive project' }));
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('not allowed'));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(refresh).not.toHaveBeenCalled();
   });
 });

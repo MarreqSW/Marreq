@@ -7,6 +7,7 @@ import {
 } from '@/api/client';
 import type { SavedView, SavedViewVisibility } from '@/api/types';
 import { useDashboard } from '@/context/DashboardContext';
+import { useProjectArchived } from '@/hooks/useProjectArchived';
 import {
   buildSavedViewDefinition,
   parseSavedViewDefinition,
@@ -31,6 +32,7 @@ export default function SavedViewsToolbar({
   onApplyState,
 }: Props) {
   const { csrfToken } = useDashboard();
+  const archived = useProjectArchived(projectId);
   const [views, setViews] = useState<SavedView[]>([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
@@ -198,14 +200,16 @@ export default function SavedViewsToolbar({
           Used in baseline
         </span>
       ) : null}
-      <button
-        type="button"
-        disabled={busy || !(csrfToken ?? '').length}
-        onClick={() => setShowSave((s) => !s)}
-        className="text-xs font-bold text-stitch-accent hover:underline disabled:opacity-40"
-      >
-        Save current as…
-      </button>
+      {archived ? null : (
+        <button
+          type="button"
+          disabled={busy || !(csrfToken ?? '').length}
+          onClick={() => setShowSave((s) => !s)}
+          className="text-xs font-bold text-stitch-accent hover:underline disabled:opacity-40"
+        >
+          Save current as…
+        </button>
+      )}
       {canMutateSelected ? (
         <>
           <button

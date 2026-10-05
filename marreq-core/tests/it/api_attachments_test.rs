@@ -57,6 +57,8 @@ fn project(id: i32, slug: &str) -> Project {
         owner_id: Some(LEAD),
         slug: slug.into(),
         group_id: None,
+        archived_at: None,
+        archived_by: None,
     }
 }
 

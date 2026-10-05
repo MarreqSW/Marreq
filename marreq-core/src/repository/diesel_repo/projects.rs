@@ -15,6 +15,18 @@ use diesel::prelude::*;
 use diesel::{Connection, OptionalExtension};
 
 impl ProjectMembersRepository for DieselRepo {
+    fn project_is_archived(&self, project_id: i32) -> Result<bool, RepoError> {
+        use crate::schema::projects::dsl;
+
+        let mut conn = self.get_conn()?;
+        let archived_at: Option<Option<chrono::NaiveDateTime>> = dsl::projects
+            .filter(dsl::id.eq(project_id))
+            .select(dsl::archived_at)
+            .first(conn.as_mut())
+            .optional()?;
+        Ok(matches!(archived_at, Some(Some(_))))
+    }
+
     fn get_members_by_project(&self, project_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
         use crate::schema::project_members::dsl;
 
@@ -256,6 +268,26 @@ impl ProjectsRepository for DieselRepo {
             .values(new)
             .get_result::<Project>(conn.as_mut())?;
         Ok(result.id)
+    }
+
+    fn set_project_archived(
+        &mut self,
+        project_id: i32,
+        archived_at: Option<chrono::NaiveDateTime>,
+        archived_by: Option<i32>,
+    ) -> Result<(), RepoError> {
+        use schema::projects::dsl;
+        let mut conn = self.get_conn()?;
+        let updated = diesel::update(dsl::projects.filter(dsl::id.eq(project_id)))
+            .set((
+                dsl::archived_at.eq(archived_at),
+                dsl::archived_by.eq(archived_by),
+            ))
+            .execute(conn.as_mut())?;
+        if updated == 0 {
+            return Err(RepoError::NotFound);
+        }
+        Ok(())
     }
 
     fn edit_project(

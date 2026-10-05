@@ -399,6 +399,7 @@ pub async fn set_quota(
 ) -> ApiResult<Json<StorageView>> {
     use crate::repository::ProjectsRepository;
     state.repo_read().get_project_by_id(project_id)?;
+    require_not_archived(state, project_id)?;
     let quota_bytes = match payload.quota_mb {
         None => None,
         Some(mb) if (1..=MAX_QUOTA_MB).contains(&mb) => Some(mb * 1024 * 1024),

@@ -217,6 +217,11 @@ export default function GroupViewPage() {
                         >
                           <div className="min-w-0">
                             <span className="font-semibold text-stitch-fg text-sm">{p.name}</span>
+                            {p.archived_at != null || dashProject?.archived ? (
+                              <span className="ml-2 rounded-sm border border-stitch-border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-stitch-muted">
+                                Archived
+                              </span>
+                            ) : null}
                             <span className="block text-xs text-stitch-muted font-mono">
                               /{p.slug}
                             </span>

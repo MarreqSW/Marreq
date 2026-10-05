@@ -136,5 +136,6 @@ All of these are on **Reports & exports**:
 - **Test management**: use the Verifications list (status chips, pass rate) and the Matrix to track which verifications pass or fail; use Reports & exports for coverage and the VCD.
 - **After changes**: when a requirement changes, its links to verifications are marked **suspect**. Review them in the Matrix side panel (**Review** compares the versions) and **Clear** the flag when the link still holds; the user and time are recorded.
 - **History**: use the **Changelog** and **Compare versions** on requirements and verifications, and **Diff vs current** on baselines, to see what changed and when.
+- **When the project is finished**: the owner or an instance administrator can **archive** it (**Project settings › General › Archive project…**). It becomes read-only for everyone but stays readable and exportable, and can be unarchived at any time (see [User Manual – Archiving a Project](user-manual.md#35-archiving-a-project)).
 
 For detailed instructions on each action, see the [User Manual](user-manual.md), including [Test Management (Verifications)](user-manual.md#5-test-management-verifications).

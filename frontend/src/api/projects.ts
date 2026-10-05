@@ -55,6 +55,21 @@ export async function deleteProject(
   });
 }
 
+/**
+ * Archive (read-only for everyone) or unarchive a project; owner or instance
+ * admin only (issue #381). Returns the updated project.
+ */
+export async function setProjectArchived(
+  projectId: number,
+  archived: boolean,
+  csrfToken: string,
+): Promise<Project> {
+  return fetchJson(`/api/projects/${projectId}/${archived ? 'archive' : 'unarchive'}`, {
+    method: 'POST',
+    headers: { ...JSON_HEADERS, 'X-CSRF-Token': csrfToken },
+  });
+}
+
 export async function getProjectFromPath(slug: string): Promise<ProjectFromPath> {
   return fetchJson<ProjectFromPath>(`/api/project-from-path/${encodeURIComponent(slug)}`);
 }

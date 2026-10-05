@@ -87,6 +87,8 @@ mod test_support {
                 owner_id: Some(1),
                 slug: "project-1".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
 
@@ -103,6 +105,8 @@ mod test_support {
                 owner_id: Some(2),
                 slug: "project-2".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
 
@@ -223,6 +227,8 @@ mod test_support {
                 owner_id: Some(1),
                 slug: "project-3".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
         repo.project_members.push(ProjectMember {

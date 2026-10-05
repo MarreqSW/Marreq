@@ -83,7 +83,9 @@ mod tests {
             owner_id: Some(1),
             slug: "test-project".to_string(),
             group_id: None,
-        }
+            archived_at: None,
+            archived_by: None,
+        },
     }
 
     fn create_test_requirement_status() -> RequirementStatus {

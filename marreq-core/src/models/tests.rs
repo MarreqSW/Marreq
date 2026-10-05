@@ -381,6 +381,8 @@ mod tests {
                 owner_id: Some(1),
                 slug: "test-project".to_string(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             };
 
             assert_eq!(Project::entity_type(), EntityType::Project);
@@ -454,6 +456,8 @@ mod tests {
                 owner_id: Some(10),
                 slug: "project".to_string(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             };
 
             assert_eq!(project.id, 1);
@@ -587,6 +591,8 @@ mod tests {
                 owner_id: Some(1),
                 slug: "project".to_string(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             };
 
             let json = serde_json::to_string(&project).unwrap();
@@ -1437,6 +1443,8 @@ mod tests {
                 owner_id: Some(1),
                 slug: "project".to_string(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             };
 
             assert_eq!(project.description, Some("Description".to_string()));
@@ -1455,6 +1463,8 @@ mod tests {
                 owner_id: None,
                 slug: "project".to_string(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             };
 
             assert_eq!(project.description, None);

@@ -308,8 +308,11 @@ pages.</p>
 <h3 id="31-switching-projects">3.1 Switching Projects</h3>
 <p>Open the <strong>Projects</strong> menu (the project name in the top
 bar). It lists your projects: select one to switch to it, staying on the
-same kind of page. The menu also has <strong>Groups</strong> (<a
-href="#36-groups">§3.6</a>), <strong>New project</strong> and
+same kind of page. Archived projects (<a
+href="#35-archiving-a-project">§3.5</a>) are grouped under
+<strong>Archived (n)</strong> at the end of the list; select it to show
+them. The menu also has <strong>Groups</strong> (<a
+href="#37-groups">§3.7</a>), <strong>New project</strong> and
 <strong>Import project bundle</strong> (<a
 href="#103-importing-a-project-bundle">§10.3</a>).</p>
 <p>Project URLs use the project slug only
@@ -383,7 +386,36 @@ Storage</strong>, or use <strong>Reset to default</strong> to go back to
 the server-wide value. The change is recorded in <strong>System
 logs</strong>. A limit below the current usage is allowed: it only
 blocks new uploads.</p>
-<h3 id="35-deleting-a-project">3.5 Deleting a Project</h3>
+<h3 id="35-archiving-a-project">3.5 Archiving a Project</h3>
+<p>Archive a project that is finished but must be kept, for example for
+audits. An archived project is <strong>read-only for everyone</strong>,
+instance administrators included: nobody can edit requirements or
+verifications, links, comments, approvals, baselines, saved views,
+report templates, members, reviewers, the catalog or the project's
+settings. Members can still open it, search it and export anything from
+<strong>Reports &amp; exports</strong> (<a
+href="#9-reports--export">§9</a>). Nothing is deleted.</p>
+<p>The <strong>project owner</strong> and instance administrators can
+archive a project. Open <strong>Project settings › General</strong> and
+select <strong>Archive project…</strong> in the <strong>Danger
+zone</strong>, then confirm with <strong>Archive project</strong>. The
+change is recorded in <strong>System logs</strong>.</p>
+<p>While a project is archived:</p>
+<ul>
+<li>a banner at the top of each page says so, and the
+<strong>Create</strong> button is hidden;</li>
+<li>the project moves to the <strong>Archived</strong> section of the
+<strong>Projects</strong> menu (<a
+href="#31-switching-projects">§3.1</a>) and is marked
+<strong>Archived</strong> on its group's page;</li>
+<li>any attempt to change it is refused with <em>This project is
+archived; unarchive it to make changes.</em></li>
+</ul>
+<p>To make changes again, the owner or an instance administrator selects
+<strong>Unarchive</strong> in the banner, or <strong>Unarchive
+project</strong> in <strong>Project settings › General</strong>. The
+project returns exactly as it was.</p>
+<h3 id="36-deleting-a-project">3.6 Deleting a Project</h3>
 <p>The <strong>project owner</strong> and instance administrators can
 delete a project. Open <strong>Project settings › General</strong> and
 select <strong>Delete project…</strong> in the <strong>Danger
@@ -400,17 +432,19 @@ is kept);</li>
 <li>the catalog, custom fields, members, reviewers and storage
 settings.</li>
 </ul>
-<p>To keep a copy, export a project bundle or a ReqIFZ archive from
-<strong>Reports &amp; exports</strong> first (<a
-href="#9-reports--export">§9</a>). To confirm, type the project's URL
-name (its slug, e.g. <code>satellite-demo</code>) and select
-<strong>Delete project</strong>. You are then taken to another project,
-or to the home page if you have none left.</p>
+<p>To keep the project but stop changes to it, archive it instead (<a
+href="#35-archiving-a-project">§3.5</a>). To keep a copy, export a
+project bundle or a ReqIFZ archive from <strong>Reports &amp;
+exports</strong> first (<a href="#9-reports--export">§9</a>). To
+confirm, type the project's URL name (its slug, e.g.
+<code>satellite-demo</code>) and select <strong>Delete project</strong>.
+You are then taken to another project, or to the home page if you have
+none left.</p>
 <p>Users are not deleted. The project's entries in <strong>System
 logs</strong> are kept, and a new entry records who deleted the project,
 its name and how many requirements, verifications, baselines and
 attachments it had.</p>
-<h3 id="36-groups">3.6 Groups</h3>
+<h3 id="37-groups">3.7 Groups</h3>
 <p>Groups collect projects, for example per team or product line. Open
 <strong>Projects → Groups</strong> (<code>/groups</code>) to see your
 groups; <strong>New group</strong> creates one (name and description),

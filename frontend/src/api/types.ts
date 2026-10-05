@@ -148,6 +148,8 @@ export interface DashboardProject {
   group_id: number | null;
   group_name: string | null;
   group_slug: string | null;
+  /** Archived projects stay listed, read-only (issue #381). */
+  archived?: boolean;
   [key: string]: unknown;
 }
 
@@ -163,6 +165,7 @@ export interface DashboardProjectWire {
   group_id: number | null;
   group_name: string | null;
   group_slug: string | null;
+  archived?: boolean;
   [key: string]: unknown;
 }
 
@@ -411,6 +414,8 @@ export interface EffectivePermissions {
   manage_custom_fields: boolean;
   manage_project_configuration?: boolean;
   manage_project_members: boolean;
+  /** The project is archived: read-only for everyone until unarchived (issue #381). */
+  archived?: boolean;
 }
 
 /** GET/PUT `/api/projects/:id/reviewers` */
@@ -767,6 +772,9 @@ export interface Project {
   status: string;
   creation_date: string | null;
   update_date: string | null;
+  /** Set while the project is archived (read-only; issue #381). */
+  archived_at?: string | null;
+  archived_by?: number | null;
 }
 
 /** One requirement row/column of the dependency structure matrix (`GET /api/projects/:id/dsm`). */

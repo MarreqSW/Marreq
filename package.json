@@ -36,14 +36,14 @@
   "homepage": "https://github.com/mariusmm/Marreq#readme",
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
-    "@vitest/coverage-v8": "^5.0.2",
+    "@vitest/coverage-v8": "^5.0.3",
     "@vitest/ui": "^5.0.2",
     "commitizen": "^4.3.2",
     "cz-conventional-changelog": "^3.3.0",
     "happy-dom": "^20.14.5",
     "playwright": "^1.63.0",
     "purgecss": "^8.0.0",
-    "stylelint": "^17.15.0",
+    "stylelint": "^17.16.0",
     "stylelint-config-standard": "^40.0.0",
     "stylelint-order": "^7.0.1",
     "vitest": "^5.0.2"

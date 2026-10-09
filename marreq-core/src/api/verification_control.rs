@@ -174,6 +174,8 @@ mod tests {
             owner_id: Some(REVIEWER),
             slug: format!("project-{id}"),
             group_id: None,
+            archived_at: None,
+            archived_by: None,
         }
     }
 

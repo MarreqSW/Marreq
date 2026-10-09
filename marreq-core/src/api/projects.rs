@@ -9,6 +9,7 @@ use crate::api::prelude::*;
 use crate::auth::guards::{ApiUserOrBearer, ProjectAccess, ProjectAccessOrBearer};
 use crate::models::{NewProject, Project, UpdateProject};
 use crate::namespaces::project_base_path;
+use crate::repository::errors::RepoError;
 use crate::repository::{GroupsRepository, ProjectMembersRepository};
 use crate::services::project_service::ProjectService;
 use crate::status_enums::ProjectStatus;
@@ -201,6 +202,48 @@ pub async fn delete(
     }
     service.delete(user, project_id).map_err(ApiError::from)?;
     Ok(Status::NoContent)
+}
+
+/// POST /api/projects/<project_id>/archive — make the project read-only for
+/// everyone, site administrators included (issue #381). It stays listed,
+/// readable and exportable.
+///
+/// Only the project owner or an instance administrator, from a browser
+/// session (like deletion). Recorded in the audit log.
+#[post("/projects/<project_id>/archive")]
+pub async fn archive(
+    access: ProjectAccess,
+    project_id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<Project>> {
+    let project = ProjectService::new(state.inner())
+        .archive(access.user(), project_id)
+        .map_err(archive_error)?;
+    Ok(Json(project))
+}
+
+/// POST /api/projects/<project_id>/unarchive — make an archived project
+/// editable again, unchanged. Same rule as archiving.
+#[post("/projects/<project_id>/unarchive")]
+pub async fn unarchive(
+    access: ProjectAccess,
+    project_id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<Project>> {
+    let project = ProjectService::new(state.inner())
+        .unarchive(access.user(), project_id)
+        .map_err(archive_error)?;
+    Ok(Json(project))
+}
+
+fn archive_error(error: RepoError) -> ApiError {
+    match error {
+        RepoError::Unauthorized => ApiError::Forbidden(
+            "only the project owner or an instance administrator can archive or unarchive this project"
+                .into(),
+        ),
+        other => other.into(),
+    }
 }
 
 #[cfg(test)]
@@ -452,6 +495,8 @@ mod tests {
                 owner_id: Some(ADMIN_MEMBER),
                 slug: "space-project".into(),
                 group_id: Some(10),
+                archived_at: None,
+                archived_by: None,
             },
         );
         for (user_id, role) in [

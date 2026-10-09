@@ -27,6 +27,7 @@ let mockDashboard: {
       id: number;
       name: string;
       project_base_path: string;
+      archived?: boolean;
     }>;
     selected_project_id: number | null;
   } | null;
@@ -96,6 +97,29 @@ describe('HomeRedirect', () => {
       expect(navigate).toHaveBeenCalledWith('/space-project/dashboard', { replace: true }),
     );
     expect(screen.getByText(/opening project/i)).toBeInTheDocument();
+  });
+
+  it('skips archived projects when none is selected', async () => {
+    mockDashboard = {
+      dashboard: {
+        user: { id: 1, username: 'alice', name: 'Alice', is_admin: true },
+        projects: [
+          { id: 10, name: 'Old', project_base_path: '/old', archived: true },
+          { id: 11, name: 'Current', project_base_path: '/current' },
+        ],
+        selected_project_id: null,
+      },
+      loading: false,
+      logout,
+    };
+    render(
+      <MemoryRouter>
+        <HomeRedirect />
+      </MemoryRouter>,
+    );
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith('/current/dashboard', { replace: true }),
+    );
   });
 });
 

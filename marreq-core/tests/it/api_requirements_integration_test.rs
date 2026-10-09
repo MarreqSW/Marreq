@@ -82,6 +82,8 @@ mod test_support {
                 owner_id: Some(1),
                 slug: "test-project".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
 
@@ -97,6 +99,8 @@ mod test_support {
                 owner_id: Some(2),
                 slug: "other-project".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
 

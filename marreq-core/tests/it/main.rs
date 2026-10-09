@@ -18,6 +18,7 @@ mod api_imports_integration_test;
 mod api_matrix_endpoint_test;
 mod api_matrix_integration_test;
 mod api_mcp_phase2_test;
+mod api_project_archive_test;
 mod api_project_bundle_files_test;
 mod api_project_bundle_test;
 mod api_project_edit_test;

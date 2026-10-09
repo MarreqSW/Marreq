@@ -277,6 +277,10 @@ pub(crate) fn decorate_projects_for_listing(
                 .map(|dt| dt.format("%Y-%m-%d").to_string()),
             "status_id": status_display,
             "project_status_normalized": status_normalized,
+            // Archived projects stay in the payload (pages look them up here)
+            // and the SPA lists them apart in its menus (issue #381).
+            "archived": project.is_archived(),
+            "archived_at": project.archived_at,
             "project_status_badge": status_badge,
             "owner_id": project.owner_id,
             "project_owner_name": owner_name,
@@ -382,6 +386,8 @@ pub(crate) fn get_project_by_id_pooled_safe(state: &State<AppState>, project_id:
             owner_id: Some(0),
             status: ProjectStatus::Active,
             group_id: None,
+            archived_at: None,
+            archived_by: None,
         })
 }
 
@@ -455,6 +461,8 @@ mod tests {
             owner_id: Some(1),
             slug: "test-project".into(),
             group_id: None,
+            archived_at: None,
+            archived_by: None,
         }
     }
 

@@ -14,6 +14,9 @@ use crate::repository::{ProjectMembersRepository, ProjectsRepository};
 use crate::services::SavedViewService;
 
 fn can_mutate_view(state: &AppState, user: &User, view: &SavedView) -> ApiResult<bool> {
+    if crate::permissions::project_is_archived(&*state.repo_read(), view.project_id) {
+        return Ok(false);
+    }
     if user.is_admin || view.owner_id == user.id {
         return Ok(true);
     }
@@ -89,6 +92,8 @@ pub async fn create(
         project_id,
         Permission::ViewRequirements,
     )?;
+    // Archived projects are read-only (issue #381).
+    require_not_archived(state, project_id)?;
     let service = SavedViewService::new(state.inner());
     let view = service.create(project_id, access.user().id, payload.into_inner())?;
     Ok(Json(view))
@@ -108,6 +113,8 @@ pub async fn update(
         project_id,
         Permission::ViewRequirements,
     )?;
+    // Archived projects are read-only (issue #381).
+    require_not_archived(state, project_id)?;
     let service = SavedViewService::new(state.inner());
     let existing = service.get_by_id(view_id)?;
     if existing.project_id != project_id {
@@ -140,6 +147,8 @@ pub async fn delete(
         project_id,
         Permission::ViewRequirements,
     )?;
+    // Archived projects are read-only (issue #381).
+    require_not_archived(state, project_id)?;
     let service = SavedViewService::new(state.inner());
     let existing = service.get_by_id(view_id)?;
     if existing.project_id != project_id {
@@ -222,6 +231,8 @@ mod tests {
                 owner_id: Some(1),
                 slug: "p".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
         repo.project_members.push(ProjectMember {

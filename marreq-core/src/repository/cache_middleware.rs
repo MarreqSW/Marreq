@@ -715,6 +715,15 @@ impl<R: Repository> super::SessionRepository for CacheRepository<R> {
 }
 
 impl<R: Repository> ProjectMembersRepository for CacheRepository<R> {
+    /// From the cached project row (invalidated when the project is edited).
+    fn project_is_archived(&self, project_id: i32) -> Result<bool, RepoError> {
+        match ProjectsRepository::get_project_by_id(self, project_id) {
+            Ok(project) => Ok(project.is_archived()),
+            Err(RepoError::NotFound) => Ok(false),
+            Err(e) => Err(e),
+        }
+    }
+
     fn get_members_by_project(&self, project_id: i32) -> Result<Vec<ProjectMember>, RepoError> {
         let key = keys::ProjectMembers::by_project(project_id);
         self.get_or_fetch(&key, Duration::from_secs(300), || {
@@ -1292,6 +1301,25 @@ impl<R: Repository> ProjectsRepository for CacheRepository<R> {
                 .invalidate_project_namespace_slug(&namespace, &project.slug);
         }
         Ok(id)
+    }
+
+    fn set_project_archived(
+        &mut self,
+        project_id: i32,
+        archived_at: Option<chrono::NaiveDateTime>,
+        archived_by: Option<i32>,
+    ) -> Result<(), RepoError> {
+        let project = self.inner.get_project_by_id(project_id)?;
+        self.inner
+            .set_project_archived(project_id, archived_at, archived_by)?;
+        // Every cached copy of the project row carries the archived flag.
+        self.cache.invalidate_project(project_id);
+        self.cache.invalidate_project_slug(&project.slug);
+        if let Ok(namespace) = project_namespace_segment(&self.inner, &project) {
+            self.cache
+                .invalidate_project_namespace_slug(&namespace, &project.slug);
+        }
+        Ok(())
     }
 
     fn edit_project(&mut self, project_id: i32, update: &UpdateProject) -> Result<bool, RepoError> {
@@ -1918,6 +1946,8 @@ mod tests {
             owner_id: Some(1),
             slug: "proj".into(),
             group_id: None,
+            archived_at: None,
+            archived_by: None,
         };
         let requirement = Requirement {
             id: 1,

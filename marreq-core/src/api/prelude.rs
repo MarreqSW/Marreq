@@ -24,6 +24,13 @@ pub fn require_project_permission(
         .map_err(ApiError::from)
 }
 
+/// Refuse a change to an archived project (issue #381), where the check does
+/// not go through [`require_project_permission`].
+pub fn require_not_archived(state: &State<AppState>, project_id: i32) -> ApiResult<()> {
+    let repo = state.repo_read();
+    crate::authorization::require_not_archived(&*repo, project_id).map_err(ApiError::from)
+}
+
 pub fn require_project_reviewer(
     state: &State<AppState>,
     user: &crate::models::User,

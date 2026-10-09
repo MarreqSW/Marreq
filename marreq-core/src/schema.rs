@@ -417,6 +417,8 @@ diesel::table! {
         #[max_length = 255]
         slug -> Varchar,
         group_id -> Nullable<Int4>,
+        archived_at -> Nullable<Timestamp>,
+        archived_by -> Nullable<Int4>,
     }
 }
 

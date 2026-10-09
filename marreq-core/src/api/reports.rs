@@ -122,6 +122,9 @@ pub struct TemplateView {
 }
 
 fn can_edit(state: &AppState, user: &User, t: &ReportTemplate) -> ApiResult<bool> {
+    if crate::permissions::project_is_archived(&*state.repo_read(), t.project_id) {
+        return Ok(false);
+    }
     if user.is_admin || t.owner_id == user.id {
         return Ok(true);
     }
@@ -308,6 +311,8 @@ pub async fn create_template(
         project_id,
         Permission::ViewRequirements,
     )?;
+    // Archived projects are read-only (issue #381).
+    require_not_archived(state, project_id)?;
     let body = body.into_inner();
     let (Some(name), Some(definition)) = (body.name.as_deref(), body.definition) else {
         return Err(ApiError::BadRequest(
@@ -351,6 +356,8 @@ pub async fn update_template(
         project_id,
         Permission::ViewRequirements,
     )?;
+    // Archived projects are read-only (issue #381).
+    require_not_archived(state, project_id)?;
     let existing = find_template(state, access.user(), project_id, template_id)?;
     if !can_edit(state, access.user(), &existing)? {
         return Err(ApiError::Forbidden(
@@ -409,6 +416,8 @@ pub async fn delete_template(
         project_id,
         Permission::ViewRequirements,
     )?;
+    // Archived projects are read-only (issue #381).
+    require_not_archived(state, project_id)?;
     let existing = find_template(state, access.user(), project_id, template_id)?;
     if !can_edit(state, access.user(), &existing)? {
         return Err(ApiError::Forbidden(
@@ -545,6 +554,8 @@ mod tests {
                     owner_id: Some(ADMIN),
                     slug: format!("project-{id}"),
                     group_id: None,
+                    archived_at: None,
+                    archived_by: None,
                 },
             );
         }

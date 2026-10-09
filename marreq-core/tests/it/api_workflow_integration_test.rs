@@ -62,6 +62,8 @@ mod test_support {
             owner_id: Some(1),
             slug: "workflow-project".into(),
             group_id: None,
+            archived_at: None,
+            archived_by: None,
         };
         repo.projects.insert(1, project);
 
@@ -233,6 +235,8 @@ async fn workflow_project_isolation() {
             owner_id: Some(2), // Different owner
             slug: "secret-project".into(),
             group_id: None,
+            archived_at: None,
+            archived_by: None,
         },
     );
 

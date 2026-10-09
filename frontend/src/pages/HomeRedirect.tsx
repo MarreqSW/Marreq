@@ -16,8 +16,9 @@ export default function HomeRedirect() {
   useEffect(() => {
     const pl = dashboard?.projects;
     if (!pl?.length) return;
-    const id = dashboard?.selected_project_id ?? pl[0]!.id;
-    const project = pl.find((p) => p.id === id) ?? pl[0]!;
+    // The selected project, else the first one not archived (issue #381).
+    const selected = pl.find((p) => p.id === dashboard?.selected_project_id);
+    const project = selected ?? pl.find((p) => !p.archived) ?? pl[0]!;
     navigate(`${project.project_base_path}/dashboard`, { replace: true });
   }, [dashboard, navigate]);
 

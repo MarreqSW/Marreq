@@ -80,12 +80,17 @@ pub struct EffectivePermissions {
     pub manage_custom_fields: bool,
     pub manage_project_configuration: bool,
     pub manage_project_members: bool,
+    /// The project is archived: read-only for everyone (issue #381).
+    pub archived: bool,
 }
 
 fn user_is_project_reviewer<R>(repo: &R, user: &User, project_id: i32) -> bool
 where
     R: ProjectMembersRepository + ProjectReviewersRepository,
 {
+    if project_is_archived(repo, project_id) {
+        return false;
+    }
     let Ok(ids) = repo.list_project_reviewer_ids(project_id) else {
         return false;
     };
@@ -128,14 +133,30 @@ where
             ManageProjectConfiguration,
         ),
         manage_project_members: has_permission(repo, user, project_id, ManageProjectMembers),
+        archived: project_is_archived(repo, project_id),
     }
 }
 
+/// Whether the project is archived (read-only; issue #381). Fail-closed: a
+/// repository error counts as archived, so it can only block changes.
+pub fn project_is_archived<R>(repo: &R, project_id: i32) -> bool
+where
+    R: ProjectMembersRepository,
+{
+    !matches!(repo.project_is_archived(project_id), Ok(false))
+}
+
 /// Returns true only if the user has the given permission in the project. Fail-closed.
+///
+/// In an archived project every permission except `ViewRequirements` is
+/// refused, for site administrators too (issue #381).
 pub fn has_permission<R>(repo: &R, user: &User, project_id: i32, permission: Permission) -> bool
 where
     R: ProjectMembersRepository,
 {
+    if permission != Permission::ViewRequirements && project_is_archived(repo, project_id) {
+        return false;
+    }
     if user.is_admin {
         return true;
     }
@@ -373,5 +394,71 @@ mod tests {
         assert!(!perms.is_project_reviewer);
         assert!(perms.approve_versions);
         assert!(!may_change_review_gates(&repo, &actor, 10));
+    }
+
+    #[test]
+    fn an_archived_project_grants_only_view_even_to_site_admins() {
+        use crate::models::{Project, ProjectMember};
+        use crate::repository::diesel_repo_mock::DieselRepoMock;
+
+        let when = chrono::NaiveDate::from_ymd_opt(2024, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap();
+        let mut repo = DieselRepoMock::default();
+        repo.projects.insert(
+            10,
+            Project {
+                id: 10,
+                name: "Archived".into(),
+                slug: "archived".into(),
+                description: None,
+                creation_date: Some(when),
+                update_date: Some(when),
+                owner_id: Some(1),
+                status: crate::status_enums::ProjectStatus::Active,
+                group_id: None,
+                archived_at: Some(when),
+                archived_by: Some(1),
+            },
+        );
+        repo.project_members.push(ProjectMember {
+            project_id: 10,
+            user_id: 7,
+            role: ROLE_ADMIN,
+            created_at: when,
+            updated_at: when,
+        });
+        repo.project_reviewers.insert(10, vec![7]);
+        let member = DieselRepoMock::make_user(7, "lead", "");
+        let mut site_admin = DieselRepoMock::make_user(1, "root", "");
+        site_admin.is_admin = true;
+
+        for user in [&member, &site_admin] {
+            assert!(has_permission(
+                &repo,
+                user,
+                10,
+                Permission::ViewRequirements
+            ));
+            assert!(!has_permission(
+                &repo,
+                user,
+                10,
+                Permission::EditRequirements
+            ));
+            assert!(!has_permission(
+                &repo,
+                user,
+                10,
+                Permission::ManageProjectMembers
+            ));
+            let perms = effective_permissions(&repo, user, 10);
+            assert!(perms.archived);
+            assert!(perms.view_requirements);
+            assert!(!perms.edit_requirements);
+        }
+        assert!(!effective_permissions(&repo, &member, 10).is_project_reviewer);
+        assert!(!may_change_review_gates(&repo, &member, 10));
     }
 }

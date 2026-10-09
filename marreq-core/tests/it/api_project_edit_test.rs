@@ -44,6 +44,8 @@ fn repo() -> DieselRepoMock {
             owner_id: Some(1),
             slug: "lunar-lander".into(),
             group_id: None,
+            archived_at: None,
+            archived_by: None,
         },
     );
     for (user_id, role) in [(1, ROLE_ADMIN), (2, ROLE_VIEWER)] {

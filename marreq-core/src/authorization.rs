@@ -16,6 +16,9 @@ use crate::repository::{
 pub enum AuthorizationError {
     #[error("permission denied")]
     Forbidden,
+    /// The project is archived: read-only for everyone (issue #381).
+    #[error("project is archived")]
+    Archived,
     #[error("authorization repository error: {0}")]
     Repository(#[from] crate::repository::errors::RepoError),
 }
@@ -34,8 +37,28 @@ where
 {
     if has_permission(repo, user, project_id, permission) {
         Ok(())
+    } else if permission != Permission::ViewRequirements
+        && crate::permissions::project_is_archived(repo, project_id)
+        && has_permission(repo, user, project_id, Permission::ViewRequirements)
+    {
+        // Say why, to someone who may otherwise see the project.
+        Err(AuthorizationError::Archived)
     } else {
         Err(AuthorizationError::Forbidden)
+    }
+}
+
+/// Refuse any change to an archived project (issue #381), for checks that do
+/// not go through [`require_project_permission`] (saved views, report
+/// templates, storage quota).
+pub fn require_not_archived<R>(repo: &R, project_id: i32) -> AuthorizationResult<()>
+where
+    R: ProjectMembersRepository,
+{
+    if crate::permissions::project_is_archived(repo, project_id) {
+        Err(AuthorizationError::Archived)
+    } else {
+        Ok(())
     }
 }
 
@@ -52,6 +75,7 @@ where
 {
     require_project_permission(repo, actor, project_id, permission).map_err(|error| match error {
         AuthorizationError::Forbidden => crate::repository::errors::RepoError::Unauthorized,
+        AuthorizationError::Archived => crate::repository::errors::RepoError::Archived,
         AuthorizationError::Repository(error) => error,
     })
 }
@@ -82,6 +106,7 @@ pub fn require_project_reviewer<R>(
 where
     R: ProjectMembersRepository + ProjectReviewersRepository,
 {
+    require_not_archived(repo, project_id)?;
     let reviewer_ids = repo.list_project_reviewer_ids(project_id)?;
     if reviewer_ids.is_empty() {
         if user.is_admin {

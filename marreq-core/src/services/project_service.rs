@@ -263,6 +263,62 @@ impl<'a> ProjectService<'a> {
         actor.is_admin || project.owner_id == Some(actor.id)
     }
 
+    /// Archive the project (issue #381): it becomes read-only for everyone and
+    /// leaves the everyday project lists until unarchived. Same rule as
+    /// deletion: the owner or an instance administrator.
+    pub fn archive(&self, actor: &User, id: i32) -> Result<Project, RepoError> {
+        self.set_archived(actor, id, true)
+    }
+
+    /// Unarchive the project: it is editable and listed again, unchanged.
+    pub fn unarchive(&self, actor: &User, id: i32) -> Result<Project, RepoError> {
+        self.set_archived(actor, id, false)
+    }
+
+    fn set_archived(&self, actor: &User, id: i32, archive: bool) -> Result<Project, RepoError> {
+        let project = self.get_by_id(id)?;
+        if !Self::can_delete(actor, &project) {
+            return Err(RepoError::Unauthorized);
+        }
+        if project.is_archived() == archive {
+            return Err(RepoError::Duplicate(if archive {
+                "the project is already archived".into()
+            } else {
+                "the project is not archived".into()
+            }));
+        }
+        let (at, by) = if archive {
+            (Some(chrono::Utc::now().naive_utc()), Some(actor.id))
+        } else {
+            (None, None)
+        };
+        self.state.repo_write().set_project_archived(id, at, by)?;
+        let after = self.get_by_id(id)?;
+
+        let (action, verb) = if archive {
+            (ActionType::Archive, "Archived")
+        } else {
+            (ActionType::Unarchive, "Unarchived")
+        };
+        let log = NewLog {
+            user_id: actor.id,
+            action_type: action.to_string(),
+            entity_type: EntityType::Project.to_string(),
+            entity_id: Some(id),
+            project_id: Some(id),
+            old_values: serde_json::to_string(&project).ok(),
+            new_values: serde_json::to_string(&after).ok(),
+            description: Some(format!("{verb} project {} ({})", after.name, after.slug)),
+            ip_address: None,
+            user_agent: None,
+        };
+        if let Err(_e) = self.state.repo_write().insert_log(&log) {
+            #[cfg(debug_assertions)]
+            eprintln!("audit: failed to log archiving of project {id}: {_e}");
+        }
+        Ok(after)
+    }
+
     /// Delete a project and everything in it (issue #349), then remove the
     /// attachment files no other project uses and record the deletion in the
     /// audit log. The log entry has no `project_id`, so it outlives the project.
@@ -411,6 +467,8 @@ mod tests {
             owner_id: Some(1),
             slug: name.to_lowercase().replace(' ', "-"),
             group_id: None,
+            archived_at: None,
+            archived_by: None,
         }
     }
 

@@ -654,6 +654,8 @@ mod tests {
             owner_id: Some(1),
             slug: "export-test-project".into(),
             group_id: None,
+            archived_at: None,
+            archived_by: None,
         };
         mock.projects.insert(1, proj);
         mock.requirement_statuses.insert(
@@ -732,6 +734,8 @@ mod tests {
                 owner_id: Some(1),
                 slug: "proj".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
         mock.baselines.push(crate::models::Baseline {
@@ -837,6 +841,8 @@ mod tests {
                 owner_id: None,
                 slug: "p1".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
         mock.baselines.push(crate::models::Baseline {

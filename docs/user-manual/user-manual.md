@@ -124,7 +124,7 @@ You are notified when you are made the **reviewer** of a requirement, and, in pr
 
 ### 3.1 Switching Projects
 
-Open the **Projects** menu (the project name in the top bar). It lists your projects: select one to switch to it, staying on the same kind of page. The menu also has **Groups** ([§3.6](#36-groups)), **New project** and **Import project bundle** ([§10.3](#103-importing-a-project-bundle)).
+Open the **Projects** menu (the project name in the top bar). It lists your projects: select one to switch to it, staying on the same kind of page. Archived projects ([§3.5](#35-archiving-a-project)) are grouped under **Archived (n)** at the end of the list; select it to show them. The menu also has **Groups** ([§3.7](#37-groups)), **New project** and **Import project bundle** ([§10.3](#103-importing-a-project-bundle)).
 
 Project URLs use the project slug only (`/<project-slug>/dashboard`). Owner usernames and group names are not part of the path. Opening `/<project-slug>` shows the project's [Dashboard](#22-dashboard).
 
@@ -161,7 +161,21 @@ Files attached to requirements and verifications ([§4.9](#49-attachments)) coun
 
 The defaults are **10 MB per file** and **500 MB per project**. The server administrator sets them with `MARREQ_ATTACHMENT_MAX_MB` and `MARREQ_PROJECT_STORAGE_QUOTA_MB`. Instance administrators can give a project its own limit in **Project settings › Storage**, or use **Reset to default** to go back to the server-wide value. The change is recorded in **System logs**. A limit below the current usage is allowed: it only blocks new uploads.
 
-### 3.5 Deleting a Project
+### 3.5 Archiving a Project
+
+Archive a project that is finished but must be kept, for example for audits. An archived project is **read-only for everyone**, instance administrators included: nobody can edit requirements or verifications, links, comments, approvals, baselines, saved views, report templates, members, reviewers, the catalog or the project's settings. Members can still open it, search it and export anything from **Reports & exports** ([§9](#9-reports--export)). Nothing is deleted.
+
+The **project owner** and instance administrators can archive a project. Open **Project settings › General** and select **Archive project…** in the **Danger zone**, then confirm with **Archive project**. The change is recorded in **System logs**.
+
+While a project is archived:
+
+- a banner at the top of each page says so, and the **Create** button is hidden;
+- the project moves to the **Archived** section of the **Projects** menu ([§3.1](#31-switching-projects)) and is marked **Archived** on its group's page;
+- any attempt to change it is refused with *This project is archived; unarchive it to make changes.*
+
+To make changes again, the owner or an instance administrator selects **Unarchive** in the banner, or **Unarchive project** in **Project settings › General**. The project returns exactly as it was.
+
+### 3.6 Deleting a Project
 
 The **project owner** and instance administrators can delete a project. Open **Project settings › General** and select **Delete project…** in the **Danger zone** at the bottom of the page. Other members see who can delete the project instead.
 
@@ -173,11 +187,11 @@ Deleting a project **cannot be undone**. It removes everything in the project:
 - attachments and their files (a file that another project also uses is kept);
 - the catalog, custom fields, members, reviewers and storage settings.
 
-To keep a copy, export a project bundle or a ReqIFZ archive from **Reports & exports** first ([§9](#9-reports--export)). To confirm, type the project's URL name (its slug, e.g. `satellite-demo`) and select **Delete project**. You are then taken to another project, or to the home page if you have none left.
+To keep the project but stop changes to it, archive it instead ([§3.5](#35-archiving-a-project)). To keep a copy, export a project bundle or a ReqIFZ archive from **Reports & exports** first ([§9](#9-reports--export)). To confirm, type the project's URL name (its slug, e.g. `satellite-demo`) and select **Delete project**. You are then taken to another project, or to the home page if you have none left.
 
 Users are not deleted. The project's entries in **System logs** are kept, and a new entry records who deleted the project, its name and how many requirements, verifications, baselines and attachments it had.
 
-### 3.6 Groups
+### 3.7 Groups
 
 Groups collect projects, for example per team or product line. Open **Projects → Groups** (`/groups`) to see your groups; **New group** creates one (name and description), and you become its Owner.
 

@@ -21,6 +21,7 @@ import DocumentSettingsForm from '@/components/reports/DocumentSettingsForm';
 import SectionList from '@/components/reports/SectionList';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import { useDashboard } from '@/context/DashboardContext';
+import { useProjectArchived } from '@/hooks/useProjectArchived';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { cloneDefinition, sameDefinition } from '@/utils/reportDefinition';
 
@@ -38,6 +39,7 @@ const selectCls = 'rounded-md border border-stitch-border bg-stitch-surface px-2
 export default function ReportBuilderPage() {
   const { projectId: pid, basePath } = useOutletContext<ProjectOutletContext>();
   const { csrfToken, dashboard } = useDashboard();
+  const archived = useProjectArchived(pid);
   const projectName = dashboard?.projects?.find((p) => p.id === pid)?.name ?? 'Project';
   const token = csrfToken ?? '';
   const [params, setParams] = useSearchParams();
@@ -253,7 +255,7 @@ export default function ReportBuilderPage() {
           <button
             type="button"
             className={btn}
-            disabled={busy !== null}
+            disabled={busy !== null || archived}
             onClick={() => {
               setSaveAsName(template ? `${template.name} (copy)` : '');
               setSaveAsShared(false);

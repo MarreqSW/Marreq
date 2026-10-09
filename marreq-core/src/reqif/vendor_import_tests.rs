@@ -52,6 +52,8 @@ fn blank_project() -> (AppState<DieselCachedRepo>, User, ImportConfig) {
             owner_id: Some(1),
             slug: "reqif-audit".into(),
             group_id: None,
+            archived_at: None,
+            archived_by: None,
         },
     );
     repo.requirement_statuses.insert(

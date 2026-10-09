@@ -489,6 +489,8 @@ mod tests {
                 owner_id: Some(7),
                 slug: "orbiter".into(),
                 group_id: Some(1),
+                archived_at: None,
+                archived_by: None,
             },
         );
 

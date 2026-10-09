@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { Link, useOutletContext } from 'react-router-dom';
 import { createBaseline, listBaselines, listSavedViews } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
+import { useProjectArchived } from '@/hooks/useProjectArchived';
 import StitchPageHeader from '@/components/StitchPageHeader';
 import type { Baseline, SavedView } from '@/api/types';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
@@ -10,6 +11,7 @@ export default function BaselinesPage() {
   const { projectId, basePath } = useOutletContext<ProjectOutletContext>();
   const pid = projectId;
   const { csrfToken, dashboard } = useDashboard();
+  const archived = useProjectArchived(pid);
 
   const [rows, setRows] = useState<Baseline[]>([]);
   const [views, setViews] = useState<SavedView[]>([]);
@@ -97,64 +99,66 @@ export default function BaselinesPage() {
         subtitle="Immutable snapshots of requirements and traceability."
       />
 
-      <form
-        onSubmit={onCreate}
-        className="mb-8 rounded-xl border border-stitch-border bg-stitch-surface p-5 shadow-stitch space-y-4 max-w-xl"
-      >
-        <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-wide">Create baseline</h3>
-        <div>
-          <label className="block text-[10px] font-bold text-stitch-muted uppercase mb-1">
-            Name
-          </label>
-          <input
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full text-sm bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg"
-            placeholder="e.g. PDR freeze"
-          />
-        </div>
-        <div>
-          <label className="block text-[10px] font-bold text-stitch-muted uppercase mb-1">
-            Description (optional)
-          </label>
-          <input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="w-full text-sm bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg"
-          />
-        </div>
-        <div>
-          <label className="block text-[10px] font-bold text-stitch-muted uppercase mb-1">
-            From saved view (optional)
-          </label>
-          <select
-            value={savedViewId === '' ? '' : String(savedViewId)}
-            onChange={(e) =>
-              setSavedViewId(e.target.value ? Number(e.target.value) : '')
-            }
-            className="w-full text-sm bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg"
-          >
-            <option value="">Entire project</option>
-            {views.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.name} ({v.visibility})
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-[10px] text-stitch-muted">
-            Using a saved view snapshots matching requirements and locks that view.
-          </p>
-        </div>
-        {createErr && <p className="text-sm text-red-300">{createErr}</p>}
-        <button
-          type="submit"
-          disabled={creating}
-          className="bg-stitch-accent text-stitch-canvas px-4 py-2 rounded-md text-xs font-bold uppercase tracking-widest disabled:opacity-50"
+      {archived ? null : (
+        <form
+          onSubmit={onCreate}
+          className="mb-8 rounded-xl border border-stitch-border bg-stitch-surface p-5 shadow-stitch space-y-4 max-w-xl"
         >
-          {creating ? 'Creating…' : 'Create'}
-        </button>
-      </form>
+          <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-wide">Create baseline</h3>
+          <div>
+            <label className="block text-[10px] font-bold text-stitch-muted uppercase mb-1">
+              Name
+            </label>
+            <input
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full text-sm bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg"
+              placeholder="e.g. PDR freeze"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-stitch-muted uppercase mb-1">
+              Description (optional)
+            </label>
+            <input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full text-sm bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg"
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-stitch-muted uppercase mb-1">
+              From saved view (optional)
+            </label>
+            <select
+              value={savedViewId === '' ? '' : String(savedViewId)}
+              onChange={(e) =>
+                setSavedViewId(e.target.value ? Number(e.target.value) : '')
+              }
+              className="w-full text-sm bg-stitch-elevated border border-stitch-border rounded-md px-3 py-2 text-stitch-fg"
+            >
+              <option value="">Entire project</option>
+              {views.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name} ({v.visibility})
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[10px] text-stitch-muted">
+              Using a saved view snapshots matching requirements and locks that view.
+            </p>
+          </div>
+          {createErr && <p className="text-sm text-red-300">{createErr}</p>}
+          <button
+            type="submit"
+            disabled={creating}
+            className="bg-stitch-accent text-stitch-canvas px-4 py-2 rounded-md text-xs font-bold uppercase tracking-widest disabled:opacity-50"
+          >
+            {creating ? 'Creating…' : 'Create'}
+          </button>
+        </form>
+      )}
 
       <div className="bg-stitch-surface rounded-xl border border-stitch-border overflow-hidden shadow-stitch">
         <table className="w-full text-left text-sm">

@@ -220,6 +220,8 @@ mod tests {
                 owner_id: None,
                 slug: "p7".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
         repo.matrices.push(MatrixLink {
@@ -263,6 +265,8 @@ mod tests {
                 owner_id: Some(ADMIN_ID),
                 slug: "p".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
         repo.project_members.push(ProjectMember {
@@ -298,6 +302,8 @@ mod tests {
                 owner_id: Some(ADMIN_ID),
                 slug: "p".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
         repo.project_members.push(ProjectMember {

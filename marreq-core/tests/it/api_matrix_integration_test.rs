@@ -62,6 +62,8 @@ mod test_support {
                 owner_id: Some(1),
                 slug: "test-project".into(),
                 group_id: None,
+                archived_at: None,
+                archived_by: None,
             },
         );
 
@@ -270,6 +272,8 @@ fn link_sets_correct_project_id() {
             owner_id: Some(1),
             slug: "other-project".into(),
             group_id: None,
+            archived_at: None,
+            archived_by: None,
         },
     );
     repo.requirements

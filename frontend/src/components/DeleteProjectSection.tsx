@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { deleteProject, listProjectsOptional } from '@/api/client';
+import { deleteProject, listProjectsOptional, setProjectArchived } from '@/api/client';
 import type { Project } from '@/api/types';
 import Dialog from '@/components/Dialog';
 import { useDashboard } from '@/context/DashboardContext';
@@ -14,9 +14,9 @@ type Props = {
 };
 
 /**
- * Project settings › General: the "Danger zone" that permanently deletes the
- * project (issue #349). Only the project owner or an instance administrator
- * may delete; they must type the project slug to confirm.
+ * Project settings › General: the "Danger zone" that archives (issue #381) or
+ * permanently deletes (issue #349) the project. Only the project owner or an
+ * instance administrator may do either; deleting needs the slug typed to confirm.
  */
 export default function DeleteProjectSection({ projectId, basePath, userLabel }: Props) {
   const { dashboard, csrfToken, refresh } = useDashboard();
@@ -27,6 +27,8 @@ export default function DeleteProjectSection({ projectId, basePath, userLabel }:
   const [typed, setTyped] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -51,6 +53,23 @@ export default function DeleteProjectSection({ projectId, basePath, userLabel }:
     setError(null);
   };
 
+  const archived = project.archived_at != null;
+
+  async function toggleArchived() {
+    if (!project || busy) return;
+    setBusy(true);
+    setArchiveError(null);
+    try {
+      setProject(await setProjectArchived(project.id, !archived, csrfToken ?? ''));
+      setArchiveOpen(false);
+      await refresh();
+    } catch (err) {
+      setArchiveError(err instanceof Error ? err.message : 'Could not change the project.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function onDelete(e: FormEvent) {
     e.preventDefault();
     if (!project || !confirmed || busy) return;
@@ -70,8 +89,8 @@ export default function DeleteProjectSection({ projectId, basePath, userLabel }:
     const owner = project.owner_id != null ? userLabel(project.owner_id) : null;
     return (
       <p className="mb-10 text-xs text-stitch-muted">
-        Only the project owner{owner ? ` (${owner})` : ''} or an instance administrator can delete
-        this project.
+        Only the project owner{owner ? ` (${owner})` : ''} or an instance administrator can archive
+        or delete this project.
       </p>
     );
   }
@@ -84,6 +103,45 @@ export default function DeleteProjectSection({ projectId, basePath, userLabel }:
       >
         Danger zone
       </h3>
+      <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-4 border-b border-stitch-border">
+        <p className="text-sm text-stitch-muted max-w-xl">
+          {archived ? (
+            <>
+              <strong className="text-stitch-fg">{project.name}</strong> is archived: read-only for
+              everyone. Unarchive it to allow changes again.
+            </>
+          ) : (
+            <>
+              Archive <strong className="text-stitch-fg">{project.name}</strong>: it becomes
+              read-only for everyone, administrators included, and moves to the Archived section of
+              the project menu. Nothing is deleted; you can unarchive it at any time.
+            </>
+          )}
+        </p>
+        {archived ? (
+          <button
+            type="button"
+            onClick={() => void toggleArchived()}
+            disabled={busy}
+            className="rounded-md border border-stitch-border px-4 py-2 text-sm font-semibold text-stitch-fg hover:bg-stitch-elevated disabled:opacity-50"
+          >
+            {busy ? 'Unarchiving…' : 'Unarchive project'}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setArchiveOpen(true)}
+            className="rounded-md border border-amber-600/60 px-4 py-2 text-sm font-semibold text-amber-800 dark:text-amber-300 hover:bg-amber-600 hover:text-white transition-colors"
+          >
+            Archive project…
+          </button>
+        )}
+        {archiveError && !archiveOpen ? (
+          <p role="alert" className="w-full text-sm text-red-700 dark:text-red-300">
+            {archiveError}
+          </p>
+        ) : null}
+      </div>
       <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-sm text-stitch-muted max-w-xl">
           Permanently delete <strong className="text-stitch-fg">{project.name}</strong> and all of
@@ -97,6 +155,53 @@ export default function DeleteProjectSection({ projectId, basePath, userLabel }:
           Delete project…
         </button>
       </div>
+
+      <Dialog
+        open={archiveOpen}
+        onClose={() => {
+          if (busy) return;
+          setArchiveOpen(false);
+          setArchiveError(null);
+        }}
+        title="Archive project"
+        subtitle={project.name}
+      >
+        <div className="space-y-4 text-sm text-stitch-fg">
+          <p>While archived, nobody can change anything in this project, administrators included:</p>
+          <ul className="list-disc pl-5 text-stitch-muted space-y-0.5">
+            <li>requirements, verifications, links, comments and approvals</li>
+            <li>baselines, saved views and report templates</li>
+            <li>members, reviewers, catalog and settings</li>
+          </ul>
+          <p>
+            Members can still open, search and export it. You or an instance administrator can
+            unarchive it at any time.
+          </p>
+          {archiveError ? (
+            <p role="alert" className="text-red-700 dark:text-red-300">
+              {archiveError}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setArchiveOpen(false)}
+              disabled={busy}
+              className="rounded-md border border-stitch-border px-4 py-2"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => void toggleArchived()}
+              disabled={busy}
+              className="rounded-md bg-amber-600 px-4 py-2 font-semibold text-white disabled:opacity-50"
+            >
+              {busy ? 'Archiving…' : 'Archive project'}
+            </button>
+          </div>
+        </div>
+      </Dialog>
 
       <Dialog open={open} onClose={close} title="Delete project" subtitle={project.name}>
         <form onSubmit={onDelete} className="space-y-4 text-sm text-stitch-fg">

@@ -118,6 +118,8 @@ fn repo() -> DieselRepoMock {
             owner_id: Some(1),
             slug: "space".into(),
             group_id: None,
+            archived_at: None,
+            archived_by: None,
         },
     );
     repo.project_members.push(ProjectMember {

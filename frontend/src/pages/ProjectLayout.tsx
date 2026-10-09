@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useDashboard } from '@/context/DashboardContext';
 import { useTheme, type ThemePreference } from '@/context/ThemeContext';
-import { getProjectFromPath } from '@/api/client';
+import { getProjectFromPath, setProjectArchived } from '@/api/client';
 import type { User } from '@/api/types';
 import NotificationPanel from '@/components/NotificationPanel';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
@@ -56,12 +56,15 @@ export default function ProjectLayout() {
   const { projectSlug } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { dashboard, setSelectedProjectId, refresh, logout } = useDashboard();
+  const { dashboard, csrfToken, setSelectedProjectId, refresh, logout } = useDashboard();
   const { preference, setPreference } = useTheme();
   const [sidebarWideSetting, setSidebarWideSetting] = useState(readSidebarWide);
   /** Off-canvas sidebar on narrow screens. */
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [projectMenuOpen, setProjectMenuOpen] = useState(false);
+  const [showArchivedProjects, setShowArchivedProjects] = useState(false);
+  const [unarchiving, setUnarchiving] = useState(false);
+  const [unarchiveError, setUnarchiveError] = useState<string | null>(null);
   const projectMenuRef = useRef<HTMLDivElement | null>(null);
   const ui = getFrontendBuildConstants();
   const { build } = useBuildInfo();
@@ -79,6 +82,11 @@ export default function ProjectLayout() {
 
   const currentProject = projects.find((p) => p.slug === projectSlug);
   const pid = currentProject?.id ?? resolvedPid;
+  /** Archived projects are read-only for everyone (issue #381). */
+  const archived = currentProject?.archived === true;
+  const activeProjects = projects.filter((p) => !p.archived);
+  const archivedProjects = projects.filter((p) => p.archived);
+  const archivedListOpen = showArchivedProjects || archived;
 
   useEffect(() => {
     if (currentProject || !projectSlug) return;
@@ -217,6 +225,46 @@ export default function ProjectLayout() {
       navigate(`${selectedProject.project_base_path}${subPath || '/dashboard'}`);
     }
   };
+
+  const canUnarchive =
+    user != null &&
+    (user.is_admin || (currentProject?.owner_id != null && currentProject.owner_id === user.id));
+
+  const unarchive = async () => {
+    if (unarchiving) return;
+    setUnarchiving(true);
+    setUnarchiveError(null);
+    try {
+      await setProjectArchived(pid, false, csrfToken ?? '');
+      await refresh();
+    } catch (err) {
+      setUnarchiveError(err instanceof Error ? err.message : 'Could not unarchive the project.');
+    } finally {
+      setUnarchiving(false);
+    }
+  };
+
+  const projectMenuItem = (p: (typeof projects)[number]) => (
+    <button
+      key={p.id}
+      type="button"
+      role="menuitemradio"
+      aria-checked={p.id === pid}
+      onClick={() => switchProject(p.id)}
+      className={`w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-stitch-elevated ${
+        p.id === pid
+          ? 'font-bold text-stitch-accent'
+          : p.archived
+            ? 'text-stitch-muted'
+            : 'text-stitch-fg'
+      }`}
+    >
+      <span className="material-symbols-outlined text-base" aria-hidden>
+        {p.id === pid ? 'check' : p.archived ? 'inventory_2' : 'folder'}
+      </span>
+      <span className="truncate">{p.name}</span>
+    </button>
+  );
 
   const outletContext: ProjectOutletContext = {
     projectId: pid,
@@ -374,23 +422,23 @@ export default function ProjectLayout() {
                     aria-label="Projects"
                     className="absolute left-0 top-[calc(100%+6px)] min-w-[240px] max-h-[70vh] overflow-y-auto rounded-lg border border-stitch-border bg-stitch-surface shadow-stitch py-1 z-60"
                   >
-                    {projects.map((p) => (
-                      <button
-                        key={p.id}
-                        type="button"
-                        role="menuitemradio"
-                        aria-checked={p.id === pid}
-                        onClick={() => switchProject(p.id)}
-                        className={`w-full text-left flex items-center gap-2 px-3 py-2 text-sm hover:bg-stitch-elevated ${
-                          p.id === pid ? 'font-bold text-stitch-accent' : 'text-stitch-fg'
-                        }`}
-                      >
-                        <span className="material-symbols-outlined text-base" aria-hidden>
-                          {p.id === pid ? 'check' : 'folder'}
-                        </span>
-                        <span className="truncate">{p.name}</span>
-                      </button>
-                    ))}
+                    {activeProjects.map(projectMenuItem)}
+                    {archivedProjects.length > 0 ? (
+                      <>
+                        <button
+                          type="button"
+                          aria-expanded={archivedListOpen}
+                          onClick={() => setShowArchivedProjects((o) => !o)}
+                          className="w-full text-left flex items-center gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-stitch-muted hover:bg-stitch-elevated"
+                        >
+                          <span className="material-symbols-outlined text-base" aria-hidden>
+                            {archivedListOpen ? 'expand_less' : 'expand_more'}
+                          </span>
+                          Archived ({archivedProjects.length})
+                        </button>
+                        {archivedListOpen ? archivedProjects.map(projectMenuItem) : null}
+                      </>
+                    ) : null}
                     <div className="my-1 border-t border-stitch-border" role="separator" />
                     {(
                       [
@@ -461,59 +509,61 @@ export default function ProjectLayout() {
             <div className="hidden sm:flex items-center gap-1 text-stitch-muted">
               <NotificationPanel />
             </div>
-            <div className="relative inline-flex" ref={createMenuRef}>
-              <div className="inline-flex rounded-md shadow-lg overflow-hidden">
-                <Link
-                  to={primaryCreate.to}
-                  title={primaryCreate.label}
-                  onClick={() => setCreateMenuOpen(false)}
-                  className="bg-linear-to-br from-primary to-primary-container text-white pl-4 pr-3 py-2 text-sm font-semibold flex items-center gap-2 hover:opacity-95 active:scale-[0.99] transition-transform"
-                >
-                  <span className="material-symbols-outlined text-sm shrink-0">add</span>
-                  <span className="hidden lg:inline whitespace-nowrap">{primaryCreate.label}</span>
-                  <span className="hidden sm:inline lg:hidden whitespace-nowrap">
-                    {primaryCreate.compact}
-                  </span>
-                </Link>
-                <button
-                  type="button"
-                  title="More create options"
-                  aria-expanded={createMenuOpen}
-                  aria-haspopup="menu"
-                  aria-label="Open create menu"
-                  onClick={() => setCreateMenuOpen((o) => !o)}
-                  className="bg-linear-to-br from-primary to-primary-container text-white px-2 py-2 border-l border-white/25 hover:opacity-95 flex items-center justify-center shrink-0"
-                >
-                  <span
-                    className={`material-symbols-outlined text-xl transition-transform ${createMenuOpen ? 'rotate-180' : ''}`}
-                    aria-hidden
+            {archived ? null : (
+              <div className="relative inline-flex" ref={createMenuRef}>
+                <div className="inline-flex rounded-md shadow-lg overflow-hidden">
+                  <Link
+                    to={primaryCreate.to}
+                    title={primaryCreate.label}
+                    onClick={() => setCreateMenuOpen(false)}
+                    className="bg-linear-to-br from-primary to-primary-container text-white pl-4 pr-3 py-2 text-sm font-semibold flex items-center gap-2 hover:opacity-95 active:scale-[0.99] transition-transform"
                   >
-                    expand_more
-                  </span>
-                </button>
-              </div>
-              {createMenuOpen ? (
-                <div
-                  role="menu"
-                  className="absolute right-0 top-[calc(100%+6px)] min-w-[220px] rounded-lg border border-stitch-border bg-stitch-surface shadow-stitch py-1 z-60"
-                >
-                  {createMenuItems.map((item) => (
-                    <Link
-                      key={item.to}
-                      role="menuitem"
-                      to={item.to}
-                      onClick={() => setCreateMenuOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-stitch-fg hover:bg-stitch-elevated transition-colors"
+                    <span className="material-symbols-outlined text-sm shrink-0">add</span>
+                    <span className="hidden lg:inline whitespace-nowrap">{primaryCreate.label}</span>
+                    <span className="hidden sm:inline lg:hidden whitespace-nowrap">
+                      {primaryCreate.compact}
+                    </span>
+                  </Link>
+                  <button
+                    type="button"
+                    title="More create options"
+                    aria-expanded={createMenuOpen}
+                    aria-haspopup="menu"
+                    aria-label="Open create menu"
+                    onClick={() => setCreateMenuOpen((o) => !o)}
+                    className="bg-linear-to-br from-primary to-primary-container text-white px-2 py-2 border-l border-white/25 hover:opacity-95 flex items-center justify-center shrink-0"
+                  >
+                    <span
+                      className={`material-symbols-outlined text-xl transition-transform ${createMenuOpen ? 'rotate-180' : ''}`}
+                      aria-hidden
                     >
-                      <span className="material-symbols-outlined text-stitch-accent text-lg">
-                        {item.icon}
-                      </span>
-                      {item.label}
-                    </Link>
-                  ))}
+                      expand_more
+                    </span>
+                  </button>
                 </div>
-              ) : null}
-            </div>
+                {createMenuOpen ? (
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-[calc(100%+6px)] min-w-[220px] rounded-lg border border-stitch-border bg-stitch-surface shadow-stitch py-1 z-60"
+                  >
+                    {createMenuItems.map((item) => (
+                      <Link
+                        key={item.to}
+                        role="menuitem"
+                        to={item.to}
+                        onClick={() => setCreateMenuOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2.5 text-sm font-semibold text-stitch-fg hover:bg-stitch-elevated transition-colors"
+                      >
+                        <span className="material-symbols-outlined text-stitch-accent text-lg">
+                          {item.icon}
+                        </span>
+                        {item.label}
+                      </Link>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            )}
             <div className="relative" ref={userMenuRef}>
               <button
                 type="button"
@@ -577,6 +627,40 @@ export default function ProjectLayout() {
 
         {/* No overflow here: it would become the containing scrollport for sticky page action bars. */}
         <main className="flex-1 p-6 md:p-8 pb-16">
+          {archived ? (
+            <div
+              role="status"
+              className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-stitch-fg"
+            >
+              <span className="flex items-center gap-2">
+                <span
+                  className="material-symbols-outlined text-lg text-amber-700 dark:text-amber-300"
+                  aria-hidden
+                >
+                  inventory_2
+                </span>
+                <span>
+                  <strong>This project is archived.</strong> It is read-only for everyone
+                  {canUnarchive ? '; unarchive it to make changes.' : '.'}
+                </span>
+              </span>
+              {canUnarchive ? (
+                <button
+                  type="button"
+                  onClick={() => void unarchive()}
+                  disabled={unarchiving}
+                  className="rounded-md border border-stitch-border bg-stitch-surface px-3 py-1.5 text-sm font-semibold hover:bg-stitch-elevated disabled:opacity-50"
+                >
+                  {unarchiving ? 'Unarchiving…' : 'Unarchive'}
+                </button>
+              ) : null}
+              {unarchiveError ? (
+                <p role="alert" className="w-full text-red-700 dark:text-red-300">
+                  {unarchiveError}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           <Outlet context={outletContext} />
         </main>
 

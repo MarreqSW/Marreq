@@ -98,6 +98,9 @@ impl From<RepoError> for ApiError {
             RepoError::Unauthorized => ApiError::Forbidden("operation not permitted".into()),
             RepoError::Duplicate(msg) => ApiError::Conflict(msg),
             RepoError::CrossProjectViolation(msg) => ApiError::UnprocessableEntity(msg),
+            RepoError::Archived => {
+                ApiError::Forbidden(crate::repository::errors::ARCHIVED_MESSAGE.into())
+            }
         }
     }
 }
@@ -107,6 +110,9 @@ impl From<crate::authorization::AuthorizationError> for ApiError {
         match value {
             crate::authorization::AuthorizationError::Forbidden => {
                 ApiError::Forbidden("permission denied".into())
+            }
+            crate::authorization::AuthorizationError::Archived => {
+                ApiError::Forbidden(crate::repository::errors::ARCHIVED_MESSAGE.into())
             }
             crate::authorization::AuthorizationError::Repository(error) => error.into(),
         }

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>9 · Flow view</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Google+Sans+Text:wght@400;500;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"><link rel="stylesheet" href="./style.css"></head>
+<body class="font-sans text-stitch">
+<div class="h-screen flex bg-stitch-canvas overflow-hidden">
+
+<aside class="w-60 shrink-0 bg-stitch-surface border-r border-stitch-border flex flex-col">
+  <div class="flex items-center gap-3 px-6 h-[70px]">
+    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center"><span class="material-symbols-outlined text-white text-sm" aria-hidden="true">architecture</span></div>
+    <div><p class="text-stitch-accent text-xs uppercase tracking-wider font-bold leading-none">Marreq</p>
+    <p class="text-[10px] text-stitch-muted font-mono leading-none mt-1">v0.1.18</p></div>
+  </div>
+  <nav class="mt-4 pr-6 space-y-1"><div class="flex items-center gap-3 py-3.5 pr-4 rounded-r-md text-[12px] font-bold uppercase tracking-[0.12em] text-stitch-fg pl-5"><span class="material-symbols-outlined text-lg" aria-hidden="true">dashboard</span><span>Dashboard</span></div><div class="flex items-center gap-3 py-3.5 pr-4 rounded-r-md text-[12px] font-bold uppercase tracking-[0.12em] text-stitch-fg pl-5"><span class="material-symbols-outlined text-lg" aria-hidden="true">list_alt</span><span>Requirements</span></div><div class="flex items-center gap-3 py-3.5 pr-4 rounded-r-md text-[12px] font-bold uppercase tracking-[0.12em] text-stitch-fg pl-5"><span class="material-symbols-outlined text-lg" aria-hidden="true">verified</span><span>Verifications</span></div><div class="flex items-center gap-3 py-3.5 pr-4 rounded-r-md text-[12px] font-bold uppercase tracking-[0.12em] bg-stitch-elevated text-stitch-accent border-l-4 border-stitch-accent pl-4"><span class="material-symbols-outlined text-lg" aria-hidden="true">account_tree</span><span>Use cases</span> <span class="ml-auto rounded-sm bg-amber-200 text-amber-900 px-1 py-px text-[9px] tracking-wider">NEW</span></div><div class="flex items-center gap-3 py-3.5 pr-4 rounded-r-md text-[12px] font-bold uppercase tracking-[0.12em] text-stitch-fg pl-5"><span class="material-symbols-outlined text-lg" aria-hidden="true">hub</span><span>Traceability</span></div><div class="flex items-center gap-3 py-3.5 pr-4 rounded-r-md text-[12px] font-bold uppercase tracking-[0.12em] text-stitch-fg pl-5"><span class="material-symbols-outlined text-lg" aria-hidden="true">history_edu</span><span>Baselines</span></div><div class="flex items-center gap-3 py-3.5 pr-4 rounded-r-md text-[12px] font-bold uppercase tracking-[0.12em] text-stitch-fg pl-5"><span class="material-symbols-outlined text-lg" aria-hidden="true">description</span><span>Reports & exports</span></div></nav>
+  <div class="mt-auto border-t border-stitch-border px-5 py-4 space-y-4 text-[12px] font-bold uppercase tracking-[0.12em] text-stitch-fg">
+    <div class="flex items-center gap-3"><span class="material-symbols-outlined text-lg" aria-hidden="true">settings</span> Project settings</div>
+    <div class="flex items-center gap-3"><span class="material-symbols-outlined text-lg" aria-hidden="true">help</span> Help</div>
+  </div>
+</aside>
+<div class="flex-1 min-w-0 flex flex-col">
+
+<header class="h-[70px] shrink-0 bg-stitch-surface border-b border-stitch-border shadow-sm px-6 flex items-center gap-4">
+  <span class="text-xl font-bold text-stitch-fg font-headline">Space Project</span>
+  <span class="flex items-center gap-1.5 border border-stitch-border rounded-md px-2.5 py-1.5 text-xs bg-stitch-elevated"><span class="material-symbols-outlined text-sm" aria-hidden="true">swap_horiz</span>Projects<span class="material-symbols-outlined text-sm" aria-hidden="true">expand_more</span></span>
+  <div class="flex-1 max-w-md flex items-center gap-2 border border-stitch-border rounded-md bg-stitch-elevated px-3 py-2 text-sm text-stitch-muted"><span class="material-symbols-outlined text-sm" aria-hidden="true">search</span>Global search…</div>
+  <div class="ml-auto flex items-center gap-4 text-stitch-muted">
+    <span class="material-symbols-outlined text-xl" aria-hidden="true">notifications</span>
+    <span class="inline-flex items-center gap-2 rounded-md bg-linear-to-br from-primary to-primary-container text-white px-4 py-2.5 text-sm font-semibold shadow-lg"><span class="material-symbols-outlined text-sm" aria-hidden="true">add</span>Create use case</span>
+    <span class="w-9 h-9 rounded-full border-2 border-stitch-border bg-stitch-elevated text-stitch-accent text-xs font-bold flex items-center justify-center">AJ</span>
+  </div>
+</header>
+<main class="flex-1 min-h-0 overflow-hidden px-8 py-5 relative">
+<div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-stitch-muted mb-2">
+  Use cases <span class="material-symbols-outlined text-sm" aria-hidden="true">chevron_right</span> <span class="text-stitch-accent">UC-001</span>
+</div>
+<div class="flex items-start justify-between mb-3">
+  <div>
+    <div class="flex items-center gap-2 mb-1"><span class="font-mono text-[11px] font-semibold text-stitch-accent whitespace-nowrap text-xs">UC-001</span><span class="rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800">Approved</span><span class="rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-stitch-elevated text-stitch-fg">v2</span>
+      <span class="text-xs text-stitch-muted">Primary actor <strong class="text-stitch-fg">Project member</strong> · Owner <strong class="text-stitch-fg">Alice Johnson</strong></span></div>
+    <h1 class="text-2xl font-bold text-stitch-fg font-headline">Export requirements</h1>
+  </div>
+  <div class="flex gap-2"><div class="flex gap-1"><span class="inline-flex items-center gap-1.5 rounded-md border border-stitch-border bg-stitch-surface text-stitch-fg px-3 py-1.5 text-xs font-semibold whitespace-nowrap "><span class="material-symbols-outlined text-sm text-stitch-muted" aria-hidden="true">article</span>Document</span><span class="inline-flex items-center gap-1.5 rounded-md border border-stitch-border bg-stitch-surface text-stitch-fg px-3 py-1.5 text-xs font-semibold whitespace-nowrap bg-stitch-elevated text-stitch-accent"><span class="material-symbols-outlined text-sm text-stitch-muted" aria-hidden="true">schema</span>Flow</span></div></div>
+</div>
+<div class="flex gap-5">
+  <div class="flex-1 min-w-0 rounded-lg border border-stitch-border bg-stitch-surface shadow-sm relative h-[520px] overflow-hidden"
+       style="background-image: radial-gradient(rgba(0,0,0,0.08) 1px, transparent 1px); background-size: 18px 18px">
+    
+<svg class="absolute inset-0" width="100%" height="100%">
+  <defs><marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#3949ab"/></marker>
+  <marker id="r" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#be123c"/></marker>
+  <marker id="s" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#0369a1"/></marker></defs>
+  <g stroke="#3949ab" stroke-width="2" fill="none" marker-end="url(#a)">
+    <line x1="170" y1="46" x2="170" y2="68"/><line x1="170" y1="134" x2="170" y2="158"/>
+    <line x1="170" y1="224" x2="170" y2="248"/><line x1="170" y1="314" x2="170" y2="338"/><line x1="170" y1="404" x2="170" y2="436"/>
+  </g>
+  <line x1="282" y1="281" x2="356" y2="281" stroke="#0369a1" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#s)"/>
+  <line x1="470" y1="248" x2="470" y2="200" stroke="#0369a1" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#s)"/>
+  <path d="M356,160 C300,160 310,262 284,266" stroke="#0369a1" stroke-width="2" stroke-dasharray="5 4" fill="none" marker-end="url(#s)"/>
+  <line x1="282" y1="371" x2="626" y2="371" stroke="#be123c" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#r)"/>
+  <line x1="740" y1="404" x2="740" y2="436" stroke="#be123c" stroke-width="2" marker-end="url(#r)"/>
+</svg><div class="absolute rounded-full px-4 py-1.5 text-xs font-bold bg-stitch-accent text-white" style="left:140px;top:14px">Start</div><div class="absolute rounded-lg border-2 border-stitch-accent bg-stitch-surface shadow-sm px-3 py-2" style="left:60px;top:70px;width:220px"><p class="font-mono text-[10px] font-bold text-stitch-muted">1</p><p class="text-xs text-stitch-fg leading-snug">User opens the requirements page.</p></div><div class="absolute rounded-lg border-2 border-stitch-accent bg-stitch-surface shadow-sm px-3 py-2" style="left:60px;top:160px;width:220px"><p class="font-mono text-[10px] font-bold text-stitch-muted">2</p><p class="text-xs text-stitch-fg leading-snug">System displays the available requirements.</p></div><div class="absolute rounded-lg border-2 border-stitch-accent bg-stitch-surface shadow-sm px-3 py-2 ring-4 ring-amber-300" style="left:60px;top:250px;width:220px"><p class="font-mono text-[10px] font-bold text-stitch-muted">3</p><p class="text-xs text-stitch-fg leading-snug">User selects requirements and requests an export.</p></div><div class="absolute rounded-lg border-2 border-stitch-accent bg-stitch-surface shadow-sm px-3 py-2" style="left:60px;top:340px;width:220px"><p class="font-mono text-[10px] font-bold text-stitch-muted">4</p><p class="text-xs text-stitch-fg leading-snug">System generates the file in the chosen format.</p></div><div class="absolute rounded-full px-4 py-1.5 text-xs font-bold bg-emerald-600 text-white" style="left:100px;top:438px">End · file available</div><div class="absolute rounded-lg border-2 border-sky-600 bg-sky-50 shadow-sm px-3 py-2" style="left:358px;top:250px;width:230px"><p class="font-mono text-[10px] font-bold text-stitch-muted">A3.1 · Nothing selected</p><p class="text-xs text-stitch-fg leading-snug">System asks the user to select at least one requirement.</p></div><div class="absolute rounded-lg border-2 border-sky-600 bg-sky-50 shadow-sm px-3 py-2" style="left:358px;top:130px;width:230px"><p class="font-mono text-[10px] font-bold text-stitch-muted">A3.2</p><p class="text-xs text-stitch-fg leading-snug">User selects requirements, then back to step 3.</p></div><div class="absolute rounded-lg border-2 border-rose-600 bg-rose-50 shadow-sm px-3 py-2" style="left:628px;top:340px;width:230px"><p class="font-mono text-[10px] font-bold text-stitch-muted">E4.1 · Export fails</p><p class="text-xs text-stitch-fg leading-snug">System reports the error and keeps the selection.</p></div><div class="absolute rounded-full px-4 py-1.5 text-xs font-bold bg-rose-600 text-white" style="left:690px;top:438px">End · no file</div>
+    <div class="absolute right-3 bottom-3 flex gap-1"><span class="inline-flex items-center gap-1.5 rounded-md border border-stitch-border bg-stitch-surface text-stitch-fg px-3 py-1.5 text-xs font-semibold whitespace-nowrap "><span class="material-symbols-outlined text-sm text-stitch-muted" aria-hidden="true">zoom_in</span></span><span class="inline-flex items-center gap-1.5 rounded-md border border-stitch-border bg-stitch-surface text-stitch-fg px-3 py-1.5 text-xs font-semibold whitespace-nowrap "><span class="material-symbols-outlined text-sm text-stitch-muted" aria-hidden="true">zoom_out</span></span><span class="inline-flex items-center gap-1.5 rounded-md border border-stitch-border bg-stitch-surface text-stitch-fg px-3 py-1.5 text-xs font-semibold whitespace-nowrap "><span class="material-symbols-outlined text-sm text-stitch-muted" aria-hidden="true">fit_screen</span></span></div>
+  </div>
+<aside class="w-64 shrink-0 space-y-3">
+  <div class="rounded-lg border border-stitch-border bg-stitch-surface shadow-sm px-4 py-3 text-xs space-y-2">
+    <p class="text-[10px] font-bold uppercase tracking-[0.12em] text-stitch-muted">Selected · step 3</p>
+    <p class="text-stitch-fg">User selects requirements and requests an export.</p>
+    <p><span class="inline-flex items-center gap-1 rounded-full border border-stitch-accent/30 bg-stitch-accent/5 px-2 py-0.5 font-mono text-[10px] font-semibold text-stitch-accent"><span class="material-symbols-outlined text-[12px]" aria-hidden="true">link</span>REQ-EXP-004</span></p>
+    <p class="text-stitch-accent font-semibold flex items-center gap-1"><span class="material-symbols-outlined text-sm" aria-hidden="true">article</span>Show in document</p>
+  </div>
+  <div class="rounded-lg border border-stitch-border bg-stitch-surface shadow-sm px-4 py-3 text-xs space-y-1.5">
+    <p class="text-[10px] font-bold uppercase tracking-[0.12em] text-stitch-muted">Legend</p>
+    <p class="flex items-center gap-2"><span class="w-6 h-0.5 bg-[#3949ab]"></span>Main scenario</p>
+    <p class="flex items-center gap-2"><span class="w-6 border-t-2 border-dashed border-sky-700"></span>Alternative</p>
+    <p class="flex items-center gap-2"><span class="w-6 border-t-2 border-dashed border-rose-700"></span>Exception</p>
+    <p class="text-stitch-muted pt-1 border-t border-stitch-border">Drawn from the same steps as the document. There is no diagram to maintain.</p>
+  </div>
+</aside>
+</div></main>
+<footer class="shrink-0 border-t border-stitch-border bg-stitch-surface px-6 py-1.5 flex justify-between font-mono text-[10px] text-stitch-muted">
+  <span>9 · Flow view (later iteration): derived from the same data</span><span>Mockup for #388 · illustrative data</span>
+</footer>
+</div></div></body></html>

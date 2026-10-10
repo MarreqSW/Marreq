@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>3 · Inline editing</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Google+Sans+Text:wght@400;500;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"><link rel="stylesheet" href="./style.css"></head>
+<body class="font-sans text-stitch">
+<div class="h-screen flex bg-stitch-canvas overflow-hidden">
+
+<aside class="w-60 shrink-0 bg-stitch-surface border-r border-stitch-border flex flex-col">
+  <div class="flex items-center gap-3 px-6 h-[70px]">
+    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center"><span class="material-symbols-outlined text-white text-sm" aria-hidden="true">architecture</span></div>
+    <div><p class="text-stitch-accent text-xs uppercase tracking-wider font-bold leading-none">Marreq</p>
+    <p class="text-[10px] text-stitch-muted font-mono leading-none mt-1">v0.1.18</p></div>
+  </div>
+  <nav class="mt-4 pr-6 space-y-1"><div class="flex items-center gap-3 py-3.5 pr-4 rounded-r-md text-[12px] font-bold uppercase tracking-[0.12em] text-stitch-fg pl-5"><span class="material-symbols-outlined text-lg" aria-hidden="true">dashboard</span><span>Dashboard</span></div><div class="flex items-center gap-3 py-3.5 pr-4 rounded-r-md text-[12px] font-bold uppercase tracking-[0.12em] text-stitch-fg pl-5"><span class="material-symbols-outlined text-lg" aria-hidden="true">list_alt</span><span>Requirements</span></div><div class="flex items-center gap-3 py-3.5 pr-4 rounded-r-md text-[12px] font-bold uppercase tracking-[0.12em] text-stitch-fg pl-5"><span class="material-symbols-outlined text-lg" aria-hidden="true">verified</span><span>Verifications</span></div><div class="flex items-center gap-3 py-3.5 pr-4 rounded-r-md text-[12px] font-bold uppercase tracking-[0.12em] bg-stitch-elevated text-stitch-accent border-l-4 border-stitch-accent pl-4"><span class="material-symbols-outlined text-lg" aria-hidden="true">account_tree</span><span>Use cases</span> <span class="ml-auto rounded-sm bg-amber-200 text-amber-900 px-1 py-px text-[9px] tracking-wider">NEW</span></div><div class="flex items-center gap-3 py-3.5 pr-4 rounded-r-md text-[12px] font-bold uppercase tracking-[0.12em] text-stitch-fg pl-5"><span class="material-symbols-outlined text-lg" aria-hidden="true">hub</span><span>Traceability</span></div><div class="flex items-center gap-3 py-3.5 pr-4 rounded-r-md text-[12px] font-bold uppercase tracking-[0.12em] text-stitch-fg pl-5"><span class="material-symbols-outlined text-lg" aria-hidden="true">history_edu</span><span>Baselines</span></div><div class="flex items-center gap-3 py-3.5 pr-4 rounded-r-md text-[12px] font-bold uppercase tracking-[0.12em] text-stitch-fg pl-5"><span class="material-symbols-outlined text-lg" aria-hidden="true">description</span><span>Reports & exports</span></div></nav>
+  <div class="mt-auto border-t border-stitch-border px-5 py-4 space-y-4 text-[12px] font-bold uppercase tracking-[0.12em] text-stitch-fg">
+    <div class="flex items-center gap-3"><span class="material-symbols-outlined text-lg" aria-hidden="true">settings</span> Project settings</div>
+    <div class="flex items-center gap-3"><span class="material-symbols-outlined text-lg" aria-hidden="true">help</span> Help</div>
+  </div>
+</aside>
+<div class="flex-1 min-w-0 flex flex-col">
+
+<header class="h-[70px] shrink-0 bg-stitch-surface border-b border-stitch-border shadow-sm px-6 flex items-center gap-4">
+  <span class="text-xl font-bold text-stitch-fg font-headline">Space Project</span>
+  <span class="flex items-center gap-1.5 border border-stitch-border rounded-md px-2.5 py-1.5 text-xs bg-stitch-elevated"><span class="material-symbols-outlined text-sm" aria-hidden="true">swap_horiz</span>Projects<span class="material-symbols-outlined text-sm" aria-hidden="true">expand_more</span></span>
+  <div class="flex-1 max-w-md flex items-center gap-2 border border-stitch-border rounded-md bg-stitch-elevated px-3 py-2 text-sm text-stitch-muted"><span class="material-symbols-outlined text-sm" aria-hidden="true">search</span>Global search…</div>
+  <div class="ml-auto flex items-center gap-4 text-stitch-muted">
+    <span class="material-symbols-outlined text-xl" aria-hidden="true">notifications</span>
+    <span class="inline-flex items-center gap-2 rounded-md bg-linear-to-br from-primary to-primary-container text-white px-4 py-2.5 text-sm font-semibold shadow-lg"><span class="material-symbols-outlined text-sm" aria-hidden="true">add</span>Create use case</span>
+    <span class="w-9 h-9 rounded-full border-2 border-stitch-border bg-stitch-elevated text-stitch-accent text-xs font-bold flex items-center justify-center">AJ</span>
+  </div>
+</header>
+<main class="flex-1 min-h-0 overflow-hidden px-8 py-5 relative">
+<div class="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-stitch-muted mb-2">
+  Use cases <span class="material-symbols-outlined text-sm" aria-hidden="true">chevron_right</span> <span class="text-stitch-accent">UC-001</span>
+</div>
+<div class="flex items-start justify-between mb-3">
+  <div>
+    <div class="flex items-center gap-2 mb-1"><span class="font-mono text-[11px] font-semibold text-stitch-accent whitespace-nowrap text-xs">UC-001</span><span class="rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800">Approved</span><span class="rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-stitch-elevated text-stitch-fg">v2</span>
+      <span class="text-xs text-stitch-muted">Primary actor <strong class="text-stitch-fg">Project member</strong> · Owner <strong class="text-stitch-fg">Alice Johnson</strong></span></div>
+    <h1 class="text-2xl font-bold text-stitch-fg font-headline">Export requirements</h1>
+  </div>
+  <div class="flex gap-2"><span class="inline-flex items-center gap-1.5 rounded-md border border-stitch-border bg-stitch-surface text-stitch-fg px-3 py-1.5 text-xs font-semibold whitespace-nowrap ">Cancel</span></div>
+</div><div class="flex gap-5">
+<div class="flex-1 min-w-0 space-y-3">
+  
+<div class="flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-2 mb-3">
+  <span class="material-symbols-outlined text-lg text-amber-700" aria-hidden="true">edit_note</span><span class="text-sm text-amber-900"><strong>Draft</strong> · unsaved changes · based on v2</span>
+  <span class="ml-auto flex items-center gap-2"><span class="inline-flex items-center gap-1.5 rounded-md border border-stitch-border bg-stitch-surface text-stitch-fg px-3 py-1.5 text-xs font-semibold whitespace-nowrap "><span class="material-symbols-outlined text-sm text-stitch-muted" aria-hidden="true">undo</span></span><span class="inline-flex items-center gap-1.5 rounded-md border border-stitch-border bg-stitch-surface text-stitch-fg px-3 py-1.5 text-xs font-semibold whitespace-nowrap "><span class="material-symbols-outlined text-sm text-stitch-muted" aria-hidden="true">redo</span></span><span class="inline-flex items-center gap-1.5 rounded-md border border-stitch-border bg-stitch-surface text-stitch-fg px-3 py-1.5 text-xs font-semibold whitespace-nowrap "><span class="material-symbols-outlined text-sm text-stitch-muted" aria-hidden="true">save</span>Save draft</span><span class="inline-flex items-center gap-1.5 rounded-md bg-linear-to-br from-primary to-primary-container text-white px-3 py-1.5 text-xs font-semibold shadow-md whitespace-nowrap"><span class="material-symbols-outlined text-sm" aria-hidden="true">send</span>Submit</span></span>
+</div>
+  
+<section class="rounded-lg border border-stitch-border bg-stitch-surface shadow-sm">
+  <div class="flex items-center gap-2 px-4 py-2.5 border-b border-stitch-border bg-stitch-elevated/50">
+    <span class="material-symbols-outlined text-lg text-stitch-accent" aria-hidden="true">login</span><h3 class="text-sm font-bold text-stitch-accent font-headline">Preconditions</h3>
+  </div>
+  <div class="px-4 py-2"><div class="group flex items-start gap-2 py-1.5 text-sm text-stitch-fg"><span class="material-symbols-outlined text-base text-transparent" aria-hidden="true">drag_indicator</span><span class="mt-[7px] w-1.5 h-1.5 rounded-full bg-stitch-muted shrink-0"></span><span class="flex-1">User is authenticated.</span></div><div class="group flex items-start gap-2 py-1.5 text-sm text-stitch-fg"><span class="material-symbols-outlined text-base text-transparent" aria-hidden="true">drag_indicator</span><span class="mt-[7px] w-1.5 h-1.5 rounded-full bg-stitch-muted shrink-0"></span><span class="flex-1">User has access to the project.</span></div><div class="flex items-center gap-2 pl-6 py-1 text-xs text-stitch-muted"><span class="material-symbols-outlined text-sm" aria-hidden="true">add</span>Add precondition</div></div>
+</section>
+  
+<section class="rounded-lg border border-stitch-border bg-stitch-surface shadow-sm">
+  <div class="flex items-center gap-2 px-4 py-2.5 border-b border-stitch-border bg-stitch-elevated/50">
+    <span class="material-symbols-outlined text-lg text-stitch-accent" aria-hidden="true">format_list_numbered</span><h3 class="text-sm font-bold text-stitch-accent font-headline">Main scenario</h3>
+  </div>
+  <div class="px-4 py-2">
+<div class="relative flex items-start gap-2 rounded-md px-1 py-1.5"><span class="material-symbols-outlined text-base text-transparent mt-0.5" aria-hidden="true">drag_indicator</span>
+  <span class="mt-0.5 w-6 h-6 shrink-0 rounded-full bg-stitch-accent text-white text-[11px] font-bold flex items-center justify-center">1</span>
+  <span class="flex-1 text-sm text-stitch-fg leading-6">User opens the requirements page.</span><span class="flex flex-wrap justify-end items-center gap-1 mt-0.5 shrink-0"></span>
+</div>
+<div class="relative flex items-start gap-2 rounded-md px-1 py-1.5"><span class="material-symbols-outlined text-base text-transparent mt-0.5" aria-hidden="true">drag_indicator</span>
+  <span class="mt-0.5 w-6 h-6 shrink-0 rounded-full bg-stitch-accent text-white text-[11px] font-bold flex items-center justify-center">2</span>
+  <span class="flex-1 text-sm text-stitch-fg leading-6">System displays the available requirements.</span><span class="flex flex-wrap justify-end items-center gap-1 mt-0.5 shrink-0"><span class="inline-flex items-center gap-1 rounded-full border border-stitch-accent/30 bg-stitch-accent/5 px-2 py-0.5 font-mono text-[10px] font-semibold text-stitch-accent"><span class="material-symbols-outlined text-[12px]" aria-hidden="true">link</span>REQ-UI-003</span></span>
+</div><div class="relative">
+<div class="relative flex items-start gap-2 rounded-md px-1 py-1.5 bg-stitch-surface ring-2 ring-stitch-accent shadow-md"><span class="material-symbols-outlined text-base text-stitch-muted mt-0.5" aria-hidden="true">drag_indicator</span>
+  <span class="mt-0.5 w-6 h-6 shrink-0 rounded-full bg-stitch-accent text-white text-[11px] font-bold flex items-center justify-center">3</span>
+  <span class="flex-1 text-sm text-stitch-fg leading-6">User selects requirements and requests an export in a chosen format<span class="inline-block w-px h-4 bg-stitch-accent align-middle animate-pulse ml-px"></span></span><span class="flex flex-wrap justify-end items-center gap-1 mt-0.5 shrink-0"><span class="inline-flex items-center gap-1 rounded-full border border-stitch-accent/30 bg-stitch-accent/5 px-2 py-0.5 font-mono text-[10px] font-semibold text-stitch-accent"><span class="material-symbols-outlined text-[12px]" aria-hidden="true">link</span>REQ-EXP-004</span></span><span class="flex items-center gap-0.5 ml-1 text-stitch-muted"><span class="p-0.5 rounded-sm hover:bg-stitch-elevated"><span class="material-symbols-outlined text-base" aria-hidden="true">add</span></span><span class="p-0.5 rounded-sm bg-stitch-elevated text-stitch-fg"><span class="material-symbols-outlined text-base" aria-hidden="true">more_horiz</span></span></span>
+</div>
+<div class="absolute right-2 top-9 z-20 w-80 rounded-lg border border-stitch-border bg-stitch-surface shadow-stitch py-1 text-sm">
+  <div class="flex items-center gap-2.5 px-3 py-1.5 bg-stitch-elevated"><span class="material-symbols-outlined text-base text-stitch-muted" aria-hidden="true">alt_route</span>Add alternative from this step<span class="ml-auto font-mono text-[10px] text-stitch-muted">A</span></div><div class="flex items-center gap-2.5 px-3 py-1.5 "><span class="material-symbols-outlined text-base text-stitch-muted" aria-hidden="true">report</span>Add exception from this step<span class="ml-auto font-mono text-[10px] text-stitch-muted">E</span></div><div class="flex items-center gap-2.5 px-3 py-1.5 "><span class="material-symbols-outlined text-base text-stitch-muted" aria-hidden="true">link</span>Link requirement or verification<span class="ml-auto font-mono text-[10px] text-stitch-muted">L</span></div><div class="flex items-center gap-2.5 px-3 py-1.5 "><span class="material-symbols-outlined text-base text-stitch-muted" aria-hidden="true">add_comment</span>Comment on this step<span class="ml-auto font-mono text-[10px] text-stitch-muted">C</span></div><div class="flex items-center gap-2.5 px-3 py-1.5 "><span class="material-symbols-outlined text-base text-stitch-muted" aria-hidden="true">content_copy</span>Duplicate<span class="ml-auto font-mono text-[10px] text-stitch-muted">⌘D</span></div>
+  <div class="border-t border-stitch-border mt-1 pt-1 flex items-center gap-2.5 px-3 py-1.5 text-stitch-danger"><span class="material-symbols-outlined text-base" aria-hidden="true">delete</span>Delete step<span class="ml-auto font-mono text-[10px]">⌫</span></div>
+</div></div>
+<div class="relative flex items-start gap-2 rounded-md px-1 py-1.5"><span class="material-symbols-outlined text-base text-transparent mt-0.5" aria-hidden="true">drag_indicator</span>
+  <span class="mt-0.5 w-6 h-6 shrink-0 rounded-full bg-stitch-accent text-white text-[11px] font-bold flex items-center justify-center">4</span>
+  <span class="flex-1 text-sm text-stitch-fg leading-6">System generates the file in the chosen format.</span><span class="flex flex-wrap justify-end items-center gap-1 mt-0.5 shrink-0"><span class="inline-flex items-center gap-1 rounded-full border border-stitch-accent/30 bg-stitch-accent/5 px-2 py-0.5 font-mono text-[10px] font-semibold text-stitch-accent"><span class="material-symbols-outlined text-[12px]" aria-hidden="true">link</span>REQ-EXP-007</span><span class="inline-flex items-center gap-1 rounded-full border border-stitch-accent/30 bg-stitch-accent/5 px-2 py-0.5 font-mono text-[10px] font-semibold text-stitch-accent"><span class="material-symbols-outlined text-[12px]" aria-hidden="true">link</span>TEST-EXP-002</span></span>
+</div><div class="flex items-center gap-2 pl-9 py-1.5 text-sm text-stitch-muted"><span class="material-symbols-outlined text-base" aria-hidden="true">add</span>Add step <span class="text-xs">· or press Enter at the end of a step</span></div></div>
+</section>
+</div><aside class="w-72 shrink-0 space-y-3">
+<div class="rounded-lg border border-stitch-border bg-stitch-surface shadow-sm px-4 py-3 text-xs text-stitch-muted space-y-1.5">
+  <p class="text-[10px] font-bold uppercase tracking-[0.12em]">Keyboard</p>
+  <p><span class="font-mono text-stitch-fg">Enter</span> new step below · <span class="font-mono text-stitch-fg">Tab</span> indent into a branch</p>
+  <p><span class="font-mono text-stitch-fg">Alt ↑ / ↓</span> move the step · <span class="font-mono text-stitch-fg">⌘Z</span> undo</p>
+  <p><span class="font-mono text-stitch-fg">/</span> commands (link, comment, alternative…)</p>
+</div></aside></div></main>
+<footer class="shrink-0 border-t border-stitch-border bg-stitch-surface px-6 py-1.5 flex justify-between font-mono text-[10px] text-stitch-muted">
+  <span>3 · Editing in place: block toolbar and step menu</span><span>Mockup for #388 · illustrative data</span>
+</footer>
+</div></div></body></html>

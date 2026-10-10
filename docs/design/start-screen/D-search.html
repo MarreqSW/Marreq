@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>D · Search-first</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Google+Sans+Text:wght@400;500;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"><link rel="stylesheet" href="./style.css"></head>
+<body class="font-sans text-stitch">
+<div class="min-h-screen flex flex-col bg-stitch-canvas">
+
+<header class="h-14 shrink-0 border-b border-stitch-border bg-stitch-surface px-6 flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center"><span class="material-symbols-outlined text-white text-sm" aria-hidden="true">architecture</span></div>
+    <div>
+      <p class="text-stitch-accent text-xs uppercase tracking-wider font-bold leading-none">Marreq</p>
+      <p class="text-[10px] text-stitch-muted font-mono leading-none mt-1">v0.1.17</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-4 text-stitch-muted">
+    <div class="flex items-center rounded-lg border border-stitch-border p-0.5 gap-0.5">
+      <span class="p-1.5 rounded-md bg-stitch-elevated text-stitch-accent"><span class="material-symbols-outlined text-lg" aria-hidden="true">light_mode</span></span>
+      <span class="p-1.5"><span class="material-symbols-outlined text-lg" aria-hidden="true">dark_mode</span></span>
+      <span class="p-1.5"><span class="material-symbols-outlined text-lg" aria-hidden="true">routine</span></span>
+    </div>
+    <span class="relative"><span class="material-symbols-outlined text-xl" aria-hidden="true">notifications</span><span class="absolute -top-1 -right-1.5 rounded-full bg-red-600 text-white text-[9px] font-bold px-1">3</span></span>
+    <span class="flex items-center gap-2 text-stitch-fg">
+      <span class="w-8 h-8 rounded-full bg-stitch-accent text-white text-xs font-bold flex items-center justify-center">AJ</span>
+      <span class="text-sm font-semibold">Alice Johnson</span><span class="material-symbols-outlined text-base text-stitch-muted" aria-hidden="true">expand_more</span>
+    </span>
+  </div>
+</header>
+<main class="flex-1 px-10 py-8">
+<div class="max-w-3xl mx-auto pt-10">
+  <h1 class="text-center text-2xl font-bold text-stitch-fg font-headline mb-6">Where to, Alice?</h1>
+  <div class="rounded-xl border-2 border-stitch-accent/60 bg-stitch-surface shadow-lg flex items-center gap-3 px-5 py-4">
+    <span class="material-symbols-outlined text-2xl text-stitch-accent" aria-hidden="true">search</span>
+    <span class="flex-1 text-base text-stitch-muted">Jump to a project, a requirement (REQ-…), or an action…</span>
+    <kbd class="rounded-sm border border-stitch-border bg-stitch-canvas px-2 py-0.5 text-xs font-mono text-stitch-muted">Ctrl K</kbd>
+  </div>
+  <p class="text-center text-xs text-stitch-muted mt-2">Try “thermal”, “REQ-PWR-012” or “new project”.</p>
+  <section class="mt-10">
+    <p class="text-xs font-bold uppercase tracking-widest text-stitch-muted mb-2 px-1">Recent</p>
+    <ul class="rounded-xl border border-stitch-border bg-stitch-surface shadow-sm overflow-hidden divide-y divide-stitch-border">
+<li class="flex items-center gap-3 px-4 py-2.5 bg-stitch-elevated/70">
+  <span class="w-7 h-7 text-xs bg-indigo-700 rounded-lg text-white font-bold flex items-center justify-center shrink-0">S</span>
+  <span class="text-sm font-semibold text-stitch-fg w-48">Space Project</span>
+  <span class="text-sm text-stitch-muted flex-1">Requirements › REQ-PWR-012</span>
+  <span class="text-xs text-stitch-muted">2 hours ago</span>
+  <kbd class="ml-2 rounded-sm border border-stitch-border bg-stitch-surface px-1.5 text-[10px] font-mono text-stitch-muted">↵</kbd>
+</li>
+<li class="flex items-center gap-3 px-4 py-2.5 ">
+  <span class="w-7 h-7 text-xs bg-teal-700 rounded-lg text-white font-bold flex items-center justify-center shrink-0">T</span>
+  <span class="text-sm font-semibold text-stitch-fg w-48">Thermal Subsystem</span>
+  <span class="text-sm text-stitch-muted flex-1">Traceability › Matrix</span>
+  <span class="text-xs text-stitch-muted">yesterday</span>
+  <span class="ml-2 w-6"></span>
+</li>
+<li class="flex items-center gap-3 px-4 py-2.5 ">
+  <span class="w-7 h-7 text-xs bg-amber-700 rounded-lg text-white font-bold flex items-center justify-center shrink-0">R</span>
+  <span class="text-sm font-semibold text-stitch-fg w-48">Rover Navigation</span>
+  <span class="text-sm text-stitch-muted flex-1">Dashboard</span>
+  <span class="text-xs text-stitch-muted">3 days ago</span>
+  <span class="ml-2 w-6"></span>
+</li>
+<li class="flex items-center gap-3 px-4 py-2.5 ">
+  <span class="w-7 h-7 text-xs bg-sky-700 rounded-lg text-white font-bold flex items-center justify-center shrink-0">M</span>
+  <span class="text-sm font-semibold text-stitch-fg w-48">Marreq Project</span>
+  <span class="text-sm text-stitch-muted flex-1">Baselines › Release 1.0</span>
+  <span class="text-xs text-stitch-muted">last week</span>
+  <span class="ml-2 w-6"></span>
+</li></ul>
+  </section>
+  <div class="mt-6 flex items-center justify-between px-1 text-sm">
+    <div class="flex gap-5 font-semibold text-stitch-fg">
+      <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-base text-stitch-muted" aria-hidden="true">add_box</span> New project</span>
+      <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-base text-stitch-muted" aria-hidden="true">upload_file</span> Import</span>
+      <span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-base text-stitch-muted" aria-hidden="true">workspaces</span> Groups</span>
+    </div>
+    <div class="flex gap-4 text-stitch-accent font-semibold">
+      <span>All projects (6)</span><span class="text-stitch-muted">Archived (2)</span>
+    </div>
+  </div>
+</div></main>
+<footer class="shrink-0 border-t border-stitch-border bg-stitch-surface px-6 py-2 flex justify-between font-mono text-[10px] text-stitch-muted">
+  <span>© 2026 Marreq</span><span>Proposal D · mockup with illustrative data</span>
+</footer>
+</div></body></html>

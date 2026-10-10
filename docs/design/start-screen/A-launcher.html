@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>A · Project launcher</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;600;700;800&family=Google+Sans+Text:wght@400;500;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"><link rel="stylesheet" href="./style.css"></head>
+<body class="font-sans text-stitch">
+<div class="min-h-screen flex flex-col bg-stitch-canvas">
+
+<header class="h-14 shrink-0 border-b border-stitch-border bg-stitch-surface px-6 flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center"><span class="material-symbols-outlined text-white text-sm" aria-hidden="true">architecture</span></div>
+    <div>
+      <p class="text-stitch-accent text-xs uppercase tracking-wider font-bold leading-none">Marreq</p>
+      <p class="text-[10px] text-stitch-muted font-mono leading-none mt-1">v0.1.17</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-4 text-stitch-muted">
+    <div class="flex items-center rounded-lg border border-stitch-border p-0.5 gap-0.5">
+      <span class="p-1.5 rounded-md bg-stitch-elevated text-stitch-accent"><span class="material-symbols-outlined text-lg" aria-hidden="true">light_mode</span></span>
+      <span class="p-1.5"><span class="material-symbols-outlined text-lg" aria-hidden="true">dark_mode</span></span>
+      <span class="p-1.5"><span class="material-symbols-outlined text-lg" aria-hidden="true">routine</span></span>
+    </div>
+    <span class="relative"><span class="material-symbols-outlined text-xl" aria-hidden="true">notifications</span><span class="absolute -top-1 -right-1.5 rounded-full bg-red-600 text-white text-[9px] font-bold px-1">3</span></span>
+    <span class="flex items-center gap-2 text-stitch-fg">
+      <span class="w-8 h-8 rounded-full bg-stitch-accent text-white text-xs font-bold flex items-center justify-center">AJ</span>
+      <span class="text-sm font-semibold">Alice Johnson</span><span class="material-symbols-outlined text-base text-stitch-muted" aria-hidden="true">expand_more</span>
+    </span>
+  </div>
+</header>
+<main class="flex-1 px-10 py-8">
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-end justify-between mb-6">
+    <div>
+      <p class="text-xs font-semibold uppercase tracking-wider text-stitch-muted">Your projects</p>
+      <h1 class="text-2xl font-bold text-stitch-fg font-headline">Good morning, Alice</h1>
+    </div>
+    <div class="flex gap-2"><span class="inline-flex items-center gap-2 rounded-md border border-stitch-border bg-stitch-surface text-stitch-fg px-4 py-2 text-sm font-semibold"><span class="material-symbols-outlined text-sm text-stitch-muted" aria-hidden="true">workspaces</span>Groups</span><span class="inline-flex items-center gap-2 rounded-md border border-stitch-border bg-stitch-surface text-stitch-fg px-4 py-2 text-sm font-semibold"><span class="material-symbols-outlined text-sm text-stitch-muted" aria-hidden="true">upload_file</span>Import bundle</span><span class="inline-flex items-center gap-2 rounded-md bg-linear-to-br from-primary to-primary-container text-white px-4 py-2 text-sm font-semibold shadow-lg"><span class="material-symbols-outlined text-sm" aria-hidden="true">add</span>New project</span></div>
+  </div>
+  <div class="flex gap-3 mb-5">
+    <div class="relative flex-1 max-w-md">
+      <span class="absolute inset-y-0 left-3 flex items-center text-stitch-muted"><span class="material-symbols-outlined text-sm" aria-hidden="true">search</span></span>
+      <div class="w-full pl-10 pr-4 py-2 bg-stitch-surface border border-stitch-border rounded-md text-sm text-stitch-muted">Search projects…</div>
+    </div>
+    <div class="flex items-center gap-2 border border-stitch-border rounded-md bg-stitch-surface px-3 text-sm">Group: <strong>All</strong><span class="material-symbols-outlined text-base text-stitch-muted" aria-hidden="true">expand_more</span></div>
+    <div class="flex items-center gap-2 border border-stitch-border rounded-md bg-stitch-surface px-3 text-sm">Sort: <strong>Recently updated</strong><span class="material-symbols-outlined text-base text-stitch-muted" aria-hidden="true">expand_more</span></div>
+  </div>
+  <div class="grid grid-cols-3 gap-4">
+<div class="rounded-xl border border-stitch-border bg-stitch-surface p-4 shadow-sm hover:shadow-md flex flex-col gap-3">
+  <div class="flex items-start gap-3">
+    <span class="w-10 h-10 text-base bg-indigo-700 rounded-lg text-white font-bold flex items-center justify-center shrink-0">S</span>
+    <div class="min-w-0 flex-1">
+      <p class="font-bold text-stitch-fg text-[15px] truncate">Space Project</p>
+      <p class="text-xs text-stitch-muted flex items-center gap-1"><span class="material-symbols-outlined text-xs" aria-hidden="true">workspaces</span> Satellite Team</p>
+    </div>
+    <span class="rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-800">Admin</span>
+  </div>
+  <div class="flex gap-5 text-xs text-stitch-muted">
+    <span><strong class="text-stitch-fg text-sm">128</strong> requirements</span>
+    <span><strong class="text-stitch-fg text-sm">42</strong> verifications</span>
+  </div>
+  <p class="text-[11px] text-stitch-muted border-t border-stitch-border pt-2">Updated 2 hours ago</p>
+</div>
+<div class="rounded-xl border border-stitch-border bg-stitch-surface p-4 shadow-sm hover:shadow-md flex flex-col gap-3">
+  <div class="flex items-start gap-3">
+    <span class="w-10 h-10 text-base bg-teal-700 rounded-lg text-white font-bold flex items-center justify-center shrink-0">T</span>
+    <div class="min-w-0 flex-1">
+      <p class="font-bold text-stitch-fg text-[15px] truncate">Thermal Subsystem</p>
+      <p class="text-xs text-stitch-muted flex items-center gap-1"><span class="material-symbols-outlined text-xs" aria-hidden="true">workspaces</span> Satellite Team</p>
+    </div>
+    <span class="rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-teal-100 text-teal-800">Reviewer</span>
+  </div>
+  <div class="flex gap-5 text-xs text-stitch-muted">
+    <span><strong class="text-stitch-fg text-sm">64</strong> requirements</span>
+    <span><strong class="text-stitch-fg text-sm">23</strong> verifications</span>
+  </div>
+  <p class="text-[11px] text-stitch-muted border-t border-stitch-border pt-2">Updated yesterday</p>
+</div>
+<div class="rounded-xl border border-stitch-border bg-stitch-surface p-4 shadow-sm hover:shadow-md flex flex-col gap-3">
+  <div class="flex items-start gap-3">
+    <span class="w-10 h-10 text-base bg-amber-700 rounded-lg text-white font-bold flex items-center justify-center shrink-0">R</span>
+    <div class="min-w-0 flex-1">
+      <p class="font-bold text-stitch-fg text-[15px] truncate">Rover Navigation</p>
+      <p class="text-xs text-stitch-muted flex items-center gap-1"><span class="material-symbols-outlined text-xs" aria-hidden="true">person</span> Personal</p>
+    </div>
+    <span class="rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800">Author</span>
+  </div>
+  <div class="flex gap-5 text-xs text-stitch-muted">
+    <span><strong class="text-stitch-fg text-sm">37</strong> requirements</span>
+    <span><strong class="text-stitch-fg text-sm">11</strong> verifications</span>
+  </div>
+  <p class="text-[11px] text-stitch-muted border-t border-stitch-border pt-2">Updated 3 days ago</p>
+</div>
+<div class="rounded-xl border border-stitch-border bg-stitch-surface p-4 shadow-sm hover:shadow-md flex flex-col gap-3">
+  <div class="flex items-start gap-3">
+    <span class="w-10 h-10 text-base bg-sky-700 rounded-lg text-white font-bold flex items-center justify-center shrink-0">M</span>
+    <div class="min-w-0 flex-1">
+      <p class="font-bold text-stitch-fg text-[15px] truncate">Marreq Project</p>
+      <p class="text-xs text-stitch-muted flex items-center gap-1"><span class="material-symbols-outlined text-xs" aria-hidden="true">person</span> Personal</p>
+    </div>
+    <span class="rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-800">Admin</span>
+  </div>
+  <div class="flex gap-5 text-xs text-stitch-muted">
+    <span><strong class="text-stitch-fg text-sm">52</strong> requirements</span>
+    <span><strong class="text-stitch-fg text-sm">18</strong> verifications</span>
+  </div>
+  <p class="text-[11px] text-stitch-muted border-t border-stitch-border pt-2">Updated last week</p>
+</div>
+<div class="rounded-xl border border-stitch-border bg-stitch-surface p-4 shadow-sm hover:shadow-md flex flex-col gap-3">
+  <div class="flex items-start gap-3">
+    <span class="w-10 h-10 text-base bg-rose-700 rounded-lg text-white font-bold flex items-center justify-center shrink-0">G</span>
+    <div class="min-w-0 flex-1">
+      <p class="font-bold text-stitch-fg text-[15px] truncate">Ground Segment</p>
+      <p class="text-xs text-stitch-muted flex items-center gap-1"><span class="material-symbols-outlined text-xs" aria-hidden="true">workspaces</span> Ops</p>
+    </div>
+    <span class="rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-slate-200 text-slate-700">Viewer</span>
+  </div>
+  <div class="flex gap-5 text-xs text-stitch-muted">
+    <span><strong class="text-stitch-fg text-sm">19</strong> requirements</span>
+    <span><strong class="text-stitch-fg text-sm">6</strong> verifications</span>
+  </div>
+  <p class="text-[11px] text-stitch-muted border-t border-stitch-border pt-2">Updated 2 weeks ago</p>
+</div>
+<div class="rounded-xl border border-stitch-border bg-stitch-surface p-4 shadow-sm hover:shadow-md flex flex-col gap-3">
+  <div class="flex items-start gap-3">
+    <span class="w-10 h-10 text-base bg-slate-600 rounded-lg text-white font-bold flex items-center justify-center shrink-0">E</span>
+    <div class="min-w-0 flex-1">
+      <p class="font-bold text-stitch-fg text-[15px] truncate">Empty Project</p>
+      <p class="text-xs text-stitch-muted flex items-center gap-1"><span class="material-symbols-outlined text-xs" aria-hidden="true">person</span> Personal</p>
+    </div>
+    <span class="rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-800">Admin</span>
+  </div>
+  <div class="flex gap-5 text-xs text-stitch-muted">
+    <span><strong class="text-stitch-fg text-sm">0</strong> requirements</span>
+    <span><strong class="text-stitch-fg text-sm">0</strong> verifications</span>
+  </div>
+  <p class="text-[11px] text-stitch-muted border-t border-stitch-border pt-2">Updated 3 weeks ago</p>
+</div></div>
+  <div class="mt-5 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stitch-muted">
+    <span class="material-symbols-outlined text-base" aria-hidden="true">chevron_right</span> Archived (2)
+  </div>
+</div></main>
+<footer class="shrink-0 border-t border-stitch-border bg-stitch-surface px-6 py-2 flex justify-between font-mono text-[10px] text-stitch-muted">
+  <span>© 2026 Marreq</span><span>Proposal A · mockup with illustrative data</span>
+</footer>
+</div></body></html>

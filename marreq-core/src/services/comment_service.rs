@@ -5,12 +5,16 @@
 //!
 //! Comments are immutable. Permission checks (project membership, lock approved version)
 //! are done in the API layer; this service validates requirement/version existence and
-//! delegates to the repository.
+//! delegates to the repository. `@username` mentions of project members are
+//! notified when a comment is created.
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{NewRequirementComment, RequirementComment, User};
 use crate::repository::errors::RepoError;
-use crate::repository::{RequirementCommentsRepository, RequirementsRepository};
+use crate::repository::{
+    ProjectMembersRepository, RequirementCommentsRepository, RequirementsRepository, UserRepository,
+};
+use crate::services::mentions::extract_mentions;
 
 pub struct CommentService<'a> {
     state: &'a AppState<DieselCachedRepo>,
@@ -70,8 +74,10 @@ impl<'a> CommentService<'a> {
         };
         let comment = self.repo_write().insert_requirement_comment(&new)?;
 
+        let mentioned_ids = self.mentioned_members(req.project_id, &comment.body);
         let ns = super::NotificationService::new(self.state);
-        ns.notify_comment_added(actor, &req, &comment.body);
+        let mentioned = ns.notify_mentioned(actor, &req, &comment.body, &mentioned_ids);
+        ns.notify_comment_added(actor, &req, &comment.body, &mentioned);
 
         Ok(comment)
     }
@@ -86,6 +92,29 @@ impl<'a> CommentService<'a> {
         let _req = self.repo_read().get_requirement_by_id(requirement_id)?;
         self.repo_read()
             .list_comments_by_requirement(requirement_id, version_id)
+    }
+
+    /// Ids of the project members mentioned in `body`. Mentions of anyone outside
+    /// the project are ignored, so a comment never reveals who has an account.
+    fn mentioned_members(&self, project_id: i32, body: &str) -> Vec<i32> {
+        let names = extract_mentions(body);
+        if names.is_empty() {
+            return Vec::new();
+        }
+        let repo = self.repo_read();
+        let members = repo.get_members_by_project(project_id).unwrap_or_default();
+        let mut ids: Vec<(usize, i32)> = members
+            .iter()
+            .filter_map(|m| {
+                let user = repo.get_user_by_id(m.user_id).ok()?;
+                let pos = names
+                    .iter()
+                    .position(|n| n.eq_ignore_ascii_case(&user.username))?;
+                Some((pos, user.id))
+            })
+            .collect();
+        ids.sort_unstable();
+        ids.into_iter().map(|(_, id)| id).collect()
     }
 
     fn repo_read(&self) -> std::sync::RwLockReadGuard<'_, DieselCachedRepo> {

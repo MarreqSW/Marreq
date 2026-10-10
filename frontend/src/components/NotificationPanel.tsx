@@ -40,6 +40,8 @@ function notificationIcon(type: string): string {
       return 'approval';
     case 'comment_added':
       return 'comment';
+    case 'mentioned':
+      return 'alternate_email';
     case 'requirement_created':
       return 'add_circle';
     case 'requirement_updated':

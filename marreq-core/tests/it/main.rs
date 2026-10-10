@@ -10,6 +10,7 @@ mod api_attachments_test;
 mod api_authentication_test;
 mod api_cache_integration_test;
 mod api_categories_integration_test;
+mod api_comment_mentions_test;
 mod api_constraint_violation_test;
 mod api_dsm_test;
 mod api_error_consistency_test;

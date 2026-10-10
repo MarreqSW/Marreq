@@ -831,7 +831,7 @@ export function createMarreqServer(ctx: SessionContext) {
       "create_requirement_comment",
       {
         description:
-          "Add a comment on a requirement. Optional requirement_version_id ties the comment to a version.",
+          "Add a comment on a requirement. Optional requirement_version_id ties the comment to a version. Mentioning a project member as @username in the body notifies them.",
         inputSchema: z.object({
           ...projectField,
           idempotency_key: operationKey,

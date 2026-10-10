@@ -208,7 +208,9 @@ href="#111-project-reviewers-workflow-gates">§11.1</a>);</li>
 <li><strong>suspect links</strong> to review, in projects where you can
 edit;</li>
 <li>unread notifications that ask something of you: you were made a
-requirement's reviewer, or someone commented on your requirement.</li>
+requirement's reviewer, someone commented on your requirement, or
+someone <strong>mentioned</strong> you in a comment (<a
+href="#46-comments">§4.6</a>).</li>
 </ul>
 <p>Select a row to open the requirement, the draft list, or the Matrix
 filtered to suspect links. Opening a notification marks it read. The
@@ -334,11 +336,13 @@ read (up to <em>99+</em>). Open it to see the list; select a
 notification to go to the requirement it is about, or <strong>Mark all
 as read</strong>. The list refreshes on its own.</p>
 <p>You are notified when you are made the <strong>reviewer</strong> of a
-requirement, and, in projects where you turned them on, when
-requirements are created, updated or deleted. Choose per project in
-<strong>Project settings › Notifications</strong>: <strong>In-app
-notifications for this project</strong> and <strong>Email notifications
-for this project</strong>.</p>
+requirement, when someone <strong>comments</strong> on a requirement you
+wrote or review, when someone <strong>mentions</strong> you in a comment
+(<a href="#46-comments">§4.6</a>), and, in projects where you turned
+them on, when requirements are created, updated or deleted. Choose per
+project in <strong>Project settings › Notifications</strong>:
+<strong>In-app notifications for this project</strong> and <strong>Email
+notifications for this project</strong>.</p>
 <h3 id="26-help">2.6 Help</h3>
 <p><strong>Help</strong> at the bottom of the sidebar
 (<code>/&lt;project-slug&gt;/help</code>) summarises the main pages and
@@ -854,6 +858,18 @@ requirements.</li>
 <li>The <strong>Discussion</strong> section of the requirement page
 lists the comments and has the form to add one. Each comment is attached
 to the version that was current when it was written.</li>
+<li>To <strong>mention</strong> a project member, type <code>@</code>
+and choose them from the list (arrow keys and <strong>Enter</strong> or
+<strong>Tab</strong>, or click; <strong>Esc</strong> closes it), or type
+their username, for example <code>@alice</code>. Mentions of project
+members are highlighted. Each member you mention is notified (<em>…
+mentioned you on REQ-…</em>) and sees it under <strong>Needs your
+attention</strong> on the start screen (<a
+href="#22-start-screen">§2.2</a>). Mentioning someone who is not a
+member of the project does nothing.</li>
+<li>A new comment also notifies the requirement's author and reviewer,
+unless the comment mentions them (then they get only the mention). You
+are never notified of your own comments.</li>
 <li>Comments cannot be edited or deleted.</li>
 <li>When the current version is <strong>Approved</strong>, the form is
 replaced by <em>Comments are locked on this approved version.</em>

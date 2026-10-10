@@ -14,6 +14,7 @@ import {
   listVerifications,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
+import { useRecentDetail } from '@/hooks/useRecentDetail';
 import AttachmentsPanel from '@/components/AttachmentsPanel';
 import VerificationControlPanel from '@/components/VerificationControlPanel';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -95,6 +96,7 @@ export default function ViewVerificationPage() {
   );
 
   const [row, setRow] = useState<Verification | null>(null);
+  useRecentDetail(pid, row ? row.reference_code || `#${row.id}` : null);
   const [statuses, setStatuses] = useState<VerificationStatus[]>([]);
   const [methods, setMethods] = useState<VerificationMethod[]>([]);
   const [siblings, setSiblings] = useState<Verification[]>([]);

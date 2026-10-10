@@ -18,6 +18,7 @@ pub mod error;
 pub mod exports;
 pub mod groups;
 pub mod guards;
+pub mod home;
 pub mod idempotency;
 pub mod imports;
 pub mod logs;
@@ -97,6 +98,8 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         auth::auth_me,
         auth::auth_update_me,
         dashboard::dashboard_json,
+        home::attention,
+        home::search,
         projects_session::list_for_session,
         projects_session::project_from_path,
         catalog::get,

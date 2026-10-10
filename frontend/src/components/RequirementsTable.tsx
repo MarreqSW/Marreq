@@ -153,7 +153,11 @@ export default function RequirementsTable({
 
   const [statusFilter, setStatusFilter] = useState<'all' | number>('all');
   const [categoryFilter, setCategoryFilter] = useState<'all' | number>('all');
-  const [approvalFilter, setApprovalFilter] = useState<'all' | string>('all');
+  // Deep-link: ?approval=draft|reviewed|approved (e.g. from the start screen, issue #387).
+  const [approvalFilter, setApprovalFilter] = useState<'all' | string>(() => {
+    const requested = searchParams.get('approval');
+    return requested && ['draft', 'reviewed', 'approved'].includes(requested) ? requested : 'all';
+  });
   const [sortColumn, setSortColumn] = useState<RequirementsSortColumn>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [visibleColumns, setVisibleColumns] = useState<RequirementsColumnId[]>(

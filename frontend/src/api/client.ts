@@ -7,6 +7,7 @@ export * from './verifications';
 export * from './catalog';
 export * from './traceability';
 export * from './projects';
+export * from './home';
 export * from './users';
 export * from './groups';
 export * from './baselines';

@@ -7,6 +7,7 @@ import type { User } from '@/api/types';
 import NotificationPanel from '@/components/NotificationPanel';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import { parseUser } from '@/utils/parseUser';
+import { recordVisit } from '@/utils/recentPages';
 import { useBuildInfo } from '@/hooks/useBuildInfo';
 import { getFrontendBuildConstants, shortSha } from '@/utils/semverRange';
 
@@ -184,6 +185,14 @@ export default function ProjectLayout() {
     setDrawerOpen(false);
   }, [location.pathname]);
 
+  // Remember the page for the start screen's Recent list (issue #387).
+  const currentProjectId = currentProject?.id;
+  useEffect(() => {
+    if (currentProjectId == null) return;
+    const subPath = location.pathname.slice(basePath.length);
+    recordVisit(currentProjectId, location.pathname + location.search, subPath);
+  }, [currentProjectId, basePath, location.pathname, location.search]);
+
   useEffect(() => {
     if (!drawerOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -319,7 +328,12 @@ export default function ProjectLayout() {
         } ${sidebarWide ? 'w-64' : 'w-18'}`}
       >
         <div className={`px-6 py-8 flex-1 min-h-0 overflow-y-auto ${!sidebarWide ? 'px-3' : ''}`}>
-          <div className={`flex items-center gap-3 mb-8 ${!sidebarWide ? 'flex-col' : ''}`}>
+          <Link
+            to="/"
+            title="Start screen"
+            aria-label="Marreq start screen"
+            className={`flex items-center gap-3 mb-8 ${!sidebarWide ? 'flex-col' : ''}`}
+          >
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center shrink-0">
               <span className="material-symbols-outlined text-white text-sm">architecture</span>
             </div>
@@ -331,7 +345,7 @@ export default function ProjectLayout() {
                 <p className="text-[10px] text-stitch-muted font-mono">{APP_VERSION}</p>
               </div>
             ) : null}
-          </div>
+          </Link>
           <nav className="flex flex-col space-y-1">
             {NAV_ITEMS.map((item) => (
               <div key={item.path}>

@@ -288,8 +288,71 @@ def option_d():
     return page("D · Search-first", body, "D")
 
 
+# ── E · Search with attention (D's minimal layout + B's attention list) ──
+def option_e():
+    attention = [
+        ("rate_review", "text-indigo-700", "REQ-PWR-012 is waiting for your review", "S", "bg-indigo-700", "Space Project", "1 h"),
+        ("link_off", "text-amber-700", "3 suspect links after REQ-THM-004 changed", "T", "bg-teal-700", "Thermal Subsystem", "5 h"),
+        ("alternate_email", "text-sky-700", "Bob mentioned you in REQ-NAV-007", "R", "bg-amber-700", "Rover Navigation", "1 d"),
+        ("rate_review", "text-indigo-700", "REQ-THM-009 is waiting for your review", "T", "bg-teal-700", "Thermal Subsystem", "2 d"),
+    ]
+    att_rows = "".join(f"""
+<li class="flex items-center gap-3 px-4 py-2.5">
+  {icon(ic, 'text-lg ' + col)}
+  <span class="text-sm text-stitch-fg flex-1 truncate">{text}</span>
+  <span class="flex items-center gap-1.5 text-xs text-stitch-muted w-40">{initial(ini, pcol, 'w-4 h-4 text-[9px] rounded-sm')}{proj}</span>
+  <span class="text-xs text-stitch-muted w-8 text-right">{when}</span>
+  {icon('chevron_right', 'text-base text-stitch-muted')}
+</li>""" for ic, col, text, ini, pcol, proj, when in attention)
+    recent = [
+        ("S", "Space Project", "bg-indigo-700", "Requirements › REQ-PWR-012", "2 hours ago"),
+        ("T", "Thermal Subsystem", "bg-teal-700", "Traceability › Matrix", "yesterday"),
+        ("R", "Rover Navigation", "bg-amber-700", "Dashboard", "3 days ago"),
+    ]
+    rec_rows = "".join(f"""
+<li class="flex items-center gap-3 px-4 py-2.5 {'bg-stitch-elevated/70' if i == 0 else ''}">
+  {initial(ini, col, 'w-6 h-6 text-[11px]')}
+  <span class="text-sm font-semibold text-stitch-fg w-44">{name}</span>
+  <span class="text-sm text-stitch-muted flex-1">{where}</span>
+  <span class="text-xs text-stitch-muted">{when}</span>
+  {'<kbd class="ml-2 rounded-sm border border-stitch-border bg-stitch-surface px-1.5 text-[10px] font-mono text-stitch-muted">↵</kbd>' if i == 0 else '<span class="ml-2 w-6"></span>'}
+</li>""" for i, (ini, name, col, where, when) in enumerate(recent))
+    body = f"""
+<div class="max-w-3xl mx-auto pt-2">
+  <h1 class="text-center text-2xl font-bold text-stitch-fg font-headline">Where to, Alice?</h1>
+  <p class="text-center text-sm text-stitch-muted mt-1 mb-5">2 reviews and 3 suspect links are waiting for you.</p>
+  <div class="rounded-xl border-2 border-stitch-accent/60 bg-stitch-surface shadow-lg flex items-center gap-3 px-5 py-3.5">
+    {icon('search', 'text-2xl text-stitch-accent')}
+    <span class="flex-1 text-base text-stitch-muted">Jump to a project, a requirement (REQ-…), or an action…</span>
+    <kbd class="rounded-sm border border-stitch-border bg-stitch-canvas px-2 py-0.5 text-xs font-mono text-stitch-muted">Ctrl K</kbd>
+  </div>
+  <section class="mt-8">
+    <div class="flex items-baseline justify-between px-1 mb-2">
+      <p class="text-xs font-bold uppercase tracking-widest text-stitch-muted">Needs your attention <span class="ml-1 rounded-full bg-red-600 text-white px-1.5 py-0.5 text-[10px] tracking-normal">5</span></p>
+      <span class="text-xs font-semibold text-stitch-accent">Show all</span>
+    </div>
+    <ul class="rounded-xl border border-stitch-border bg-stitch-surface shadow-sm overflow-hidden divide-y divide-stitch-border">{att_rows}</ul>
+  </section>
+  <section class="mt-6">
+    <p class="text-xs font-bold uppercase tracking-widest text-stitch-muted mb-2 px-1">Recent</p>
+    <ul class="rounded-xl border border-stitch-border bg-stitch-surface shadow-sm overflow-hidden divide-y divide-stitch-border">{rec_rows}</ul>
+  </section>
+  <div class="mt-5 flex items-center justify-between px-1 text-sm">
+    <div class="flex gap-5 font-semibold text-stitch-fg">
+      <span class="flex items-center gap-1.5">{icon('add_box', 'text-base text-stitch-muted')} New project</span>
+      <span class="flex items-center gap-1.5">{icon('upload_file', 'text-base text-stitch-muted')} Import</span>
+      <span class="flex items-center gap-1.5">{icon('workspaces', 'text-base text-stitch-muted')} Groups</span>
+    </div>
+    <div class="flex gap-4 text-stitch-accent font-semibold">
+      <span>All projects ({len(PROJECTS)})</span><span class="text-stitch-muted">Archived ({len(ARCHIVED)})</span>
+    </div>
+  </div>
+</div>"""
+    return page("E · Search with attention", body, "E")
+
+
 os.makedirs(OUT, exist_ok=True)
-for name, fn in [("A-launcher", option_a), ("B-workspace", option_b), ("C-tiles", option_c), ("D-search", option_d)]:
+for name, fn in [("A-launcher", option_a), ("B-workspace", option_b), ("C-tiles", option_c), ("D-search", option_d), ("E-search-attention", option_e)]:
     with open(os.path.join(OUT, f"{name}.html"), "w") as f:
         f.write(fn())
 print("ok")

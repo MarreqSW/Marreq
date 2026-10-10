@@ -185,9 +185,53 @@ system. The choice is stored in the browser.</li>
 <li><strong>Sign out</strong>: open the user menu (the circle with your
 initials, top right) and select <strong>Sign out</strong>.</li>
 </ul>
-<h3 id="22-dashboard">2.2 Dashboard</h3>
-<p>After signing in you land on the <strong>Dashboard</strong> of the
-project you used last (or your first project):
+<h3 id="22-start-screen">2.2 Start Screen</h3>
+<p>After signing in you land on the <strong>start screen</strong>
+(<code>/</code>). It asks <strong>Where to?</strong> and gathers what
+you need to pick up your work across all your projects:</p>
+<ul>
+<li><p><strong>Search</strong> (focused straight away; <strong>Ctrl
+K</strong> or <strong>⌘ K</strong> from anywhere on the page): type part
+of a project name, a requirement's reference code or title (e.g.
+<code>REQ-PWR-012</code> or <code>battery</code>), or an action such as
+<em>new project</em> or <em>groups</em>. Requirements are searched in
+every project you can see, from two characters on. Use the arrow keys
+and <strong>Enter</strong> to open a result, <strong>Esc</strong> to
+clear.</p></li>
+<li><p><strong>Needs your attention</strong>: what is waiting for you,
+newest first, with a one-line summary above the search box:</p>
+<ul>
+<li>requirements <strong>waiting for your approval</strong> (marked
+<em>Reviewed</em>) and the number of <strong>drafts to review</strong>,
+in projects where you are a project reviewer (<a
+href="#111-project-reviewers-workflow-gates">§11.1</a>);</li>
+<li><strong>suspect links</strong> to review, in projects where you can
+edit;</li>
+<li>unread notifications that ask something of you: you were made a
+requirement's reviewer, or someone commented on your requirement.</li>
+</ul>
+<p>Select a row to open the requirement, the draft list, or the Matrix
+filtered to suspect links. Opening a notification marks it read. The
+first four rows are shown; <strong>Show all</strong> lists the rest.
+Archived projects (<a href="#35-archiving-a-project">§3.5</a>) never
+appear here.</p></li>
+<li><p><strong>Recent</strong>: the last page you opened in each of your
+three most recent projects (for example <em>Requirements ›
+REQ-PWR-012</em>). It is kept in your browser, so it starts empty on a
+new browser; until then the list shows your projects instead.</p></li>
+<li><p><strong>New project</strong>, <strong>Import</strong> and
+<strong>Groups</strong>, and <strong>All projects (n)</strong> and
+<strong>Archived (n)</strong> to list your projects.</p></li>
+</ul>
+<p>The <strong>Marreq</strong> logo at the top of the project sidebar
+brings you back here. Links to a specific page (for example from a
+notification email) still open that page directly.</p>
+<p>If you are not a member of any project yet, you see <strong>You don't
+have any projects yet</strong> with <strong>New project</strong>,
+<strong>New group</strong>, <strong>Change password</strong> and
+<strong>Sign out</strong>.</p>
+<h3 id="23-dashboard">2.3 Dashboard</h3>
+<p>Each project opens on its <strong>Dashboard</strong>,
 <code>/&lt;project-slug&gt;/dashboard</code>, titled <strong>Project
 overview</strong>.</p>
 <ul>
@@ -203,11 +247,7 @@ Traceability and Reports.</li>
 </ul>
 <p><img src="../screenshots/dashboard.png"
 alt="Project dashboard" /></p>
-<p>If you are not a member of any project yet, you see <strong>You don't
-have any projects yet</strong> with <strong>New project</strong>,
-<strong>New group</strong>, <strong>Change password</strong> and
-<strong>Sign out</strong>.</p>
-<h3 id="23-navigation">2.3 Navigation</h3>
+<h3 id="24-navigation">2.4 Navigation</h3>
 <p>Inside a project, the <strong>sidebar</strong> on the left holds the
 pages you work in every day:</p>
 <table>
@@ -246,7 +286,8 @@ downloads</td>
 </tr>
 </tbody>
 </table>
-<p>At the bottom of the sidebar:</p>
+<p>At the top of the sidebar, the <strong>Marreq</strong> logo opens the
+start screen (<a href="#22-start-screen">§2.2</a>). At the bottom:</p>
 <ul>
 <li><strong>Project settings</strong>: one page with tabs for
 <strong>General</strong> (name, status, owner, group), <strong>Members
@@ -266,7 +307,7 @@ another project (you stay on the same page), or open
 project bundle</strong>;</li>
 <li><strong>Global Search</strong>, the theme switch (light, dark, match
 system) and the <strong>notifications</strong> bell (<a
-href="#24-notifications">§2.4</a>);</li>
+href="#25-notifications">§2.5</a>);</li>
 <li>the <strong>Create</strong> button: its main part creates a
 requirement (a verification when you are on the Verifications pages);
 the arrow next to it offers <strong>Create requirement</strong>,
@@ -287,7 +328,7 @@ the Matrix tab, <code>/&lt;project&gt;/import</code>,
 settings tab, <code>/&lt;project&gt;/admin/…</code> opens the
 Administration area, and links that still contain an owner or group name
 before the project are redirected.</p>
-<h3 id="24-notifications">2.4 Notifications</h3>
+<h3 id="25-notifications">2.5 Notifications</h3>
 <p>The bell in the top bar shows how many notifications you have not
 read (up to <em>99+</em>). Open it to see the list; select a
 notification to go to the requirement it is about, or <strong>Mark all
@@ -298,7 +339,7 @@ requirements are created, updated or deleted. Choose per project in
 <strong>Project settings › Notifications</strong>: <strong>In-app
 notifications for this project</strong> and <strong>Email notifications
 for this project</strong>.</p>
-<h3 id="25-help">2.5 Help</h3>
+<h3 id="26-help">2.6 Help</h3>
 <p><strong>Help</strong> at the bottom of the sidebar
 (<code>/&lt;project-slug&gt;/help</code>) summarises the main pages and
 shows the versions of the UI and the API with links to the most used
@@ -319,7 +360,7 @@ href="#103-importing-a-project-bundle">§10.3</a>).</p>
 (<code>/&lt;project-slug&gt;/dashboard</code>). Owner usernames and
 group names are not part of the path. Opening
 <code>/&lt;project-slug&gt;</code> shows the project's <a
-href="#22-dashboard">Dashboard</a>.</p>
+href="#23-dashboard">Dashboard</a>.</p>
 <h3 id="32-creating-a-project">3.2 Creating a Project</h3>
 <ol type="1">
 <li><strong>Projects → New project</strong>

@@ -14,6 +14,7 @@ mod api_constraint_violation_test;
 mod api_dsm_test;
 mod api_error_consistency_test;
 mod api_exports_integration_test;
+mod api_home_test;
 mod api_imports_integration_test;
 mod api_matrix_endpoint_test;
 mod api_matrix_integration_test;

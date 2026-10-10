@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as apiClient from '@/api/client';
+import { readRecentPages } from '@/utils/recentPages';
 import ProjectLayout from '../ProjectLayout';
 
 const dashboard = vi.hoisted(() => ({
@@ -68,6 +69,7 @@ describe('ProjectLayout navigation', () => {
     const sidebar = screen.getByRole('complementary', { name: 'Project navigation' });
     const links = within(sidebar).getAllByRole('link');
     expect(links.map((a) => a.getAttribute('href'))).toEqual([
+      '/', // the Marreq logo opens the start screen (issue #387)
       '/space-project/dashboard',
       '/space-project/requirements',
       '/space-project/verifications',
@@ -186,5 +188,15 @@ describe('ProjectLayout navigation', () => {
     renderAt('/space-project/dashboard');
     expect(screen.queryByText('This project is archived.')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /create requirement/i })).toBeInTheDocument();
+  });
+
+  it('records the page for the start screen\'s Recent list', () => {
+    renderAt('/rover/traceability?view=matrix');
+    expect(readRecentPages()[0]).toMatchObject({
+      projectId: 6,
+      path: '/rover/traceability?view=matrix',
+      section: 'Traceability',
+    });
+    expect(screen.getByRole('link', { name: 'Marreq start screen' })).toHaveAttribute('href', '/');
   });
 });

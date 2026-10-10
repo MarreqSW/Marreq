@@ -8,7 +8,7 @@ import {
   useNavigate,
 } from 'react-router-dom';
 import { DashboardProvider, useDashboard } from '@/context/DashboardContext';
-import HomeRedirect from '@/pages/HomeRedirect';
+import StartPage from '@/pages/StartPage';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
 import ForgotPasswordPage from '@/pages/ForgotPasswordPage';
@@ -114,7 +114,7 @@ export default function App() {
           </DashboardProvider>
         }
       >
-        <Route index element={<HomeRedirect />} />
+        <Route index element={<StartPage />} />
         <Route path="change-password" element={<ChangePasswordPage />} />
         <Route path="account" element={<AccountPage />} />
         <Route path="change_password" element={<Navigate to="/change-password" replace />} />

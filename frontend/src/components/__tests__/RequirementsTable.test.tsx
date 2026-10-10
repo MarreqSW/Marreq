@@ -165,6 +165,14 @@ describe('RequirementsTable views', () => {
     expect(api.patchRequirementByProject).not.toHaveBeenCalled();
   });
 
+  it('opens filtered by approval from a ?approval= link', async () => {
+    render(<Harness search="?approval=draft" />);
+    expect(await screen.findByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Filter by approval' })).toHaveValue('draft');
+    expect(screen.getByRole('button', { name: parent.title })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: alpha.title })).not.toBeInTheDocument();
+  });
+
   it('renders List as a contextual review surface with the statement and core metadata', async () => {
     render(<Harness search="?view=list" />);
 

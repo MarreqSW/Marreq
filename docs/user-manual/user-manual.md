@@ -65,9 +65,27 @@ If you use a demo setup, typical users include `alice`, `dr_smith`, `eng_jones`,
 - **Theme**: the **Light / Dark / Auto** buttons at the top right of the login page (and in the top bar inside the application) switch the colour theme; *Auto* follows your system. The choice is stored in the browser.
 - **Sign out**: open the user menu (the circle with your initials, top right) and select **Sign out**.
 
-### 2.2 Dashboard
+### 2.2 Start Screen
 
-After signing in you land on the **Dashboard** of the project you used last (or your first project): `/<project-slug>/dashboard`, titled **Project overview**.
+After signing in you land on the **start screen** (`/`). It asks **Where to?** and gathers what you need to pick up your work across all your projects:
+
+- **Search** (focused straight away; **Ctrl K** or **⌘ K** from anywhere on the page): type part of a project name, a requirement's reference code or title (e.g. `REQ-PWR-012` or `battery`), or an action such as *new project* or *groups*. Requirements are searched in every project you can see, from two characters on. Use the arrow keys and **Enter** to open a result, **Esc** to clear.
+- **Needs your attention**: what is waiting for you, newest first, with a one-line summary above the search box:
+  - requirements **waiting for your approval** (marked *Reviewed*) and the number of **drafts to review**, in projects where you are a project reviewer ([§11.1](#111-project-reviewers-workflow-gates));
+  - **suspect links** to review, in projects where you can edit;
+  - unread notifications that ask something of you: you were made a requirement's reviewer, or someone commented on your requirement.
+
+  Select a row to open the requirement, the draft list, or the Matrix filtered to suspect links. Opening a notification marks it read. The first four rows are shown; **Show all** lists the rest. Archived projects ([§3.5](#35-archiving-a-project)) never appear here.
+- **Recent**: the last page you opened in each of your three most recent projects (for example *Requirements › REQ-PWR-012*). It is kept in your browser, so it starts empty on a new browser; until then the list shows your projects instead.
+- **New project**, **Import** and **Groups**, and **All projects (n)** and **Archived (n)** to list your projects.
+
+The **Marreq** logo at the top of the project sidebar brings you back here. Links to a specific page (for example from a notification email) still open that page directly.
+
+If you are not a member of any project yet, you see **You don't have any projects yet** with **New project**, **New group**, **Change password** and **Sign out**.
+
+### 2.3 Dashboard
+
+Each project opens on its **Dashboard**, `/<project-slug>/dashboard`, titled **Project overview**.
 
 - **Counts**: Requirements, Verifications, Matrix links, and **Req. with tests** (the share of requirements linked to at least one verification).
 - **Traceability health**: **Gaps** (requirements without tests), **Orphans** (tests without requirements) and **Suspect** (links flagged as suspect). Each card opens the matching list on the Reports page.
@@ -75,9 +93,7 @@ After signing in you land on the **Dashboard** of the project you used last (or 
 
 ![Project dashboard](screenshots/dashboard.png)
 
-If you are not a member of any project yet, you see **You don't have any projects yet** with **New project**, **New group**, **Change password** and **Sign out**.
-
-### 2.3 Navigation
+### 2.4 Navigation
 
 Inside a project, the **sidebar** on the left holds the pages you work in every day:
 
@@ -90,7 +106,7 @@ Inside a project, the **sidebar** on the left holds the pages you work in every 
 | **Baselines** | Immutable snapshots of the project |
 | **Reports & exports** | Coverage reports and Excel, PDF, ReqIF/ReqIFZ and JSON downloads |
 
-At the bottom of the sidebar:
+At the top of the sidebar, the **Marreq** logo opens the start screen ([§2.2](#22-start-screen)). At the bottom:
 
 - **Project settings**: one page with tabs for **General** (name, status, owner, group), **Members & reviewers**, **Catalog** (categories, applicability, statuses, custom fields, verification methods), **Storage**, **Notifications** and **Import**.
 - **Help**, the **Collapse** button (the sidebar remembers whether it is collapsed) and the UI and API versions.
@@ -98,7 +114,7 @@ At the bottom of the sidebar:
 The top bar holds:
 
 - the project name and the **Projects** menu: switch to another project (you stay on the same page), or open **Groups**, **New project** or **Import project bundle**;
-- **Global Search**, the theme switch (light, dark, match system) and the **notifications** bell ([§2.4](#24-notifications));
+- **Global Search**, the theme switch (light, dark, match system) and the **notifications** bell ([§2.5](#25-notifications));
 - the **Create** button: its main part creates a requirement (a verification when you are on the Verifications pages); the arrow next to it offers **Create requirement**, **Create verification** and **Import**;
 - the **user menu** (avatar): Account settings, **Administration** (instance administrators only, see [§13](#13-administration)), Change password and Sign out.
 
@@ -108,13 +124,13 @@ On a narrow screen the sidebar is hidden; open it with the **☰** button in the
 
 Older links keep working: `/<project>/matrix` opens the Matrix tab, `/<project>/import`, `/<project>/members` and `/<project>/catalog/…` open the matching Project settings tab, `/<project>/admin/…` opens the Administration area, and links that still contain an owner or group name before the project are redirected.
 
-### 2.4 Notifications
+### 2.5 Notifications
 
 The bell in the top bar shows how many notifications you have not read (up to *99+*). Open it to see the list; select a notification to go to the requirement it is about, or **Mark all as read**. The list refreshes on its own.
 
 You are notified when you are made the **reviewer** of a requirement, and, in projects where you turned them on, when requirements are created, updated or deleted. Choose per project in **Project settings › Notifications**: **In-app notifications for this project** and **Email notifications for this project**.
 
-### 2.5 Help
+### 2.6 Help
 
 **Help** at the bottom of the sidebar (`/<project-slug>/help`) summarises the main pages and shows the versions of the UI and the API with links to the most used pages.
 
@@ -126,7 +142,7 @@ You are notified when you are made the **reviewer** of a requirement, and, in pr
 
 Open the **Projects** menu (the project name in the top bar). It lists your projects: select one to switch to it, staying on the same kind of page. Archived projects ([§3.5](#35-archiving-a-project)) are grouped under **Archived (n)** at the end of the list; select it to show them. The menu also has **Groups** ([§3.7](#37-groups)), **New project** and **Import project bundle** ([§10.3](#103-importing-a-project-bundle)).
 
-Project URLs use the project slug only (`/<project-slug>/dashboard`). Owner usernames and group names are not part of the path. Opening `/<project-slug>` shows the project's [Dashboard](#22-dashboard).
+Project URLs use the project slug only (`/<project-slug>/dashboard`). Owner usernames and group names are not part of the path. Opening `/<project-slug>` shows the project's [Dashboard](#23-dashboard).
 
 ### 3.2 Creating a Project
 

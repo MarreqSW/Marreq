@@ -5,6 +5,7 @@ import RequirementCommentComposer, {
 } from '@/components/RequirementCommentComposer';
 import { useDashboard } from '@/context/DashboardContext';
 import { useProjectArchived } from '@/hooks/useProjectArchived';
+import { useRecentDetail } from '@/hooks/useRecentDetail';
 import {
   getMyPermissions,
   getRequirementByProject,
@@ -124,6 +125,7 @@ export default function ViewRequirementPage() {
   const viewingVersionParam = Number.isFinite(requestedVersionId);
 
   const [detail, setDetail] = useState<RequirementDetailPayload | null>(null);
+  useRecentDetail(pid, detail ? detail.reference_code || `#${detail.id}` : null);
   const [snapshot, setSnapshot] = useState<RequirementVersion | null>(null);
   const [snapshotParents, setSnapshotParents] = useState<RequirementVersionLink[]>([]);
   const [methods, setMethods] = useState<VerificationMethod[]>([]);

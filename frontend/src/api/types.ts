@@ -912,3 +912,34 @@ export interface RequirementCloseOut {
     outcome: VerificationOutcome;
   }[];
 }
+
+/** One row of "Needs your attention" on the start screen (`GET /api/home/attention`, issue #387). */
+export interface AttentionItem {
+  kind: 'approval' | 'review' | 'suspect' | 'notification';
+  project_id: number;
+  title: string;
+  requirement_id: number | null;
+  reference_code: string | null;
+  /** Drafts or suspect links, for the per-project rows. */
+  count: number | null;
+  notification_id: number | null;
+  notification_type: string | null;
+  /** Server time without a zone (UTC), newest first. */
+  at: string | null;
+}
+
+export interface AttentionResponse {
+  items: AttentionItem[];
+  approvals: number;
+  reviews: number;
+  suspect_links: number;
+  notifications: number;
+}
+
+/** A requirement found by the start-screen search (`GET /api/search`). */
+export interface SearchHit {
+  project_id: number;
+  requirement_id: number;
+  reference_code: string;
+  title: string;
+}

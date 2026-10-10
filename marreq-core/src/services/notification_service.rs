@@ -11,6 +11,18 @@ use crate::models::{
 use crate::repository::errors::RepoError;
 use crate::repository::{NotificationRepository, ProjectReviewersRepository, UserRepository};
 use crate::services::email_sender;
+use std::collections::HashSet;
+
+/// Longest comment excerpt, in characters, carried in a notification body.
+const EXCERPT_CHARS: usize = 100;
+
+/// The first [`EXCERPT_CHARS`] characters of a comment, with an ellipsis when cut.
+fn excerpt(body: &str) -> String {
+    match body.char_indices().nth(EXCERPT_CHARS) {
+        Some((cut, _)) => format!("{}…", &body[..cut]),
+        None => body.to_string(),
+    }
+}
 
 pub struct NotificationService<'a> {
     state: &'a AppState<DieselCachedRepo>,
@@ -84,19 +96,17 @@ impl<'a> NotificationService<'a> {
     }
 
     /// Notify the requirement author and reviewer when a comment is added.
+    /// Users in `skip` (those already notified of a mention in the same comment)
+    /// get nothing, so nobody receives two notifications for one comment.
     pub fn notify_comment_added(
         &self,
         actor: &User,
         requirement: &Requirement,
         comment_body: &str,
+        skip: &HashSet<i32>,
     ) {
-        let truncated = if comment_body.len() > 100 {
-            format!("{}…", &comment_body[..100])
-        } else {
-            comment_body.to_string()
-        };
         let title = format!("{} commented on {}", actor.name, requirement.reference_code);
-        let mut notified = std::collections::HashSet::new();
+        let mut notified = skip.clone();
         notified.insert(actor.id);
         for uid in [requirement.author_id, requirement.reviewer_id] {
             if notified.insert(uid) {
@@ -105,13 +115,46 @@ impl<'a> NotificationService<'a> {
                     project_id: Some(requirement.project_id),
                     notification_type: "comment_added".into(),
                     title: title.clone(),
-                    body: Some(truncated.clone()),
+                    body: Some(excerpt(comment_body)),
                     entity_type: Some("requirement".into()),
                     entity_id: Some(requirement.id),
                     actor_id: Some(actor.id),
                 });
             }
         }
+    }
+
+    /// Notify users mentioned in a comment. The caller resolves mentions to project
+    /// members; the actor is never notified of their own mention. Returns the ids
+    /// that were notified.
+    pub fn notify_mentioned(
+        &self,
+        actor: &User,
+        requirement: &Requirement,
+        comment_body: &str,
+        mentioned_ids: &[i32],
+    ) -> HashSet<i32> {
+        let title = format!(
+            "{} mentioned you on {}",
+            actor.name, requirement.reference_code
+        );
+        let mut notified = HashSet::new();
+        for &uid in mentioned_ids {
+            if uid == actor.id || !notified.insert(uid) {
+                continue;
+            }
+            self.create_notification(NewNotification {
+                user_id: uid,
+                project_id: Some(requirement.project_id),
+                notification_type: "mentioned".into(),
+                title: title.clone(),
+                body: Some(excerpt(comment_body)),
+                entity_type: Some("requirement".into()),
+                entity_id: Some(requirement.id),
+                actor_id: Some(actor.id),
+            });
+        }
+        notified
     }
 
     // ── Project-subscribed notifications ─────────────────────────────────
@@ -336,11 +379,68 @@ mod tests {
         let mut req = requirement(1, 10);
         req.author_id = 2;
         req.reviewer_id = 3;
-        service.notify_comment_added(&actor(), &req, "Great work!");
+        service.notify_comment_added(&actor(), &req, "Great work!", &HashSet::new());
 
         assert_eq!(service.unread_count(2).unwrap(), 1);
         assert_eq!(service.unread_count(3).unwrap(), 1);
         assert_eq!(service.unread_count(1).unwrap(), 0);
+    }
+
+    #[test]
+    fn notify_mentioned_notifies_each_member_once_and_skips_the_actor() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(1, actor());
+        repo.users
+            .insert(2, DieselRepoMock::make_user(2, "bob", ""));
+        repo.users
+            .insert(3, DieselRepoMock::make_user(3, "carol", ""));
+        let state = state_with_repo(repo);
+        let service = NotificationService::new(&state);
+
+        let req = requirement(1, 10);
+        let notified = service.notify_mentioned(&actor(), &req, "@bob @carol", &[2, 3, 2, 1]);
+
+        assert_eq!(notified, HashSet::from([2, 3]));
+        assert_eq!(service.unread_count(1).unwrap(), 0);
+        let bob = service.list_for_user(2, 10, false).unwrap();
+        assert_eq!(bob.len(), 1);
+        assert_eq!(bob[0].notification_type, "mentioned");
+        assert!(bob[0].title.ends_with("mentioned you on REQ-001"));
+        assert_eq!(bob[0].entity_id, Some(1));
+    }
+
+    #[test]
+    fn notify_comment_added_skips_users_already_mentioned() {
+        let mut repo = DieselRepoMock::default();
+        repo.users.insert(1, actor());
+        repo.users
+            .insert(2, DieselRepoMock::make_user(2, "bob", ""));
+        repo.users
+            .insert(3, DieselRepoMock::make_user(3, "carol", ""));
+        let state = state_with_repo(repo);
+        let service = NotificationService::new(&state);
+
+        let mut req = requirement(1, 10);
+        req.author_id = 2;
+        req.reviewer_id = 3;
+        let mentioned = service.notify_mentioned(&actor(), &req, "@bob", &[2]);
+        service.notify_comment_added(&actor(), &req, "@bob", &mentioned);
+
+        let bob = service.list_for_user(2, 10, false).unwrap();
+        assert_eq!(bob.len(), 1);
+        assert_eq!(bob[0].notification_type, "mentioned");
+        let carol = service.list_for_user(3, 10, false).unwrap();
+        assert_eq!(carol.len(), 1);
+        assert_eq!(carol[0].notification_type, "comment_added");
+    }
+
+    #[test]
+    fn comment_excerpt_cuts_on_character_boundaries() {
+        let body = "é".repeat(150);
+        let cut = excerpt(&body);
+        assert_eq!(cut.chars().count(), EXCERPT_CHARS + 1);
+        assert!(cut.ends_with('…'));
+        assert_eq!(excerpt("short"), "short");
     }
 
     #[test]

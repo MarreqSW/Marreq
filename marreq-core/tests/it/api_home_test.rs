@@ -57,6 +57,7 @@ fn busy_repo() -> DieselRepoMock {
         notification(4, ADMIN, "comment_added", true),
         notification(5, ADMIN, "approval_requested", false),
         notification(6, VIEWER, "comment_added", false),
+        notification(7, ADMIN, "mentioned", false),
     ];
     repo
 }
@@ -89,8 +90,8 @@ async fn attention_lists_approvals_drafts_suspect_links_and_notifications() {
     assert_eq!(body["reviews"], 1);
     assert_eq!(body["suspect_links"], 1);
     assert_eq!(
-        body["notifications"], 2,
-        "unread comment and review_assigned only"
+        body["notifications"], 3,
+        "unread comment, review_assigned and mentioned only"
     );
 
     let items = body["items"].as_array().unwrap();
@@ -110,7 +111,7 @@ async fn attention_lists_approvals_drafts_suspect_links_and_notifications() {
         .collect();
     assert_eq!(
         ids,
-        vec![2, 1],
+        vec![7, 2, 1],
         "newest first; read, other users' and other types left out"
     );
 }

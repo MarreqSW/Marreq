@@ -40,6 +40,7 @@ import type {
 } from '@/api/types';
 import AttachmentsPanel from '@/components/AttachmentsPanel';
 import RequirementVersionDiffDialog from '@/components/RequirementVersionDiffDialog';
+import CommentBody from '@/components/CommentBody';
 import RequirementCommentComposer, {
   commentsLockedForApproval,
 } from '@/components/RequirementCommentComposer';
@@ -1175,7 +1176,7 @@ export default function EditRequirementPage() {
                           <span className="text-xs font-bold text-stitch-fg">{c.author_name}</span>
                           <span className="text-[10px] text-stitch-muted">{formatRelativeTime(c.created_at) || formatTs(c.created_at)}</span>
                         </div>
-                        <p className="text-xs text-stitch-muted leading-relaxed whitespace-pre-wrap">{c.body}</p>
+                        <CommentBody body={c.body} members={members} className="text-xs text-stitch-muted leading-relaxed whitespace-pre-wrap" />
                       </div>
                     </div>
                   ))}
@@ -1188,6 +1189,7 @@ export default function EditRequirementPage() {
                   locked={commentsLockedForApproval(
                     versionsNewestFirst[0]?.approval_state ?? detail.approval_state,
                   )}
+                  members={members}
                   onPosted={(comment) => setComments((prev) => [comment, ...prev])}
                 />
               </div>

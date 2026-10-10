@@ -73,7 +73,7 @@ After signing in you land on the **start screen** (`/`). It asks **Where to?** a
 - **Needs your attention**: what is waiting for you, newest first, with a one-line summary above the search box:
   - requirements **waiting for your approval** (marked *Reviewed*) and the number of **drafts to review**, in projects where you are a project reviewer ([§11.1](#111-project-reviewers-workflow-gates));
   - **suspect links** to review, in projects where you can edit;
-  - unread notifications that ask something of you: you were made a requirement's reviewer, or someone commented on your requirement.
+  - unread notifications that ask something of you: you were made a requirement's reviewer, someone commented on your requirement, or someone **mentioned** you in a comment ([§4.6](#46-comments)).
 
   Select a row to open the requirement, the draft list, or the Matrix filtered to suspect links. Opening a notification marks it read. The first four rows are shown; **Show all** lists the rest. Archived projects ([§3.5](#35-archiving-a-project)) never appear here.
 - **Recent**: the last page you opened in each of your three most recent projects (for example *Requirements › REQ-PWR-012*). It is kept in your browser, so it starts empty on a new browser; until then the list shows your projects instead.
@@ -128,7 +128,7 @@ Older links keep working: `/<project>/matrix` opens the Matrix tab, `/<project>/
 
 The bell in the top bar shows how many notifications you have not read (up to *99+*). Open it to see the list; select a notification to go to the requirement it is about, or **Mark all as read**. The list refreshes on its own.
 
-You are notified when you are made the **reviewer** of a requirement, and, in projects where you turned them on, when requirements are created, updated or deleted. Choose per project in **Project settings › Notifications**: **In-app notifications for this project** and **Email notifications for this project**.
+You are notified when you are made the **reviewer** of a requirement, when someone **comments** on a requirement you wrote or review, when someone **mentions** you in a comment ([§4.6](#46-comments)), and, in projects where you turned them on, when requirements are created, updated or deleted. Choose per project in **Project settings › Notifications**: **In-app notifications for this project** and **Email notifications for this project**.
 
 ### 2.6 Help
 
@@ -360,6 +360,8 @@ Formatting is shown on the requirement page, and version snapshots and review ca
 ### 4.6 Comments
 
 - The **Discussion** section of the requirement page lists the comments and has the form to add one. Each comment is attached to the version that was current when it was written.
+- To **mention** a project member, type `@` and choose them from the list (arrow keys and **Enter** or **Tab**, or click; **Esc** closes it), or type their username, for example `@alice`. Mentions of project members are highlighted. Each member you mention is notified (*… mentioned you on REQ-…*) and sees it under **Needs your attention** on the start screen ([§2.2](#22-start-screen)). Mentioning someone who is not a member of the project does nothing.
+- A new comment also notifies the requirement's author and reviewer, unless the comment mentions them (then they get only the mention). You are never notified of your own comments.
 - Comments cannot be edited or deleted.
 - When the current version is **Approved**, the form is replaced by *Comments are locked on this approved version.* Editing the requirement creates a new draft version, which can be discussed again.
 

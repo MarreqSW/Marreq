@@ -266,7 +266,7 @@ For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For trac
 | `patch_requirement` | Update a requirement (creates new version). Changing `status_id` requires project reviewer rules on the API |
 | `set_approval` | Set requirement version approval to `reviewed` or `approved` |
 | `create_baseline` | Create a new baseline snapshot |
-| `create_requirement_comment` | Add a comment on a requirement |
+| `create_requirement_comment` | Add a comment on a requirement (`@username` mentions notify project members) |
 
 ### Trace write (`MARREQ_TRACE_WRITE=true`)
 

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { createRequirementComment } from '@/api/client';
-import type { RequirementCommentItem } from '@/api/types';
+import type { ProjectMember, RequirementCommentItem } from '@/api/types';
+import MentionTextarea from '@/components/MentionTextarea';
 
 const textareaClass =
   'w-full min-h-[72px] text-sm font-medium resize-y bg-stitch-elevated border border-stitch-border rounded-lg px-3 py-2 text-stitch-fg focus:border-stitch-accent focus:ring-1 focus:ring-stitch-accent/30 outline-hidden transition-colors';
@@ -14,12 +15,15 @@ export default function RequirementCommentComposer({
   versionId,
   csrfToken,
   locked = false,
+  members = [],
   onPosted,
 }: {
   requirementId: number;
   versionId: number | null;
   csrfToken: string | null | undefined;
   locked?: boolean;
+  /** Project members suggested after `@`. */
+  members?: ProjectMember[];
   onPosted: (comment: RequirementCommentItem) => void;
 }) {
   const [body, setBody] = useState('');
@@ -65,12 +69,13 @@ export default function RequirementCommentComposer({
           {error}
         </p>
       ) : null}
-      <textarea
+      <MentionTextarea
         className={textareaClass}
-        placeholder="Add a comment…"
+        placeholder={members.length > 0 ? 'Add a comment… (@ to mention)' : 'Add a comment…'}
         value={body}
-        onChange={(e) => setBody(e.target.value)}
-        aria-label="Add a comment"
+        onChange={setBody}
+        members={members}
+        ariaLabel="Add a comment"
       />
       <button
         type="button"

@@ -238,6 +238,33 @@ describe('ViewRequirementPage snapshot', () => {
     expect(screen.queryByRole('link', { name: 'edit Edit' })).not.toBeInTheDocument();
   });
 
+  it('suggests project members after @ and highlights mentions in comments', async () => {
+    vi.mocked(apiClient.listProjectMembers).mockResolvedValue([
+      { user_id: 9, role: 2, role_label: 'Reviewer', username: 'bob', name: 'Bob Reviewer' },
+    ]);
+    vi.mocked(apiClient.listRequirementComments).mockResolvedValue([
+      {
+        id: 5,
+        requirement_id: 42,
+        requirement_version_id: null,
+        author_id: 9,
+        author_name: 'Bob Reviewer',
+        body: 'Thanks @bob, and @nobody',
+        created_at: '2026-01-01T10:00:00',
+      },
+    ]);
+    const user = userEvent.setup();
+    renderView('/space-project/requirements/42');
+
+    expect(await screen.findByText('@bob')).toHaveAttribute('title', 'Bob Reviewer');
+    expect(screen.queryByText('@nobody')).not.toBeInTheDocument();
+
+    const box = await screen.findByRole('combobox', { name: 'Add a comment' });
+    await user.type(box, 'Ask @bo');
+    await user.keyboard('{Enter}');
+    expect(box).toHaveValue('Ask @bob ');
+  });
+
   it('hides the composer when the current version is approved', async () => {
     vi.mocked(apiClient.getRequirementByProject).mockResolvedValue({
       ...current,

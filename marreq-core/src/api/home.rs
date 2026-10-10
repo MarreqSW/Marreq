@@ -23,7 +23,7 @@ const MAX_ATTENTION_ITEMS: usize = 50;
 const NOTIFICATION_SCAN: i64 = 100;
 /// Notification types that ask something of the user. `approval_requested`
 /// is left out: pending approvals are computed live instead.
-const ATTENTION_NOTIFICATIONS: [&str; 2] = ["review_assigned", "comment_added"];
+const ATTENTION_NOTIFICATIONS: [&str; 3] = ["review_assigned", "comment_added", "mentioned"];
 const DEFAULT_SEARCH_LIMIT: usize = 20;
 const MAX_SEARCH_LIMIT: usize = 50;
 

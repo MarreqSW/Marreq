@@ -68,9 +68,14 @@ function itemIcon(item: AttentionItem): [string, string] {
     case 'suspect':
       return ['link_off', 'text-amber-700 dark:text-amber-300'];
     default:
-      return item.notification_type === 'comment_added'
-        ? ['comment', 'text-sky-700 dark:text-sky-300']
-        : ['rate_review', 'text-indigo-700 dark:text-indigo-300'];
+      switch (item.notification_type) {
+        case 'comment_added':
+          return ['comment', 'text-sky-700 dark:text-sky-300'];
+        case 'mentioned':
+          return ['alternate_email', 'text-violet-700 dark:text-violet-300'];
+        default:
+          return ['rate_review', 'text-indigo-700 dark:text-indigo-300'];
+      }
   }
 }
 

@@ -92,6 +92,19 @@ describe('StartPage', () => {
     expect(screen.getByTestId('where')).toHaveTextContent('/rover/requirements/70');
   });
 
+  it('shows mentions with their own icon', async () => {
+    vi.mocked(apiClient.getAttention).mockResolvedValueOnce({
+      ...attention,
+      items: [
+        { kind: 'notification', project_id: 6, title: 'Bob mentioned you on NAV-7', requirement_id: 70, reference_code: null, count: null, notification_id: 100, notification_type: 'mentioned', at: hoursAgo(1) },
+      ],
+    });
+    renderStart();
+    const link = await screen.findByRole('link', { name: /bob mentioned you on nav-7/i });
+    expect(link).toHaveAttribute('href', '/rover/requirements/70');
+    expect(within(link).getByText('alternate_email')).toBeInTheDocument();
+  });
+
   it('says so when nothing needs attention, or when it cannot load', async () => {
     vi.mocked(apiClient.getAttention).mockResolvedValueOnce({
       items: [],

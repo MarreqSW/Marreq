@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useOutletContext, useParams } from 'react-router-dom';
+import CommentBody from '@/components/CommentBody';
 import RequirementCommentComposer, {
   commentsLockedForApproval,
 } from '@/components/RequirementCommentComposer';
@@ -905,7 +906,7 @@ export default function ViewRequirementPage() {
                         </span>
                       ) : null}
                     </div>
-                    <p className="text-sm text-stitch-fg/90 leading-relaxed whitespace-pre-wrap">{c.body}</p>
+                    <CommentBody body={c.body} members={members} className="text-sm text-stitch-fg/90 leading-relaxed whitespace-pre-wrap" />
                   </div>
                 </div>
               ))
@@ -918,6 +919,7 @@ export default function ViewRequirementPage() {
               versionId={detail.current_version_id}
               csrfToken={csrfToken}
               locked={commentsLockedForApproval(view.approval_state)}
+              members={members}
               onPosted={(comment) => setComments((prev) => [comment, ...prev])}
             />
           </div>

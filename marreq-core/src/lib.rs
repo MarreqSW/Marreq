@@ -39,4 +39,5 @@ pub mod schema;
 pub mod services;
 pub mod status_enums;
 pub mod storage;
+pub mod use_case_document;
 pub mod validation;

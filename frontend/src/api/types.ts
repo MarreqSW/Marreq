@@ -943,3 +943,146 @@ export interface SearchHit {
   reference_code: string;
   title: string;
 }
+
+// ----- Use cases (issue #398/#399) -----
+
+/** One element of a use case list: a precondition, step or postcondition. */
+export interface UseCaseElement {
+  id: string;
+  text: string;
+}
+
+export type UseCaseBranchKind = 'alternative' | 'exception';
+
+export type UseCaseBranchEnd =
+  | { type: 'rejoin'; step: string }
+  | { type: 'end'; outcome: 'success' | 'failure' };
+
+export interface UseCaseBranch {
+  id: string;
+  kind: UseCaseBranchKind;
+  title: string;
+  /** The main step the branch starts from. */
+  from_step: string;
+  steps: UseCaseElement[];
+  end: UseCaseBranchEnd;
+}
+
+/** `marreq.use-case.v1`: the content of one use case version or draft. */
+export interface UseCaseDocument {
+  schema: string;
+  title: string;
+  primary_actor: string | null;
+  secondary_actors: string[];
+  summary: string | null;
+  preconditions: UseCaseElement[];
+  main: UseCaseElement[];
+  branches: UseCaseBranch[];
+  postconditions: UseCaseElement[];
+}
+
+/** Display labels by element id: `3`, `A3`, `A3.1`, `E4`, `P1`, `Q1`. */
+export type UseCaseLabels = Record<string, string>;
+
+export interface UseCaseRow {
+  id: number;
+  reference_code: string;
+  title: string;
+  primary_actor: string | null;
+  step_count: number;
+  alternative_count: number;
+  exception_count: number;
+  /** Of the current version; `null` before the first publish. */
+  approval_state: string | null;
+  current_version_number: number | null;
+  has_draft: boolean;
+  updated_at: string;
+}
+
+export interface UseCaseVersionSummary {
+  id: number;
+  version_number: number;
+  approval_state: string;
+  title: string;
+  primary_actor: string | null;
+  change_note: string | null;
+  created_by: number | null;
+  created_by_name: string | null;
+  created_at: string;
+  reviewed_by: number | null;
+  reviewed_at: string | null;
+  approved_by: number | null;
+  approved_at: string | null;
+}
+
+export interface UseCaseVersion extends UseCaseVersionSummary {
+  document: UseCaseDocument;
+  labels: UseCaseLabels;
+}
+
+export interface UseCaseDraftSummary {
+  revision: number;
+  base_version_id: number | null;
+  updated_by: number | null;
+  updated_by_name: string | null;
+  updated_at: string;
+}
+
+export interface UseCaseDraft extends UseCaseDraftSummary {
+  use_case_id: number;
+  document: UseCaseDocument;
+  labels: UseCaseLabels;
+}
+
+export type UseCaseEffect =
+  | { type: 'relabelled'; id: string; from: string; to: string }
+  | { type: 'removed'; id: string }
+  | { type: 'rebranched'; id: string; from_step: string }
+  | { type: 'created'; id: string };
+
+export interface UseCaseDraftChange extends UseCaseDraft {
+  effects: UseCaseEffect[];
+}
+
+export interface UseCaseDetail {
+  id: number;
+  project_id: number;
+  reference_code: string;
+  title: string;
+  created_by: number | null;
+  created_at: string;
+  updated_at: string;
+  current_version: UseCaseVersion | null;
+  draft: UseCaseDraftSummary | null;
+}
+
+/** A list of elements: a top-level list or a branch's steps. */
+export type UseCaseListRef = 'preconditions' | 'main' | 'postconditions' | { branch: string };
+
+/** Draft operations; see docs/developer/use-cases-api.md. `after: null` is first, omitted is last. */
+export type UseCaseOperation =
+  | {
+      op: 'set_header';
+      title?: string;
+      primary_actor?: string | null;
+      secondary_actors?: string[];
+      summary?: string | null;
+    }
+  | { op: 'add_element'; list: UseCaseListRef; after?: string | null; element: UseCaseElement }
+  | { op: 'update_text'; id: string; text: string }
+  | { op: 'move_element'; id: string; list?: UseCaseListRef; after?: string | null }
+  | {
+      op: 'remove_element';
+      id: string;
+      dependents?: 'cascade' | { rebranch_to: string };
+    }
+  | { op: 'add_branch'; branch: UseCaseBranch }
+  | {
+      op: 'update_branch';
+      id: string;
+      title?: string;
+      kind?: UseCaseBranchKind;
+      from_step?: string;
+      end?: UseCaseBranchEnd;
+    }
+  | { op: 'remove_branch'; id: string };

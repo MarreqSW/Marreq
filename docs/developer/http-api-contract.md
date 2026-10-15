@@ -136,6 +136,10 @@ Files attached to requirements and verifications (issue #241). Session or Bearer
 
 Uploads larger than Rocket's form limits never reach the handler; a JSON **413** catcher answers them. The limits are raised at startup when the per-file maximum needs it, and nginx allows 100 MB on `/api/`.
 
+## Use cases
+
+Use cases with a structured scenario, a shared working draft and approved versions (issue #398) live under `/api/projects/{project_id}/use-cases`. Their routes, document format, draft operations and error codes are described in [use-cases-api.md](use-cases-api.md).
+
 ## Error format
 
 Structured errors from `ApiError` responses:

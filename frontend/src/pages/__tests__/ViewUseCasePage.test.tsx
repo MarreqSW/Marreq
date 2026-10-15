@@ -34,6 +34,19 @@ vi.mock('@/api/client', async () => ({
   ...mocks,
   ApiError: (await vi.importActual<typeof import('@/api/transport')>('@/api/transport')).ApiError,
 }));
+vi.mock('@/components/useCases/UseCaseFlowView', () => ({
+  default: ({ onSelect, selected }: { onSelect: (id: string | null) => void; selected: string | null }) => (
+    <div data-testid="use-case-flow">
+      <button type="button" onClick={() => onSelect('s_Pick')}>
+        flow node 2
+      </button>
+      <button type="button" onClick={() => onSelect('b_None')}>
+        flow node A2
+      </button>
+      <output>{selected ?? 'none'}</output>
+    </div>
+  ),
+}));
 vi.mock('@/context/DashboardContext', () => ({
   useDashboard: () => ({ csrfToken: 'csrf', dashboard: { projects: [{ id: 5, name: 'Space Project' }] } }),
 }));
@@ -395,5 +408,24 @@ describe('ViewUseCasePage', () => {
     expect(screen.getByText('3 → 2')).toBeInTheDocument();
     expect(screen.getByText('picks').tagName).toBe('DEL');
     expect(screen.getByText('selects').tagName).toBe('INS');
+  });
+
+  it('switches to the flow view and back to the selected step', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole('tab', { name: /flow/i }));
+    const flow = screen.getByTestId('use-case-flow');
+    await user.click(within(flow).getByRole('button', { name: 'flow node 2' }));
+    expect(screen.getByText('Selected: 2')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /show in document/i }));
+    expect(screen.getByRole('tab', { name: /document/i })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByTestId('use-case-flow')).not.toBeInTheDocument();
+
+    // A branch selected in the flow is the document's selected branch too.
+    await user.click(screen.getByRole('tab', { name: /flow/i }));
+    await user.click(within(screen.getByTestId('use-case-flow')).getByRole('button', { name: 'flow node A2' }));
+    expect(screen.getByText('Selected: A2')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: /document/i }));
+    expect(screen.getByText('Nothing selected').closest('[id^="branch-"]')).toHaveClass('ring-2');
   });
 });

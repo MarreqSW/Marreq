@@ -79,6 +79,7 @@ pub struct DieselRepoMock {
     pub use_cases: Vec<UseCase>,
     pub use_case_versions: Vec<UseCaseVersion>,
     pub use_case_drafts: Vec<UseCaseDraft>,
+    pub use_case_links: Vec<UseCaseLink>,
     /// Shared by use cases and their versions.
     pub next_use_case_id: i32,
     pub oauth_clients: HashMap<String, OAuthClient>,
@@ -170,6 +171,7 @@ impl Default for DieselRepoMock {
             use_cases: Vec::new(),
             use_case_versions: Vec::new(),
             use_case_drafts: Vec::new(),
+            use_case_links: Vec::new(),
             next_use_case_id: 1,
         }
     }
@@ -571,6 +573,7 @@ impl DieselRepoMock {
             use_cases: Vec::new(),
             use_case_versions: Vec::new(),
             use_case_drafts: Vec::new(),
+            use_case_links: Vec::new(),
             next_use_case_id: 1,
             oauth_clients: HashMap::new(),
             oauth_grants: HashMap::new(),
@@ -640,6 +643,7 @@ impl DieselRepoMock {
             use_cases: Vec::new(),
             use_case_versions: Vec::new(),
             use_case_drafts: Vec::new(),
+            use_case_links: Vec::new(),
             next_use_case_id: 1,
             oauth_clients: HashMap::new(),
             oauth_grants: HashMap::new(),
@@ -2630,6 +2634,17 @@ impl MatrixRepository for DieselRepoMock {
                 }
             }
         }
+        for link in self.use_case_links.iter_mut() {
+            if link.requirement_id == Some(requirement_id) {
+                link.suspect = true;
+                link.suspect_at = Some(now);
+                link.suspect_reason = Some(reason.to_string());
+                link.cleared_by = None;
+                link.cleared_at = None;
+                link.triggering_version_id = triggering_version_id;
+                link.triggering_user_id = triggering_user_id;
+            }
+        }
         Ok(project_ids)
     }
 
@@ -4151,6 +4166,7 @@ impl UseCasesRepository for DieselRepoMock {
         self.use_cases.retain(|u| u.id != id);
         self.use_case_versions.retain(|v| v.use_case_id != id);
         self.use_case_drafts.retain(|d| d.use_case_id != id);
+        self.use_case_links.retain(|l| l.use_case_id != id);
         Ok(self.use_cases.len() < before)
     }
 
@@ -4344,6 +4360,137 @@ impl UseCasesRepository for DieselRepoMock {
             u.updated_at = now;
         }
         Ok(Some(created))
+    }
+
+    fn list_use_case_links(&self, use_case_id: i32) -> Result<Vec<UseCaseLink>, RepoError> {
+        Ok(self
+            .use_case_links
+            .iter()
+            .filter(|l| l.use_case_id == use_case_id)
+            .cloned()
+            .collect())
+    }
+
+    fn list_use_case_links_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<UseCaseLink>, RepoError> {
+        Ok(self
+            .use_case_links
+            .iter()
+            .filter(|l| l.project_id == project_id)
+            .cloned()
+            .collect())
+    }
+
+    fn list_use_case_links_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<UseCaseLink>, RepoError> {
+        Ok(self
+            .use_case_links
+            .iter()
+            .filter(|l| l.requirement_id == Some(requirement_id))
+            .cloned()
+            .collect())
+    }
+
+    fn list_use_case_links_for_verification(
+        &self,
+        verification_id: i32,
+    ) -> Result<Vec<UseCaseLink>, RepoError> {
+        Ok(self
+            .use_case_links
+            .iter()
+            .filter(|l| l.verification_id == Some(verification_id))
+            .cloned()
+            .collect())
+    }
+
+    fn get_use_case_link(&self, id: i32) -> Result<UseCaseLink, RepoError> {
+        self.use_case_links
+            .iter()
+            .find(|l| l.id == id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn create_use_case_link(&mut self, new: &NewUseCaseLink) -> Result<UseCaseLink, RepoError> {
+        if self.use_case_links.iter().any(|l| {
+            l.use_case_id == new.use_case_id
+                && l.element_id == new.element_id
+                && l.requirement_id == new.requirement_id
+                && l.verification_id == new.verification_id
+        }) {
+            return Err(RepoError::Duplicate("this link already exists".into()));
+        }
+        let id = self.next_use_case_id;
+        self.next_use_case_id += 1;
+        let link = UseCaseLink {
+            id,
+            project_id: new.project_id,
+            use_case_id: new.use_case_id,
+            element_id: new.element_id.clone(),
+            requirement_id: new.requirement_id,
+            verification_id: new.verification_id,
+            linked_requirement_version_id: new.linked_requirement_version_id,
+            rationale: new.rationale.clone(),
+            suspect: false,
+            suspect_at: None,
+            suspect_reason: None,
+            triggering_version_id: None,
+            triggering_user_id: None,
+            cleared_by: None,
+            cleared_at: None,
+            created_by: new.created_by,
+            created_at: chrono::Utc::now().naive_utc(),
+        };
+        self.use_case_links.push(link.clone());
+        Ok(link)
+    }
+
+    fn delete_use_case_link(&mut self, id: i32) -> Result<bool, RepoError> {
+        let before = self.use_case_links.len();
+        self.use_case_links.retain(|l| l.id != id);
+        Ok(self.use_case_links.len() < before)
+    }
+
+    fn clear_use_case_link_suspect(
+        &mut self,
+        id: i32,
+        user_id: i32,
+        current_version_id: Option<i32>,
+    ) -> Result<bool, RepoError> {
+        let Some(link) = self
+            .use_case_links
+            .iter_mut()
+            .find(|l| l.id == id && l.suspect)
+        else {
+            return Ok(false);
+        };
+        link.suspect = false;
+        link.suspect_at = None;
+        link.suspect_reason = None;
+        link.cleared_by = Some(user_id);
+        link.cleared_at = Some(chrono::Utc::now().naive_utc());
+        link.linked_requirement_version_id = current_version_id;
+        Ok(true)
+    }
+
+    fn delete_use_case_links_outside(
+        &mut self,
+        use_case_id: i32,
+        keep: &[String],
+    ) -> Result<Vec<UseCaseLink>, RepoError> {
+        let (gone, kept): (Vec<UseCaseLink>, Vec<UseCaseLink>) =
+            std::mem::take(&mut self.use_case_links)
+                .into_iter()
+                .partition(|l| {
+                    l.use_case_id == use_case_id
+                        && l.element_id.as_ref().is_some_and(|e| !keep.contains(e))
+                });
+        self.use_case_links = kept;
+        Ok(gone)
     }
 }
 

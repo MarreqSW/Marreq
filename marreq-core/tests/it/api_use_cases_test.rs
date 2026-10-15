@@ -178,7 +178,8 @@ async fn a_use_case_goes_from_draft_to_approved_versions() {
             "id": id, "reference_code": "UC-001", "title": "Export requirements",
             "primary_actor": "Engineer", "step_count": 4, "alternative_count": 1,
             "exception_count": 0, "approval_state": "draft", "current_version_number": 1,
-            "has_draft": false, "updated_at": list[0]["updated_at"]
+            "has_draft": false, "link_count": 0, "suspect_count": 0,
+            "updated_at": list[0]["updated_at"]
         }])
     );
 
@@ -531,4 +532,214 @@ async fn an_archived_project_is_read_only() {
     assert_eq!(status, Status::Forbidden, "{body}");
     let (status, _) = call(&client, AUTHOR, "GET", BASE, None).await;
     assert_eq!(status, Status::Ok);
+}
+
+#[rocket::async_test]
+async fn links_follow_requirements_and_the_published_elements() {
+    let client = test_client(repo()).await;
+    let id = export_use_case(&client).await;
+    let links = format!("{BASE}/{id}/links");
+
+    // A step link to a requirement and a use case link to a verification.
+    let (status, step_link) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &links,
+        Some(json!({ "element_id": "s_Pick01", "requirement_id": 1, "rationale": "Selection" })),
+    )
+    .await;
+    assert_eq!(status, Status::Created, "{step_link}");
+    assert_eq!(step_link["element_label"], "2");
+    assert_eq!(step_link["target_reference_code"], "SAT-PWR-001");
+    assert_eq!(step_link["linked_requirement_version_id"], 10);
+    let (status, _) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &links,
+        Some(json!({ "verification_id": 1 })),
+    )
+    .await;
+    assert_eq!(status, Status::Created);
+
+    let (status, _) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &links,
+        Some(json!({ "element_id": "s_Pick01", "requirement_id": 1 })),
+    )
+    .await;
+    assert_eq!(status, Status::Conflict, "the same link twice");
+    let (status, _) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &links,
+        Some(json!({ "element_id": "s_Nope01", "requirement_id": 1 })),
+    )
+    .await;
+    assert_eq!(status, Status::BadRequest);
+    let (status, _) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &links,
+        Some(json!({ "requirement_id": 1, "verification_id": 1 })),
+    )
+    .await;
+    assert_eq!(status, Status::BadRequest);
+    let (status, _) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &links,
+        Some(json!({ "requirement_id": 999 })),
+    )
+    .await;
+    assert_eq!(status, Status::NotFound);
+    let (status, _) = call(
+        &client,
+        VIEWER,
+        "POST",
+        &links,
+        Some(json!({ "requirement_id": 1 })),
+    )
+    .await;
+    assert_eq!(status, Status::Forbidden);
+
+    // Reverse lookups.
+    let (_, used) = call(
+        &client,
+        VIEWER,
+        "GET",
+        "/api/projects/1/requirements/1/use-cases",
+        None,
+    )
+    .await;
+    assert_eq!(used[0]["reference_code"], "UC-001");
+    assert_eq!(used[0]["element_label"], "2");
+    let (_, used) = call(
+        &client,
+        VIEWER,
+        "GET",
+        "/api/projects/1/verifications/1/use-cases",
+        None,
+    )
+    .await;
+    assert_eq!(
+        (
+            used[0]["element_id"].clone(),
+            used.as_array().unwrap().len()
+        ),
+        (Value::Null, 1)
+    );
+
+    // A requirement change makes the link suspect, as it does matrix rows.
+    let (status, _) = call(
+        &client,
+        ADMIN,
+        "PUT",
+        "/api/projects/1/requirements/1/versions/10/approval",
+        Some(json!({ "state": "reviewed" })),
+    )
+    .await;
+    assert_eq!(status, Status::Ok);
+    let (_, rows) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("{BASE}?has_suspect=true"),
+        None,
+    )
+    .await;
+    assert_eq!(
+        (
+            rows[0]["link_count"].as_i64(),
+            rows[0]["suspect_count"].as_i64()
+        ),
+        (Some(2), Some(1))
+    );
+    let (_, listed) = call(&client, VIEWER, "GET", &links, None).await;
+    let suspect = listed
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|l| l["suspect"] == true)
+        .unwrap()
+        .clone();
+    assert_eq!(suspect["suspect_reason"], "Approval state changed");
+    let clear = format!("{links}/{}/clear_suspect", suspect["id"]);
+    let (_, cleared) = call(&client, AUTHOR, "POST", &clear, None).await;
+    assert_eq!(cleared, json!({ "status": "ok", "cleared": true }));
+    let (_, again) = call(&client, AUTHOR, "POST", &clear, None).await;
+    assert_eq!(again["status"], "no_change");
+    let (_, rows) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("{BASE}?requirement_id=1"),
+        None,
+    )
+    .await;
+    assert_eq!(
+        (
+            rows.as_array().unwrap().len(),
+            rows[0]["suspect_count"].as_i64()
+        ),
+        (1, Some(0))
+    );
+    let (_, rows) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("{BASE}?requirement_id=2"),
+        None,
+    )
+    .await;
+    assert_eq!(rows, json!([]));
+
+    // Publishing a version without the step removes its link and says so.
+    let (status, _) = ops(
+        &client,
+        id,
+        json!(2),
+        json!([{ "op": "remove_element", "id": "s_Pick01", "dependents": "cascade" }]),
+    )
+    .await;
+    assert_eq!(status, Status::Ok);
+    let (status, published) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &format!("{BASE}/{id}/draft/publish"),
+        Some(json!({ "base_revision": 3 })),
+    )
+    .await;
+    assert_eq!(status, Status::Created);
+    assert_eq!(
+        published["removed_links"][0]["target_reference_code"],
+        "SAT-PWR-001"
+    );
+    let (_, listed) = call(&client, VIEWER, "GET", &links, None).await;
+    assert_eq!(
+        listed.as_array().unwrap().len(),
+        1,
+        "the use case link stays"
+    );
+
+    // Deleting a link.
+    let link_id = listed[0]["id"].as_i64().unwrap();
+    let (status, _) = call(
+        &client,
+        AUTHOR,
+        "DELETE",
+        &format!("{links}/{link_id}"),
+        None,
+    )
+    .await;
+    assert_eq!(status, Status::NoContent);
+    let (_, listed) = call(&client, VIEWER, "GET", &links, None).await;
+    assert_eq!(listed, json!([]));
 }

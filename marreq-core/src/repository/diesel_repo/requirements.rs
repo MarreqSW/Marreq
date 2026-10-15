@@ -617,6 +617,13 @@ impl RequirementsRepository for DieselRepo {
                         matrix::triggering_user_id.eq(Some(actor_id)),
                     ))
                     .execute(conn)?;
+                super::use_cases::mark_use_case_links_suspect(
+                    conn,
+                    requirement_id,
+                    suspect_reason,
+                    Some(new_version_id),
+                    Some(actor_id),
+                )?;
                 if let Some(links) = parent_links {
                     diesel::delete(
                         requirement_version_links::table.filter(

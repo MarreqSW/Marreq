@@ -1638,6 +1638,54 @@ impl<R: Repository> UseCasesRepository for CacheRepository<R> {
     ) -> Result<Option<UseCaseVersion>, RepoError> {
         self.inner.publish_use_case_draft(base_revision, version)
     }
+    fn list_use_case_links(&self, use_case_id: i32) -> Result<Vec<UseCaseLink>, RepoError> {
+        self.inner.list_use_case_links(use_case_id)
+    }
+    fn list_use_case_links_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<UseCaseLink>, RepoError> {
+        self.inner.list_use_case_links_by_project(project_id)
+    }
+    fn list_use_case_links_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<UseCaseLink>, RepoError> {
+        self.inner
+            .list_use_case_links_for_requirement(requirement_id)
+    }
+    fn list_use_case_links_for_verification(
+        &self,
+        verification_id: i32,
+    ) -> Result<Vec<UseCaseLink>, RepoError> {
+        self.inner
+            .list_use_case_links_for_verification(verification_id)
+    }
+    fn get_use_case_link(&self, id: i32) -> Result<UseCaseLink, RepoError> {
+        self.inner.get_use_case_link(id)
+    }
+    fn create_use_case_link(&mut self, new: &NewUseCaseLink) -> Result<UseCaseLink, RepoError> {
+        self.inner.create_use_case_link(new)
+    }
+    fn delete_use_case_link(&mut self, id: i32) -> Result<bool, RepoError> {
+        self.inner.delete_use_case_link(id)
+    }
+    fn clear_use_case_link_suspect(
+        &mut self,
+        id: i32,
+        user_id: i32,
+        current_version_id: Option<i32>,
+    ) -> Result<bool, RepoError> {
+        self.inner
+            .clear_use_case_link_suspect(id, user_id, current_version_id)
+    }
+    fn delete_use_case_links_outside(
+        &mut self,
+        use_case_id: i32,
+        keep: &[String],
+    ) -> Result<Vec<UseCaseLink>, RepoError> {
+        self.inner.delete_use_case_links_outside(use_case_id, keep)
+    }
 }
 
 // Attachments are not cached: listings are small and per entity.
@@ -2139,6 +2187,7 @@ mod tests {
             use_cases: Vec::new(),
             use_case_versions: Vec::new(),
             use_case_drafts: Vec::new(),
+            use_case_links: Vec::new(),
             next_use_case_id: 1,
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),

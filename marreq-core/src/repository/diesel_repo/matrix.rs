@@ -51,6 +51,13 @@ impl MatrixRepository for DieselRepo {
             ))
             .returning(dsl::project_id)
             .get_results(conn.as_mut())?;
+        super::use_cases::mark_use_case_links_suspect(
+            conn.as_mut(),
+            requirement_id,
+            reason,
+            triggering_version_id,
+            triggering_user_id,
+        )?;
         Ok(updated.into_iter().collect())
     }
 

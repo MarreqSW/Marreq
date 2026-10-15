@@ -601,6 +601,46 @@ pub struct UseCaseDraft {
     pub updated_at: chrono::NaiveDateTime,
 }
 
+/// A traceability link from a use case, or one element of it, to a
+/// requirement or a verification (issue #400).
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone, PartialEq)]
+#[diesel(table_name = crate::schema::use_case_links)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct UseCaseLink {
+    pub id: i32,
+    pub project_id: i32,
+    pub use_case_id: i32,
+    /// A step or condition id of the use case document; `None` for the whole use case.
+    pub element_id: Option<String>,
+    pub requirement_id: Option<i32>,
+    pub verification_id: Option<i32>,
+    /// The requirement version the link was made or last cleared against.
+    pub linked_requirement_version_id: Option<i32>,
+    pub rationale: Option<String>,
+    pub suspect: bool,
+    pub suspect_at: Option<chrono::NaiveDateTime>,
+    pub suspect_reason: Option<String>,
+    pub triggering_version_id: Option<i32>,
+    pub triggering_user_id: Option<i32>,
+    pub cleared_by: Option<i32>,
+    pub cleared_at: Option<chrono::NaiveDateTime>,
+    pub created_by: Option<i32>,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Insertable, Clone)]
+#[diesel(table_name = crate::schema::use_case_links)]
+pub struct NewUseCaseLink {
+    pub project_id: i32,
+    pub use_case_id: i32,
+    pub element_id: Option<String>,
+    pub requirement_id: Option<i32>,
+    pub verification_id: Option<i32>,
+    pub linked_requirement_version_id: Option<i32>,
+    pub rationale: Option<String>,
+    pub created_by: Option<i32>,
+}
+
 /// Level, stage and close-out evidence of one verification (issue #353).
 #[derive(Debug, Serialize, Deserialize, Queryable, Insertable, AsChangeset, Clone, PartialEq)]
 #[diesel(table_name = crate::schema::verification_control)]

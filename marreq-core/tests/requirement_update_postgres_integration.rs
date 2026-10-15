@@ -3,7 +3,8 @@
 
 //! Custom-field values across requirement versions against PostgreSQL
 //! (issue #369): an update that does not send custom fields keeps them on the
-//! new version; one that sends them replaces them. Set
+//! new version; one that sends them replaces them. A new version also makes
+//! the use case links to the requirement suspect (issue #400). Set
 //! `MARREQ_TEST_DATABASE_URL` to a migrated, disposable database; the test
 //! truncates application data.
 
@@ -13,7 +14,9 @@ use diesel::connection::SimpleConnection;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use marreq_core::models::{CustomFieldValueInput, NewRequirement};
-use marreq_core::repository::{CustomFieldRepository, DieselRepo, RequirementsRepository};
+use marreq_core::repository::{
+    CustomFieldRepository, DieselRepo, RequirementsRepository, UseCasesRepository,
+};
 
 #[test]
 fn requirement_update_keeps_or_replaces_custom_field_values() {
@@ -42,7 +45,9 @@ fn requirement_update_keeps_or_replaces_custom_field_values() {
          INSERT INTO requirement_versions (id,requirement_id,title,description,status_id,author_id,reviewer_id,category_id,applicability_id,created_at,approval_state)
            VALUES (10,1,'Power','The system shall.',1,1,1,1,1,now(),'draft');
          UPDATE requirements SET current_version_id = 10 WHERE id = 1;
-         INSERT INTO custom_field_values (requirement_version_id,custom_field_definition_id,value) VALUES (10,1,'High'), (10,2,NULL);",
+         INSERT INTO custom_field_values (requirement_version_id,custom_field_definition_id,value) VALUES (10,1,'High'), (10,2,NULL);
+         INSERT INTO use_cases (id,project_id,reference_code) VALUES (1,1,'UC-001');
+         INSERT INTO use_case_links (project_id,use_case_id,element_id,requirement_id,linked_requirement_version_id) VALUES (1,1,'s_A',1,10);",
     )
     .expect("seed");
 
@@ -86,6 +91,12 @@ fn requirement_update_keeps_or_replaces_custom_field_values() {
         .expect("update without custom fields");
     let v2 = updated.current_version_id.expect("new version");
     assert_ne!(v2, 10);
+    let link = &repo.list_use_case_links_for_requirement(1).expect("links")[0];
+    assert!(
+        link.suspect,
+        "the use case link goes suspect with the new version"
+    );
+    assert_eq!(link.triggering_version_id, Some(v2));
     assert_eq!(
         values_of(&repo, v2),
         vec![(1, Some("High".into())), (2, None)]

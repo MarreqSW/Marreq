@@ -960,6 +960,19 @@ Linking a verification to a use case does not mark the use case's requirements a
 
 Deleting a step that has links asks first; its links are removed when the next version is published, and Marreq says which. Requirement and verification pages list **Used in use cases**, with the step and a mark on suspect links.
 
+### 14.6 Reviewing Changes and Comments
+
+**Review changes** (next to **Document**, once there is something to compare) shows what changed between two versions, or between the current version and the draft, step by step. Each element carries a badge:
+
+- **Added** and **Removed**: the element is new or gone (removed ones are listed at the end, struck through).
+- **Edited**: the text changed; deleted words are shown in red and new words in green.
+- **Moved**: the step changed place (its old and new numbers are shown, such as *3 → 2*), or moved between the main scenario and a branch. When two steps swap, the one that came forward is marked.
+- **Rebranched**: an alternative or exception now starts from another step, or ends differently.
+
+Choose the two sides with **Compare … with …**; **Show unchanged** lists every element.
+
+The **Discussion** below the use case collects comments. Comment on the whole use case or on one step: pick it under **Comment on**, use **Comment on this step** in the step's **⋯** menu, or the comment icon in the review. Steps with comments show a count; click it to see only that step's thread. Type **@** to mention a project member, as on requirements ([§4.6](#46-comments)). Mentioned members are notified, and so are the use case's creator and the person who published the current version. Publishing a version notifies the project's reviewers, and the start screen lists reviewed use case versions waiting for approval.
+
 ## 15. Tips & Shortcuts
 
 - **Theme**: the light / dark / match-system switch in the top bar (on wider screens) or on the login page; the choice is stored in the browser.

@@ -1174,3 +1174,17 @@ export interface UseCaseComment {
   body: string;
   created_at: string;
 }
+
+/** A use case version a baseline recorded (issue #402). */
+export interface BaselineUseCase {
+  use_case_id: number;
+  reference_code: string;
+  title: string;
+  primary_actor: string | null;
+  version_id: number;
+  version_number: number;
+  approval_state: string;
+  current_version_id: number | null;
+  current_version_number: number | null;
+  link_count: number;
+}

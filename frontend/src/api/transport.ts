@@ -18,23 +18,28 @@ function friendlyNonJsonError(status: number, text: string): string {
 /** Error thrown for non-2xx API responses; keeps the HTTP status for callers that branch on it. */
 export class ApiError extends Error {
   readonly status: number;
+  /** The parsed JSON error body, for routes that add details (a `code`, …). */
+  readonly body: unknown;
 
-  constructor(status: number, message: string) {
+  constructor(status: number, message: string, body?: unknown) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.body = body;
   }
 }
 
 function apiErrorFrom(res: Response, text: string): ApiError {
   let msg = res.statusText;
+  let body: unknown;
   try {
     const j = JSON.parse(text) as { message?: string; error?: string };
+    body = j;
     msg = (j.message ?? j.error ?? text) || msg;
   } catch {
     msg = friendlyNonJsonError(res.status, text);
   }
-  return new ApiError(res.status, msg);
+  return new ApiError(res.status, msg, body);
 }
 
 async function parseJson<T>(res: Response): Promise<T> {

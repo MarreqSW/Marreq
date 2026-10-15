@@ -48,6 +48,8 @@ import { MatrixRedirect, MovedRedirect } from '@/pages/LegacyRedirects';
 import AdminLayout from '@/pages/admin/AdminLayout';
 import BaselinesPage from '@/pages/BaselinesPage';
 import BaselineDetailPage from '@/pages/BaselineDetailPage';
+import UseCasesPage from '@/pages/UseCasesPage';
+import ViewUseCasePage from '@/pages/ViewUseCasePage';
 import ProjectCatalogLayout from '@/pages/catalog/ProjectCatalogLayout';
 import CatalogCategoriesPage from '@/pages/catalog/CatalogCategoriesPage';
 import CatalogApplicabilityPage from '@/pages/catalog/CatalogApplicabilityPage';
@@ -157,6 +159,8 @@ export default function App() {
           <Route path="verifications/:verificationId/edit" element={<EditVerificationPage />} />
           <Route path="verifications/:verificationId" element={<ViewVerificationPage />} />
           <Route path="verifications" element={<VerificationsPage />} />
+          <Route path="use-cases/:useCaseId" element={<ViewUseCasePage />} />
+          <Route path="use-cases" element={<UseCasesPage />} />
           <Route path="traceability" element={<TraceabilityPage />} />
           <Route path="matrix" element={<MatrixRedirect />} />
           <Route path="baselines/:baselineId" element={<BaselineDetailPage />} />

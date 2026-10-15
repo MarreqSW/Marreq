@@ -13,7 +13,7 @@ const blocks: { title: string; body: string }[] = [
   {
     title: 'Navigation',
     body:
-      'The sidebar holds Dashboard, Requirements, Verifications, Traceability (with Coverage, Hierarchy, DSM and Matrix tabs), Baselines and Reports & exports. Project settings at the bottom has tabs for General, Members & reviewers, Catalog, Storage, Notifications and Import. Switch projects, or open Groups and New project, from the Projects menu in the header. Instance administrators find Administration in the user menu. On a narrow screen, open the sidebar with the menu button.',
+      'The sidebar holds Dashboard, Requirements, Verifications, Use cases, Traceability (with Coverage, Hierarchy, DSM and Matrix tabs), Baselines and Reports & exports. Project settings at the bottom has tabs for General, Members & reviewers, Catalog, Storage, Notifications and Import. Switch projects, or open Groups and New project, from the Projects menu in the header. Instance administrators find Administration in the user menu. On a narrow screen, open the sidebar with the menu button.',
   },
   {
     title: 'Search',
@@ -24,6 +24,11 @@ const blocks: { title: string; body: string }[] = [
     title: 'Traceability',
     body:
       'The Graph view has two subtabs. Coverage shows requirement ↔ verification links (suspect links use coral styling). Hierarchy shows parent ↔ child links between requirements (solid blue) and between verifications (dashed green); a Requirements / Verifications / Both filter restricts the view and is remembered in the URL (?kind=). Double-click a node to open the requirement or verification view page.',
+  },
+  {
+    title: 'Use cases',
+    body:
+      'A use case lists preconditions, numbered main steps, alternatives (A3) and exceptions (E4) branching from a step, and postconditions. Edit opens a draft shared by the project and saved as you type: Enter adds the next step, Alt+↑/↓ or drag moves it, the ⋯ menu adds a branch. Numbers follow the order, and branches stay attached to their step. Publish version creates the next version for reviewers to mark reviewed and approve.',
   },
   {
     title: 'Creating records',

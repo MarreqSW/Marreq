@@ -940,8 +940,11 @@ export interface AttentionResponse {
 
 /** A requirement found by the start-screen search (`GET /api/search`). */
 export interface SearchHit {
+  /** `use_case` hits since issue #402. */
+  kind?: 'requirement' | 'use_case';
   project_id: number;
-  requirement_id: number;
+  requirement_id: number | null;
+  use_case_id?: number | null;
   reference_code: string;
   title: string;
 }

@@ -56,6 +56,24 @@ describe('StartSearch', () => {
     expect(screen.getByTestId('where')).toHaveTextContent('/thermal/requirements/40');
   });
 
+  it('lists use cases after requirements and opens them', async () => {
+    vi.mocked(apiClient.searchRequirements).mockResolvedValue([
+      { kind: 'use_case', project_id: 6, requirement_id: null, use_case_id: 4, reference_code: 'UC-004', title: 'Downlink telemetry pass' },
+      { kind: 'requirement', project_id: 6, requirement_id: 40, reference_code: 'THM-004', title: 'Radiator area' },
+    ]);
+    const user = userEvent.setup();
+    renderSearch();
+    await user.type(screen.getByRole('combobox'), 'pass');
+    const useCase = await screen.findByRole('option', { name: /UC-004 · Downlink telemetry pass/ });
+    const options = screen.getAllByRole('option');
+    expect(options.indexOf(useCase)).toBeGreaterThan(
+      options.indexOf(screen.getByRole('option', { name: /THM-004/ })),
+    );
+    expect(screen.getByText('Use cases')).toBeInTheDocument();
+    await user.click(useCase);
+    expect(screen.getByTestId('where')).toHaveTextContent('/thermal/use-cases/4');
+  });
+
   it('matches actions, keeps Administration for admins, and waits for two characters', async () => {
     const user = userEvent.setup();
     const { unmount } = renderSearch();

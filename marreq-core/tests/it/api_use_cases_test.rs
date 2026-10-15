@@ -1117,3 +1117,36 @@ async fn baselines_record_use_case_versions_and_links() {
     let (status, body) = call(&client, AUTHOR, "DELETE", &format!("{BASE}/{id}"), None).await;
     assert_eq!(status, Status::Conflict, "{body}");
 }
+
+#[rocket::async_test]
+async fn the_global_search_finds_use_cases() {
+    let client = test_client(repo()).await;
+    let id = export_use_case(&client).await;
+    for q in ["UC-001", "export req", "selects requirements", "engineer"] {
+        let (status, hits) = call(
+            &client,
+            VIEWER,
+            "GET",
+            &format!("/api/search?q={}", q.replace(' ', "%20")),
+            None,
+        )
+        .await;
+        assert_eq!(status, Status::Ok);
+        let hit = hits
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|h| h["kind"] == "use_case")
+            .unwrap_or_else(|| panic!("{q}: {hits}"));
+        assert_eq!(
+            (hit["use_case_id"].as_i64(), hit["requirement_id"].clone()),
+            (Some(id), Value::Null),
+            "{q}"
+        );
+        assert_eq!(hit["title"], "Export requirements");
+    }
+    let (_, hits) = call(&client, VIEWER, "GET", "/api/search?q=SAT-PWR", None).await;
+    assert_eq!(hits[0]["kind"], "requirement");
+    let (_, hits) = call(&client, OUTSIDER, "GET", "/api/search?q=UC-001", None).await;
+    assert_eq!(hits, json!([]));
+}

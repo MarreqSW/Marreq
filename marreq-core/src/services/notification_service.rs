@@ -6,7 +6,7 @@
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{
     NewNotification, NewNotificationPreference, Notification, NotificationPreference, Requirement,
-    User,
+    UseCase, User,
 };
 use crate::repository::errors::RepoError;
 use crate::repository::{NotificationRepository, ProjectReviewersRepository, UserRepository};
@@ -155,6 +155,117 @@ impl<'a> NotificationService<'a> {
             });
         }
         notified
+    }
+
+    // ── Use cases (issue #401) ───────────────────────────────────────────
+
+    fn use_case_notification(
+        &self,
+        actor: &User,
+        use_case: &UseCase,
+        user_id: i32,
+        notification_type: &str,
+        title: String,
+        body: Option<String>,
+    ) {
+        self.create_notification(NewNotification {
+            user_id,
+            project_id: Some(use_case.project_id),
+            notification_type: notification_type.into(),
+            title,
+            body,
+            entity_type: Some("use_case".into()),
+            entity_id: Some(use_case.id),
+            actor_id: Some(actor.id),
+        });
+    }
+
+    /// Notify the members mentioned in a use case comment; returns who was
+    /// notified. The actor is never notified of their own mention.
+    pub fn notify_use_case_mentioned(
+        &self,
+        actor: &User,
+        use_case: &UseCase,
+        comment_body: &str,
+        mentioned_ids: &[i32],
+    ) -> HashSet<i32> {
+        let title = format!(
+            "{} mentioned you on {}",
+            actor.name, use_case.reference_code
+        );
+        let mut notified = HashSet::new();
+        for &uid in mentioned_ids {
+            if uid == actor.id || !notified.insert(uid) {
+                continue;
+            }
+            self.use_case_notification(
+                actor,
+                use_case,
+                uid,
+                "mentioned",
+                title.clone(),
+                Some(excerpt(comment_body)),
+            );
+        }
+        notified
+    }
+
+    /// Notify `recipients` (the use case's creator and the publisher of its
+    /// current version) of a new comment, except the actor and `skip`.
+    pub fn notify_use_case_comment(
+        &self,
+        actor: &User,
+        use_case: &UseCase,
+        comment_body: &str,
+        recipients: &[i32],
+        skip: &HashSet<i32>,
+    ) {
+        let title = format!("{} commented on {}", actor.name, use_case.reference_code);
+        let mut notified = skip.clone();
+        notified.insert(actor.id);
+        for &uid in recipients {
+            if notified.insert(uid) {
+                self.use_case_notification(
+                    actor,
+                    use_case,
+                    uid,
+                    "comment_added",
+                    title.clone(),
+                    Some(excerpt(comment_body)),
+                );
+            }
+        }
+    }
+
+    /// Ask the project's reviewers to review a newly published version.
+    pub fn notify_use_case_published(
+        &self,
+        actor: &User,
+        use_case: &UseCase,
+        version_number: i32,
+        title: &str,
+    ) {
+        let reviewer_ids = self
+            .state
+            .repo_read()
+            .list_project_reviewer_ids(use_case.project_id)
+            .unwrap_or_default();
+        let heading = format!(
+            "{} published {} v{} for review",
+            actor.name, use_case.reference_code, version_number
+        );
+        for rid in reviewer_ids {
+            if rid != actor.id {
+                self.use_case_notification(
+                    actor,
+                    use_case,
+                    rid,
+                    "approval_requested",
+                    heading.clone(),
+                    Some(title.to_string()),
+                );
+            }
+        }
     }
 
     // ── Project-subscribed notifications ─────────────────────────────────

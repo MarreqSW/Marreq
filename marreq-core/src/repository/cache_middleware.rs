@@ -1686,6 +1686,21 @@ impl<R: Repository> UseCasesRepository for CacheRepository<R> {
     ) -> Result<Vec<UseCaseLink>, RepoError> {
         self.inner.delete_use_case_links_outside(use_case_id, keep)
     }
+    fn list_use_case_comments(
+        &self,
+        use_case_id: i32,
+        version_id: Option<i32>,
+        element_id: Option<&str>,
+    ) -> Result<Vec<UseCaseComment>, RepoError> {
+        self.inner
+            .list_use_case_comments(use_case_id, version_id, element_id)
+    }
+    fn create_use_case_comment(
+        &mut self,
+        new: &NewUseCaseComment,
+    ) -> Result<UseCaseComment, RepoError> {
+        self.inner.create_use_case_comment(new)
+    }
 }
 
 // Attachments are not cached: listings are small and per entity.
@@ -2188,6 +2203,7 @@ mod tests {
             use_case_versions: Vec::new(),
             use_case_drafts: Vec::new(),
             use_case_links: Vec::new(),
+            use_case_comments: Vec::new(),
             next_use_case_id: 1,
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),

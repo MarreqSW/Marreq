@@ -14,7 +14,9 @@ use crate::api::prelude::*;
 use crate::auth::guards::SessionUser;
 use crate::models::{Project, User};
 use crate::permissions::{has_permission, may_change_review_gates};
-use crate::repository::{MatrixRepository, NotificationRepository, RequirementsRepository};
+use crate::repository::{
+    MatrixRepository, NotificationRepository, RequirementsRepository, UseCasesRepository,
+};
 use crate::services::ProjectService;
 
 /// Most attention items returned; the start screen shows the first few.
@@ -46,6 +48,8 @@ pub struct AttentionItem {
     pub project_id: i32,
     pub title: String,
     pub requirement_id: Option<i32>,
+    /// Set for use case items (issue #401) instead of `requirement_id`.
+    pub use_case_id: Option<i32>,
     pub reference_code: Option<String>,
     /// Number of drafts or suspect links for the aggregated kinds.
     pub count: Option<usize>,
@@ -113,6 +117,7 @@ pub fn collect_attention(state: &AppState, user: &User) -> ApiResult<AttentionRe
                                 requirement.reference_code
                             ),
                             requirement_id: Some(requirement.id),
+                            use_case_id: None,
                             reference_code: Some(requirement.reference_code.clone()),
                             count: None,
                             notification_id: None,
@@ -127,6 +132,31 @@ pub fn collect_attention(state: &AppState, user: &User) -> ApiResult<AttentionRe
                     _ => {}
                 }
             }
+            // Use case versions marked reviewed wait for approval too (issue #401).
+            for version in repo.list_current_use_case_versions(project.id)? {
+                if !version.approval_state.eq_ignore_ascii_case("reviewed") {
+                    continue;
+                }
+                let Ok(use_case) = repo.get_use_case(version.use_case_id) else {
+                    continue;
+                };
+                approvals += 1;
+                items.push(AttentionItem {
+                    kind: AttentionKind::Approval,
+                    project_id: project.id,
+                    title: format!(
+                        "{} v{} is waiting for your approval",
+                        use_case.reference_code, version.version_number
+                    ),
+                    requirement_id: None,
+                    use_case_id: Some(use_case.id),
+                    reference_code: Some(use_case.reference_code.clone()),
+                    count: None,
+                    notification_id: None,
+                    notification_type: None,
+                    at: version.reviewed_at.or(Some(version.created_at)),
+                });
+            }
             if drafts > 0 {
                 reviews += drafts;
                 items.push(AttentionItem {
@@ -137,6 +167,7 @@ pub fn collect_attention(state: &AppState, user: &User) -> ApiResult<AttentionRe
                         if drafts == 1 { "" } else { "s" }
                     ),
                     requirement_id: None,
+                    use_case_id: None,
                     reference_code: None,
                     count: Some(drafts),
                     notification_id: None,
@@ -163,6 +194,7 @@ pub fn collect_attention(state: &AppState, user: &User) -> ApiResult<AttentionRe
                         if suspect.len() == 1 { "" } else { "s" }
                     ),
                     requirement_id: None,
+                    use_case_id: None,
                     reference_code: None,
                     count: Some(suspect.len()),
                     notification_id: None,
@@ -190,6 +222,9 @@ pub fn collect_attention(state: &AppState, user: &User) -> ApiResult<AttentionRe
             requirement_id: n
                 .entity_id
                 .filter(|_| n.entity_type.as_deref() == Some("requirement")),
+            use_case_id: n
+                .entity_id
+                .filter(|_| n.entity_type.as_deref() == Some("use_case")),
             reference_code: None,
             count: None,
             notification_id: Some(n.id),

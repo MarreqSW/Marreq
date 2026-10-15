@@ -4,6 +4,7 @@ import type {
   UseCaseDocument,
   UseCaseElement,
   UseCaseLabels,
+  UseCaseLink,
   UseCaseListRef,
   UseCaseOperation,
 } from '@/api/types';
@@ -11,6 +12,7 @@ import StatementText from '@/components/StatementText';
 import { listKey, newElementId } from '@/utils/useCaseDocument';
 import BranchCard from './BranchCard';
 import ElementRow, { type RowMenuItem } from './ElementRow';
+import LinkChip from './LinkChip';
 
 type Props = {
   doc: UseCaseDocument;
@@ -20,6 +22,11 @@ type Props = {
   apply: (ops: UseCaseOperation[]) => Promise<void>;
   selectedBranch: string | null;
   onSelectBranch: (id: string | null) => void;
+  /** Links by element id, shown as chips after the element (issue #400). */
+  linksByElement?: Map<string, UseCaseLink[]>;
+  onOpenLink?: (link: UseCaseLink) => void;
+  /** Offered in each element's menu when set. */
+  onLinkElement?: (elementId: string) => void;
 };
 
 type Pending = { key: string; list: UseCaseListRef; after: string | null; id: string };
@@ -68,6 +75,9 @@ export default function UseCaseDocumentView({
   apply,
   selectedBranch,
   onSelectBranch,
+  linksByElement,
+  onOpenLink,
+  onLinkElement,
 }: Props) {
   const [pending, setPending] = useState<Pending | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
@@ -194,6 +204,14 @@ export default function UseCaseDocumentView({
           { icon: 'report', label: 'Add exception from this step', onSelect: () => addBranch(row.id, 'exception') },
         );
       }
+      if (onLinkElement) {
+        menu.push({
+          icon: 'add_link',
+          label: 'Link requirement or verification',
+          onSelect: () => onLinkElement(row.id),
+        });
+      }
+      const rowLinks = linksByElement?.get(row.id) ?? [];
       menu.push(
         {
           icon: 'arrow_upward',
@@ -211,7 +229,17 @@ export default function UseCaseDocumentView({
           icon: 'delete',
           label: variant === 'bullet' ? 'Delete' : 'Delete step',
           danger: true,
-          onSelect: () => void apply([{ op: 'remove_element', id: row.id }]),
+          onSelect: () => {
+            if (
+              rowLinks.length > 0 &&
+              !window.confirm(
+                `This element is linked to ${rowLinks.map((l) => l.target_reference_code).join(', ')}. The links are removed when the next version is published. Delete it?`,
+              )
+            ) {
+              return;
+            }
+            void apply([{ op: 'remove_element', id: row.id }]);
+          },
         },
       );
       return (
@@ -232,6 +260,15 @@ export default function UseCaseDocumentView({
           onMove={(delta) => move(list, items, index, delta)}
           onInsertBelow={() => startInsert(list, row.id)}
           menu={menu}
+          trailing={
+            rowLinks.length > 0 ? (
+              <span className="mt-0.5 flex shrink-0 flex-wrap justify-end gap-1">
+                {rowLinks.map((l) => (
+                  <LinkChip key={l.id} link={l} onOpen={onOpenLink} />
+                ))}
+              </span>
+            ) : undefined
+          }
           dragHandlers={
             editing
               ? {

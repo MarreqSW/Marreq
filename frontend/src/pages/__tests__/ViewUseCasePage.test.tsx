@@ -17,6 +17,13 @@ const mocks = vi.hoisted(() => ({
   discardUseCaseDraft: vi.fn(),
   deleteUseCase: vi.fn(),
   setUseCaseVersionApproval: vi.fn(),
+  listUseCaseLinks: vi.fn(),
+  createUseCaseLink: vi.fn(),
+  deleteUseCaseLink: vi.fn(),
+  clearUseCaseLinkSuspect: vi.fn(),
+  listRequirements: vi.fn(),
+  listVerificationsByProject: vi.fn(),
+  getRequirementByProject: vi.fn(),
 }));
 vi.mock('@/api/client', async () => ({
   ...mocks,
@@ -112,6 +119,7 @@ describe('ViewUseCasePage', () => {
     mocks.getUseCase.mockResolvedValue(detail);
     mocks.listUseCaseVersions.mockResolvedValue([version]);
     mocks.getMyPermissions.mockResolvedValue({ edit_requirements: true, is_project_reviewer: true });
+    mocks.listUseCaseLinks.mockResolvedValue([]);
   });
 
   it('reads the current version with its branches and review action', async () => {
@@ -227,6 +235,79 @@ describe('ViewUseCasePage', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Publish' }));
     await waitFor(() =>
       expect(mocks.publishUseCaseDraft).toHaveBeenCalledWith(5, 7, 4, 'Tightened step 1', 'csrf'),
+    );
+  });
+
+  it('shows links on their steps, opens a requirement beside the page and links new ones', async () => {
+    const user = userEvent.setup();
+    const link = {
+      id: 3,
+      element_id: 's_Pick',
+      element_label: '2',
+      target_type: 'requirement',
+      requirement_id: 11,
+      verification_id: null,
+      target_reference_code: 'REQ-EXP-004',
+      target_title: 'Export a selection',
+      rationale: null,
+      suspect: true,
+      suspect_at: '2026-10-15T08:00:00',
+      suspect_reason: 'Requirement updated',
+      linked_requirement_version_id: 40,
+      current_requirement_version_id: 41,
+      created_by: 1,
+      created_at: '2026-10-15T08:00:00',
+    };
+    mocks.listUseCaseLinks.mockResolvedValue([link]);
+    mocks.getRequirementByProject.mockResolvedValue({
+      id: 11,
+      reference_code: 'REQ-EXP-004',
+      title: 'Export a selection',
+      description: 'The system shall export **selected** requirements.',
+      approval_state: 'approved',
+    });
+    renderPage();
+
+    const panel = await screen.findByText('Related artifacts');
+    const aside = panel.closest('div.rounded-lg') as HTMLElement;
+    expect(within(aside).getByText('step 2')).toBeInTheDocument();
+    expect(within(aside).getByText(/Changed since linked · Requirement updated/)).toBeInTheDocument();
+
+    // The chip on step 2 opens the requirement in a side panel.
+    const row = screen.getByText('User selects requirements.').closest('[data-element-id]') as HTMLElement;
+    await user.click(within(row).getByRole('button', { name: /REQ-EXP-004/ }));
+    const peek = await screen.findByRole('complementary', { name: 'Requirement REQ-EXP-004' });
+    expect(await within(peek).findByText('selected')).toBeInTheDocument();
+    expect(within(peek).getByRole('link', { name: /open requirement/i })).toHaveAttribute(
+      'href',
+      '/space-project/requirements/11',
+    );
+    await user.click(within(peek).getByRole('button', { name: 'Close' }));
+
+    // Clear the suspect flag.
+    mocks.clearUseCaseLinkSuspect.mockResolvedValue({ status: 'ok', cleared: true });
+    await user.click(within(aside).getByRole('button', { name: 'Clear' }));
+    expect(mocks.clearUseCaseLinkSuspect).toHaveBeenCalledWith(5, 7, 3, 'csrf');
+
+    // Link a verification to step 1.
+    mocks.listRequirements.mockResolvedValue([]);
+    mocks.listVerificationsByProject.mockResolvedValue([
+      { id: 21, reference_code: 'TEST-EXP-002', name: 'Export round trip' },
+    ]);
+    mocks.createUseCaseLink.mockResolvedValue({ ...link, id: 4 });
+    await user.click(screen.getByRole('button', { name: 'Link a requirement or verification' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Link a requirement or verification' });
+    await user.selectOptions(within(dialog).getByRole('combobox'), 's_Open');
+    await user.click(within(dialog).getByRole('radio', { name: 'Verification' }));
+    await user.click(await within(dialog).findByRole('option', { name: /TEST-EXP-002/ }));
+    await user.click(within(dialog).getByRole('button', { name: 'Link' }));
+    await waitFor(() =>
+      expect(mocks.createUseCaseLink).toHaveBeenCalledWith(
+        5,
+        7,
+        { element_id: 's_Open', verification_id: 21, rationale: null },
+        'csrf',
+      ),
     );
   });
 });

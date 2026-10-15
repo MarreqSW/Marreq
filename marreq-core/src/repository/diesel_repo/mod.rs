@@ -31,6 +31,9 @@ pub(crate) fn map_db_error(e: diesel::result::Error) -> RepoError {
                         TAKEN_NAMESPACE_MESSAGE.to_string()
                     }
                     c if c.contains("email") => "email is already taken".to_string(),
+                    c if c.contains("use_cases_project_code_unique") => {
+                        "reference_code is already used by a use case in this project".to_string()
+                    }
                     c if c.contains("tests_project_id_reference_code") => {
                         "reference_code is already used in this project".to_string()
                     }
@@ -276,6 +279,7 @@ pub(crate) mod report_templates;
 pub(crate) mod requirement_links;
 pub(crate) mod requirements;
 pub(crate) mod saved_views;
+pub(crate) mod use_cases;
 pub(crate) mod users;
 pub(crate) mod verification_control;
 pub(crate) mod verifications;

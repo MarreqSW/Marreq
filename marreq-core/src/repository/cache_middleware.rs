@@ -11,7 +11,8 @@ use crate::repository::{
     ExternalIdentityRepository, LogRepository, LookupRepository, MatrixRepository,
     ProjectMembersRepository, ProjectReviewersRepository, ProjectsRepository, Repository,
     RequirementCommentsRepository, RequirementVersionLinksRepository, RequirementsRepository,
-    SavedViewRepository, UserRepository, VerificationControlRepository, VerificationsRepository,
+    SavedViewRepository, UseCasesRepository, UserRepository, VerificationControlRepository,
+    VerificationsRepository,
 };
 use serde::{Serialize, de::DeserializeOwned};
 use std::sync::Arc;
@@ -1560,6 +1561,85 @@ impl<R: Repository> SavedViewRepository for CacheRepository<R> {
     }
 }
 
+// Use cases are not cached: they are read per project and per use case.
+impl<R: Repository> UseCasesRepository for CacheRepository<R> {
+    fn list_use_cases_by_project(&self, project_id: i32) -> Result<Vec<UseCase>, RepoError> {
+        self.inner.list_use_cases_by_project(project_id)
+    }
+    fn get_use_case(&self, id: i32) -> Result<UseCase, RepoError> {
+        self.inner.get_use_case(id)
+    }
+    fn list_use_case_codes(&self, project_id: i32) -> Result<Vec<String>, RepoError> {
+        self.inner.list_use_case_codes(project_id)
+    }
+    fn create_use_case(
+        &mut self,
+        new: &NewUseCase,
+        draft_document: &serde_json::Value,
+    ) -> Result<(UseCase, UseCaseDraft), RepoError> {
+        self.inner.create_use_case(new, draft_document)
+    }
+    fn delete_use_case(&mut self, id: i32) -> Result<bool, RepoError> {
+        self.inner.delete_use_case(id)
+    }
+    fn list_use_case_versions(&self, use_case_id: i32) -> Result<Vec<UseCaseVersion>, RepoError> {
+        self.inner.list_use_case_versions(use_case_id)
+    }
+    fn get_use_case_version(&self, version_id: i32) -> Result<UseCaseVersion, RepoError> {
+        self.inner.get_use_case_version(version_id)
+    }
+    fn list_current_use_case_versions(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<UseCaseVersion>, RepoError> {
+        self.inner.list_current_use_case_versions(project_id)
+    }
+    fn set_use_case_version_approval(
+        &mut self,
+        version_id: i32,
+        new_state: &str,
+        user_id: i32,
+    ) -> Result<UseCaseVersion, RepoError> {
+        self.inner
+            .set_use_case_version_approval(version_id, new_state, user_id)
+    }
+    fn get_use_case_draft(&self, use_case_id: i32) -> Result<Option<UseCaseDraft>, RepoError> {
+        self.inner.get_use_case_draft(use_case_id)
+    }
+    fn list_use_case_drafts_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<UseCaseDraft>, RepoError> {
+        self.inner.list_use_case_drafts_by_project(project_id)
+    }
+    fn save_use_case_draft(
+        &mut self,
+        use_case_id: i32,
+        base_revision: Option<i32>,
+        base_version_id: Option<i32>,
+        document: &serde_json::Value,
+        user_id: i32,
+    ) -> Result<Option<UseCaseDraft>, RepoError> {
+        self.inner.save_use_case_draft(
+            use_case_id,
+            base_revision,
+            base_version_id,
+            document,
+            user_id,
+        )
+    }
+    fn delete_use_case_draft(&mut self, use_case_id: i32) -> Result<bool, RepoError> {
+        self.inner.delete_use_case_draft(use_case_id)
+    }
+    fn publish_use_case_draft(
+        &mut self,
+        base_revision: i32,
+        version: &NewUseCaseVersion,
+    ) -> Result<Option<UseCaseVersion>, RepoError> {
+        self.inner.publish_use_case_draft(base_revision, version)
+    }
+}
+
 // Attachments are not cached: listings are small and per entity.
 impl<R: Repository> crate::repository::ReportTemplateRepository for CacheRepository<R> {
     fn list_report_templates(&self, project_id: i32) -> Result<Vec<ReportTemplate>, RepoError> {
@@ -2056,6 +2136,10 @@ mod tests {
             report_templates: Vec::new(),
             next_report_template_id: 1,
             requirement_compliance: HashMap::new(),
+            use_cases: Vec::new(),
+            use_case_versions: Vec::new(),
+            use_case_drafts: Vec::new(),
+            next_use_case_id: 1,
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),
             next_custom_field_id: 1,

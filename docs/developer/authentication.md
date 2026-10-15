@@ -55,7 +55,8 @@ pre-register approved clients at their ingress/provisioning layer.
 Supported scopes are `projects:read`, `requirements:read`,
 `requirements:write`, `requirements:approve`, `verifications:read`,
 `verifications:write`, `traceability:read`, `traceability:write`,
-`baselines:read`, and `baselines:write`. Scope is only a delegation ceiling:
+`baselines:read`, `baselines:write`, `use_cases:read`, `use_cases:write`
+and `use_cases:approve`. Scope is only a delegation ceiling:
 the authenticated Marreq user's normal membership, role, reviewer, and project
 authorization checks still run on every REST request.
 

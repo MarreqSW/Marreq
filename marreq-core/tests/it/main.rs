@@ -30,6 +30,7 @@ mod api_requirements_integration_test;
 mod api_semantic_search_test;
 mod api_status_integration_test;
 mod api_tests_integration_test;
+mod api_use_cases_test;
 mod api_users_integration_test;
 mod api_validation_test;
 mod api_workflow_integration_test;

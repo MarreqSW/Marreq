@@ -14,7 +14,8 @@ use crate::auth::guards::{
     ApiUserOrBearer, BaselinesRead, BaselinesWrite, RequirementsAndBaselinesRead,
     RequirementsAndTraceabilityRead, RequirementsApprove, RequirementsRead,
     RequirementsVerificationsAndTraceabilityRead, RequirementsWrite, SessionUser, TraceabilityRead,
-    TraceabilityWrite, VerificationsRead, VerificationsWrite,
+    TraceabilityWrite, UseCasesApprove, UseCasesRead, UseCasesWrite, VerificationsRead,
+    VerificationsWrite,
 };
 use crate::models::User;
 
@@ -238,6 +239,9 @@ scoped_project_guard!(
 scoped_project_guard!(ProjectTraceabilityWrite, TraceabilityWrite);
 scoped_project_guard!(ProjectBaselinesRead, BaselinesRead);
 scoped_project_guard!(ProjectBaselinesWrite, BaselinesWrite);
+scoped_project_guard!(ProjectUseCasesRead, UseCasesRead);
+scoped_project_guard!(ProjectUseCasesWrite, UseCasesWrite);
+scoped_project_guard!(ProjectUseCasesApprove, UseCasesApprove);
 scoped_project_guard!(
     ProjectRequirementsAndBaselinesRead,
     RequirementsAndBaselinesRead

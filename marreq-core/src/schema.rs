@@ -616,6 +616,61 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    use_case_drafts (use_case_id) {
+        use_case_id -> Int4,
+        base_version_id -> Nullable<Int4>,
+        document -> Jsonb,
+        revision -> Int4,
+        updated_by -> Nullable<Int4>,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
+    use_case_versions (id) {
+        id -> Int4,
+        use_case_id -> Int4,
+        version_number -> Int4,
+        document -> Jsonb,
+        #[max_length = 255]
+        title -> Varchar,
+        #[max_length = 255]
+        primary_actor -> Nullable<Varchar>,
+        #[max_length = 16]
+        approval_state -> Varchar,
+        reviewed_by -> Nullable<Int4>,
+        reviewed_at -> Nullable<Timestamp>,
+        approved_by -> Nullable<Int4>,
+        approved_at -> Nullable<Timestamp>,
+        change_note -> Nullable<Text>,
+        created_by -> Nullable<Int4>,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
+    use_cases (id) {
+        id -> Int4,
+        project_id -> Int4,
+        #[max_length = 50]
+        reference_code -> Varchar,
+        current_version_id -> Nullable<Int4>,
+        created_by -> Nullable<Int4>,
+        created_at -> Timestamp,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     user_api_tokens (id) {
         id -> Int4,
         user_id -> Int4,
@@ -832,6 +887,9 @@ diesel::joinable!(requirement_compliance -> projects (project_id));
 diesel::joinable!(requirement_compliance -> requirements (requirement_id));
 diesel::joinable!(verification_control -> projects (project_id));
 diesel::joinable!(verification_control -> verifications (verification_id));
+// Use cases (issue #398).
+diesel::joinable!(use_case_drafts -> use_cases (use_case_id));
+diesel::joinable!(use_cases -> projects (project_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     applicability,
@@ -872,6 +930,9 @@ diesel::allow_tables_to_appear_in_same_query!(
     requirements,
     saved_views,
     sessions,
+    use_case_drafts,
+    use_case_versions,
+    use_cases,
     user_api_tokens,
     user_identities,
     users,

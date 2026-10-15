@@ -20,6 +20,9 @@ pub const SCOPES: &[&str] = &[
     "traceability:write",
     "baselines:read",
     "baselines:write",
+    "use_cases:read",
+    "use_cases:write",
+    "use_cases:approve",
 ];
 pub const AUTHORIZATION_CODE_SECONDS: i64 = 300;
 pub const ACCESS_TOKEN_SECONDS: i64 = 900;

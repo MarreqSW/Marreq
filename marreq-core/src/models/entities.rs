@@ -531,6 +531,76 @@ pub struct ReportTemplateWrite {
     pub updated_at: chrono::NaiveDateTime,
 }
 
+/// A use case (issue #398). Its content lives in [`UseCaseVersion`]s and, while
+/// being edited, in one [`UseCaseDraft`].
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone, PartialEq)]
+#[diesel(table_name = crate::schema::use_cases)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct UseCase {
+    pub id: i32,
+    pub project_id: i32,
+    pub reference_code: String,
+    pub current_version_id: Option<i32>,
+    pub created_by: Option<i32>,
+    pub created_at: chrono::NaiveDateTime,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Insertable, Clone)]
+#[diesel(table_name = crate::schema::use_cases)]
+pub struct NewUseCase {
+    pub project_id: i32,
+    pub reference_code: String,
+    pub created_by: Option<i32>,
+}
+
+/// An immutable, published version of a use case. `document` is a
+/// [`crate::use_case_document::UseCaseDocument`] as JSON.
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone, PartialEq)]
+#[diesel(table_name = crate::schema::use_case_versions)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct UseCaseVersion {
+    pub id: i32,
+    pub use_case_id: i32,
+    pub version_number: i32,
+    pub document: serde_json::Value,
+    pub title: String,
+    pub primary_actor: Option<String>,
+    pub approval_state: String,
+    pub reviewed_by: Option<i32>,
+    pub reviewed_at: Option<chrono::NaiveDateTime>,
+    pub approved_by: Option<i32>,
+    pub approved_at: Option<chrono::NaiveDateTime>,
+    pub change_note: Option<String>,
+    pub created_by: Option<i32>,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+/// A version about to be published; the repository assigns the number.
+#[derive(Debug, Clone)]
+pub struct NewUseCaseVersion {
+    pub use_case_id: i32,
+    pub document: serde_json::Value,
+    pub title: String,
+    pub primary_actor: Option<String>,
+    pub change_note: Option<String>,
+    pub created_by: i32,
+}
+
+/// The shared working draft of a use case. `revision` grows by one on every
+/// write; a write based on an older revision is refused.
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone, PartialEq)]
+#[diesel(table_name = crate::schema::use_case_drafts)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct UseCaseDraft {
+    pub use_case_id: i32,
+    pub base_version_id: Option<i32>,
+    pub document: serde_json::Value,
+    pub revision: i32,
+    pub updated_by: Option<i32>,
+    pub updated_at: chrono::NaiveDateTime,
+}
+
 /// Level, stage and close-out evidence of one verification (issue #353).
 #[derive(Debug, Serialize, Deserialize, Queryable, Insertable, AsChangeset, Clone, PartialEq)]
 #[diesel(table_name = crate::schema::verification_control)]
@@ -701,6 +771,8 @@ pub enum EntityType {
     Attachment,
     /// Saved report template (issue #354).
     ReportTemplate,
+    /// Use case (issue #398).
+    UseCase,
 }
 
 impl std::fmt::Display for EntityType {
@@ -719,6 +791,7 @@ impl std::fmt::Display for EntityType {
             EntityType::Notification => write!(f, "NOTIFICATION"),
             EntityType::Attachment => write!(f, "ATTACHMENT"),
             EntityType::ReportTemplate => write!(f, "REPORT_TEMPLATE"),
+            EntityType::UseCase => write!(f, "USE_CASE"),
         }
     }
 }
@@ -740,6 +813,7 @@ impl EntityType {
             EntityType::Notification => "notification",
             EntityType::Attachment => "attachment",
             EntityType::ReportTemplate => "report template",
+            EntityType::UseCase => "use case",
         }
     }
 }

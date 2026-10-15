@@ -22,8 +22,8 @@ pub use bearer::{
     ApiUserOrBearer, AuthenticationSource, BaselinesRead, BaselinesWrite, McpAuditAuth,
     McpPrincipalAuth, ProjectsRead, RequirementsAndBaselinesRead, RequirementsAndTraceabilityRead,
     RequirementsApprove, RequirementsRead, RequirementsVerificationsAndTraceabilityRead,
-    RequirementsWrite, TraceabilityRead, TraceabilityWrite, VerificationsRead, VerificationsWrite,
-    request_has_valid_bearer,
+    RequirementsWrite, TraceabilityRead, TraceabilityWrite, UseCasesApprove, UseCasesRead,
+    UseCasesWrite, VerificationsRead, VerificationsWrite, request_has_valid_bearer,
 };
 pub use group::{HtmlGroupAccess, HtmlGroupManageAccess};
 pub use html::HtmlProjectAccess;
@@ -32,7 +32,7 @@ pub use project::{
     ProjectRequirementsAndBaselinesRead, ProjectRequirementsAndTraceabilityRead,
     ProjectRequirementsApprove, ProjectRequirementsRead,
     ProjectRequirementsVerificationsAndTraceabilityRead, ProjectRequirementsWrite,
-    ProjectTraceabilityRead, ProjectTraceabilityWrite, ProjectVerificationsRead,
-    ProjectVerificationsWrite,
+    ProjectTraceabilityRead, ProjectTraceabilityWrite, ProjectUseCasesApprove, ProjectUseCasesRead,
+    ProjectUseCasesWrite, ProjectVerificationsRead, ProjectVerificationsWrite,
 };
 pub use session::SessionUser;

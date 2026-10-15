@@ -280,6 +280,15 @@ Behind the Docker frontend (or Vite dev), use the **same origin** as the SPA (e.
 - `GET /projects/{project_id}/baselines/{baseline_id}/requirements/{req_id}/diff/current` - Diff requirement in baseline vs current version (structured JSON with optional labels for status, category, applicability, verification)
 - `GET /projects/{project_id}/baselines/{baseline_id}/traceability` - Get traceability snapshot for the baseline
 
+#### Use cases
+- `GET|POST /projects/{project_id}/use-cases` - List / create use cases (`GET .../next-code` suggests a code)
+- `GET|DELETE /projects/{project_id}/use-cases/{id}` - Use case with its current version (or `?version_id=`) and draft summary
+- `GET|PUT|DELETE /projects/{project_id}/use-cases/{id}/draft` - The shared working draft (revision-checked)
+- `POST /projects/{project_id}/use-cases/{id}/draft/operations` - Apply editor operations atomically
+- `POST /projects/{project_id}/use-cases/{id}/draft/publish` - Publish the draft as the next version
+- `GET /projects/{project_id}/use-cases/{id}/versions[/{version_id}]` - Versions; `PUT .../versions/{version_id}/approval` to review or approve
+- Details: [docs/developer/use-cases-api.md](docs/developer/use-cases-api.md)
+
 #### Users
 - `GET /users` - List all users
 - `GET /users/{id}` - Get specific user

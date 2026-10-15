@@ -666,6 +666,30 @@ pub struct NewUseCaseComment {
     pub body: String,
 }
 
+/// The version of a use case recorded by a baseline (issue #402).
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone, PartialEq)]
+#[diesel(table_name = crate::schema::baseline_use_cases)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct BaselineUseCase {
+    pub baseline_id: i32,
+    pub use_case_id: i32,
+    pub version_id: i32,
+}
+
+/// A use case link as a baseline recorded it (issue #402).
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone, PartialEq)]
+#[diesel(table_name = crate::schema::baseline_use_case_links)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct BaselineUseCaseLink {
+    pub id: i32,
+    pub baseline_id: i32,
+    pub use_case_id: i32,
+    pub element_id: Option<String>,
+    pub requirement_id: Option<i32>,
+    pub verification_id: Option<i32>,
+    pub suspect: bool,
+}
+
 /// Level, stage and close-out evidence of one verification (issue #353).
 #[derive(Debug, Serialize, Deserialize, Queryable, Insertable, AsChangeset, Clone, PartialEq)]
 #[diesel(table_name = crate::schema::verification_control)]

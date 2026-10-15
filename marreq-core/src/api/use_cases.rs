@@ -1466,3 +1466,141 @@ pub async fn create_comment(
         .expect("one comment");
     Ok((Status::Created, Json(view)))
 }
+
+// ----- Baselines (issue #402) -----
+
+#[derive(Debug, Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct BaselineUseCaseView {
+    pub use_case_id: i32,
+    pub reference_code: String,
+    pub title: String,
+    pub primary_actor: Option<String>,
+    /// The version the baseline recorded.
+    pub version_id: i32,
+    pub version_number: i32,
+    pub approval_state: String,
+    /// The use case's current version, to tell whether it changed since.
+    pub current_version_id: Option<i32>,
+    pub current_version_number: Option<i32>,
+    pub link_count: usize,
+}
+
+fn baseline_in_project(state: &AppState, project_id: i32, baseline_id: i32) -> UcResult<()> {
+    use crate::repository::BaselineRepository;
+    let baseline = state.repo_read().get_baseline_by_id(baseline_id)?;
+    if baseline.project_id != project_id {
+        return Err(UseCaseApiError::new(
+            Status::NotFound,
+            "baseline not found",
+            Value::Null,
+        ));
+    }
+    Ok(())
+}
+
+/// GET /projects/{id}/baselines/{bid}/use-cases — the use case versions a
+/// baseline recorded.
+#[get("/projects/<project_id>/baselines/<baseline_id>/use-cases")]
+pub async fn baseline_use_cases(
+    access: ProjectUseCasesRead,
+    project_id: i32,
+    baseline_id: i32,
+    state: &State<AppState>,
+) -> UcResult<Json<Vec<BaselineUseCaseView>>> {
+    require(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    baseline_in_project(state, project_id, baseline_id)?;
+    let (recorded, links) = {
+        let repo = state.repo_read();
+        (
+            repo.list_baseline_use_cases(baseline_id)?,
+            repo.list_baseline_use_case_links(baseline_id)?,
+        )
+    };
+    let mut out = Vec::new();
+    for b in recorded {
+        let repo = state.repo_read();
+        let use_case = repo.get_use_case(b.use_case_id)?;
+        let version = repo.get_use_case_version(b.version_id)?;
+        let current = match use_case.current_version_id {
+            Some(id) if id != version.id => Some(repo.get_use_case_version(id)?),
+            Some(_) => Some(version.clone()),
+            None => None,
+        };
+        out.push(BaselineUseCaseView {
+            use_case_id: use_case.id,
+            reference_code: use_case.reference_code.clone(),
+            title: version.title.clone(),
+            primary_actor: version.primary_actor.clone(),
+            version_id: version.id,
+            version_number: version.version_number,
+            approval_state: version.approval_state.clone(),
+            current_version_id: current.as_ref().map(|c| c.id),
+            current_version_number: current.as_ref().map(|c| c.version_number),
+            link_count: links
+                .iter()
+                .filter(|l| l.use_case_id == use_case.id)
+                .count(),
+        });
+    }
+    out.sort_by(|a, b| a.reference_code.cmp(&b.reference_code));
+    Ok(Json(out))
+}
+
+/// GET /projects/{id}/baselines/{bid}/use-cases/{uc}/diff/current — the
+/// recorded version against the current one.
+#[get(
+    "/projects/<project_id>/baselines/<baseline_id>/use-cases/<id>/diff/current?<include_unchanged>"
+)]
+pub async fn baseline_use_case_diff(
+    access: ProjectUseCasesRead,
+    project_id: i32,
+    baseline_id: i32,
+    id: i32,
+    include_unchanged: Option<bool>,
+    state: &State<AppState>,
+) -> UcResult<Json<DiffView>> {
+    require(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    baseline_in_project(state, project_id, baseline_id)?;
+    let service = UseCaseService::new(state.inner());
+    let err = |e| into_api_error(state, None, e);
+    let use_case = service.get_in_project(project_id, id).map_err(err)?;
+    let recorded = state
+        .repo_read()
+        .list_baseline_use_cases(baseline_id)?
+        .into_iter()
+        .find(|b| b.use_case_id == use_case.id)
+        .ok_or_else(|| {
+            UseCaseApiError::new(
+                Status::NotFound,
+                "the baseline does not record this use case",
+                Value::Null,
+            )
+        })?;
+    let from = service
+        .get_version(&use_case, recorded.version_id)
+        .map_err(err)?;
+    let to = service
+        .current_version(&use_case)
+        .map_err(err)?
+        .unwrap_or_else(|| from.clone());
+    Ok(Json(DiffView {
+        from: Some(version_end(&from)),
+        to: version_end(&to),
+        diff: diff_documents(
+            &parse_document(&from.document).map_err(err)?,
+            &parse_document(&to.document).map_err(err)?,
+            include_unchanged.unwrap_or(false),
+        ),
+    }))
+}

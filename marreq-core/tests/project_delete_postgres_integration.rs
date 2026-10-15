@@ -72,6 +72,8 @@ fn seed_project(project: i32, base: i32, slug: &str) -> String {
          UPDATE use_cases SET current_version_id = {b} WHERE id = {b};
          INSERT INTO use_case_drafts (use_case_id,base_version_id,document) VALUES ({b},{b},'{{}}');
          INSERT INTO use_case_comments (use_case_id,use_case_version_id,element_id,author_id,body) VALUES ({b},{b},'s_A',1,'Check');
+         INSERT INTO baseline_use_cases (baseline_id,use_case_id,version_id) VALUES ({b},{b},{b});
+         INSERT INTO baseline_use_case_links (baseline_id,use_case_id,element_id,requirement_id) VALUES ({b},{b},'s_A',{b}+1);
          INSERT INTO use_case_links (project_id,use_case_id,element_id,requirement_id,linked_requirement_version_id) VALUES ({project},{b},'s_A',{b}+1,{b}+1);
          INSERT INTO notifications (user_id,project_id,notification_type,title) VALUES (2,{project},'requirement_updated','Changed');
          INSERT INTO notification_preferences (user_id,project_id) VALUES (2,{project});
@@ -138,6 +140,8 @@ fn project_rows(conn: &mut PgConnection, p: i32) -> Vec<(&'static str, i64)> {
         ("use_case_versions", "use_case_id"),
         ("use_case_drafts", "use_case_id"),
         ("use_case_comments", "use_case_id"),
+        ("baseline_use_cases", "baseline_id"),
+        ("baseline_use_case_links", "baseline_id"),
     ] {
         out.push((
             t,

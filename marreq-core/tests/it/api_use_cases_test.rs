@@ -987,3 +987,133 @@ async fn comments_anchor_to_steps_and_notify() {
         .unwrap();
     assert_eq!(approval["title"], "UC-001 v1 is waiting for your approval");
 }
+
+#[rocket::async_test]
+async fn baselines_record_use_case_versions_and_links() {
+    let client = test_client(repo()).await;
+    let id = export_use_case(&client).await;
+    let publish = format!("{BASE}/{id}/draft/publish");
+    let (_, v1) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &publish,
+        Some(json!({ "base_revision": 2 })),
+    )
+    .await;
+    let v1 = v1["version"]["id"].as_i64().unwrap();
+    call(
+        &client,
+        AUTHOR,
+        "POST",
+        &format!("{BASE}/{id}/links"),
+        Some(json!({ "element_id": "s_Pick01", "requirement_id": 1 })),
+    )
+    .await;
+    // An unpublished use case is not recorded.
+    call(
+        &client,
+        AUTHOR,
+        "POST",
+        BASE,
+        Some(json!({ "title": "Not yet published" })),
+    )
+    .await;
+
+    let (status, a) = call(
+        &client,
+        ADMIN,
+        "POST",
+        "/api/projects/1/baselines",
+        Some(json!({ "name": "PDR" })),
+    )
+    .await;
+    assert_eq!(status, Status::Ok, "{a}");
+    let a = a["id"].as_i64().unwrap();
+    let (_, recorded) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("/api/projects/1/baselines/{a}/use-cases"),
+        None,
+    )
+    .await;
+    assert_eq!(recorded.as_array().unwrap().len(), 1);
+    assert_eq!(
+        (
+            recorded[0]["version_id"].as_i64(),
+            recorded[0]["link_count"].as_i64()
+        ),
+        (Some(v1), Some(1))
+    );
+
+    // A newer version: the baseline still points at v1, the diff shows the change.
+    ops(&client, id, Value::Null, json!([{ "op": "update_text", "id": "s_Make01", "text": "System generates the export file." }])).await;
+    let (_, v2) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &publish,
+        Some(json!({ "base_revision": 1 })),
+    )
+    .await;
+    let v2 = v2["version"]["id"].as_i64().unwrap();
+    let (_, recorded) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("/api/projects/1/baselines/{a}/use-cases"),
+        None,
+    )
+    .await;
+    assert_eq!(
+        (
+            recorded[0]["version_number"].as_i64(),
+            recorded[0]["current_version_number"].as_i64()
+        ),
+        (Some(1), Some(2))
+    );
+    let (_, diff) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("/api/projects/1/baselines/{a}/use-cases/{id}/diff/current"),
+        None,
+    )
+    .await;
+    assert_eq!(
+        (
+            diff["from"]["version_id"].as_i64(),
+            diff["to"]["version_id"].as_i64()
+        ),
+        (Some(v1), Some(v2))
+    );
+    assert_eq!(diff["summary"]["edited"], 1);
+
+    let (_, b) = call(
+        &client,
+        ADMIN,
+        "POST",
+        "/api/projects/1/baselines",
+        Some(json!({ "name": "CDR" })),
+    )
+    .await;
+    let b = b["id"].as_i64().unwrap();
+    let (_, compared) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("/api/projects/1/baselines/diff?baseline_a={a}&baseline_b={b}"),
+        None,
+    )
+    .await;
+    assert_eq!(
+        compared["use_cases_changed"],
+        json!([{ "use_case_id": id, "version_a": v1, "version_b": v2 }])
+    );
+    assert_eq!(compared["use_cases_only_in_a"], json!([]));
+
+    // A baselined use case cannot be deleted.
+    let (status, body) = call(&client, AUTHOR, "DELETE", &format!("{BASE}/{id}"), None).await;
+    assert_eq!(status, Status::Conflict, "{body}");
+}

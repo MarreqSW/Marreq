@@ -14,7 +14,7 @@ use diesel::prelude::*;
 use marreq_core::models::{NewUseCase, NewUseCaseComment, NewUseCaseLink, NewUseCaseVersion};
 use marreq_core::repository::errors::RepoError;
 use marreq_core::repository::{
-    DieselRepo, MatrixRepository, RequirementsRepository, UseCasesRepository,
+    BaselineRepository, DieselRepo, MatrixRepository, RequirementsRepository, UseCasesRepository,
 };
 use serde_json::json;
 
@@ -261,4 +261,59 @@ fn use_case_drafts_versions_and_approval() {
             .is_empty()
     );
     assert_eq!(repo.list_use_cases_by_project(2).unwrap().len(), 1);
+
+    // Baselines record published use cases and their links, immutably.
+    let (uc, _) = repo
+        .create_use_case(&new(1), &doc)
+        .expect("a new UC-001 after the delete");
+    let published = repo
+        .publish_use_case_draft(
+            1,
+            &NewUseCaseVersion {
+                use_case_id: uc.id,
+                ..version("Recorded")
+            },
+        )
+        .unwrap()
+        .expect("published");
+    repo.create_use_case_link(&NewUseCaseLink {
+        use_case_id: uc.id,
+        ..link(Some("s_A"), Some(1), None)
+    })
+    .unwrap();
+    let baseline = repo
+        .create_baseline(
+            1,
+            1,
+            &marreq_core::models::NewBaseline {
+                name: "PDR".into(),
+                description: None,
+                saved_view_id: None,
+                mcp_idempotency_identity: None,
+            },
+        )
+        .expect("baseline");
+    let recorded = repo.list_baseline_use_cases(baseline.id).unwrap();
+    assert_eq!(
+        recorded.len(),
+        1,
+        "only the published use case of project 1"
+    );
+    assert_eq!(recorded[0].version_id, published.id);
+    assert_eq!(
+        repo.list_baseline_use_case_links(baseline.id)
+            .unwrap()
+            .len(),
+        1
+    );
+    assert!(repo.use_case_in_baseline(uc.id).unwrap());
+    assert!(repo.delete_use_case(uc.id).is_err(), "RESTRICT keeps it");
+    assert!(
+        conn.batch_execute(&format!(
+            "DELETE FROM baseline_use_cases WHERE baseline_id = {}",
+            baseline.id
+        ))
+        .is_err(),
+        "baseline rows are immutable"
+    );
 }

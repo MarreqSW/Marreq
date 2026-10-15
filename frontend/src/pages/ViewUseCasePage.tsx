@@ -656,7 +656,7 @@ export default function ViewUseCasePage() {
       </div>
 
       {toast ? (
-        <div role="status" className="fixed bottom-6 right-6 z-70 flex max-w-md items-center gap-3 rounded-lg bg-stitch-fg px-4 py-2.5 text-sm text-stitch-canvas shadow-stitch">
+        <div role="status" className="fixed bottom-6 right-6 z-70 flex max-w-md items-center gap-3 rounded-lg bg-slate-900 px-4 py-2.5 text-sm text-white shadow-stitch ring-1 ring-white/10">
           <span className="material-symbols-outlined text-lg text-emerald-300">check_circle</span>
           <span>{toast.message}</span>
           {toast.undo ? (

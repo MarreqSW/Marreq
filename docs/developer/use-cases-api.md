@@ -49,7 +49,7 @@ Rules (a violation is **422** `invalid_document`, with every broken rule in `err
 
 | Method | Path | Scope | Description |
 |---|---|---|---|
-| `GET` | `/use-cases` | `use_cases:read` | Rows `id, reference_code, title, primary_actor, step_count, alternative_count, exception_count, approval_state, current_version_number, has_draft, updated_at`. Query: `q` (code, title, actor), `approval_state` (`draft`, `reviewed`, `approved`, or `unpublished`), `actor`, `sort_column` (`code`, `title`, `actor`, `approval`, `modified`), `sort_dir` (`asc`, `desc`). Title and counts come from the current version, or from the draft before the first publish; `approval_state` is `null` then. |
+| `GET` | `/use-cases` | `use_cases:read` | Rows `id, reference_code, title, primary_actor, step_count, alternative_count, exception_count, approval_state, current_version_number, has_draft, link_count, suspect_count, updated_at`. Query: `q` (code, title, actor), `approval_state` (`draft`, `reviewed`, `approved`, or `unpublished`), `actor`, `has_suspect=true`, `requirement_id`, `verification_id` (use cases linked to it), `sort_column` (`code`, `title`, `actor`, `approval`, `modified`), `sort_dir` (`asc`, `desc`). Title and counts come from the current version, or from the draft before the first publish; `approval_state` is `null` then. |
 | `GET` | `/use-cases/next-code` | `use_cases:read` | `{ "reference_code": "UC-008" }`: the highest `UC-NNN` plus one. A suggestion only. |
 | `POST` | `/use-cases` | `use_cases:write` | `{reference_code?, title?, primary_actor?, document?}`. Without a code the server takes the next `UC-NNN`; codes follow `^[A-Z]{2,4}(-[A-Z0-9]{1,6})+$` (**400**) and are unique per project (**409**). `document` starts the draft from a whole document; `title` and `primary_actor` override its header. **201** with the detail. |
 | `GET` | `/use-cases/{id}` | `use_cases:read` | `{id, project_id, reference_code, title, created_by, created_at, updated_at, current_version, draft}`. `current_version` is `{id, version_number, approval_state, title, primary_actor, change_note, created_by, created_by_name, created_at, reviewed_by/at, approved_by/at, document, labels}` or `null`; `?version_id=` returns that version instead. `draft` is `{revision, base_version_id, updated_by, updated_by_name, updated_at}` or `null`. |
@@ -57,13 +57,26 @@ Rules (a violation is **422** `invalid_document`, with every broken rule in `err
 | `GET` | `/use-cases/{id}/draft` | `use_cases:read` | `{use_case_id, revision, base_version_id, updated_by, updated_by_name, updated_at, document, labels}`; **404** when there is no draft. |
 | `PUT` | `/use-cases/{id}/draft` | `use_cases:write` | `{base_revision, document}`: replace the whole draft (`base_revision: null` opens one when there is none). Returns the draft plus `effects: []`. |
 | `POST` | `/use-cases/{id}/draft/operations` | `use_cases:write` | `{base_revision, operations: [...]}`: apply the operations below in order, all or nothing. `base_revision: null` opens a draft from the current version. Returns the draft plus `effects`. |
-| `DELETE` | `/use-cases/{id}/draft` | `use_cases:write` | **204**. **409** for a use case that was never published (delete the use case instead). |
-| `POST` | `/use-cases/{id}/draft/publish` | `use_cases:write` | `{base_revision, change_note?}`. Checks the publish rules, creates the next version in approval state `draft`, makes it current and removes the draft. **201** with `{version}`. |
+| `DELETE` | `/use-cases/{id}/draft` | `use_cases:write` | **204**. Links to elements that only the draft had are deleted. **409** for a use case that was never published (delete the use case instead). |
+| `POST` | `/use-cases/{id}/draft/publish` | `use_cases:write` | `{base_revision, change_note?}`. Checks the publish rules, creates the next version in approval state `draft`, makes it current and removes the draft. Links to elements the new version no longer has are deleted. **201** with `{version, removed_links}`. |
 | `GET` | `/use-cases/{id}/versions` | `use_cases:read` | Version summaries (no document), newest first. |
 | `GET` | `/use-cases/{id}/versions/{version_id}` | `use_cases:read` | One version with `document` and `labels`. |
 | `PUT` | `/use-cases/{id}/versions/{version_id}/approval` | `use_cases:approve` | `{state: "reviewed" \| "approved"}`. Project reviewers only; `draft → reviewed → approved`, one step at a time (**400** otherwise; the same state again is a no-op). Returns the version. |
 
-Create, delete, publish and approval changes are audited with entity type `USE_CASE`. Draft edits are not audited one by one.
+Create, delete, publish, approval changes and link changes are audited with entity type `USE_CASE`. Draft edits are not audited one by one.
+
+### Links
+
+A link ties the use case, or one of its elements (a step or condition id), to a requirement or a verification of the same project. Links point at the requirement, not at a version, like matrix rows. When the requirement gets a new version or its approval state changes, its use case links become **suspect**, in the same way and transaction as its matrix rows. Linking a verification to a use case never changes the matrix: it does not verify the use case's requirements.
+
+| Method | Path | Scope | Description |
+|---|---|---|---|
+| `GET` | `/use-cases/{id}/links` | `use_cases:read` | `[{id, element_id, element_label, target_type, requirement_id, verification_id, target_reference_code, target_title, rationale, suspect, suspect_at, suspect_reason, linked_requirement_version_id, current_requirement_version_id, created_by, created_at}]`. `element_id` is `null` for the whole use case; `element_label` comes from the current version, or the draft for elements only it has. |
+| `POST` | `/use-cases/{id}/links` | `use_cases:write` | `{element_id?, requirement_id? \| verification_id?, rationale?}`: exactly one target (**400** otherwise). The element must exist in the current version or the draft (**400**); the target must be in the project (**404**). The same link twice is **409**. **201** with the link. |
+| `DELETE` | `/use-cases/{id}/links/{link_id}` | `use_cases:write` | **204**. |
+| `POST` | `/use-cases/{id}/links/{link_id}/clear_suspect` | `use_cases:write` | `{status: "ok" \| "no_change", cleared}`. Records the requirement's current version as the linked one. |
+| `GET` | `/requirements/{requirement_id}/use-cases` | `use_cases:read` | Where a requirement is used: `[{use_case_id, reference_code, title, link_id, element_id, element_label, suspect}]`. |
+| `GET` | `/verifications/{verification_id}/use-cases` | `use_cases:read` | The same for a verification. |
 
 ### Draft operations
 

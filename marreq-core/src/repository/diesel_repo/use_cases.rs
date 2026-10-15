@@ -4,12 +4,38 @@
 //! Use cases, their versions and drafts (issue #398).
 
 use super::{DieselRepo, map_db_error};
-use crate::models::{NewUseCase, NewUseCaseVersion, UseCase, UseCaseDraft, UseCaseVersion};
+use crate::models::{
+    NewUseCase, NewUseCaseLink, NewUseCaseVersion, UseCase, UseCaseDraft, UseCaseLink,
+    UseCaseVersion,
+};
 use crate::repository::UseCasesRepository;
 use crate::repository::errors::RepoError;
 use crate::schema;
 use crate::status_enums::ApprovalState;
 use diesel::prelude::*;
+
+/// Mark the use case links to a requirement suspect, in the caller's
+/// connection or transaction (the matrix rule, issue #400).
+pub(crate) fn mark_use_case_links_suspect(
+    conn: &mut PgConnection,
+    requirement_id: i32,
+    reason: &str,
+    triggering_version_id: Option<i32>,
+    triggering_user_id: Option<i32>,
+) -> QueryResult<usize> {
+    use schema::use_case_links::dsl;
+    diesel::update(dsl::use_case_links.filter(dsl::requirement_id.eq(requirement_id)))
+        .set((
+            dsl::suspect.eq(true),
+            dsl::suspect_at.eq(chrono::Utc::now().naive_utc()),
+            dsl::suspect_reason.eq(reason),
+            dsl::cleared_by.eq(Option::<i32>::None),
+            dsl::cleared_at.eq(Option::<chrono::NaiveDateTime>::None),
+            dsl::triggering_version_id.eq(triggering_version_id),
+            dsl::triggering_user_id.eq(triggering_user_id),
+        ))
+        .execute(conn)
+}
 
 fn not_found(e: diesel::result::Error) -> RepoError {
     if e == diesel::result::Error::NotFound {
@@ -294,5 +320,110 @@ impl UseCasesRepository for DieselRepo {
                 .execute(conn)?;
             Ok(Some(created))
         })
+    }
+
+    fn list_use_case_links(&self, use_case_id: i32) -> Result<Vec<UseCaseLink>, RepoError> {
+        use schema::use_case_links::dsl;
+        let mut conn = self.get_conn()?;
+        Ok(dsl::use_case_links
+            .filter(dsl::use_case_id.eq(use_case_id))
+            .order(dsl::id)
+            .load(conn.as_mut())?)
+    }
+
+    fn list_use_case_links_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<UseCaseLink>, RepoError> {
+        use schema::use_case_links::dsl;
+        let mut conn = self.get_conn()?;
+        Ok(dsl::use_case_links
+            .filter(dsl::project_id.eq(project_id))
+            .order(dsl::id)
+            .load(conn.as_mut())?)
+    }
+
+    fn list_use_case_links_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<UseCaseLink>, RepoError> {
+        use schema::use_case_links::dsl;
+        let mut conn = self.get_conn()?;
+        Ok(dsl::use_case_links
+            .filter(dsl::requirement_id.eq(requirement_id))
+            .order(dsl::id)
+            .load(conn.as_mut())?)
+    }
+
+    fn list_use_case_links_for_verification(
+        &self,
+        verification_id: i32,
+    ) -> Result<Vec<UseCaseLink>, RepoError> {
+        use schema::use_case_links::dsl;
+        let mut conn = self.get_conn()?;
+        Ok(dsl::use_case_links
+            .filter(dsl::verification_id.eq(verification_id))
+            .order(dsl::id)
+            .load(conn.as_mut())?)
+    }
+
+    fn get_use_case_link(&self, id: i32) -> Result<UseCaseLink, RepoError> {
+        use schema::use_case_links::dsl;
+        let mut conn = self.get_conn()?;
+        dsl::use_case_links
+            .find(id)
+            .first(conn.as_mut())
+            .map_err(not_found)
+    }
+
+    fn create_use_case_link(&mut self, new: &NewUseCaseLink) -> Result<UseCaseLink, RepoError> {
+        let mut conn = self.get_conn()?;
+        diesel::insert_into(schema::use_case_links::table)
+            .values(new)
+            .get_result(conn.as_mut())
+            .map_err(map_db_error)
+    }
+
+    fn delete_use_case_link(&mut self, id: i32) -> Result<bool, RepoError> {
+        use schema::use_case_links::dsl;
+        let mut conn = self.get_conn()?;
+        Ok(diesel::delete(dsl::use_case_links.find(id)).execute(conn.as_mut())? > 0)
+    }
+
+    fn clear_use_case_link_suspect(
+        &mut self,
+        id: i32,
+        user_id: i32,
+        current_version_id: Option<i32>,
+    ) -> Result<bool, RepoError> {
+        use schema::use_case_links::dsl;
+        let mut conn = self.get_conn()?;
+        let n = diesel::update(dsl::use_case_links.find(id).filter(dsl::suspect.eq(true)))
+            .set((
+                dsl::suspect.eq(false),
+                dsl::suspect_at.eq(Option::<chrono::NaiveDateTime>::None),
+                dsl::suspect_reason.eq(Option::<String>::None),
+                dsl::cleared_by.eq(user_id),
+                dsl::cleared_at.eq(chrono::Utc::now().naive_utc()),
+                dsl::linked_requirement_version_id.eq(current_version_id),
+            ))
+            .execute(conn.as_mut())?;
+        Ok(n > 0)
+    }
+
+    fn delete_use_case_links_outside(
+        &mut self,
+        use_case_id: i32,
+        keep: &[String],
+    ) -> Result<Vec<UseCaseLink>, RepoError> {
+        use schema::use_case_links::dsl;
+        let mut conn = self.get_conn()?;
+        Ok(diesel::delete(
+            dsl::use_case_links
+                .filter(dsl::use_case_id.eq(use_case_id))
+                .filter(dsl::element_id.is_not_null())
+                .filter(diesel::dsl::not(dsl::element_id.eq_any(keep))),
+        )
+        .get_results(conn.as_mut())?)
     }
 }

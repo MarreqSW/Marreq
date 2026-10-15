@@ -946,6 +946,20 @@ A new version starts in the **Draft** approval state. Project reviewers ([§11.1
 
 Archived projects are read-only: use cases can be read but not edited, published or approved. Editing needs the same permission as editing requirements.
 
+### 14.5 Links to Requirements and Verifications
+
+The **Related artifacts** panel lists the requirements and verifications linked to the use case, and which step each link belongs to. A link can belong to the whole use case or to one step or condition; step links also show as chips after the step's text.
+
+- **Add a link** with the link icon in the panel, or **Link requirement or verification** in a step's **⋯** menu while editing. Choose the step (or the whole use case), then the requirement or verification, and optionally say why.
+- **Click a requirement chip** to read the requirement in a side panel without leaving the use case; **Open requirement** goes to its page. A verification chip opens the verification.
+- **Remove** a link with **×** in the panel.
+
+When a linked requirement gets a new version or its approval state changes, its links become **suspect**, like its rows in the traceability matrix: the chip turns amber and the panel says *Changed since linked*. Check the step still matches, then click **Clear**. **Has suspect links** in the use case list shows the use cases that need this, and the **Linked** column counts each one's links.
+
+Linking a verification to a use case does not mark the use case's requirements as verified: coverage still comes from the matrix.
+
+Deleting a step that has links asks first; its links are removed when the next version is published, and Marreq says which. Requirement and verification pages list **Used in use cases**, with the step and a mark on suspect links.
+
 ## 15. Tips & Shortcuts
 
 - **Theme**: the light / dark / match-system switch in the top bar (on wider screens) or on the login page; the choice is stored in the browser.

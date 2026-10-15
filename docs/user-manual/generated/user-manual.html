@@ -2160,6 +2160,38 @@ requirements.</p>
 <p>Archived projects are read-only: use cases can be read but not
 edited, published or approved. Editing needs the same permission as
 editing requirements.</p>
+<h3 id="145-links-to-requirements-and-verifications">14.5 Links to
+Requirements and Verifications</h3>
+<p>The <strong>Related artifacts</strong> panel lists the requirements
+and verifications linked to the use case, and which step each link
+belongs to. A link can belong to the whole use case or to one step or
+condition; step links also show as chips after the step's text.</p>
+<ul>
+<li><strong>Add a link</strong> with the link icon in the panel, or
+<strong>Link requirement or verification</strong> in a step's
+<strong>⋯</strong> menu while editing. Choose the step (or the whole use
+case), then the requirement or verification, and optionally say
+why.</li>
+<li><strong>Click a requirement chip</strong> to read the requirement in
+a side panel without leaving the use case; <strong>Open
+requirement</strong> goes to its page. A verification chip opens the
+verification.</li>
+<li><strong>Remove</strong> a link with <strong>×</strong> in the
+panel.</li>
+</ul>
+<p>When a linked requirement gets a new version or its approval state
+changes, its links become <strong>suspect</strong>, like its rows in the
+traceability matrix: the chip turns amber and the panel says <em>Changed
+since linked</em>. Check the step still matches, then click
+<strong>Clear</strong>. <strong>Has suspect links</strong> in the use
+case list shows the use cases that need this, and the
+<strong>Linked</strong> column counts each one's links.</p>
+<p>Linking a verification to a use case does not mark the use case's
+requirements as verified: coverage still comes from the matrix.</p>
+<p>Deleting a step that has links asks first; its links are removed when
+the next version is published, and Marreq says which. Requirement and
+verification pages list <strong>Used in use cases</strong>, with the
+step and a mark on suspect links.</p>
 <h2 id="15-tips--shortcuts">15. Tips &amp; Shortcuts</h2>
 <ul>
 <li><strong>Theme</strong>: the light / dark / match-system switch in

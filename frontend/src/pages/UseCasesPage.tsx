@@ -23,6 +23,7 @@ const COLUMNS: { key: string; label: string; className?: string }[] = [
   { key: 'actor', label: 'Primary actor' },
   { key: '', label: 'Steps', className: 'text-center' },
   { key: '', label: 'Alt · Exc', className: 'text-center' },
+  { key: '', label: 'Linked', className: 'text-center' },
   { key: 'approval', label: 'State' },
   { key: 'modified', label: 'Updated' },
 ];
@@ -41,6 +42,7 @@ export default function UseCasesPage() {
   const [err, setErr] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const [state, setState] = useState('');
+  const [suspectOnly, setSuspectOnly] = useState(false);
   const [sort, setSort] = useState<{ column: string; dir: 'asc' | 'desc' }>({
     column: 'code',
     dir: 'asc',
@@ -60,6 +62,7 @@ export default function UseCasesPage() {
         await listUseCases(pid, {
           q: q.trim() || undefined,
           approval_state: state || undefined,
+          has_suspect: suspectOnly ? 'true' : undefined,
           sort_column: sort.column,
           sort_dir: sort.dir,
         }),
@@ -69,7 +72,7 @@ export default function UseCasesPage() {
     } finally {
       setLoading(false);
     }
-  }, [pid, q, state, sort]);
+  }, [pid, q, state, suspectOnly, sort]);
 
   useEffect(() => {
     const t = window.setTimeout(() => void load(), 150);
@@ -171,6 +174,19 @@ export default function UseCasesPage() {
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          aria-pressed={suspectOnly}
+          onClick={() => setSuspectOnly((v) => !v)}
+          className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold ${
+            suspectOnly
+              ? 'border-amber-500 bg-amber-500/10 text-amber-800 dark:text-amber-300'
+              : 'border-stitch-border bg-stitch-surface text-stitch-fg'
+          }`}
+        >
+          <span className="material-symbols-outlined text-sm">link_off</span>
+          Has suspect links
+        </button>
       </div>
 
       {err ? (
@@ -215,7 +231,7 @@ export default function UseCasesPage() {
             ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={COLUMNS.length} className="px-4 py-8 text-center text-stitch-muted">
-                  {q || state ? 'No use case matches the filter.' : 'No use cases yet.'}
+                  {q || state || suspectOnly ? 'No use case matches the filter.' : 'No use cases yet.'}
                 </td>
               </tr>
             ) : (
@@ -240,6 +256,25 @@ export default function UseCasesPage() {
                     <td className="px-4 py-3 text-center">{r.step_count}</td>
                     <td className="px-4 py-3 text-center text-stitch-muted">
                       {r.alternative_count} · {r.exception_count}
+                    </td>
+                    <td className="px-4 py-3 text-center whitespace-nowrap">
+                      <span className="inline-flex items-center gap-1 text-stitch-muted">
+                        <span className="material-symbols-outlined text-sm" aria-hidden>
+                          link
+                        </span>
+                        {r.link_count}
+                      </span>
+                      {r.suspect_count > 0 ? (
+                        <span
+                          title={`${r.suspect_count} suspect`}
+                          className="ml-2 inline-flex items-center gap-0.5 font-semibold text-amber-700 dark:text-amber-300"
+                        >
+                          <span className="material-symbols-outlined text-sm" aria-hidden>
+                            link_off
+                          </span>
+                          {r.suspect_count}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="px-4 py-3">
                       <span className="flex flex-wrap items-center gap-1">
@@ -267,6 +302,9 @@ export default function UseCasesPage() {
       {!loading && rows.length > 0 ? (
         <p className="mt-3 text-xs text-stitch-muted">
           {rows.length} use case{rows.length === 1 ? '' : 's'}
+          {rows.some((r) => r.suspect_count > 0)
+            ? ` · ${rows.filter((r) => r.suspect_count > 0).length} with suspect links`
+            : ''}
         </p>
       ) : null}
 

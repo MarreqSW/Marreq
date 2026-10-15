@@ -996,6 +996,9 @@ export interface UseCaseRow {
   approval_state: string | null;
   current_version_number: number | null;
   has_draft: boolean;
+  /** Links to requirements and verifications, and how many are suspect (issue #400). */
+  link_count: number;
+  suspect_count: number;
   updated_at: string;
 }
 
@@ -1086,3 +1089,35 @@ export type UseCaseOperation =
       end?: UseCaseBranchEnd;
     }
   | { op: 'remove_branch'; id: string };
+
+/** A link from a use case, or one of its elements, to a requirement or verification (issue #400). */
+export interface UseCaseLink {
+  id: number;
+  /** `null` for the whole use case. */
+  element_id: string | null;
+  element_label: string | null;
+  target_type: 'requirement' | 'verification';
+  requirement_id: number | null;
+  verification_id: number | null;
+  target_reference_code: string;
+  target_title: string;
+  rationale: string | null;
+  suspect: boolean;
+  suspect_at: string | null;
+  suspect_reason: string | null;
+  linked_requirement_version_id: number | null;
+  current_requirement_version_id: number | null;
+  created_by: number | null;
+  created_at: string;
+}
+
+/** A use case that links to a requirement or verification. */
+export interface UseCaseRef {
+  use_case_id: number;
+  reference_code: string;
+  title: string;
+  link_id: number;
+  element_id: string | null;
+  element_label: string | null;
+  suspect: boolean;
+}

@@ -31,6 +31,9 @@ pub(crate) fn map_db_error(e: diesel::result::Error) -> RepoError {
                         TAKEN_NAMESPACE_MESSAGE.to_string()
                     }
                     c if c.contains("email") => "email is already taken".to_string(),
+                    c if c.contains("use_case_links_unique") => {
+                        "this link already exists".to_string()
+                    }
                     c if c.contains("use_cases_project_code_unique") => {
                         "reference_code is already used by a use case in this project".to_string()
                     }

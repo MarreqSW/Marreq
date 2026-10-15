@@ -1462,8 +1462,10 @@ offered.</li>
 <p>The system captures the <strong>current</strong> version of each
 included requirement, the <strong>current</strong> traceability links
 (requirement–verification), a <strong>snapshot of each
-verification</strong> (name, status, type, …) and the list of attached
-files at that moment. A baseline cannot be edited.</p>
+verification</strong> (name, status, type, …), the list of attached
+files, and the current version of every published <strong>use
+case</strong> with its links (<a href="#14-use-cases">§14</a>) at that
+moment. A baseline cannot be edited.</p>
 <h3 id="73-viewing-a-baseline">7.3 Viewing a Baseline</h3>
 <ul>
 <li><strong>Details</strong> in the list. URL:
@@ -1492,6 +1494,10 @@ with the current verification (<em>Unchanged</em>, or
 <li><strong>Sample traceability</strong>: the first rows of the frozen
 requirement–verification links (by requirement and verification number),
 with their suspect flag.</li>
+<li><strong>Use cases</strong>: the version of each use case the
+baseline recorded, its approval state and number of links. When the use
+case has a newer version, <strong>vN: compare</strong> opens its review
+view comparing the recorded version with the current one.</li>
 <li><strong>Attachments</strong>: the files attached to the included
 requirements and verifications when the baseline was taken. Files
 deleted since stay downloadable here and are marked <em>deleted
@@ -2223,6 +2229,25 @@ notified, and so are the use case's creator and the person who published
 the current version. Publishing a version notifies the project's
 reviewers, and the start screen lists reviewed use case versions waiting
 for approval.</p>
+<h3 id="147-baselines-search-export-and-assistants">14.7 Baselines,
+Search, Export and Assistants</h3>
+<ul>
+<li><strong>Baselines</strong> record the current version of every
+published use case and its links (<a
+href="#72-creating-a-baseline">§7.2</a>). A use case that a baseline
+records cannot be deleted.</li>
+<li>The <strong>start screen search</strong> also finds use cases, by
+code, title, actor or the text of their steps, listed under <strong>Use
+cases</strong>.</li>
+<li><strong>Project bundles</strong> (<a
+href="#95-exporting-a-project-bundle">§9.5</a>, <a
+href="#103-importing-a-project-bundle">§10.3</a>) carry the use cases
+and their links; on import, published use cases become version 1 again,
+waiting for review.</li>
+<li><strong>AI assistants</strong> connected through MCP can read use
+cases and, in draft mode, create them, edit their draft, publish
+versions and link steps. They cannot approve use cases.</li>
+</ul>
 <h2 id="15-tips--shortcuts">15. Tips &amp; Shortcuts</h2>
 <ul>
 <li><strong>Theme</strong>: the light / dark / match-system switch in

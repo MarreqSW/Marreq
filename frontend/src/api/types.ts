@@ -940,8 +940,11 @@ export interface AttentionResponse {
 
 /** A requirement found by the start-screen search (`GET /api/search`). */
 export interface SearchHit {
+  /** `use_case` hits since issue #402. */
+  kind?: 'requirement' | 'use_case';
   project_id: number;
-  requirement_id: number;
+  requirement_id: number | null;
+  use_case_id?: number | null;
   reference_code: string;
   title: string;
 }
@@ -1170,4 +1173,18 @@ export interface UseCaseComment {
   author_name: string;
   body: string;
   created_at: string;
+}
+
+/** A use case version a baseline recorded (issue #402). */
+export interface BaselineUseCase {
+  use_case_id: number;
+  reference_code: string;
+  title: string;
+  primary_actor: string | null;
+  version_id: number;
+  version_number: number;
+  approval_state: string;
+  current_version_id: number | null;
+  current_version_number: number | null;
+  link_count: number;
 }

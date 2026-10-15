@@ -6,7 +6,7 @@ import ProjectInitial from './ProjectInitial';
 
 type Result = {
   key: string;
-  group: 'Projects' | 'Requirements' | 'Actions';
+  group: 'Projects' | 'Requirements' | 'Use cases' | 'Actions';
   to: string;
   label: string;
   hint: string;
@@ -104,11 +104,14 @@ export default function StartSearch({
     const requirementResults: Result[] = hits.flatMap((h) => {
       const project = byId.get(h.project_id);
       if (!project) return [];
+      const useCase = h.kind === 'use_case' && h.use_case_id != null;
       return [
         {
-          key: `r-${h.requirement_id}`,
-          group: 'Requirements' as const,
-          to: `${project.project_base_path}/requirements/${h.requirement_id}`,
+          key: useCase ? `u-${h.use_case_id}` : `r-${h.requirement_id}`,
+          group: useCase ? ('Use cases' as const) : ('Requirements' as const),
+          to: useCase
+            ? `${project.project_base_path}/use-cases/${h.use_case_id}`
+            : `${project.project_base_path}/requirements/${h.requirement_id}`,
           // Imported requirements often use the code as their title too.
           label: h.title && h.title !== h.reference_code ? `${h.reference_code} · ${h.title}` : h.reference_code,
           hint: project.name,
@@ -119,7 +122,9 @@ export default function StartSearch({
     const actionResults: Result[] = ACTIONS.filter(
       (a) => (!a.adminOnly || isAdmin) && a.label.toLowerCase().includes(needle),
     ).map((a) => ({ key: `a-${a.to}`, group: 'Actions', to: a.to, label: a.label, hint: '', icon: a.icon }));
-    return [...projectResults, ...requirementResults, ...actionResults];
+    // Requirements first, then use cases: groups render in order of appearance.
+    const byGroup = (g: Result['group']) => requirementResults.filter((r) => r.group === g);
+    return [...projectResults, ...byGroup('Requirements'), ...byGroup('Use cases'), ...actionResults];
   }, [needle, projects, hits, isAdmin]);
 
   useEffect(() => {

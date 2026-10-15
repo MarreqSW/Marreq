@@ -7,8 +7,8 @@ use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{
     Baseline, BaselineTraceability, BaselineVerification, NewBaseline, Requirement,
 };
-use crate::repository::BaselineRepository;
 use crate::repository::errors::RepoError;
+use crate::repository::{BaselineRepository, UseCasesRepository};
 use serde::Serialize;
 use std::collections::HashSet;
 
@@ -103,11 +103,50 @@ impl<'a> BaselineService<'a> {
         let trace_only_in_b: Vec<[i32; 2]> =
             set_b.difference(&set_a).map(|&(r, t)| [r, t]).collect();
 
+        // Use cases (issue #402): by id, and those recorded at another version.
+        let (uc_a, uc_b) = {
+            let repo = self.state.repo_read();
+            (
+                repo.list_baseline_use_cases(baseline_a_id)?,
+                repo.list_baseline_use_cases(baseline_b_id)?,
+            )
+        };
+        let version_in = |list: &[crate::models::BaselineUseCase], id: i32| {
+            list.iter()
+                .find(|u| u.use_case_id == id)
+                .map(|u| u.version_id)
+        };
+        let use_cases_only_in_a = uc_a
+            .iter()
+            .filter(|u| version_in(&uc_b, u.use_case_id).is_none())
+            .map(|u| u.use_case_id)
+            .collect();
+        let use_cases_only_in_b = uc_b
+            .iter()
+            .filter(|u| version_in(&uc_a, u.use_case_id).is_none())
+            .map(|u| u.use_case_id)
+            .collect();
+        let use_cases_changed = uc_a
+            .iter()
+            .filter_map(|u| {
+                version_in(&uc_b, u.use_case_id)
+                    .filter(|v| *v != u.version_id)
+                    .map(|v| UseCaseVersionChange {
+                        use_case_id: u.use_case_id,
+                        version_a: u.version_id,
+                        version_b: v,
+                    })
+            })
+            .collect();
+
         Ok(BaselineDiff {
             requirements_only_in_a,
             requirements_only_in_b,
             trace_only_in_a,
             trace_only_in_b,
+            use_cases_only_in_a,
+            use_cases_only_in_b,
+            use_cases_changed,
         })
     }
 }
@@ -119,4 +158,15 @@ pub struct BaselineDiff {
     pub requirements_only_in_b: Vec<i32>,
     pub trace_only_in_a: Vec<[i32; 2]>,
     pub trace_only_in_b: Vec<[i32; 2]>,
+    pub use_cases_only_in_a: Vec<i32>,
+    pub use_cases_only_in_b: Vec<i32>,
+    /// Use cases both baselines record, at different versions.
+    pub use_cases_changed: Vec<UseCaseVersionChange>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct UseCaseVersionChange {
+    pub use_case_id: i32,
+    pub version_a: i32,
+    pub version_b: i32,
 }

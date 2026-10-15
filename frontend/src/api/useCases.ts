@@ -1,4 +1,5 @@
 import type {
+  BaselineUseCase,
   UseCaseComment,
   UseCaseDetail,
   UseCaseDiff,
@@ -236,4 +237,12 @@ export async function createUseCaseComment(
   csrfToken: string,
 ): Promise<UseCaseComment> {
   return fetchJson(`${base(projectId)}/${id}/comments`, write('POST', body, csrfToken));
+}
+
+/** The use case versions a baseline recorded. */
+export async function listBaselineUseCases(
+  projectId: number,
+  baselineId: number,
+): Promise<BaselineUseCase[]> {
+  return fetchJson(`/api/projects/${projectId}/baselines/${baselineId}/use-cases`);
 }

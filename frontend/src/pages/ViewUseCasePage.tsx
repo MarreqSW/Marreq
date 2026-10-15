@@ -690,6 +690,7 @@ export default function ViewUseCasePage() {
             hasDraft={draft != null}
             comments={comments}
             onCommentElement={setCommentFocus}
+            initialFrom={params.get('from') ? Number(params.get('from')) : undefined}
           />
         ) : doc && shown ? (
           <UseCaseDocumentView

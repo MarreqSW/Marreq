@@ -68,10 +68,21 @@ pub struct AttentionResponse {
     pub notifications: usize,
 }
 
+#[derive(Debug, Serialize, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub enum SearchKind {
+    Requirement,
+    UseCase,
+}
+
 #[derive(Debug, Serialize)]
 pub struct SearchHit {
+    pub kind: SearchKind,
     pub project_id: i32,
-    pub requirement_id: i32,
+    /// Set for requirements.
+    pub requirement_id: Option<i32>,
+    /// Set for use cases (issue #402).
+    pub use_case_id: Option<i32>,
     pub reference_code: String,
     pub title: String,
 }
@@ -245,8 +256,9 @@ pub fn collect_attention(state: &AppState, user: &User) -> ApiResult<AttentionRe
 }
 
 /// GET /api/search?q=&limit= — requirements whose reference code or title
-/// contains `q`, across the projects the user can see. Exact and prefix
-/// matches on the reference code come first.
+/// contains `q`, and use cases whose code, title, actors or steps do, across
+/// the projects the user can see. Exact and prefix matches on the reference
+/// code come first.
 #[get("/search?<q>&<limit>")]
 pub fn search(
     user: SessionUser,
@@ -294,10 +306,60 @@ pub fn search_requirements(
             scored.push((
                 score,
                 SearchHit {
+                    kind: SearchKind::Requirement,
                     project_id: project.id,
-                    requirement_id: requirement.id,
+                    requirement_id: Some(requirement.id),
+                    use_case_id: None,
                     reference_code: requirement.reference_code,
                     title: requirement.title,
+                },
+            ));
+        }
+        // Use cases: code, title, then actors and step text of the current
+        // version (or of the draft before the first publish).
+        let versions = repo.list_current_use_case_versions(project.id)?;
+        let drafts = repo.list_use_case_drafts_by_project(project.id)?;
+        for use_case in repo.list_use_cases_by_project(project.id)? {
+            let document = versions
+                .iter()
+                .find(|v| Some(v.id) == use_case.current_version_id)
+                .map(|v| &v.document)
+                .or_else(|| {
+                    drafts
+                        .iter()
+                        .find(|d| d.use_case_id == use_case.id)
+                        .map(|d| &d.document)
+                })
+                .and_then(|d| {
+                    serde_json::from_value::<crate::use_case_document::UseCaseDocument>(d.clone())
+                        .ok()
+                });
+            let Some(document) = document else {
+                continue;
+            };
+            let code = use_case.reference_code.to_lowercase();
+            let score = if code == needle {
+                0
+            } else if code.starts_with(&needle) {
+                1
+            } else if code.contains(&needle) {
+                2
+            } else if document.title.to_lowercase().contains(&needle) {
+                3
+            } else if document.search_text().to_lowercase().contains(&needle) {
+                4
+            } else {
+                continue;
+            };
+            scored.push((
+                score,
+                SearchHit {
+                    kind: SearchKind::UseCase,
+                    project_id: project.id,
+                    requirement_id: None,
+                    use_case_id: Some(use_case.id),
+                    reference_code: use_case.reference_code,
+                    title: document.title,
                 },
             ));
         }

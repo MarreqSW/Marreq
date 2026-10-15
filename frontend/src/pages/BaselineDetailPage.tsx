@@ -18,6 +18,7 @@ import {
 } from '@/api/client';
 import { downloadBaselineReqif, downloadBaselineReqifz } from '@/api/exports';
 import { useDashboard } from '@/context/DashboardContext';
+import BaselineUseCasesSection from '@/components/useCases/BaselineUseCasesSection';
 import AsyncDiffDialog from '@/components/AsyncDiffDialog';
 import { RequirementDiffContent } from '@/components/RequirementVersionDiffDialog';
 import StitchPageHeader from '@/components/StitchPageHeader';
@@ -499,6 +500,8 @@ export default function BaselineDetailPage() {
           </table>
         </div>
       </section>
+
+      <BaselineUseCasesSection projectId={pid} baselineId={bid} basePath={basePath} />
 
       <section className="mb-8">
         <h3 className="text-sm font-bold text-stitch-fg uppercase tracking-widest mb-3">

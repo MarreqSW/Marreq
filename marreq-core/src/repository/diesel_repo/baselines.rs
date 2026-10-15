@@ -189,6 +189,9 @@ impl BaselineRepository for DieselRepo {
             .bind::<diesel::sql_types::Integer, _>(project_id)
             .execute(conn)?;
 
+            // Snapshot: use cases (issue #402).
+            super::use_cases::snapshot_use_cases(conn, baseline_id, project_id)?;
+
             if let Some(view_id) = source_saved_view_id {
                 use schema::saved_views::dsl as sv;
                 diesel::update(sv::saved_views.filter(sv::id.eq(view_id)))

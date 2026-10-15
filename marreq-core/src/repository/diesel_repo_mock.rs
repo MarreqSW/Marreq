@@ -81,6 +81,8 @@ pub struct DieselRepoMock {
     pub use_case_drafts: Vec<UseCaseDraft>,
     pub use_case_links: Vec<UseCaseLink>,
     pub use_case_comments: Vec<UseCaseComment>,
+    pub baseline_use_cases: Vec<BaselineUseCase>,
+    pub baseline_use_case_links: Vec<BaselineUseCaseLink>,
     /// Shared by use cases and their versions.
     pub next_use_case_id: i32,
     pub oauth_clients: HashMap<String, OAuthClient>,
@@ -174,6 +176,8 @@ impl Default for DieselRepoMock {
             use_case_drafts: Vec::new(),
             use_case_links: Vec::new(),
             use_case_comments: Vec::new(),
+            baseline_use_cases: Vec::new(),
+            baseline_use_case_links: Vec::new(),
             next_use_case_id: 1,
         }
     }
@@ -577,6 +581,8 @@ impl DieselRepoMock {
             use_case_drafts: Vec::new(),
             use_case_links: Vec::new(),
             use_case_comments: Vec::new(),
+            baseline_use_cases: Vec::new(),
+            baseline_use_case_links: Vec::new(),
             next_use_case_id: 1,
             oauth_clients: HashMap::new(),
             oauth_grants: HashMap::new(),
@@ -648,6 +654,8 @@ impl DieselRepoMock {
             use_case_drafts: Vec::new(),
             use_case_links: Vec::new(),
             use_case_comments: Vec::new(),
+            baseline_use_cases: Vec::new(),
+            baseline_use_case_links: Vec::new(),
             next_use_case_id: 1,
             oauth_clients: HashMap::new(),
             oauth_grants: HashMap::new(),
@@ -2879,6 +2887,31 @@ impl crate::repository::BaselineRepository for DieselRepoMock {
                     });
             }
         }
+        for use_case in self.use_cases.iter().filter(|u| u.project_id == project_id) {
+            let Some(version_id) = use_case.current_version_id else {
+                continue;
+            };
+            self.baseline_use_cases.push(BaselineUseCase {
+                baseline_id: id,
+                use_case_id: use_case.id,
+                version_id,
+            });
+            for link in self
+                .use_case_links
+                .iter()
+                .filter(|l| l.use_case_id == use_case.id)
+            {
+                self.baseline_use_case_links.push(BaselineUseCaseLink {
+                    id: self.baseline_use_case_links.len() as i32 + 1,
+                    baseline_id: id,
+                    use_case_id: link.use_case_id,
+                    element_id: link.element_id.clone(),
+                    requirement_id: link.requirement_id,
+                    verification_id: link.verification_id,
+                    suspect: link.suspect,
+                });
+            }
+        }
         for link in self.matrices.iter().filter(|m| m.project_id == project_id) {
             self.baseline_traceability
                 .push(crate::models::BaselineTraceability {
@@ -4531,6 +4564,34 @@ impl UseCasesRepository for DieselRepoMock {
         };
         self.use_case_comments.push(comment.clone());
         Ok(comment)
+    }
+
+    fn list_baseline_use_cases(&self, baseline_id: i32) -> Result<Vec<BaselineUseCase>, RepoError> {
+        Ok(self
+            .baseline_use_cases
+            .iter()
+            .filter(|b| b.baseline_id == baseline_id)
+            .cloned()
+            .collect())
+    }
+
+    fn list_baseline_use_case_links(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<BaselineUseCaseLink>, RepoError> {
+        Ok(self
+            .baseline_use_case_links
+            .iter()
+            .filter(|b| b.baseline_id == baseline_id)
+            .cloned()
+            .collect())
+    }
+
+    fn use_case_in_baseline(&self, use_case_id: i32) -> Result<bool, RepoError> {
+        Ok(self
+            .baseline_use_cases
+            .iter()
+            .any(|b| b.use_case_id == use_case_id))
     }
 }
 

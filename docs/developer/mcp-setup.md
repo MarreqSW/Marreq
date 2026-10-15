@@ -241,6 +241,10 @@ For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For trac
 | `dependency_matrix` | Dependency structure matrix: requirement × requirement links, loops and upstream-changed cells; optional `link_types`, `order` (`hierarchy`/`partition`), `category_id`, `root_id` |
 | `get_baseline` | Baseline metadata, requirements snapshot, and traceability |
 | `diff_baselines` | Compare two baselines (requirements and traceability diff) |
+| `list_use_cases` | Use cases with counts, approval state and suspect links; optional `q`, `approval_state`, `has_suspect` |
+| `get_use_case` | A use case's current version (or `version_id`) as a `marreq.use-case.v1` document with labels, and its draft with `revision` |
+| `get_use_case_diff` | Structural diff: the draft against its base, or `from_version_id` against `to_version_id` |
+| `list_use_case_links` | Requirements and verifications linked to a use case or its steps, with suspect flags |
 
 ### Extended read (`read_extended` or `draft_write`)
 
@@ -267,6 +271,12 @@ For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For trac
 | `set_approval` | Set requirement version approval to `reviewed` or `approved` |
 | `create_baseline` | Create a new baseline snapshot |
 | `create_requirement_comment` | Add a comment on a requirement (`@username` mentions notify project members) |
+| `create_use_case` | Create a use case (a draft until published); idempotent |
+| `edit_use_case_draft` | Apply draft operations (or a whole document) at `base_revision`; a stale revision is refused |
+| `publish_use_case_draft` | Publish the draft as the next version for review; idempotent |
+| `link_use_case_element` | Link a use case or one of its steps to a requirement or verification |
+
+Use case approval is not exposed to agents. The use case tools need the `use_cases:read` / `use_cases:write` scopes in remote mode ([use-cases-api.md](use-cases-api.md)).
 
 ### Trace write (`MARREQ_TRACE_WRITE=true`)
 
@@ -298,6 +308,7 @@ Reference: shared route list in `marreq-core/src/api/mod.rs` (plus deployment-sp
 | Trace up/down, coverage | **Yes** (core read) |
 | `clear_suspect` | **Yes** (`MARREQ_TRACE_WRITE`) |
 | Baselines: list/get/bundle/diff/diff_vs_current | **Yes** list/get bundle/diff/diff_vs_current; create via draft_write |
+| Use cases: list/get/diff/links, create/edit draft/publish/link | **Yes** read in every mode, writes in draft_write; approval, delete and comments are **not** exposed |
 | Categories, applicability, statuses, methods, custom fields | **Read** via `list_project_catalog`; **CRUD** | **No** |
 | Members, reviewers, permissions | **No** |
 | Users, groups, projects (admin) | **No** |

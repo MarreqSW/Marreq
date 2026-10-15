@@ -401,6 +401,8 @@ impl ProjectsRepository for DieselRepo {
             // would fire on rows whose requirement is already gone.
             const STEPS: &[&str] = &[
                 "DELETE FROM baseline_attachments WHERE baseline_id IN (SELECT id FROM baselines WHERE project_id = $1)",
+                "DELETE FROM baseline_use_case_links WHERE baseline_id IN (SELECT id FROM baselines WHERE project_id = $1)",
+                "DELETE FROM baseline_use_cases WHERE baseline_id IN (SELECT id FROM baselines WHERE project_id = $1)",
                 "DELETE FROM baseline_requirements WHERE baseline_id IN (SELECT id FROM baselines WHERE project_id = $1)",
                 "DELETE FROM baseline_traceability WHERE baseline_id IN (SELECT id FROM baselines WHERE project_id = $1)",
                 "DELETE FROM baseline_verifications WHERE baseline_id IN (SELECT id FROM baselines WHERE project_id = $1)",

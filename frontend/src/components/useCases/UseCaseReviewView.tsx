@@ -31,6 +31,8 @@ type Props = {
   hasDraft: boolean;
   comments: UseCaseComment[];
   onCommentElement: (elementId: string) => void;
+  /** Version to compare from (a baseline's); the current version is the other side. */
+  initialFrom?: number;
 };
 
 /** `draft` or a version id. */
@@ -74,10 +76,20 @@ function ElementText({ e }: { e: UseCaseElementDiff }) {
 }
 
 /** Structural review of a version or the draft against another (screen 8 of #388, issue #401). */
-export default function UseCaseReviewView({ projectId, useCaseId, versions, hasDraft, comments, onCommentElement }: Props) {
-  const [to, setTo] = useState<End>(hasDraft ? 'draft' : (versions[0]?.id ?? 'draft'));
+export default function UseCaseReviewView({
+  projectId,
+  useCaseId,
+  versions,
+  hasDraft,
+  comments,
+  onCommentElement,
+  initialFrom,
+}: Props) {
+  const [to, setTo] = useState<End>(
+    hasDraft && initialFrom == null ? 'draft' : (versions[0]?.id ?? 'draft'),
+  );
   const [from, setFrom] = useState<number | null>(
-    hasDraft ? (versions[0]?.id ?? null) : (versions[1]?.id ?? null),
+    initialFrom ?? (hasDraft ? (versions[0]?.id ?? null) : (versions[1]?.id ?? null)),
   );
   const [showUnchanged, setShowUnchanged] = useState(false);
   const [diff, setDiff] = useState<UseCaseDiff | null>(null);

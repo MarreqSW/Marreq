@@ -339,6 +339,100 @@ export class MarreqClient {
     });
   }
 
+  // ----- Use cases (issue #402) -----
+
+  private useCases(path = "") {
+    return `/api/projects/${this.ctx.projectId}/use-cases${path}`;
+  }
+
+  async listUseCases(query: { q?: string; approval_state?: string; has_suspect?: boolean } = {}) {
+    const params = new URLSearchParams();
+    if (query.q) params.set("q", query.q);
+    if (query.approval_state) params.set("approval_state", query.approval_state);
+    if (query.has_suspect) params.set("has_suspect", "true");
+    const q = params.toString();
+    return this.request(this.useCases(q ? `?${q}` : ""));
+  }
+
+  async getUseCase(id: number, versionId?: number) {
+    return this.request(this.useCases(`/${id}${versionId != null ? `?version_id=${versionId}` : ""}`));
+  }
+
+  /** The shared draft, or null when there is none. */
+  async getUseCaseDraft(id: number) {
+    try {
+      return await this.request(this.useCases(`/${id}/draft`));
+    } catch (e) {
+      if (e instanceof Error && e.message.startsWith("Marreq API 404")) return null;
+      throw e;
+    }
+  }
+
+  /** Without versions: the draft against its base. With both: version `from` against `to`. */
+  async getUseCaseDiff(id: number, fromVersionId?: number, toVersionId?: number) {
+    if (fromVersionId != null && toVersionId != null) {
+      return this.request(this.useCases(`/${id}/versions/${fromVersionId}/diff/${toVersionId}`));
+    }
+    return this.request(this.useCases(`/${id}/draft/diff`));
+  }
+
+  async listUseCaseLinks(id: number) {
+    return this.request(this.useCases(`/${id}/links`));
+  }
+
+  async createUseCase(
+    payload: { reference_code?: string; title?: string; primary_actor?: string; document?: unknown },
+    idempotencyKey: string
+  ) {
+    return this.request(this.useCases(), {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async applyUseCaseOperations(id: number, baseRevision: number | null, operations: unknown[]) {
+    return this.request(this.useCases(`/${id}/draft/operations`), {
+      method: "POST",
+      body: JSON.stringify({ base_revision: baseRevision, operations }),
+    });
+  }
+
+  async putUseCaseDraft(id: number, baseRevision: number | null, document: unknown) {
+    return this.request(this.useCases(`/${id}/draft`), {
+      method: "PUT",
+      body: JSON.stringify({ base_revision: baseRevision, document }),
+    });
+  }
+
+  async publishUseCaseDraft(
+    id: number,
+    baseRevision: number,
+    changeNote: string | null,
+    idempotencyKey: string
+  ) {
+    return this.request(this.useCases(`/${id}/draft/publish`), {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify({ base_revision: baseRevision, change_note: changeNote }),
+    });
+  }
+
+  async linkUseCaseElement(
+    id: number,
+    payload: {
+      element_id?: string | null;
+      requirement_id?: number;
+      verification_id?: number;
+      rationale?: string | null;
+    }
+  ) {
+    return this.request(this.useCases(`/${id}/links`), {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  }
+
   get projectId() {
     return this.ctx.projectId;
   }

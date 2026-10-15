@@ -18,6 +18,7 @@ const NAV_ITEMS: { path: string; icon: string; label: string; end?: boolean }[] 
   { path: 'dashboard', icon: 'dashboard', label: 'Dashboard', end: true },
   { path: 'requirements', icon: 'list_alt', label: 'Requirements' },
   { path: 'verifications', icon: 'verified', label: 'Verifications' },
+  { path: 'use-cases', icon: 'route', label: 'Use cases' },
   { path: 'traceability', icon: 'account_tree', label: 'Traceability' },
   { path: 'baselines', icon: 'history_edu', label: 'Baselines' },
   { path: 'reports', icon: 'description', label: 'Reports & exports' },
@@ -102,10 +103,32 @@ export default function ProjectLayout() {
   }, [projectSlug, currentProject, projects, navigate]);
 
   const onVerificationsSection = /\/verifications(\/|$)/.test(location.pathname);
+  const onUseCasesSection = /\/use-cases(\/|$)/.test(location.pathname);
 
   const createMenuItems = useMemo(
     () =>
-      onVerificationsSection
+      onUseCasesSection
+        ? [
+            {
+              to: `${basePath}/use-cases?new=1`,
+              label: 'Create use case',
+              compact: 'Use case',
+              icon: 'route' as const,
+            },
+            {
+              to: `${basePath}/requirements/new`,
+              label: 'Create requirement',
+              compact: 'Requirement',
+              icon: 'list_alt' as const,
+            },
+            {
+              to: `${basePath}/verifications/new`,
+              label: 'Create verification',
+              compact: 'Verification',
+              icon: 'verified' as const,
+            },
+          ]
+        : onVerificationsSection
         ? [
             {
               to: `${basePath}/verifications/new`,
@@ -146,7 +169,7 @@ export default function ProjectLayout() {
               icon: 'upload_file' as const,
             },
           ],
-    [onVerificationsSection, basePath],
+    [onUseCasesSection, onVerificationsSection, basePath],
   );
 
   const primaryCreate = createMenuItems[0];

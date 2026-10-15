@@ -23,6 +23,11 @@ ENV MARREQ_BACKEND_HOST=marreq-server
 ENV MARREQ_BACKEND_PORT=8000
 ENV MARREQ_MCP_HOST=mcp-server
 ENV MARREQ_MCP_PORT=3000
+# Optional usage statistics with a self-hosted Umami (issue #412); empty = off.
+ENV MARREQ_UMAMI_WEBSITE_ID=
+ENV MARREQ_UMAMI_HOST=umami
+ENV MARREQ_UMAMI_PORT=3000
 COPY --from=build /build/frontend/dist /usr/share/nginx/html
 COPY docker/frontend/nginx.conf.template /etc/nginx/templates/default.conf.template
+COPY --chmod=755 docker/frontend/40-marreq-umami.sh /docker-entrypoint.d/40-marreq-umami.sh
 EXPOSE 80

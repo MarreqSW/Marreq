@@ -410,6 +410,8 @@ impl ProjectsRepository for DieselRepo {
                 "DELETE FROM project_storage_quotas WHERE project_id = $1",
                 "DELETE FROM matrix WHERE project_id = $1",
                 "DELETE FROM requirement_version_links WHERE project_id = $1",
+                // Cascades use case versions and drafts.
+                "DELETE FROM use_cases WHERE project_id = $1",
                 // Cascades versions, verification methods, custom values, comments, embeddings.
                 "DELETE FROM requirements WHERE project_id = $1",
                 "DELETE FROM verifications WHERE project_id = $1",

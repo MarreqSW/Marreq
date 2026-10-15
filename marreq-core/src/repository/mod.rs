@@ -865,6 +865,69 @@ pub trait ReportTemplateRepository {
     fn delete_report_template(&mut self, id: i32) -> Result<(), RepoError>;
 }
 
+/// Use cases (issue #398): the artifact, its immutable versions and its one
+/// working draft.
+pub trait UseCasesRepository {
+    fn list_use_cases_by_project(&self, project_id: i32) -> Result<Vec<UseCase>, RepoError>;
+    /// `RepoError::NotFound` if there is no such use case.
+    fn get_use_case(&self, id: i32) -> Result<UseCase, RepoError>;
+    /// Every reference code used in the project, to suggest the next one.
+    fn list_use_case_codes(&self, project_id: i32) -> Result<Vec<String>, RepoError>;
+    /// Create the use case and its first draft in one transaction.
+    /// `RepoError::Duplicate` if the code is taken in the project.
+    fn create_use_case(
+        &mut self,
+        new: &NewUseCase,
+        draft_document: &serde_json::Value,
+    ) -> Result<(UseCase, UseCaseDraft), RepoError>;
+    /// Delete the use case with its versions and draft; `false` if absent.
+    fn delete_use_case(&mut self, id: i32) -> Result<bool, RepoError>;
+
+    /// Versions of one use case, newest first.
+    fn list_use_case_versions(&self, use_case_id: i32) -> Result<Vec<UseCaseVersion>, RepoError>;
+    fn get_use_case_version(&self, version_id: i32) -> Result<UseCaseVersion, RepoError>;
+    /// The current version of every use case of the project that has one.
+    fn list_current_use_case_versions(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<UseCaseVersion>, RepoError>;
+    /// Move a version to `reviewed` or `approved`, following
+    /// [`crate::status_enums::ApprovalState::can_transition_to`].
+    fn set_use_case_version_approval(
+        &mut self,
+        version_id: i32,
+        new_state: &str,
+        user_id: i32,
+    ) -> Result<UseCaseVersion, RepoError>;
+
+    fn get_use_case_draft(&self, use_case_id: i32) -> Result<Option<UseCaseDraft>, RepoError>;
+    fn list_use_case_drafts_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<UseCaseDraft>, RepoError>;
+    /// Write the draft if its revision is still `base_revision` (`None`: only
+    /// if there is no draft yet), and return it with the next revision.
+    /// `Ok(None)` when the draft moved on in the meantime.
+    fn save_use_case_draft(
+        &mut self,
+        use_case_id: i32,
+        base_revision: Option<i32>,
+        base_version_id: Option<i32>,
+        document: &serde_json::Value,
+        user_id: i32,
+    ) -> Result<Option<UseCaseDraft>, RepoError>;
+    /// Discard the draft; `false` if there was none.
+    fn delete_use_case_draft(&mut self, use_case_id: i32) -> Result<bool, RepoError>;
+    /// Turn the draft at `base_revision` into the next version, make it
+    /// current and delete the draft, in one transaction. `Ok(None)` when the
+    /// draft is gone or moved on.
+    fn publish_use_case_draft(
+        &mut self,
+        base_revision: i32,
+        version: &NewUseCaseVersion,
+    ) -> Result<Option<UseCaseVersion>, RepoError>;
+}
+
 /// Verification control data for the VCD (issue #353): level, stage and
 /// evidence per verification, and the compliance assessment per requirement.
 pub trait VerificationControlRepository {
@@ -926,6 +989,7 @@ pub trait Repository:
     + SessionRepository
     + VerificationControlRepository
     + ReportTemplateRepository
+    + UseCasesRepository
 {
 }
 
@@ -957,6 +1021,7 @@ impl<T> Repository for T where
         + SessionRepository
         + VerificationControlRepository
         + ReportTemplateRepository
+        + UseCasesRepository
 {
 }
 

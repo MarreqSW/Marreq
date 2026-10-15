@@ -67,6 +67,10 @@ fn seed_project(project: i32, base: i32, slug: &str) -> String {
          INSERT INTO baseline_attachments (baseline_id,attachment_id) VALUES ({b},{b});
          INSERT INTO verification_control (verification_id,project_id,verification_level,evidence_reference) VALUES ({b}+1,{project},'System','TR-{b}');
          INSERT INTO requirement_compliance (requirement_id,project_id,compliance,note) VALUES ({b}+1,{project},'C','accepted');
+         INSERT INTO use_cases (id,project_id,reference_code) VALUES ({b},{project},'UC-001');
+         INSERT INTO use_case_versions (id,use_case_id,version_number,document,title) VALUES ({b},{b},1,'{{}}','Export');
+         UPDATE use_cases SET current_version_id = {b} WHERE id = {b};
+         INSERT INTO use_case_drafts (use_case_id,base_version_id,document) VALUES ({b},{b},'{{}}');
          INSERT INTO notifications (user_id,project_id,notification_type,title) VALUES (2,{project},'requirement_updated','Changed');
          INSERT INTO notification_preferences (user_id,project_id) VALUES (2,{project});
          INSERT INTO user_api_tokens (user_id,token_hash,project_id) VALUES (2,'token-{b}',{project});
@@ -101,6 +105,7 @@ fn project_rows(conn: &mut PgConnection, p: i32) -> Vec<(&'static str, i64)> {
         "user_api_tokens",
         "verification_control",
         "requirement_compliance",
+        "use_cases",
     ];
     let mut out: Vec<(&'static str, i64)> = by_project
         .iter()
@@ -127,6 +132,8 @@ fn project_rows(conn: &mut PgConnection, p: i32) -> Vec<(&'static str, i64)> {
         ("baseline_requirements", "baseline_id"),
         ("baseline_traceability", "baseline_id"),
         ("baseline_attachments", "baseline_id"),
+        ("use_case_versions", "use_case_id"),
+        ("use_case_drafts", "use_case_id"),
     ] {
         out.push((
             t,

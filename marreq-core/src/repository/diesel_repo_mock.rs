@@ -76,6 +76,11 @@ pub struct DieselRepoMock {
     pub report_templates: Vec<ReportTemplate>,
     pub next_report_template_id: i32,
     pub requirement_compliance: HashMap<i32, RequirementCompliance>,
+    pub use_cases: Vec<UseCase>,
+    pub use_case_versions: Vec<UseCaseVersion>,
+    pub use_case_drafts: Vec<UseCaseDraft>,
+    /// Shared by use cases and their versions.
+    pub next_use_case_id: i32,
     pub oauth_clients: HashMap<String, OAuthClient>,
     pub oauth_grants: HashMap<i32, OAuthGrant>,
     pub oauth_codes: HashMap<String, OAuthAuthorizationCode>,
@@ -162,6 +167,10 @@ impl Default for DieselRepoMock {
             report_templates: Vec::new(),
             next_report_template_id: 1,
             requirement_compliance: HashMap::new(),
+            use_cases: Vec::new(),
+            use_case_versions: Vec::new(),
+            use_case_drafts: Vec::new(),
+            next_use_case_id: 1,
         }
     }
 }
@@ -559,6 +568,10 @@ impl DieselRepoMock {
             report_templates: Vec::new(),
             next_report_template_id: 1,
             requirement_compliance: HashMap::new(),
+            use_cases: Vec::new(),
+            use_case_versions: Vec::new(),
+            use_case_drafts: Vec::new(),
+            next_use_case_id: 1,
             oauth_clients: HashMap::new(),
             oauth_grants: HashMap::new(),
             oauth_codes: HashMap::new(),
@@ -624,6 +637,10 @@ impl DieselRepoMock {
             report_templates: Vec::new(),
             next_report_template_id: 1,
             requirement_compliance: HashMap::new(),
+            use_cases: Vec::new(),
+            use_case_versions: Vec::new(),
+            use_case_drafts: Vec::new(),
+            next_use_case_id: 1,
             oauth_clients: HashMap::new(),
             oauth_grants: HashMap::new(),
             oauth_codes: HashMap::new(),
@@ -4106,5 +4123,277 @@ mod log_filter_tests {
         assert_eq!(total, 3);
         assert_eq!(page.len(), 2);
         assert!(page.iter().all(|l| l.entity_type == "requirement"));
+    }
+}
+
+impl UseCasesRepository for DieselRepoMock {
+    fn list_use_cases_by_project(&self, project_id: i32) -> Result<Vec<UseCase>, RepoError> {
+        if self.force_err {
+            return Err(RepoError::NotFound);
+        }
+        let mut list: Vec<UseCase> = self
+            .use_cases
+            .iter()
+            .filter(|u| u.project_id == project_id)
+            .cloned()
+            .collect();
+        list.sort_by(|a, b| a.reference_code.cmp(&b.reference_code));
+        Ok(list)
+    }
+
+    fn get_use_case(&self, id: i32) -> Result<UseCase, RepoError> {
+        self.use_cases
+            .iter()
+            .find(|u| u.id == id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn list_use_case_codes(&self, project_id: i32) -> Result<Vec<String>, RepoError> {
+        Ok(self
+            .use_cases
+            .iter()
+            .filter(|u| u.project_id == project_id)
+            .map(|u| u.reference_code.clone())
+            .collect())
+    }
+
+    fn create_use_case(
+        &mut self,
+        new: &NewUseCase,
+        draft_document: &serde_json::Value,
+    ) -> Result<(UseCase, UseCaseDraft), RepoError> {
+        if self
+            .use_cases
+            .iter()
+            .any(|u| u.project_id == new.project_id && u.reference_code == new.reference_code)
+        {
+            return Err(RepoError::Duplicate(
+                "reference_code is already used by a use case in this project".into(),
+            ));
+        }
+        let id = self.next_use_case_id;
+        self.next_use_case_id += 1;
+        let now = chrono::Utc::now().naive_utc();
+        let use_case = UseCase {
+            id,
+            project_id: new.project_id,
+            reference_code: new.reference_code.clone(),
+            current_version_id: None,
+            created_by: new.created_by,
+            created_at: now,
+            updated_at: now,
+        };
+        let draft = UseCaseDraft {
+            use_case_id: id,
+            base_version_id: None,
+            document: draft_document.clone(),
+            revision: 1,
+            updated_by: new.created_by,
+            updated_at: now,
+        };
+        self.use_cases.push(use_case.clone());
+        self.use_case_drafts.push(draft.clone());
+        Ok((use_case, draft))
+    }
+
+    fn delete_use_case(&mut self, id: i32) -> Result<bool, RepoError> {
+        let before = self.use_cases.len();
+        self.use_cases.retain(|u| u.id != id);
+        self.use_case_versions.retain(|v| v.use_case_id != id);
+        self.use_case_drafts.retain(|d| d.use_case_id != id);
+        Ok(self.use_cases.len() < before)
+    }
+
+    fn list_use_case_versions(&self, use_case_id: i32) -> Result<Vec<UseCaseVersion>, RepoError> {
+        let mut list: Vec<UseCaseVersion> = self
+            .use_case_versions
+            .iter()
+            .filter(|v| v.use_case_id == use_case_id)
+            .cloned()
+            .collect();
+        list.sort_by(|a, b| b.version_number.cmp(&a.version_number));
+        Ok(list)
+    }
+
+    fn get_use_case_version(&self, version_id: i32) -> Result<UseCaseVersion, RepoError> {
+        self.use_case_versions
+            .iter()
+            .find(|v| v.id == version_id)
+            .cloned()
+            .ok_or(RepoError::NotFound)
+    }
+
+    fn list_current_use_case_versions(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<UseCaseVersion>, RepoError> {
+        Ok(self
+            .use_cases
+            .iter()
+            .filter(|u| u.project_id == project_id)
+            .filter_map(|u| u.current_version_id)
+            .filter_map(|id| self.use_case_versions.iter().find(|v| v.id == id).cloned())
+            .collect())
+    }
+
+    fn set_use_case_version_approval(
+        &mut self,
+        version_id: i32,
+        new_state: &str,
+        user_id: i32,
+    ) -> Result<UseCaseVersion, RepoError> {
+        use crate::status_enums::ApprovalState;
+        let version = self
+            .use_case_versions
+            .iter_mut()
+            .find(|v| v.id == version_id)
+            .ok_or(RepoError::NotFound)?;
+        let current = ApprovalState::from_db_string(&version.approval_state)
+            .ok_or_else(|| RepoError::BadInput("invalid approval_state".into()))?;
+        let target = ApprovalState::from_db_string(new_state)
+            .ok_or_else(|| RepoError::BadInput(format!("invalid approval_state: {new_state}")))?;
+        if !current.can_transition_to(target) {
+            return Err(RepoError::BadInput(format!(
+                "invalid transition: {} -> {}",
+                version.approval_state, new_state
+            )));
+        }
+        if current != target {
+            let now = chrono::Utc::now().naive_utc();
+            version.approval_state = target.to_db_string().to_string();
+            match target {
+                ApprovalState::Reviewed => {
+                    version.reviewed_by = Some(user_id);
+                    version.reviewed_at = Some(now);
+                }
+                ApprovalState::Approved => {
+                    version.approved_by = Some(user_id);
+                    version.approved_at = Some(now);
+                }
+                ApprovalState::Draft => {}
+            }
+        }
+        Ok(version.clone())
+    }
+
+    fn get_use_case_draft(&self, use_case_id: i32) -> Result<Option<UseCaseDraft>, RepoError> {
+        Ok(self
+            .use_case_drafts
+            .iter()
+            .find(|d| d.use_case_id == use_case_id)
+            .cloned())
+    }
+
+    fn list_use_case_drafts_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<UseCaseDraft>, RepoError> {
+        Ok(self
+            .use_case_drafts
+            .iter()
+            .filter(|d| {
+                self.use_cases
+                    .iter()
+                    .any(|u| u.id == d.use_case_id && u.project_id == project_id)
+            })
+            .cloned()
+            .collect())
+    }
+
+    fn save_use_case_draft(
+        &mut self,
+        use_case_id: i32,
+        base_revision: Option<i32>,
+        base_version_id: Option<i32>,
+        document: &serde_json::Value,
+        user_id: i32,
+    ) -> Result<Option<UseCaseDraft>, RepoError> {
+        let now = chrono::Utc::now().naive_utc();
+        let existing = self
+            .use_case_drafts
+            .iter_mut()
+            .find(|d| d.use_case_id == use_case_id);
+        match (existing, base_revision) {
+            (None, None) => {
+                let draft = UseCaseDraft {
+                    use_case_id,
+                    base_version_id,
+                    document: document.clone(),
+                    revision: 1,
+                    updated_by: Some(user_id),
+                    updated_at: now,
+                };
+                self.use_case_drafts.push(draft.clone());
+                Ok(Some(draft))
+            }
+            (Some(draft), Some(revision)) if draft.revision == revision => {
+                draft.document = document.clone();
+                draft.revision += 1;
+                draft.updated_by = Some(user_id);
+                draft.updated_at = now;
+                Ok(Some(draft.clone()))
+            }
+            _ => Ok(None),
+        }
+    }
+
+    fn delete_use_case_draft(&mut self, use_case_id: i32) -> Result<bool, RepoError> {
+        let before = self.use_case_drafts.len();
+        self.use_case_drafts
+            .retain(|d| d.use_case_id != use_case_id);
+        Ok(self.use_case_drafts.len() < before)
+    }
+
+    fn publish_use_case_draft(
+        &mut self,
+        base_revision: i32,
+        version: &NewUseCaseVersion,
+    ) -> Result<Option<UseCaseVersion>, RepoError> {
+        let Some(pos) = self
+            .use_case_drafts
+            .iter()
+            .position(|d| d.use_case_id == version.use_case_id && d.revision == base_revision)
+        else {
+            return Ok(None);
+        };
+        self.use_case_drafts.remove(pos);
+        let number = self
+            .use_case_versions
+            .iter()
+            .filter(|v| v.use_case_id == version.use_case_id)
+            .map(|v| v.version_number)
+            .max()
+            .unwrap_or(0)
+            + 1;
+        let id = self.next_use_case_id;
+        self.next_use_case_id += 1;
+        let now = chrono::Utc::now().naive_utc();
+        let created = UseCaseVersion {
+            id,
+            use_case_id: version.use_case_id,
+            version_number: number,
+            document: version.document.clone(),
+            title: version.title.clone(),
+            primary_actor: version.primary_actor.clone(),
+            approval_state: "draft".into(),
+            reviewed_by: None,
+            reviewed_at: None,
+            approved_by: None,
+            approved_at: None,
+            change_note: version.change_note.clone(),
+            created_by: Some(version.created_by),
+            created_at: now,
+        };
+        self.use_case_versions.push(created.clone());
+        if let Some(u) = self
+            .use_cases
+            .iter_mut()
+            .find(|u| u.id == version.use_case_id)
+        {
+            u.current_version_id = Some(id);
+            u.updated_at = now;
+        }
+        Ok(Some(created))
     }
 }

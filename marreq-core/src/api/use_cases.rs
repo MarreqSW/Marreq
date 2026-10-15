@@ -161,6 +161,45 @@ fn into_api_error(
 
 type UcResult<T> = Result<T, UseCaseApiError>;
 
+/// Run `work` once per `Idempotency-Key` (MCP retries): a replay with the same
+/// key and payload returns the stored response; a failure frees the key.
+#[allow(clippy::too_many_arguments)]
+fn idempotent<T, P>(
+    state: &State<AppState>,
+    auth: &crate::auth::guards::ApiUserOrBearer,
+    target: &str,
+    operation: &str,
+    key: &crate::api::idempotency::OptionalIdempotencyKey,
+    payload: &P,
+    work: impl FnOnce() -> UcResult<T>,
+) -> UcResult<T>
+where
+    T: Serialize + rocket::serde::DeserializeOwned,
+    P: Serialize,
+{
+    use crate::api::idempotency;
+    let user_id = auth.user().id;
+    let principal = auth.idempotency_principal();
+    if let Some(stored) =
+        idempotency::claim(state, user_id, &principal, target, operation, key, payload)?
+    {
+        return serde_json::from_value(stored)
+            .map_err(|_| ApiError::Internal("invalid stored idempotency response".into()).into());
+    }
+    match work() {
+        Ok(value) => {
+            let stored = serde_json::to_value(&value)
+                .map_err(|_| ApiError::Internal("failed to serialize the response".into()))?;
+            idempotency::complete(state, user_id, &principal, target, operation, key, &stored)?;
+            Ok(value)
+        }
+        Err(error) => {
+            idempotency::release(state, user_id, &principal, target, operation, key);
+            Err(error)
+        }
+    }
+}
+
 fn user_name(state: &AppState, id: Option<i32>) -> Option<String> {
     id.and_then(|id| state.repo_read().get_user_by_id(id).ok())
         .map(|u| u.name)
@@ -519,40 +558,50 @@ pub struct CreateUseCaseRequest {
 }
 
 /// POST /projects/{id}/use-cases — create a use case and its draft.
+/// `Idempotency-Key` makes retries safe.
 #[post("/projects/<project_id>/use-cases", data = "<body>")]
 pub async fn create(
     access: ProjectUseCasesWrite,
     project_id: i32,
     body: Json<CreateUseCaseRequest>,
+    idempotency_key: crate::api::idempotency::OptionalIdempotencyKey,
     state: &State<AppState>,
 ) -> UcResult<(Status, Json<UseCaseDetail>)> {
     let user = access.user();
     require(state, user, project_id, Permission::EditRequirements)?;
     let body = body.into_inner();
-    let (use_case, draft) = UseCaseService::new(state.inner())
-        .create(
-            user,
-            project_id,
-            CreateUseCase {
-                reference_code: body.reference_code,
-                title: body.title,
-                primary_actor: body.primary_actor,
-                document: body.document,
-            },
-        )
-        .map_err(|e| into_api_error(state, None, e))?;
-    audit(
+    let detail = idempotent(
         state,
-        user,
-        ActionType::Create,
-        &use_case,
-        format!("Created use case {}", use_case.reference_code),
-        None,
-    );
-    Ok((
-        Status::Created,
-        Json(detail(state, &use_case, None, Some(draft))),
-    ))
+        access.auth(),
+        &format!("project:{project_id}:use_cases"),
+        "create_use_case",
+        &idempotency_key,
+        &body,
+        || {
+            let (use_case, draft) = UseCaseService::new(state.inner())
+                .create(
+                    user,
+                    project_id,
+                    CreateUseCase {
+                        reference_code: body.reference_code.clone(),
+                        title: body.title.clone(),
+                        primary_actor: body.primary_actor.clone(),
+                        document: body.document.clone(),
+                    },
+                )
+                .map_err(|e| into_api_error(state, None, e))?;
+            audit(
+                state,
+                user,
+                ActionType::Create,
+                &use_case,
+                format!("Created use case {}", use_case.reference_code),
+                None,
+            );
+            Ok(detail(state, &use_case, None, Some(draft)))
+        },
+    )?;
+    Ok((Status::Created, Json(detail)))
 }
 
 /// GET /projects/{id}/use-cases/{uc} — the use case with its current version
@@ -779,13 +828,15 @@ pub struct PublishResponse {
 }
 
 /// POST /projects/{id}/use-cases/{uc}/draft/publish — publish the draft as
-/// the next version, in the `draft` approval state.
+/// the next version, in the `draft` approval state. `Idempotency-Key` makes
+/// retries safe.
 #[post("/projects/<project_id>/use-cases/<id>/draft/publish", data = "<body>")]
 pub async fn publish(
     access: ProjectUseCasesWrite,
     project_id: i32,
     id: i32,
     body: Json<PublishRequest>,
+    idempotency_key: crate::api::idempotency::OptionalIdempotencyKey,
     state: &State<AppState>,
 ) -> UcResult<(Status, Json<PublishResponse>)> {
     let user = access.user();
@@ -795,27 +846,40 @@ pub async fn publish(
     let use_case = service
         .get_in_project(project_id, id)
         .map_err(|e| into_api_error(state, None, e))?;
-    let (version, removed) = service
-        .publish(user, &use_case, body.base_revision, body.change_note)
-        .map_err(|e| into_api_error(state, None, e))?;
-    audit(
+    let response = idempotent(
         state,
-        user,
-        ActionType::Update,
-        &use_case,
-        format!(
-            "Published version {} of use case {}",
-            version.version_number, use_case.reference_code
-        ),
-        Some(json!({ "version_id": version.id, "version_number": version.version_number })),
-    );
-    Ok((
-        Status::Created,
-        Json(PublishResponse {
-            version: version_view(state, &version),
-            removed_links: link_views(state, &use_case, &removed),
-        }),
-    ))
+        access.auth(),
+        &format!("project:{project_id}:use_case:{id}"),
+        "publish_use_case_draft",
+        &idempotency_key,
+        &body,
+        || {
+            let (version, removed) = service
+                .publish(
+                    user,
+                    &use_case,
+                    body.base_revision,
+                    body.change_note.clone(),
+                )
+                .map_err(|e| into_api_error(state, None, e))?;
+            audit(
+                state,
+                user,
+                ActionType::Update,
+                &use_case,
+                format!(
+                    "Published version {} of use case {}",
+                    version.version_number, use_case.reference_code
+                ),
+                Some(json!({ "version_id": version.id, "version_number": version.version_number })),
+            );
+            Ok(PublishResponse {
+                version: version_view(state, &version),
+                removed_links: link_views(state, &use_case, &removed),
+            })
+        },
+    )?;
+    Ok((Status::Created, Json(response)))
 }
 
 // ----- Versions -----

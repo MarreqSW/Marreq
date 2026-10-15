@@ -1241,3 +1241,68 @@ async fn the_project_bundle_carries_use_cases_and_their_links() {
         vec![("UC-001", Some(1), Some(2)), ("UC-002", None, Some(0))]
     );
 }
+
+async fn call_with_key(client: &Client, path: &str, key: &str, body: Value) -> (Status, Value) {
+    let response = client
+        .post(path.to_string())
+        .private_cookie(session_cookie(client, AUTHOR))
+        .header(ContentType::JSON)
+        .header(rocket::http::Header::new(
+            "Idempotency-Key",
+            key.to_string(),
+        ))
+        .body(body.to_string())
+        .dispatch()
+        .await;
+    let status = response.status();
+    (status, response.into_json().await.unwrap_or(Value::Null))
+}
+
+#[rocket::async_test]
+async fn create_and_publish_replay_with_an_idempotency_key() {
+    let client = test_client(repo()).await;
+    let body = json!({ "title": "Retried creation" });
+    let (s1, first) = call_with_key(&client, BASE, "k-create", body.clone()).await;
+    let (s2, again) = call_with_key(&client, BASE, "k-create", body).await;
+    assert_eq!((s1, s2), (Status::Created, Status::Created));
+    assert_eq!(first["id"], again["id"]);
+    let (_, list) = call(&client, AUTHOR, "GET", BASE, None).await;
+    assert_eq!(list.as_array().unwrap().len(), 1);
+    let (status, _) = call_with_key(&client, BASE, "k-create", json!({ "title": "Another" })).await;
+    assert_eq!(status, Status::Conflict, "same key, different payload");
+
+    let id = first["id"].as_i64().unwrap();
+    ops(
+        &client,
+        id,
+        json!(1),
+        json!([{ "op": "add_element", "list": "main", "element": { "text": "A step." } }]),
+    )
+    .await;
+    let publish = format!("{BASE}/{id}/draft/publish");
+    let (s1, v1) = call_with_key(
+        &client,
+        &publish,
+        "k-publish",
+        json!({ "base_revision": 2 }),
+    )
+    .await;
+    let (s2, replay) = call_with_key(
+        &client,
+        &publish,
+        "k-publish",
+        json!({ "base_revision": 2 }),
+    )
+    .await;
+    assert_eq!((s1, s2), (Status::Created, Status::Created), "{replay}");
+    assert_eq!(v1["version"]["id"], replay["version"]["id"]);
+    let (_, versions) = call(
+        &client,
+        AUTHOR,
+        "GET",
+        &format!("{BASE}/{id}/versions"),
+        None,
+    )
+    .await;
+    assert_eq!(versions.as_array().unwrap().len(), 1);
+}

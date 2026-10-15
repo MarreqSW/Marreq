@@ -136,6 +136,14 @@ export function createMarreqServer(ctx: SessionContext) {
     diff_baselines: ["baselines:read"],
     diff_baseline_vs_current: ["requirements:read", "baselines:read"],
     create_baseline: ["baselines:write"],
+    list_use_cases: ["use_cases:read"],
+    get_use_case: ["use_cases:read"],
+    get_use_case_diff: ["use_cases:read"],
+    list_use_case_links: ["use_cases:read"],
+    create_use_case: ["use_cases:write"],
+    edit_use_case_draft: ["use_cases:write"],
+    publish_use_case_draft: ["use_cases:write"],
+    link_use_case_element: ["use_cases:write"],
   };
   const originalRegisterTool = server.registerTool.bind(server);
   const unsafeRegisterTool = originalRegisterTool as unknown as (
@@ -146,7 +154,14 @@ export function createMarreqServer(ctx: SessionContext) {
   server.registerTool = ((name: string, config: Record<string, unknown>, callback: (...args: unknown[]) => unknown) => {
     const scopes = toolScopes[name];
     const mutating = scopes?.some((scope) => scope.endsWith(":write") || scope.endsWith(":approve")) ?? false;
-    const replayProtectedCreate = ["create_requirement", "create_baseline", "create_requirement_comment", "create_verification"].includes(name);
+    const replayProtectedCreate = [
+      "create_requirement",
+      "create_baseline",
+      "create_requirement_comment",
+      "create_verification",
+      "create_use_case",
+      "publish_use_case_draft",
+    ].includes(name);
     const annotations = {
       readOnlyHint: !mutating,
       destructiveHint: false,
@@ -430,6 +445,90 @@ export function createMarreqServer(ctx: SessionContext) {
         JSON.stringify({ baseline_a, baseline_b }),
         false,
         () => toolClient.diffBaselines(baseline_a, baseline_b)
+      );
+      return { content: [jsonContent(out)] };
+    }
+  );
+
+  // Use cases (issue #402): read tools in every mode.
+  server.registerTool(
+    "list_use_cases",
+    {
+      description:
+        "List the project's use cases: code, title, primary actor, step and branch counts, approval state of the current version, whether a draft is being edited, and link and suspect-link counts.",
+      inputSchema: z.object({
+        ...projectField,
+        q: z.string().optional().describe("Filter on code, title or actor"),
+        approval_state: z.enum(["draft", "reviewed", "approved", "unpublished"]).optional(),
+        has_suspect: z.boolean().optional().describe("Only use cases with suspect links"),
+      }),
+    },
+    async ({ project_id, q, approval_state, has_suspect }) => {
+      const toolClient = forProject(project_id);
+      const out = await withAudit(toolClient, "list_use_cases", JSON.stringify({ q, approval_state, has_suspect }), false, () =>
+        toolClient.listUseCases({ q, approval_state, has_suspect })
+      );
+      return { content: [jsonContent(out)] };
+    }
+  );
+
+  server.registerTool(
+    "get_use_case",
+    {
+      description:
+        "Get a use case: its current version (or version_id) as a marreq.use-case.v1 document with computed labels (1, 2, A3, A3.1, E4), and the shared draft (document, labels, revision) when one exists. Element ids such as s_… and b_… are stable; labels are not.",
+      inputSchema: z.object({
+        ...projectField,
+        use_case_id: z.number().int().positive(),
+        version_id: z.number().int().positive().optional(),
+      }),
+    },
+    async ({ project_id, use_case_id, version_id }) => {
+      const toolClient = forProject(project_id);
+      const out = await withAudit(toolClient, "get_use_case", JSON.stringify({ use_case_id, version_id }), false, async () => ({
+        use_case: await toolClient.getUseCase(use_case_id, version_id),
+        draft: await toolClient.getUseCaseDraft(use_case_id),
+      }));
+      return { content: [jsonContent(out)] };
+    }
+  );
+
+  server.registerTool(
+    "get_use_case_diff",
+    {
+      description:
+        "Structural diff of a use case: elements added, removed, edited (with a word diff), moved or rebranched. Without versions, the draft against the version it started from; with from_version_id and to_version_id, one version against another.",
+      inputSchema: z.object({
+        ...projectField,
+        use_case_id: z.number().int().positive(),
+        from_version_id: z.number().int().positive().optional(),
+        to_version_id: z.number().int().positive().optional(),
+      }),
+    },
+    async ({ project_id, use_case_id, from_version_id, to_version_id }) => {
+      const toolClient = forProject(project_id);
+      const out = await withAudit(
+        toolClient,
+        "get_use_case_diff",
+        JSON.stringify({ use_case_id, from_version_id, to_version_id }),
+        false,
+        () => toolClient.getUseCaseDiff(use_case_id, from_version_id, to_version_id)
+      );
+      return { content: [jsonContent(out)] };
+    }
+  );
+
+  server.registerTool(
+    "list_use_case_links",
+    {
+      description:
+        "Requirements and verifications linked to a use case or to one of its steps, with suspect flags (a linked requirement changed since the link was made or cleared).",
+      inputSchema: z.object({ ...projectField, use_case_id: z.number().int().positive() }),
+    },
+    async ({ project_id, use_case_id }) => {
+      const toolClient = forProject(project_id);
+      const out = await withAudit(toolClient, "list_use_case_links", JSON.stringify({ use_case_id }), false, () =>
+        toolClient.listUseCaseLinks(use_case_id)
       );
       return { content: [jsonContent(out)] };
     }
@@ -822,6 +921,148 @@ export function createMarreqServer(ctx: SessionContext) {
           JSON.stringify(args),
           true,
           () => toolClient.createBaseline(payload, args.idempotency_key ?? randomUUID())
+        );
+        return { content: [jsonContent(out)] };
+      }
+    );
+
+    // Use cases (issue #402). Approval is deliberately not exposed to agents.
+    server.registerTool(
+      "create_use_case",
+      {
+        description:
+          "Create a use case. It starts as a draft (no version); write the scenario with edit_use_case_draft, then publish_use_case_draft. Without reference_code the next UC-NNN is used. Requires draft_write mode.",
+        inputSchema: z.object({
+          ...projectField,
+          idempotency_key: operationKey,
+          title: z.string().min(3).max(255),
+          primary_actor: z.string().optional(),
+          reference_code: z.string().optional(),
+          document: z
+            .record(z.string(), z.unknown())
+            .optional()
+            .describe("A whole marreq.use-case.v1 document to start from"),
+        }),
+      },
+      async (args) => {
+        const toolClient = forProject(args.project_id);
+        const out = await withAudit(toolClient, "create_use_case", JSON.stringify({ title: args.title, reference_code: args.reference_code }), true, () =>
+          toolClient.createUseCase(
+            {
+              title: args.title,
+              primary_actor: args.primary_actor,
+              reference_code: args.reference_code,
+              document: args.document,
+            },
+            args.idempotency_key ?? randomUUID()
+          )
+        );
+        return { content: [jsonContent(out)] };
+      }
+    );
+
+    server.registerTool(
+      "edit_use_case_draft",
+      {
+        description: [
+          "Edit the shared draft of a use case, with operations (applied in order, all or nothing) or a whole document.",
+          "base_revision is the draft revision you read (get_use_case → draft.revision), or null when there is no draft yet (the draft then starts from the current version).",
+          "A stale revision fails with 409: read the use case again and retry. Operations (ids such as s_xxxx are stable; give your own ids so you can refer to new elements):",
+          "set_header {title?, primary_actor?, secondary_actors?, summary?};",
+          "add_element {list: 'preconditions'|'main'|'postconditions'|{branch: id}, after?: id|null (null = first, omitted = last), element: {id?, text}};",
+          "update_text {id, text}; move_element {id, list?, after?};",
+          "remove_element {id, dependents?: 'cascade'|{rebranch_to: stepId}} (required when branches start from or rejoin at the step);",
+          "add_branch {branch: {id?, kind: 'alternative'|'exception', title, from_step, end: {type:'rejoin', step}|{type:'end', outcome:'success'|'failure'}, steps?}};",
+          "update_branch {id, title?, kind?, from_step?, end?}; remove_branch {id}.",
+          "Requires draft_write mode.",
+        ].join(" "),
+        inputSchema: z.object({
+          ...projectField,
+          use_case_id: z.number().int().positive(),
+          base_revision: z.number().int().positive().nullable(),
+          operations: z.array(z.object({ op: z.string() }).passthrough()).optional(),
+          document: z.record(z.string(), z.unknown()).optional(),
+        }),
+      },
+      async ({ project_id, use_case_id, base_revision, operations, document }) => {
+        if ((operations == null) === (document == null)) {
+          throw new Error("give either operations or document");
+        }
+        const toolClient = forProject(project_id);
+        const out = await withAudit(
+          toolClient,
+          "edit_use_case_draft",
+          JSON.stringify({ use_case_id, base_revision, operations: operations?.length, document: document != null }),
+          true,
+          () =>
+            operations != null
+              ? toolClient.applyUseCaseOperations(use_case_id, base_revision, operations)
+              : toolClient.putUseCaseDraft(use_case_id, base_revision, document)
+        );
+        return { content: [jsonContent(out)] };
+      }
+    );
+
+    server.registerTool(
+      "publish_use_case_draft",
+      {
+        description:
+          "Publish the draft at base_revision as the next immutable version, in the Draft approval state for reviewers. The main scenario needs at least one step. Links to steps the new version no longer has are removed and reported. Requires draft_write mode.",
+        inputSchema: z.object({
+          ...projectField,
+          idempotency_key: operationKey,
+          use_case_id: z.number().int().positive(),
+          base_revision: z.number().int().positive(),
+          change_note: z.string().optional(),
+        }),
+      },
+      async (args) => {
+        const toolClient = forProject(args.project_id);
+        const out = await withAudit(
+          toolClient,
+          "publish_use_case_draft",
+          JSON.stringify({ use_case_id: args.use_case_id, base_revision: args.base_revision }),
+          true,
+          () =>
+            toolClient.publishUseCaseDraft(
+              args.use_case_id,
+              args.base_revision,
+              args.change_note ?? null,
+              args.idempotency_key ?? randomUUID()
+            )
+        );
+        return { content: [jsonContent(out)] };
+      }
+    );
+
+    server.registerTool(
+      "link_use_case_element",
+      {
+        description:
+          "Link a use case, or one of its elements (element_id, a step or condition id), to one requirement or one verification of the project. Linking a verification does not mark the requirements verified. Requires draft_write mode.",
+        inputSchema: z.object({
+          ...projectField,
+          use_case_id: z.number().int().positive(),
+          element_id: z.string().optional(),
+          requirement_id: z.number().int().positive().optional(),
+          verification_id: z.number().int().positive().optional(),
+          rationale: z.string().optional(),
+        }),
+      },
+      async ({ project_id, use_case_id, element_id, requirement_id, verification_id, rationale }) => {
+        const toolClient = forProject(project_id);
+        const out = await withAudit(
+          toolClient,
+          "link_use_case_element",
+          JSON.stringify({ use_case_id, element_id, requirement_id, verification_id }),
+          true,
+          () =>
+            toolClient.linkUseCaseElement(use_case_id, {
+              element_id: element_id ?? null,
+              requirement_id,
+              verification_id,
+              rationale: rationale ?? null,
+            })
         );
         return { content: [jsonContent(out)] };
       }

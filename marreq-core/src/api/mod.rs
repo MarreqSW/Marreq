@@ -39,6 +39,7 @@ pub mod saved_views;
 pub mod semantic_search;
 pub mod status;
 pub mod traceability;
+pub mod use_cases;
 pub mod users;
 pub mod verification_control;
 pub mod verification_diff;
@@ -194,6 +195,12 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         semantic_search::ask,
         semantic_search::index_status,
         semantic_search::search_status,
+        use_cases::list,
+        use_cases::next_code,
+        use_cases::get,
+        use_cases::get_draft,
+        use_cases::list_versions,
+        use_cases::get_version,
     );
     policy_routes!(r, ProjectWrite;
         attachments::upload,
@@ -247,10 +254,17 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         imports::commit_excel,
         imports::commit_reqif,
         imports::import_project_bundle,
+        use_cases::create,
+        use_cases::delete,
+        use_cases::put_draft,
+        use_cases::draft_operations,
+        use_cases::discard_draft,
+        use_cases::publish,
     );
     policy_routes!(r, ProjectApproval;
         requirements::set_version_approval,
         requirements::set_version_approval_by_project,
+        use_cases::set_version_approval,
     );
     policy_routes!(r, ProjectManagement;
         members::set_member_role,

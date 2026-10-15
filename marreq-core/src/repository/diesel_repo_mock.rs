@@ -4075,57 +4075,6 @@ impl crate::repository::ReportTemplateRepository for DieselRepoMock {
     }
 }
 
-#[cfg(test)]
-mod log_filter_tests {
-    use super::*;
-    use crate::repository::{LogListQuery, LogRepository};
-
-    #[test]
-    fn get_logs_filtered_pages_and_filters_entity_type() {
-        let mut repo = DieselRepoMock::default();
-        for i in 0..3 {
-            repo.insert_log(&NewLog {
-                user_id: 1,
-                entity_type: "requirement".into(),
-                entity_id: Some(i),
-                action_type: "create".into(),
-                description: None,
-                project_id: Some(1),
-                old_values: None,
-                new_values: None,
-                ip_address: None,
-                user_agent: None,
-            })
-            .unwrap();
-        }
-        repo.insert_log(&NewLog {
-            user_id: 2,
-            entity_type: "verification".into(),
-            entity_id: Some(9),
-            action_type: "update".into(),
-            description: None,
-            project_id: Some(2),
-            old_values: None,
-            new_values: None,
-            ip_address: None,
-            user_agent: None,
-        })
-        .unwrap();
-
-        let (page, total) = repo
-            .get_logs_filtered(&LogListQuery {
-                entity_type: Some("requirement".into()),
-                limit: 2,
-                offset: 0,
-                ..Default::default()
-            })
-            .unwrap();
-        assert_eq!(total, 3);
-        assert_eq!(page.len(), 2);
-        assert!(page.iter().all(|l| l.entity_type == "requirement"));
-    }
-}
-
 impl UseCasesRepository for DieselRepoMock {
     fn list_use_cases_by_project(&self, project_id: i32) -> Result<Vec<UseCase>, RepoError> {
         if self.force_err {
@@ -4212,7 +4161,7 @@ impl UseCasesRepository for DieselRepoMock {
             .filter(|v| v.use_case_id == use_case_id)
             .cloned()
             .collect();
-        list.sort_by(|a, b| b.version_number.cmp(&a.version_number));
+        list.sort_by_key(|v| std::cmp::Reverse(v.version_number));
         Ok(list)
     }
 
@@ -4395,5 +4344,56 @@ impl UseCasesRepository for DieselRepoMock {
             u.updated_at = now;
         }
         Ok(Some(created))
+    }
+}
+
+#[cfg(test)]
+mod log_filter_tests {
+    use super::*;
+    use crate::repository::{LogListQuery, LogRepository};
+
+    #[test]
+    fn get_logs_filtered_pages_and_filters_entity_type() {
+        let mut repo = DieselRepoMock::default();
+        for i in 0..3 {
+            repo.insert_log(&NewLog {
+                user_id: 1,
+                entity_type: "requirement".into(),
+                entity_id: Some(i),
+                action_type: "create".into(),
+                description: None,
+                project_id: Some(1),
+                old_values: None,
+                new_values: None,
+                ip_address: None,
+                user_agent: None,
+            })
+            .unwrap();
+        }
+        repo.insert_log(&NewLog {
+            user_id: 2,
+            entity_type: "verification".into(),
+            entity_id: Some(9),
+            action_type: "update".into(),
+            description: None,
+            project_id: Some(2),
+            old_values: None,
+            new_values: None,
+            ip_address: None,
+            user_agent: None,
+        })
+        .unwrap();
+
+        let (page, total) = repo
+            .get_logs_filtered(&LogListQuery {
+                entity_type: Some("requirement".into()),
+                limit: 2,
+                offset: 0,
+                ..Default::default()
+            })
+            .unwrap();
+        assert_eq!(total, 3);
+        assert_eq!(page.len(), 2);
+        assert!(page.iter().all(|l| l.entity_type == "requirement"));
     }
 }

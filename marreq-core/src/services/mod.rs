@@ -95,6 +95,7 @@ pub mod requirement_service;
 pub mod saved_view_service;
 pub mod semantic_search;
 pub mod status_service;
+pub mod use_case_service;
 pub mod user_provisioning_service;
 pub mod user_service;
 pub mod verification_control_service;

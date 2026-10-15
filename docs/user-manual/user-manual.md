@@ -920,7 +920,9 @@ The page shows the current version: the summary, preconditions, the main scenari
 
 Numbers are never typed: they follow the order of the steps. When steps move, the numbers and the branch labels change with them, and the branches stay attached to their step.
 
-Click a branch's label or title to select it: its origin step is highlighted and **Jump to origin** scrolls to it. The side panel shows the actors, who published the version and its change note, and the **Versions** list; click an older version to read it.
+Click a branch's label or title to select it: its origin step is highlighted and **Jump to origin** scrolls to it.
+
+**Flow** shows the same use case as a diagram: the main scenario from **Start** (with the preconditions) down to **End** (with the postconditions), and the alternatives and exceptions beside it, each starting from its step and either returning (dashed arrow, *continues at N*) or ending the use case. It is drawn from the document, so it is always up to date. Zoom with the buttons or the mouse wheel; click a step or branch to select it, and **Show in document** to go back to it in the text. A branch selected in one view stays selected in the other. The side panel shows the actors, who published the version and its change note, and the **Versions** list; click an older version to read it.
 
 ### 14.3 Editing
 

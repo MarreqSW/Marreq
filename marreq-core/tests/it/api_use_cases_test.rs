@@ -1150,3 +1150,94 @@ async fn the_global_search_finds_use_cases() {
     let (_, hits) = call(&client, OUTSIDER, "GET", "/api/search?q=UC-001", None).await;
     assert_eq!(hits, json!([]));
 }
+
+#[rocket::async_test]
+async fn the_project_bundle_carries_use_cases_and_their_links() {
+    use crate::api_project_bundle_test::test_support::json_file_body;
+    let client = test_client(repo()).await;
+    let id = export_use_case(&client).await;
+    call(
+        &client,
+        AUTHOR,
+        "POST",
+        &format!("{BASE}/{id}/draft/publish"),
+        Some(json!({ "base_revision": 2 })),
+    )
+    .await;
+    call(
+        &client,
+        AUTHOR,
+        "POST",
+        &format!("{BASE}/{id}/links"),
+        Some(json!({ "element_id": "s_Pick01", "requirement_id": 1, "rationale": "Selection" })),
+    )
+    .await;
+    call(
+        &client,
+        AUTHOR,
+        "POST",
+        &format!("{BASE}/{id}/links"),
+        Some(json!({ "verification_id": 1 })),
+    )
+    .await;
+    call(
+        &client,
+        AUTHOR,
+        "POST",
+        BASE,
+        Some(json!({ "reference_code": "UC-002", "title": "Only a draft" })),
+    )
+    .await;
+
+    let exported = client
+        .get("/api/projects/1/exports/bundle.json")
+        .private_cookie(session_cookie(&client, ADMIN))
+        .dispatch()
+        .await;
+    let json = exported.into_string().await.unwrap();
+    let bundle: Value = serde_json::from_str(&json).unwrap();
+    assert_eq!(bundle["use_cases"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        bundle["use_cases"][0]["links"][0]["requirement_reference_code"],
+        "SAT-PWR-001"
+    );
+
+    let (ct, body) = json_file_body("bundle.json", &json);
+    let imported = client
+        .post("/api/projects/imports/bundle")
+        .header(ct)
+        .private_cookie(session_cookie(&client, ADMIN))
+        .body(body)
+        .dispatch()
+        .await;
+    let result: Value = imported.into_json().await.unwrap();
+    assert_eq!(
+        (
+            result["imported_counts"]["use_cases"].as_i64(),
+            result["imported_counts"]["use_case_links"].as_i64()
+        ),
+        (Some(2), Some(2)),
+        "{result}"
+    );
+    let new_id = result["project_id"].as_i64().unwrap();
+    let (_, rows) = call(
+        &client,
+        ADMIN,
+        "GET",
+        &format!("/api/projects/{new_id}/use-cases"),
+        None,
+    )
+    .await;
+    assert_eq!(
+        rows.as_array()
+            .unwrap()
+            .iter()
+            .map(|r| (
+                r["reference_code"].as_str().unwrap(),
+                r["current_version_number"].as_i64(),
+                r["link_count"].as_i64()
+            ))
+            .collect::<Vec<_>>(),
+        vec![("UC-001", Some(1), Some(2)), ("UC-002", None, Some(0))]
+    );
+}

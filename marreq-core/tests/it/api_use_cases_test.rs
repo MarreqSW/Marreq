@@ -743,3 +743,106 @@ async fn links_follow_requirements_and_the_published_elements() {
     let (_, listed) = call(&client, VIEWER, "GET", &links, None).await;
     assert_eq!(listed, json!([]));
 }
+
+#[rocket::async_test]
+async fn diffs_compare_the_draft_and_versions_structurally() {
+    let client = test_client(repo()).await;
+    let id = export_use_case(&client).await;
+
+    // Before the first publish everything is added.
+    let (_, first) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("{BASE}/{id}/draft/diff"),
+        None,
+    )
+    .await;
+    assert_eq!(first["from"], Value::Null);
+    assert_eq!(first["summary"]["added"], 5);
+    let publish = format!("{BASE}/{id}/draft/publish");
+    let (_, v1) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &publish,
+        Some(json!({ "base_revision": 2 })),
+    )
+    .await;
+    let v1 = v1["version"]["id"].as_i64().unwrap();
+
+    let (status, _) = ops(
+        &client,
+        id,
+        Value::Null,
+        json!([
+            { "op": "move_element", "id": "s_Make01", "after": null },
+            { "op": "update_text", "id": "s_Open01", "text": "User opens the export page." },
+            { "op": "update_branch", "id": "b_None01", "from_step": "s_Open01" }
+        ]),
+    )
+    .await;
+    assert_eq!(status, Status::Ok);
+    let (status, diff) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("{BASE}/{id}/draft/diff"),
+        None,
+    )
+    .await;
+    assert_eq!(status, Status::Ok, "{diff}");
+    assert_eq!(diff["from"]["version_number"], 1);
+    assert_eq!(diff["to"]["draft_revision"], 1);
+    assert_eq!(
+        diff["summary"],
+        json!({ "added": 0, "removed": 0, "edited": 1, "moved": 1, "rebranched": 1 })
+    );
+    let edited = diff["elements"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|e| e["id"] == "s_Open01")
+        .unwrap();
+    assert_eq!(
+        edited["text_diff"][1],
+        json!({ "op": "delete", "text": "requirements" })
+    );
+
+    let (_, v2) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &publish,
+        Some(json!({ "base_revision": 1 })),
+    )
+    .await;
+    let v2 = v2["version"]["id"].as_i64().unwrap();
+    let (_, versions) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("{BASE}/{id}/versions/{v1}/diff/{v2}"),
+        None,
+    )
+    .await;
+    assert_eq!(versions["summary"], diff["summary"]);
+    let (_, all) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("{BASE}/{id}/versions/{v1}/diff/{v2}?include_unchanged=true"),
+        None,
+    )
+    .await;
+    assert_eq!(all["elements"].as_array().unwrap().len(), 5);
+    let (status, _) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("{BASE}/{id}/draft/diff"),
+        None,
+    )
+    .await;
+    assert_eq!(status, Status::NotFound);
+}

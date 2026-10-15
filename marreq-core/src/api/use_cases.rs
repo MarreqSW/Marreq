@@ -24,6 +24,7 @@ use crate::repository::{
 use crate::services::use_case_service::{
     CreateUseCase, DraftChange, UseCaseError, UseCaseService, parse_document,
 };
+use crate::use_case_document::diff::{DocumentDiff, diff_documents};
 use crate::use_case_document::{
     BranchKind, Effect, Operation, OperationError, UseCaseDocument, labels,
 };
@@ -1242,4 +1243,118 @@ pub async fn verification_use_cases(
         .repo_read()
         .list_use_case_links_for_verification(verification_id)?;
     Ok(Json(use_case_refs(state, project_id, links)?))
+}
+
+// ----- Structural diff (issue #401) -----
+
+#[derive(Debug, Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct DiffEnd {
+    pub version_id: Option<i32>,
+    pub version_number: Option<i32>,
+    /// Set when this side is the draft.
+    pub draft_revision: Option<i32>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct DiffView {
+    pub from: Option<DiffEnd>,
+    pub to: DiffEnd,
+    #[serde(flatten)]
+    pub diff: DocumentDiff,
+}
+
+fn version_end(v: &UseCaseVersion) -> DiffEnd {
+    DiffEnd {
+        version_id: Some(v.id),
+        version_number: Some(v.version_number),
+        draft_revision: None,
+    }
+}
+
+/// An empty document, the "before" of a use case never published.
+fn empty_document() -> UseCaseDocument {
+    UseCaseDocument::new("", None)
+}
+
+/// GET /projects/{id}/use-cases/{uc}/draft/diff — the draft against the
+/// version it started from (everything is added before the first publish).
+#[get("/projects/<project_id>/use-cases/<id>/draft/diff?<include_unchanged>")]
+pub async fn draft_diff(
+    access: ProjectUseCasesRead,
+    project_id: i32,
+    id: i32,
+    include_unchanged: Option<bool>,
+    state: &State<AppState>,
+) -> UcResult<Json<DiffView>> {
+    require(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let service = UseCaseService::new(state.inner());
+    let err = |e| into_api_error(state, None, e);
+    let use_case = service.get_in_project(project_id, id).map_err(err)?;
+    let Some(draft) = service.draft(&use_case).map_err(err)? else {
+        return Err(UseCaseApiError::new(
+            Status::NotFound,
+            "there is no draft",
+            Value::Null,
+        ));
+    };
+    let base = match draft.base_version_id {
+        Some(vid) => Some(service.get_version(&use_case, vid).map_err(err)?),
+        None => None,
+    };
+    let old = match &base {
+        Some(v) => parse_document(&v.document).map_err(err)?,
+        None => empty_document(),
+    };
+    let new = parse_document(&draft.document).map_err(err)?;
+    Ok(Json(DiffView {
+        from: base.as_ref().map(version_end),
+        to: DiffEnd {
+            version_id: None,
+            version_number: None,
+            draft_revision: Some(draft.revision),
+        },
+        diff: diff_documents(&old, &new, include_unchanged.unwrap_or(false)),
+    }))
+}
+
+/// GET /projects/{id}/use-cases/{uc}/versions/{a}/diff/{b} — version `a`
+/// (before) against version `b` (after).
+#[get("/projects/<project_id>/use-cases/<id>/versions/<a>/diff/<b>?<include_unchanged>")]
+pub async fn version_diff(
+    access: ProjectUseCasesRead,
+    project_id: i32,
+    id: i32,
+    a: i32,
+    b: i32,
+    include_unchanged: Option<bool>,
+    state: &State<AppState>,
+) -> UcResult<Json<DiffView>> {
+    require(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let service = UseCaseService::new(state.inner());
+    let err = |e| into_api_error(state, None, e);
+    let use_case = service.get_in_project(project_id, id).map_err(err)?;
+    let from = service.get_version(&use_case, a).map_err(err)?;
+    let to = service.get_version(&use_case, b).map_err(err)?;
+    let diff = diff_documents(
+        &parse_document(&from.document).map_err(err)?,
+        &parse_document(&to.document).map_err(err)?,
+        include_unchanged.unwrap_or(false),
+    );
+    Ok(Json(DiffView {
+        from: Some(version_end(&from)),
+        to: version_end(&to),
+        diff,
+    }))
 }

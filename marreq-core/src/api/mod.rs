@@ -204,6 +204,8 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         use_cases::list_links,
         use_cases::requirement_use_cases,
         use_cases::verification_use_cases,
+        use_cases::draft_diff,
+        use_cases::version_diff,
     );
     policy_routes!(r, ProjectWrite;
         attachments::upload,

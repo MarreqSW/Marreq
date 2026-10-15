@@ -14,6 +14,8 @@ function notificationEntityPath(n: Notification, projects: DashboardProject[]): 
       return `${base}/requirements/${n.entity_id}`;
     case 'verification':
       return `${base}/verifications/${n.entity_id}`;
+    case 'use_case':
+      return `${base}/use-cases/${n.entity_id}`;
     default:
       return null;
   }

@@ -27,6 +27,9 @@ type Props = {
   onOpenLink?: (link: UseCaseLink) => void;
   /** Offered in each element's menu when set. */
   onLinkElement?: (elementId: string) => void;
+  /** Comments per element id, shown as a count after the element (issue #401). */
+  commentCounts?: Map<string, number>;
+  onCommentElement?: (elementId: string) => void;
 };
 
 type Pending = { key: string; list: UseCaseListRef; after: string | null; id: string };
@@ -78,6 +81,8 @@ export default function UseCaseDocumentView({
   linksByElement,
   onOpenLink,
   onLinkElement,
+  commentCounts,
+  onCommentElement,
 }: Props) {
   const [pending, setPending] = useState<Pending | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
@@ -211,7 +216,15 @@ export default function UseCaseDocumentView({
           onSelect: () => onLinkElement(row.id),
         });
       }
+      if (onCommentElement) {
+        menu.push({
+          icon: 'add_comment',
+          label: variant === 'bullet' ? 'Comment on this condition' : 'Comment on this step',
+          onSelect: () => onCommentElement(row.id),
+        });
+      }
       const rowLinks = linksByElement?.get(row.id) ?? [];
+      const rowComments = commentCounts?.get(row.id) ?? 0;
       menu.push(
         {
           icon: 'arrow_upward',
@@ -261,11 +274,25 @@ export default function UseCaseDocumentView({
           onInsertBelow={() => startInsert(list, row.id)}
           menu={menu}
           trailing={
-            rowLinks.length > 0 ? (
-              <span className="mt-0.5 flex shrink-0 flex-wrap justify-end gap-1">
+            rowLinks.length > 0 || rowComments > 0 ? (
+              <span className="mt-0.5 flex shrink-0 flex-wrap items-center justify-end gap-1">
                 {rowLinks.map((l) => (
                   <LinkChip key={l.id} link={l} onOpen={onOpenLink} />
                 ))}
+                {rowComments > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => onCommentElement?.(row.id)}
+                    title={`${rowComments} comment${rowComments === 1 ? '' : 's'}`}
+                    aria-label={`${rowComments} comment${rowComments === 1 ? '' : 's'} on ${labels[row.id] ?? 'this element'}`}
+                    className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold text-stitch-muted hover:bg-stitch-elevated hover:text-stitch-accent"
+                  >
+                    <span className="material-symbols-outlined text-[13px]" aria-hidden>
+                      forum
+                    </span>
+                    {rowComments}
+                  </button>
+                ) : null}
               </span>
             ) : undefined
           }

@@ -105,6 +105,25 @@ describe('StartPage', () => {
     expect(within(link).getByText('alternate_email')).toBeInTheDocument();
   });
 
+  it('opens use cases from their approvals and notifications', async () => {
+    vi.mocked(apiClient.getAttention).mockResolvedValueOnce({
+      ...attention,
+      items: [
+        { kind: 'approval', project_id: 5, title: 'UC-001 v2 is waiting for your approval', requirement_id: null, use_case_id: 3, reference_code: 'UC-001', count: null, notification_id: null, notification_type: null, at: hoursAgo(1) },
+        { kind: 'notification', project_id: 6, title: 'Bob mentioned you on UC-004', requirement_id: null, use_case_id: 4, reference_code: null, count: null, notification_id: 101, notification_type: 'mentioned', at: hoursAgo(2) },
+      ],
+    });
+    renderStart();
+    expect(await screen.findByRole('link', { name: /UC-001 v2 is waiting/i })).toHaveAttribute(
+      'href',
+      '/space-project/use-cases/3',
+    );
+    expect(screen.getByRole('link', { name: /bob mentioned you on UC-004/i })).toHaveAttribute(
+      'href',
+      '/rover/use-cases/4',
+    );
+  });
+
   it('says so when nothing needs attention, or when it cannot load', async () => {
     vi.mocked(apiClient.getAttention).mockResolvedValueOnce({
       items: [],

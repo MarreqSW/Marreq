@@ -24,6 +24,11 @@ const mocks = vi.hoisted(() => ({
   listRequirements: vi.fn(),
   listVerificationsByProject: vi.fn(),
   getRequirementByProject: vi.fn(),
+  listUseCaseComments: vi.fn(),
+  createUseCaseComment: vi.fn(),
+  listProjectMembers: vi.fn(),
+  getUseCaseDraftDiff: vi.fn(),
+  getUseCaseVersionDiff: vi.fn(),
 }));
 vi.mock('@/api/client', async () => ({
   ...mocks,
@@ -120,6 +125,10 @@ describe('ViewUseCasePage', () => {
     mocks.listUseCaseVersions.mockResolvedValue([version]);
     mocks.getMyPermissions.mockResolvedValue({ edit_requirements: true, is_project_reviewer: true });
     mocks.listUseCaseLinks.mockResolvedValue([]);
+    mocks.listUseCaseComments.mockResolvedValue([]);
+    mocks.listProjectMembers.mockResolvedValue([
+      { user_id: 2, role: 2, role_label: 'Author', username: 'dr_smith', name: 'Dr. Smith' },
+    ]);
   });
 
   it('reads the current version with its branches and review action', async () => {
@@ -309,5 +318,82 @@ describe('ViewUseCasePage', () => {
         'csrf',
       ),
     );
+  });
+
+  it('comments on a step with mentions and reviews the changes between versions', async () => {
+    const user = userEvent.setup();
+    const v2 = { ...version, id: 32, version_number: 2 };
+    mocks.getUseCase.mockResolvedValue({ ...detail, current_version: v2 });
+    mocks.listUseCaseVersions.mockResolvedValue([v2, version]);
+    mocks.listUseCaseComments.mockResolvedValue([
+      {
+        id: 1,
+        use_case_id: 7,
+        use_case_version_id: 31,
+        element_id: 's_Pick',
+        element_label: '2',
+        author_id: 2,
+        author_name: 'Dr. Smith',
+        body: 'Is @dr_smith right here?',
+        created_at: '2026-10-15T08:00:00',
+      },
+    ]);
+    renderPage();
+
+    // The step shows its comment count; clicking it filters the discussion to that step.
+    await user.click(await screen.findByRole('button', { name: '1 comment on 2' }));
+    const discussion = document.getElementById('discussion') as HTMLElement;
+    expect(within(discussion).getByText('On Step 2')).toBeInTheDocument();
+    expect(within(discussion).getByTitle('Dr. Smith')).toHaveTextContent('@dr_smith');
+
+    mocks.createUseCaseComment.mockResolvedValue({
+      id: 2,
+      use_case_id: 7,
+      use_case_version_id: 32,
+      element_id: 's_Pick',
+      element_label: '2',
+      author_id: 1,
+      author_name: 'Alice',
+      body: 'Yes.',
+      created_at: '2026-10-15T09:00:00',
+    });
+    await user.type(within(discussion).getByRole('combobox', { name: 'Add a comment' }), 'Yes.');
+    await user.click(within(discussion).getByRole('button', { name: 'Add comment' }));
+    expect(mocks.createUseCaseComment).toHaveBeenCalledWith(
+      5,
+      7,
+      { body: 'Yes.', use_case_version_id: 32, element_id: 's_Pick' },
+      'csrf',
+    );
+    expect(await within(discussion).findByText('Yes.')).toBeInTheDocument();
+
+    // Review changes: v1 → v2 with badges and the word diff.
+    mocks.getUseCaseVersionDiff.mockResolvedValue({
+      from: { version_id: 31, version_number: 1, draft_revision: null },
+      to: { version_id: 32, version_number: 2, draft_revision: null },
+      summary: { added: 0, removed: 0, edited: 1, moved: 1, rebranched: 0 },
+      header: {},
+      elements: [
+        {
+          id: 's_Pick',
+          kind: 'step',
+          changes: ['edited', 'moved'],
+          old: { list: 'main', label: '3', text: 'User picks.' },
+          new: { list: 'main', label: '2', text: 'User selects.' },
+          text_diff: [
+            { op: 'equal', text: 'User ' },
+            { op: 'delete', text: 'picks' },
+            { op: 'insert', text: 'selects' },
+            { op: 'equal', text: '.' },
+          ],
+        },
+      ],
+    });
+    await user.click(screen.getByRole('tab', { name: /review changes/i }));
+    expect(await screen.findByText('1 Edited')).toBeInTheDocument();
+    expect(mocks.getUseCaseVersionDiff).toHaveBeenCalledWith(5, 7, 31, 32, false);
+    expect(screen.getByText('3 → 2')).toBeInTheDocument();
+    expect(screen.getByText('picks').tagName).toBe('DEL');
+    expect(screen.getByText('selects').tagName).toBe('INS');
   });
 });

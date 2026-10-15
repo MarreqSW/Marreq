@@ -9,6 +9,8 @@ import {
   deleteUseCaseLink,
   discardUseCaseDraft,
   getMyPermissions,
+  listProjectMembers,
+  listUseCaseComments,
   getUseCase,
   getUseCaseDraft,
   listUseCaseLinks,
@@ -18,6 +20,8 @@ import {
 } from '@/api/client';
 import type {
   EffectivePermissions,
+  ProjectMember,
+  UseCaseComment,
   UseCaseDetail,
   UseCaseDocument,
   UseCaseDraft,
@@ -33,7 +37,9 @@ import DeleteStepDialog, { type DependentBranch } from '@/components/useCases/De
 import LinkDialog, { type LinkableElement } from '@/components/useCases/LinkDialog';
 import RelatedArtifactsPanel from '@/components/useCases/RelatedArtifactsPanel';
 import RequirementPeek from '@/components/useCases/RequirementPeek';
+import UseCaseDiscussion from '@/components/useCases/UseCaseDiscussion';
 import UseCaseDocumentView from '@/components/useCases/UseCaseDocumentView';
+import UseCaseReviewView from '@/components/useCases/UseCaseReviewView';
 import { useDashboard } from '@/context/DashboardContext';
 import { useProjectArchived } from '@/hooks/useProjectArchived';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
@@ -117,6 +123,10 @@ export default function ViewUseCasePage() {
   const [linkDialog, setLinkDialog] = useState<{ elementId: string | null } | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [peek, setPeek] = useState<UseCaseLink | null>(null);
+  const [comments, setComments] = useState<UseCaseComment[]>([]);
+  const [members, setMembers] = useState<ProjectMember[]>([]);
+  const [commentFocus, setCommentFocus] = useState<string | null>(null);
+  const reviewing = params.get('view') === 'review';
 
   const editorRef = useRef<Editor | null>(null);
   editorRef.current = editor;
@@ -129,16 +139,20 @@ export default function ViewUseCasePage() {
   const load = useCallback(async () => {
     setLoadError(null);
     try {
-      const [d, v, p, l] = await Promise.all([
+      const [d, v, p, l, c, m] = await Promise.all([
         getUseCase(pid, id, requestedVersion),
         listUseCaseVersions(pid, id),
         getMyPermissions(pid).catch(() => null),
         listUseCaseLinks(pid, id).catch(() => [] as UseCaseLink[]),
+        listUseCaseComments(pid, id).catch(() => [] as UseCaseComment[]),
+        listProjectMembers(pid).catch(() => [] as ProjectMember[]),
       ]);
       setDetail(d);
       setVersions(v);
       setPerms(p);
       setLinks(l);
+      setComments(c);
+      setMembers(m);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load the use case');
     }
@@ -461,6 +475,19 @@ export default function ViewUseCasePage() {
 
   const canLink = Boolean(perms?.edit_requirements) && !archived;
 
+  const commentCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const c of comments) if (c.element_id) m.set(c.element_id, (m.get(c.element_id) ?? 0) + 1);
+    return m;
+  }, [comments]);
+
+  function setReviewing(on: boolean) {
+    const next = new URLSearchParams(params);
+    if (on) next.set('view', 'review');
+    else next.delete('view');
+    setParams(next, { replace: true });
+  }
+
   if (loadError) {
     return (
       <div role="alert" className="rounded-xl border border-red-500/40 bg-red-500/10 p-4 text-sm text-red-800 dark:text-red-100">
@@ -628,7 +655,43 @@ export default function ViewUseCasePage() {
       ) : null}
 
       <div className="flex flex-col gap-5 lg:flex-row">
-        {doc && shown ? (
+        <div className="min-w-0 flex-1">
+        {!editing && (versions.length > 1 || (draft && versions.length > 0)) ? (
+          <div role="tablist" aria-label="View" className="mb-3 flex gap-1">
+            {(
+              [
+                [false, 'article', 'Document'],
+                [true, 'compare', 'Review changes'],
+              ] as const
+            ).map(([on, icon, text]) => (
+              <button
+                key={text}
+                type="button"
+                role="tab"
+                aria-selected={reviewing === on}
+                onClick={() => setReviewing(on)}
+                className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold ${
+                  reviewing === on
+                    ? 'border-stitch-accent bg-stitch-accent/10 text-stitch-accent'
+                    : 'border-stitch-border bg-stitch-surface text-stitch-fg'
+                }`}
+              >
+                <span className="material-symbols-outlined text-sm">{icon}</span>
+                {text}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {reviewing && !editing ? (
+          <UseCaseReviewView
+            projectId={pid}
+            useCaseId={id}
+            versions={versions}
+            hasDraft={draft != null}
+            comments={comments}
+            onCommentElement={setCommentFocus}
+          />
+        ) : doc && shown ? (
           <UseCaseDocumentView
             doc={doc}
             labels={shown.labels}
@@ -646,6 +709,8 @@ export default function ViewUseCasePage() {
                   }
                 : undefined
             }
+            commentCounts={commentCounts}
+            onCommentElement={setCommentFocus}
           />
         ) : (
           <div className="flex-1 rounded-lg border border-dashed border-stitch-border p-8 text-center text-sm text-stitch-muted">
@@ -653,6 +718,21 @@ export default function ViewUseCasePage() {
             {canEdit ? ' Open the editor to write the scenario.' : ''}
           </div>
         )}
+        <UseCaseDiscussion
+          projectId={pid}
+          useCaseId={id}
+          comments={comments}
+          members={members}
+          elements={linkable}
+          versionId={version?.id ?? null}
+          canComment={canLink}
+          locked={false}
+          csrfToken={csrfToken}
+          focusElement={commentFocus}
+          onFocusElement={setCommentFocus}
+          onPosted={(c) => setComments((all) => [...all, c])}
+        />
+        </div>
 
         <aside className="w-full shrink-0 space-y-3 lg:w-72">
           {selectedBranch && doc ? (

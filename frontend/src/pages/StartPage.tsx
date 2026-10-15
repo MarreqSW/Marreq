@@ -55,6 +55,7 @@ function itemPath(item: AttentionItem, project: DashboardProject): string {
     case 'suspect':
       return `${base}/traceability?view=matrix&mx_suspect=1`;
     default:
+      if (item.use_case_id != null) return `${base}/use-cases/${item.use_case_id}`;
       return item.requirement_id != null ? `${base}/requirements/${item.requirement_id}` : `${base}/dashboard`;
   }
 }
@@ -180,7 +181,7 @@ export default function StartPage() {
                   const project = byId.get(item.project_id)!;
                   const [icon, colour] = itemIcon(item);
                   return (
-                    <li key={`${item.kind}-${item.project_id}-${item.requirement_id ?? ''}-${item.notification_id ?? ''}`}>
+                    <li key={`${item.kind}-${item.project_id}-${item.requirement_id ?? ''}-${item.use_case_id ?? ''}-${item.notification_id ?? ''}`}>
                       <Link
                         to={itemPath(item, project)}
                         onClick={() => {

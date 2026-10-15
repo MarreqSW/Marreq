@@ -13,8 +13,8 @@ use regex::Regex;
 
 use crate::app::{AppState, DieselCachedRepo};
 use crate::models::{
-    NewUseCase, NewUseCaseLink, NewUseCaseVersion, UseCase, UseCaseDraft, UseCaseLink,
-    UseCaseVersion, User,
+    NewUseCase, NewUseCaseComment, NewUseCaseLink, NewUseCaseVersion, UseCase, UseCaseComment,
+    UseCaseDraft, UseCaseLink, UseCaseVersion, User,
 };
 use crate::repository::errors::RepoError;
 use crate::repository::{RequirementsRepository, UseCasesRepository, VerificationsRepository};
@@ -42,6 +42,7 @@ pub enum UseCaseError {
     Stale(Option<UseCaseDraft>),
     /// The request conflicts with the use case's state.
     Conflict(String),
+    Forbidden(String),
 }
 
 impl From<RepoError> for UseCaseError {
@@ -356,6 +357,12 @@ impl<'a> UseCaseService<'a> {
         let Some(published) = published else {
             return Err(UseCaseError::Stale(self.draft(use_case)?));
         };
+        super::NotificationService::new(self.state).notify_use_case_published(
+            actor,
+            use_case,
+            published.version_number,
+            &published.title,
+        );
         // Links to elements the new version no longer has go with them.
         let keep: Vec<String> = doc.ids().into_iter().map(str::to_string).collect();
         let removed = self
@@ -468,6 +475,87 @@ impl<'a> UseCaseService<'a> {
             .state
             .repo_write()
             .clear_use_case_link_suspect(link.id, actor.id, current)?)
+    }
+
+    /// Add a comment to the use case, optionally on a version and an element.
+    /// Mentioned project members get a `mentioned` notification; the use
+    /// case's creator and the current version's publisher a `comment_added`.
+    pub fn create_comment(
+        &self,
+        actor: &User,
+        use_case: &UseCase,
+        version_id: Option<i32>,
+        element_id: Option<String>,
+        body: &str,
+    ) -> UseCaseResult<UseCaseComment> {
+        let body = body.trim();
+        if body.is_empty() {
+            return Err(UseCaseError::BadRequest(
+                "comment body must not be empty".into(),
+            ));
+        }
+        if body.chars().count() > 10_000 {
+            return Err(UseCaseError::BadRequest(
+                "comment body must be at most 10000 characters".into(),
+            ));
+        }
+        if let Some(vid) = version_id {
+            let version = self.get_version(use_case, vid)?;
+            if crate::config::lock_approved_version_comments()
+                && version.approval_state.eq_ignore_ascii_case("approved")
+            {
+                return Err(UseCaseError::Forbidden(
+                    "approved versions cannot receive new comments when locked".into(),
+                ));
+            }
+        }
+        let element_id = element_id
+            .map(|e| e.trim().to_string())
+            .filter(|e| !e.is_empty());
+        let current = self.current_version(use_case)?;
+        if let Some(element) = &element_id {
+            let in_version = match version_id {
+                Some(vid) => {
+                    parse_document(&self.get_version(use_case, vid)?.document)?.contains(element)
+                }
+                None => false,
+            };
+            let mut known = in_version;
+            if !known && let Some(version) = &current {
+                known = parse_document(&version.document)?.contains(element);
+            }
+            if !known && let Some(draft) = self.draft(use_case)? {
+                known = parse_document(&draft.document)?.contains(element);
+            }
+            if !known {
+                return Err(UseCaseError::BadRequest(format!(
+                    "the use case has no element \"{element}\""
+                )));
+            }
+        }
+        let comment = self
+            .state
+            .repo_write()
+            .create_use_case_comment(&NewUseCaseComment {
+                use_case_id: use_case.id,
+                use_case_version_id: version_id,
+                element_id,
+                author_id: actor.id,
+                body: body.to_string(),
+            })?;
+
+        let mentioned_ids = super::CommentService::new(self.state)
+            .mentioned_members(use_case.project_id, &comment.body);
+        let ns = super::NotificationService::new(self.state);
+        let mentioned =
+            ns.notify_use_case_mentioned(actor, use_case, &comment.body, &mentioned_ids);
+        let recipients: Vec<i32> = use_case
+            .created_by
+            .into_iter()
+            .chain(current.and_then(|v| v.created_by))
+            .collect();
+        ns.notify_use_case_comment(actor, use_case, &comment.body, &recipients, &mentioned);
+        Ok(comment)
     }
 
     pub fn set_approval(

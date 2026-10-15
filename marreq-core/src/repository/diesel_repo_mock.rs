@@ -80,6 +80,7 @@ pub struct DieselRepoMock {
     pub use_case_versions: Vec<UseCaseVersion>,
     pub use_case_drafts: Vec<UseCaseDraft>,
     pub use_case_links: Vec<UseCaseLink>,
+    pub use_case_comments: Vec<UseCaseComment>,
     /// Shared by use cases and their versions.
     pub next_use_case_id: i32,
     pub oauth_clients: HashMap<String, OAuthClient>,
@@ -172,6 +173,7 @@ impl Default for DieselRepoMock {
             use_case_versions: Vec::new(),
             use_case_drafts: Vec::new(),
             use_case_links: Vec::new(),
+            use_case_comments: Vec::new(),
             next_use_case_id: 1,
         }
     }
@@ -574,6 +576,7 @@ impl DieselRepoMock {
             use_case_versions: Vec::new(),
             use_case_drafts: Vec::new(),
             use_case_links: Vec::new(),
+            use_case_comments: Vec::new(),
             next_use_case_id: 1,
             oauth_clients: HashMap::new(),
             oauth_grants: HashMap::new(),
@@ -644,6 +647,7 @@ impl DieselRepoMock {
             use_case_versions: Vec::new(),
             use_case_drafts: Vec::new(),
             use_case_links: Vec::new(),
+            use_case_comments: Vec::new(),
             next_use_case_id: 1,
             oauth_clients: HashMap::new(),
             oauth_grants: HashMap::new(),
@@ -4167,6 +4171,7 @@ impl UseCasesRepository for DieselRepoMock {
         self.use_case_versions.retain(|v| v.use_case_id != id);
         self.use_case_drafts.retain(|d| d.use_case_id != id);
         self.use_case_links.retain(|l| l.use_case_id != id);
+        self.use_case_comments.retain(|c| c.use_case_id != id);
         Ok(self.use_cases.len() < before)
     }
 
@@ -4491,6 +4496,41 @@ impl UseCasesRepository for DieselRepoMock {
                 });
         self.use_case_links = kept;
         Ok(gone)
+    }
+
+    fn list_use_case_comments(
+        &self,
+        use_case_id: i32,
+        version_id: Option<i32>,
+        element_id: Option<&str>,
+    ) -> Result<Vec<UseCaseComment>, RepoError> {
+        Ok(self
+            .use_case_comments
+            .iter()
+            .filter(|c| c.use_case_id == use_case_id)
+            .filter(|c| version_id.is_none_or(|v| c.use_case_version_id.is_none_or(|cv| cv == v)))
+            .filter(|c| element_id.is_none_or(|e| c.element_id.as_deref() == Some(e)))
+            .cloned()
+            .collect())
+    }
+
+    fn create_use_case_comment(
+        &mut self,
+        new: &NewUseCaseComment,
+    ) -> Result<UseCaseComment, RepoError> {
+        let id = self.next_use_case_id;
+        self.next_use_case_id += 1;
+        let comment = UseCaseComment {
+            id,
+            use_case_id: new.use_case_id,
+            use_case_version_id: new.use_case_version_id,
+            element_id: new.element_id.clone(),
+            author_id: new.author_id,
+            body: new.body.clone(),
+            created_at: chrono::Utc::now().naive_utc(),
+        };
+        self.use_case_comments.push(comment.clone());
+        Ok(comment)
     }
 }
 

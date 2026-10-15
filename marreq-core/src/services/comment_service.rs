@@ -96,7 +96,7 @@ impl<'a> CommentService<'a> {
 
     /// Ids of the project members mentioned in `body`. Mentions of anyone outside
     /// the project are ignored, so a comment never reveals who has an account.
-    fn mentioned_members(&self, project_id: i32, body: &str) -> Vec<i32> {
+    pub(crate) fn mentioned_members(&self, project_id: i32, body: &str) -> Vec<i32> {
         let names = extract_mentions(body);
         if names.is_empty() {
             return Vec::new();

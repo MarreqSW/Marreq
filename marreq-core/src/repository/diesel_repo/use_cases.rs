@@ -5,8 +5,8 @@
 
 use super::{DieselRepo, map_db_error};
 use crate::models::{
-    NewUseCase, NewUseCaseLink, NewUseCaseVersion, UseCase, UseCaseDraft, UseCaseLink,
-    UseCaseVersion,
+    NewUseCase, NewUseCaseComment, NewUseCaseLink, NewUseCaseVersion, UseCase, UseCaseComment,
+    UseCaseDraft, UseCaseLink, UseCaseVersion,
 };
 use crate::repository::UseCasesRepository;
 use crate::repository::errors::RepoError;
@@ -425,5 +425,41 @@ impl UseCasesRepository for DieselRepo {
                 .filter(diesel::dsl::not(dsl::element_id.eq_any(keep))),
         )
         .get_results(conn.as_mut())?)
+    }
+
+    fn list_use_case_comments(
+        &self,
+        use_case_id: i32,
+        version_id: Option<i32>,
+        element_id: Option<&str>,
+    ) -> Result<Vec<UseCaseComment>, RepoError> {
+        use schema::use_case_comments::dsl;
+        let mut conn = self.get_conn()?;
+        let mut query = dsl::use_case_comments
+            .filter(dsl::use_case_id.eq(use_case_id))
+            .into_boxed();
+        if let Some(vid) = version_id {
+            query = query.filter(
+                dsl::use_case_version_id
+                    .eq(vid)
+                    .or(dsl::use_case_version_id.is_null()),
+            );
+        }
+        if let Some(element) = element_id {
+            query = query.filter(dsl::element_id.eq(element));
+        }
+        Ok(query
+            .order((dsl::created_at, dsl::id))
+            .load(conn.as_mut())?)
+    }
+
+    fn create_use_case_comment(
+        &mut self,
+        new: &NewUseCaseComment,
+    ) -> Result<UseCaseComment, RepoError> {
+        let mut conn = self.get_conn()?;
+        Ok(diesel::insert_into(schema::use_case_comments::table)
+            .values(new)
+            .get_result(conn.as_mut())?)
     }
 }

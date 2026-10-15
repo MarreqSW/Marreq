@@ -846,3 +846,144 @@ async fn diffs_compare_the_draft_and_versions_structurally() {
     .await;
     assert_eq!(status, Status::NotFound);
 }
+
+fn notifications(client: &Client) -> Vec<(i32, String, Option<String>, Option<i32>)> {
+    let state = client
+        .rocket()
+        .state::<crate::api_project_bundle_test::test_support::TestAppState>()
+        .unwrap();
+    let repo = state.repo.read().unwrap();
+    repo.inner_repo()
+        .notifications
+        .iter()
+        .map(|n| {
+            (
+                n.user_id,
+                n.notification_type.clone(),
+                n.entity_type.clone(),
+                n.entity_id,
+            )
+        })
+        .collect()
+}
+
+#[rocket::async_test]
+async fn comments_anchor_to_steps_and_notify() {
+    let mut repo = repo();
+    // The viewer reviews: publishing asks them, and approvals reach the start screen.
+    repo.project_reviewers.insert(1, vec![VIEWER]);
+    let client = test_client(repo).await;
+    let id = export_use_case(&client).await;
+    let (_, published) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &format!("{BASE}/{id}/draft/publish"),
+        Some(json!({ "base_revision": 2 })),
+    )
+    .await;
+    let v1 = published["version"]["id"].as_i64().unwrap();
+    assert_eq!(
+        notifications(&client),
+        vec![(
+            VIEWER,
+            "approval_requested".into(),
+            Some("use_case".into()),
+            Some(id as i32)
+        )]
+    );
+
+    let comments = format!("{BASE}/{id}/comments");
+    let (status, comment) = call(&client, ADMIN, "POST", &comments, Some(json!({
+        "body": "@viewer is step 2 right? cc @outsider", "use_case_version_id": v1, "element_id": "s_Pick01"
+    }))).await;
+    assert_eq!(status, Status::Created, "{comment}");
+    assert_eq!(comment["element_label"], "2");
+    assert_eq!(comment["author_name"], "name");
+    let notes = notifications(&client);
+    assert_eq!(
+        notes[1..]
+            .iter()
+            .map(|(u, t, _, _)| (*u, t.as_str()))
+            .collect::<Vec<_>>(),
+        vec![(VIEWER, "mentioned"), (AUTHOR, "comment_added")],
+        "the outsider is not a member; the author created the use case"
+    );
+
+    let (status, _) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &comments,
+        Some(json!({ "body": "On the use case." })),
+    )
+    .await;
+    assert_eq!(status, Status::Created);
+    let (status, _) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &comments,
+        Some(json!({ "body": "x", "element_id": "s_Nope01" })),
+    )
+    .await;
+    assert_eq!(status, Status::BadRequest);
+    let (status, _) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &comments,
+        Some(json!({ "body": "  " })),
+    )
+    .await;
+    assert_eq!(status, Status::BadRequest);
+    let (status, _) = call(
+        &client,
+        VIEWER,
+        "POST",
+        &comments,
+        Some(json!({ "body": "Viewers read only." })),
+    )
+    .await;
+    assert_eq!(status, Status::Forbidden);
+
+    let (_, all) = call(&client, VIEWER, "GET", &comments, None).await;
+    assert_eq!(all.as_array().unwrap().len(), 2);
+    let (_, on_step) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("{comments}?element_id=s_Pick01"),
+        None,
+    )
+    .await;
+    assert_eq!(on_step.as_array().unwrap().len(), 1);
+    assert_eq!(on_step[0]["use_case_version_id"], v1);
+
+    // The viewer, a reviewer, sees the mention and, once reviewed, the approval.
+    let (_, attention) = call(&client, VIEWER, "GET", "/api/home/attention", None).await;
+    let mention = attention["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["notification_type"] == "mentioned")
+        .unwrap();
+    assert_eq!(mention["use_case_id"], id);
+    let (status, _) = call(
+        &client,
+        VIEWER,
+        "PUT",
+        &format!("{BASE}/{id}/versions/{v1}/approval"),
+        Some(json!({ "state": "reviewed" })),
+    )
+    .await;
+    assert_eq!(status, Status::Ok);
+    let (_, attention) = call(&client, VIEWER, "GET", "/api/home/attention", None).await;
+    let approval = attention["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|i| i["kind"] == "approval" && i["use_case_id"] == id)
+        .unwrap();
+    assert_eq!(approval["title"], "UC-001 v1 is waiting for your approval");
+}

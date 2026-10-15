@@ -616,6 +616,22 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    use_case_comments (id) {
+        id -> Int4,
+        use_case_id -> Int4,
+        use_case_version_id -> Nullable<Int4>,
+        #[max_length = 40]
+        element_id -> Nullable<Varchar>,
+        author_id -> Int4,
+        body -> Text,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     use_case_drafts (use_case_id) {
         use_case_id -> Int4,
         base_version_id -> Nullable<Int4>,
@@ -914,6 +930,7 @@ diesel::joinable!(requirement_compliance -> requirements (requirement_id));
 diesel::joinable!(verification_control -> projects (project_id));
 diesel::joinable!(verification_control -> verifications (verification_id));
 // Use cases (issue #398).
+diesel::joinable!(use_case_comments -> use_cases (use_case_id));
 diesel::joinable!(use_case_drafts -> use_cases (use_case_id));
 diesel::joinable!(use_cases -> projects (project_id));
 diesel::joinable!(use_case_links -> use_cases (use_case_id));
@@ -957,6 +974,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     requirements,
     saved_views,
     sessions,
+    use_case_comments,
     use_case_drafts,
     use_case_links,
     use_case_versions,

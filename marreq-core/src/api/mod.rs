@@ -206,6 +206,7 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         use_cases::verification_use_cases,
         use_cases::draft_diff,
         use_cases::version_diff,
+        use_cases::list_comments,
     );
     policy_routes!(r, ProjectWrite;
         attachments::upload,
@@ -268,6 +269,7 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         use_cases::create_link,
         use_cases::delete_link,
         use_cases::clear_link_suspect,
+        use_cases::create_comment,
     );
     policy_routes!(r, ProjectApproval;
         requirements::set_version_approval,

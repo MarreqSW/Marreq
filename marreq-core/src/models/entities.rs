@@ -641,6 +641,31 @@ pub struct NewUseCaseLink {
     pub created_by: Option<i32>,
 }
 
+/// An immutable comment on a use case, optionally on one version and one
+/// element of it (issue #401).
+#[derive(Debug, Serialize, Deserialize, Queryable, Clone, PartialEq)]
+#[diesel(table_name = crate::schema::use_case_comments)]
+#[diesel(check_for_backend(diesel::pg::Pg))]
+pub struct UseCaseComment {
+    pub id: i32,
+    pub use_case_id: i32,
+    pub use_case_version_id: Option<i32>,
+    pub element_id: Option<String>,
+    pub author_id: i32,
+    pub body: String,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+#[derive(Debug, Insertable, Clone)]
+#[diesel(table_name = crate::schema::use_case_comments)]
+pub struct NewUseCaseComment {
+    pub use_case_id: i32,
+    pub use_case_version_id: Option<i32>,
+    pub element_id: Option<String>,
+    pub author_id: i32,
+    pub body: String,
+}
+
 /// Level, stage and close-out evidence of one verification (issue #353).
 #[derive(Debug, Serialize, Deserialize, Queryable, Insertable, AsChangeset, Clone, PartialEq)]
 #[diesel(table_name = crate::schema::verification_control)]

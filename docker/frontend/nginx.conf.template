@@ -23,6 +23,7 @@ server {
     # Name is `api_upstream` (not `marreq_*`) so envsubst does not mangle it next to ${MARREQ_BACKEND_HOST}.
     set $api_upstream http://${MARREQ_BACKEND_HOST}:${MARREQ_BACKEND_PORT};
     set $mcp_upstream http://${MARREQ_MCP_HOST}:${MARREQ_MCP_PORT};
+    set $stats_upstream http://${MARREQ_UMAMI_HOST}:${MARREQ_UMAMI_PORT};
 
     # Backup (issues #247, #341): the response starts only after pg_dump and the
     # archive with the attachment files are written, so allow longer than the
@@ -85,6 +86,27 @@ server {
         proxy_set_header X-Forwarded-Proto $marreq_forwarded_proto;
         proxy_set_header X-Forwarded-Host $host;
         client_max_body_size 2m;
+    }
+
+    # Optional usage statistics (issue #412): the Umami tracker and its endpoint,
+    # same-origin so no third-party request and no CSP change. Only used when
+    # MARREQ_UMAMI_WEBSITE_ID adds the tracker to index.html. The visitor's address
+    # is passed on for Umami's location statistics.
+    location = /stats/script.js {
+        proxy_pass $stats_upstream/script.js;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        expires 1d;
+    }
+
+    location = /stats/api/send {
+        proxy_pass $stats_upstream/api/send;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header User-Agent $http_user_agent;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        client_max_body_size 64k;
     }
 
     location / {

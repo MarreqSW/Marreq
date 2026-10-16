@@ -266,6 +266,44 @@ docker compose \
 
 The DB helper scripts in `marreq-core/scripts/` already use `docker/docker-compose.yml` internally, so existing commands like `./marreq-core/scripts/db_setup.sh` keep working.
 
+## Usage statistics (optional, Umami)
+
+The frontend image can add a self-hosted [Umami](https://umami.is) tracker to the app (issue #412). It is off unless configured. The browser only talks to Marreq's own origin: the frontend nginx proxies the tracker script and its endpoint under `/stats/`, so there is no third-party request and no CSP change. Umami sets no cookies; Marreq asks it to drop query strings and to respect Do Not Track.
+
+1. Run Umami on the same Docker network as the frontend. It can use Marreq's PostgreSQL with its own database and role:
+   ```bash
+   docker exec -it docker-db-1 psql -U rust -d marreq \
+     -c "CREATE ROLE umami LOGIN PASSWORD 'change-me';" -c "CREATE DATABASE umami OWNER umami;"
+   ```
+   ```yaml
+   # /opt/umami/docker-compose.yml
+   services:
+     umami:
+       image: ghcr.io/umami-software/umami:postgresql-latest
+       restart: always
+       environment:
+         DATABASE_URL: postgresql://umami:change-me@db:5432/umami
+         APP_SECRET: <openssl rand -hex 32>
+       ports: ["127.0.0.1:3001:3000"]   # dashboard, local only
+       networks: [marreq]
+   networks:
+     marreq:
+       external: true
+       name: docker_default              # the network of Marreq's compose project
+   ```
+2. In the Umami dashboard (default login `admin` / `umami`; change it), add a website and copy its id.
+3. Give the id to the frontend container and recreate it:
+   ```yaml
+   frontend:
+     environment:
+       MARREQ_UMAMI_WEBSITE_ID: 0b5d1a2c-…   # empty or unset: statistics off
+       # MARREQ_UMAMI_HOST: umami           # defaults; change if Umami runs elsewhere
+       # MARREQ_UMAMI_PORT: '3000'
+   ```
+   The log shows `40-marreq-umami: usage statistics enabled`. Removing the id and recreating the container removes the tracker.
+
+Umami's own database is not in Marreq's backup; dump it separately (`pg_dump -U umami umami`).
+
 ## Troubleshooting
 
 ### Port 5432 already in use

@@ -120,7 +120,8 @@ Applicability &amp; Verification</a></li>
 <li><a href="#11-project-members">Project Members</a></li>
 <li><a href="#12-profile--account">Profile &amp; Account</a></li>
 <li><a href="#13-administration">Administration</a></li>
-<li><a href="#14-tips--shortcuts">Tips &amp; Shortcuts</a></li>
+<li><a href="#14-use-cases">Use Cases</a></li>
+<li><a href="#15-tips--shortcuts">Tips &amp; Shortcuts</a></li>
 </ol>
 <hr />
 <h2 id="1-introduction">1. Introduction</h2>
@@ -273,6 +274,11 @@ pages you work in every day:</p>
 <td>Verifications (test cases, analyses, reviews) and their status</td>
 </tr>
 <tr>
+<td><strong>Use cases</strong></td>
+<td>How the system behaves step by step, with alternatives and
+exceptions (<a href="#14-use-cases">§14</a>)</td>
+</tr>
+<tr>
 <td><strong>Traceability</strong></td>
 <td>Coverage graph, hierarchy, dependency structure matrix (DSM) and the
 requirement × verification <strong>Matrix</strong>, as tabs</td>
@@ -311,9 +317,9 @@ project bundle</strong>;</li>
 system) and the <strong>notifications</strong> bell (<a
 href="#25-notifications">§2.5</a>);</li>
 <li>the <strong>Create</strong> button: its main part creates a
-requirement (a verification when you are on the Verifications pages);
-the arrow next to it offers <strong>Create requirement</strong>,
-<strong>Create verification</strong> and <strong>Import</strong>;</li>
+requirement (a verification on the Verifications pages, a use case on
+the Use cases pages); the arrow next to it offers the other choices and
+<strong>Import</strong>;</li>
 <li>the <strong>user menu</strong> (avatar): Account settings,
 <strong>Administration</strong> (instance administrators only, see <a
 href="#13-administration">§13</a>), Change password and Sign out.</li>
@@ -2062,7 +2068,99 @@ that action or user for the same period.</li>
 <p>Days are calendar days in <strong>UTC</strong>. Available to
 administrators only.</p>
 <hr />
-<h2 id="14-tips--shortcuts">14. Tips &amp; Shortcuts</h2>
+<h2 id="14-use-cases">14. Use Cases</h2>
+<p>A use case describes how an actor and the system interact to reach a
+goal: the <strong>preconditions</strong>, a numbered <strong>main
+scenario</strong>, the <strong>alternatives</strong> and
+<strong>exceptions</strong> that branch off it, and the
+<strong>postconditions</strong>. Open <strong>Use cases</strong> in the
+sidebar.</p>
+<h3 id="141-use-case-list">14.1 Use Case List</h3>
+<p>The list shows each use case's code (<code>UC-001</code>, …), title,
+primary actor, number of steps, number of alternatives and exceptions,
+approval state with the current version, and when it last changed.
+<strong>Editing</strong> marks a use case whose next version is being
+drafted. Filter by text (code, title or actor) or by state, and click a
+column title to sort.</p>
+<p><strong>New use case</strong> (or <strong>Create → Create use
+case</strong>) asks for a title, an optional primary actor and the code,
+which is suggested. The use case opens in the editor straight away. It
+stays <strong>Unpublished</strong> until you publish its first
+version.</p>
+<h3 id="142-reading-a-use-case">14.2 Reading a Use Case</h3>
+<p>The page shows the current version: the summary, preconditions, the
+main scenario with numbered steps, then each alternative (blue) and
+exception (red). A branch is labelled with its kind and the step it
+starts from: <strong>A3</strong> is an alternative from step 3,
+<strong>E4</strong> an exception from step 4, and its steps are
+<strong>A3.1</strong>, <strong>A3.2</strong>, …; a second alternative
+from the same step is <strong>A3b</strong>. Every branch says where it
+goes when it finishes: <strong>Continues at step N</strong> or
+<strong>Use case ends</strong> (with or without success).</p>
+<p>Numbers are never typed: they follow the order of the steps. When
+steps move, the numbers and the branch labels change with them, and the
+branches stay attached to their step.</p>
+<p>Click a branch's label or title to select it: its origin step is
+highlighted and <strong>Jump to origin</strong> scrolls to it. The side
+panel shows the actors, who published the version and its change note,
+and the <strong>Versions</strong> list; click an older version to read
+it.</p>
+<h3 id="143-editing">14.3 Editing</h3>
+<p>Click <strong>Edit</strong> (or <strong>Continue editing</strong>
+when a draft exists). Changes go to a <strong>draft</strong> shared by
+the whole project and are saved as you make them; the bar at the top
+says <em>all changes saved</em>. Nobody sees the draft as the use case's
+content until it is published.</p>
+<ul>
+<li><strong>Text</strong>: click a step or condition and type.
+<strong>Enter</strong> saves it and starts a new step below;
+<strong>Shift+Enter</strong> adds a line break; <strong>Esc</strong>
+cancels the edit. Statement Markdown (bold, italics, lists, links) works
+as in requirements (<a href="#44-editing-a-requirement">§4.4</a>).</li>
+<li><strong>Insert</strong>: hover a step and click <strong>+</strong>,
+or use <strong>Add step</strong>, <strong>Add precondition</strong> and
+<strong>Add postcondition</strong> at the end of each list.</li>
+<li><strong>Reorder</strong>: drag a step by its handle, press
+<strong>Alt+↑</strong> / <strong>Alt+↓</strong> in its text, or use
+<strong>Move up</strong> / <strong>Move down</strong> in its
+<strong>⋯</strong> menu. If a branch follows a moved step to a new
+number, a message says so, with <strong>Undo</strong>.</li>
+<li><strong>Branches</strong>: in a main step's <strong>⋯</strong> menu
+choose <strong>Add alternative from this step</strong> or <strong>Add
+exception from this step</strong>. In the branch, change its kind,
+title, origin step and where it ends, add steps, or delete it with the
+bin icon.</li>
+<li><strong>Header</strong>: title, primary actor, secondary actors
+(comma-separated) and summary are at the top of the editor.</li>
+<li><strong>Undo / Redo</strong>: the arrows in the draft bar, or
+<strong>Ctrl+Z</strong> / <strong>Ctrl+Shift+Z</strong> outside a text
+field.</li>
+</ul>
+<p>Deleting a step that a branch starts from or returns to asks what
+should happen to that branch: <strong>attach it to another
+step</strong>, or <strong>delete it too</strong>.</p>
+<p>If someone else changed the draft since you opened it, Marreq does
+not overwrite their work: a message asks you to <strong>Reload the
+draft</strong> and make your change again.</p>
+<p><strong>Done</strong> leaves the editor; the draft stays.
+<strong>Discard draft</strong> throws it away and keeps the published
+version.</p>
+<h3 id="144-publishing-and-approval">14.4 Publishing and Approval</h3>
+<p><strong>Publish version</strong> turns the draft into the next
+numbered version (v1, v2, …), with an optional change note for
+reviewers. Published versions never change; the next edit starts a new
+draft from the current version. A use case needs at least one main step
+to be published.</p>
+<p>A new version starts in the <strong>Draft</strong> approval state.
+Project reviewers (<a
+href="#111-project-reviewers-workflow-gates">§11.1</a>) move it to
+<strong>Reviewed</strong> with <strong>Mark as reviewed</strong>, then
+to <strong>Approved</strong> with <strong>Approve</strong>, as for
+requirements.</p>
+<p>Archived projects are read-only: use cases can be read but not
+edited, published or approved. Editing needs the same permission as
+editing requirements.</p>
+<h2 id="15-tips--shortcuts">15. Tips &amp; Shortcuts</h2>
 <ul>
 <li><strong>Theme</strong>: the light / dark / match-system switch in
 the top bar (on wider screens) or on the login page; the choice is

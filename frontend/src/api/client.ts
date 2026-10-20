@@ -20,3 +20,4 @@ export * from './logs';
 export * from './attachments';
 export * from './verificationControl';
 export * from './reports';
+export * from './useCases';

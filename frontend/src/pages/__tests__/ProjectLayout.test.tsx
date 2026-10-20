@@ -73,6 +73,7 @@ describe('ProjectLayout navigation', () => {
       '/space-project/dashboard',
       '/space-project/requirements',
       '/space-project/verifications',
+      '/space-project/use-cases',
       '/space-project/traceability',
       '/space-project/baselines',
       '/space-project/reports',
@@ -150,6 +151,14 @@ describe('ProjectLayout navigation', () => {
     expect(screen.getByRole('menuitem', { name: /import/i })).toHaveAttribute(
       'href',
       '/space-project/settings/import',
+    );
+  });
+
+  it('puts Create use case first on the use cases section', () => {
+    renderAt('/space-project/use-cases/3');
+    expect(screen.getByRole('link', { name: /create use case/i })).toHaveAttribute(
+      'href',
+      '/space-project/use-cases?new=1',
     );
   });
 

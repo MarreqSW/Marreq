@@ -23,7 +23,8 @@ For a **typical end-to-end workflow** (project setup → requirements → tests 
 11. [Project Members](#11-project-members)
 12. [Profile & Account](#12-profile--account)
 13. [Administration](#13-administration)
-14. [Tips & Shortcuts](#14-tips--shortcuts)
+14. [Use Cases](#14-use-cases)
+15. [Tips & Shortcuts](#15-tips--shortcuts)
 
 ---
 
@@ -102,6 +103,7 @@ Inside a project, the **sidebar** on the left holds the pages you work in every 
 | **Dashboard** | Counts and traceability health of the project |
 | **Requirements** | The requirement list (table, list or graph view) |
 | **Verifications** | Verifications (test cases, analyses, reviews) and their status |
+| **Use cases** | How the system behaves step by step, with alternatives and exceptions ([§14](#14-use-cases)) |
 | **Traceability** | Coverage graph, hierarchy, dependency structure matrix (DSM) and the requirement × verification **Matrix**, as tabs |
 | **Baselines** | Immutable snapshots of the project |
 | **Reports & exports** | Coverage reports and Excel, PDF, ReqIF/ReqIFZ and JSON downloads |
@@ -115,7 +117,7 @@ The top bar holds:
 
 - the project name and the **Projects** menu: switch to another project (you stay on the same page), or open **Groups**, **New project** or **Import project bundle**;
 - **Global Search**, the theme switch (light, dark, match system) and the **notifications** bell ([§2.5](#25-notifications));
-- the **Create** button: its main part creates a requirement (a verification when you are on the Verifications pages); the arrow next to it offers **Create requirement**, **Create verification** and **Import**;
+- the **Create** button: its main part creates a requirement (a verification on the Verifications pages, a use case on the Use cases pages); the arrow next to it offers the other choices and **Import**;
 - the **user menu** (avatar): Account settings, **Administration** (instance administrators only, see [§13](#13-administration)), Change password and Sign out.
 
 On a narrow screen the sidebar is hidden; open it with the **☰** button in the top bar.
@@ -901,7 +903,50 @@ Days are calendar days in **UTC**. Available to administrators only.
 
 ---
 
-## 14. Tips & Shortcuts
+## 14. Use Cases
+
+A use case describes how an actor and the system interact to reach a goal: the **preconditions**, a numbered **main scenario**, the **alternatives** and **exceptions** that branch off it, and the **postconditions**. Open **Use cases** in the sidebar.
+
+### 14.1 Use Case List
+
+The list shows each use case's code (`UC-001`, …), title, primary actor, number of steps, number of alternatives and exceptions, approval state with the current version, and when it last changed. **Editing** marks a use case whose next version is being drafted. Filter by text (code, title or actor) or by state, and click a column title to sort.
+
+**New use case** (or **Create → Create use case**) asks for a title, an optional primary actor and the code, which is suggested. The use case opens in the editor straight away. It stays **Unpublished** until you publish its first version.
+
+### 14.2 Reading a Use Case
+
+The page shows the current version: the summary, preconditions, the main scenario with numbered steps, then each alternative (blue) and exception (red). A branch is labelled with its kind and the step it starts from: **A3** is an alternative from step 3, **E4** an exception from step 4, and its steps are **A3.1**, **A3.2**, …; a second alternative from the same step is **A3b**. Every branch says where it goes when it finishes: **Continues at step N** or **Use case ends** (with or without success).
+
+Numbers are never typed: they follow the order of the steps. When steps move, the numbers and the branch labels change with them, and the branches stay attached to their step.
+
+Click a branch's label or title to select it: its origin step is highlighted and **Jump to origin** scrolls to it. The side panel shows the actors, who published the version and its change note, and the **Versions** list; click an older version to read it.
+
+### 14.3 Editing
+
+Click **Edit** (or **Continue editing** when a draft exists). Changes go to a **draft** shared by the whole project and are saved as you make them; the bar at the top says *all changes saved*. Nobody sees the draft as the use case's content until it is published.
+
+- **Text**: click a step or condition and type. **Enter** saves it and starts a new step below; **Shift+Enter** adds a line break; **Esc** cancels the edit. Statement Markdown (bold, italics, lists, links) works as in requirements ([§4.4](#44-editing-a-requirement)).
+- **Insert**: hover a step and click **+**, or use **Add step**, **Add precondition** and **Add postcondition** at the end of each list.
+- **Reorder**: drag a step by its handle, press **Alt+↑** / **Alt+↓** in its text, or use **Move up** / **Move down** in its **⋯** menu. If a branch follows a moved step to a new number, a message says so, with **Undo**.
+- **Branches**: in a main step's **⋯** menu choose **Add alternative from this step** or **Add exception from this step**. In the branch, change its kind, title, origin step and where it ends, add steps, or delete it with the bin icon.
+- **Header**: title, primary actor, secondary actors (comma-separated) and summary are at the top of the editor.
+- **Undo / Redo**: the arrows in the draft bar, or **Ctrl+Z** / **Ctrl+Shift+Z** outside a text field.
+
+Deleting a step that a branch starts from or returns to asks what should happen to that branch: **attach it to another step**, or **delete it too**.
+
+If someone else changed the draft since you opened it, Marreq does not overwrite their work: a message asks you to **Reload the draft** and make your change again.
+
+**Done** leaves the editor; the draft stays. **Discard draft** throws it away and keeps the published version.
+
+### 14.4 Publishing and Approval
+
+**Publish version** turns the draft into the next numbered version (v1, v2, …), with an optional change note for reviewers. Published versions never change; the next edit starts a new draft from the current version. A use case needs at least one main step to be published.
+
+A new version starts in the **Draft** approval state. Project reviewers ([§11.1](#111-project-reviewers-workflow-gates)) move it to **Reviewed** with **Mark as reviewed**, then to **Approved** with **Approve**, as for requirements.
+
+Archived projects are read-only: use cases can be read but not edited, published or approved. Editing needs the same permission as editing requirements.
+
+## 15. Tips & Shortcuts
 
 - **Theme**: the light / dark / match-system switch in the top bar (on wider screens) or on the login page; the choice is stored in the browser.
 - **Keyboard**:

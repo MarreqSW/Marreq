@@ -18,7 +18,7 @@ authors = [
 anyhow = "1.0"
 argon2 = "0.6"
 base64 = "0.23"
-calamine = "0.36"
+calamine = "0.37"
 chrono = { version = "0.4.44", features = ["serde"] }
 csv = "1.4"
 diesel = { version = "2.3.6", features = ["postgres", "chrono", "r2d2", "serde_json"] }
@@ -46,13 +46,13 @@ time = "0.3"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "sync", "process"] }
 urlencoding = "2.1"
 url = "2.5"
-rust_xlsxwriter = "0.99"
+rust_xlsxwriter = "0.100"
 # Report documents rendered to PDF (issue #354).
 typst = "0.15.1"
 typst-layout = "0.15.1"
 typst-pdf = "0.15.1"
 # ReqIFZ archives. Same version and features calamine/rust_xlsxwriter already pull in.
-zip = { version = "8.6", default-features = false, features = ["deflate"] }
+zip = { version = "9.0", default-features = false, features = ["deflate"] }
 # Admin backup archive: SQL dump plus attachment files (issue #341).
 flate2 = "1"
 tar = "0.4"

@@ -231,7 +231,7 @@ For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For trac
 | Tool | Description |
 |------|-------------|
 | `get_requirement` | Get a requirement by id (with trace summary: parent, children, linked tests) |
-| `list_requirements` | List requirements; optional filter by `approval_state` (draft/reviewed/approved) and `has_tests` (true/false) |
+| `list_requirements` | List requirements; filter by `approval_state`, `has_tests`, `status_id`, `category_id`, `q` (text) and a saved `view_id`; sort with `sort_column` and `sort_dir` |
 | `get_versions` | Version history for a requirement |
 | `compare_versions` | Structured diff between two requirement versions |
 | `semantic_search_requirements` | Semantic requirement search (when embeddings are configured) |
@@ -245,6 +245,10 @@ For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For trac
 | `get_use_case` | A use case's current version (or `version_id`) as a `marreq.use-case.v1` document with labels, and its draft with `revision` |
 | `get_use_case_diff` | Structural diff: the draft against its base, or `from_version_id` against `to_version_id` |
 | `list_use_case_links` | Requirements and verifications linked to a use case or its steps, with suspect flags |
+| `list_linked_use_cases` | Use cases linked to a requirement or a verification (`requirement_id` or `verification_id`) |
+| `list_use_case_versions` | Version history of a use case |
+| `get_baseline_contents` | A baseline's use cases or verifications (`kind`) |
+| `ask_requirements` | Answer a question from the project's requirements (LLM call; needs `RAG_ENABLED` on the server) |
 
 ### Extended read (`read_extended` or `draft_write`)
 
@@ -259,6 +263,15 @@ For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For trac
 | `get_verification_matrix` | Requirement ids linked to a verification |
 | `list_project_catalog` | Categories, applicability, statuses, verification methods, custom fields (project-filtered) |
 | `diff_baseline_vs_current` | Diff baseline snapshot vs current requirement version |
+| `diff_baseline_verification_vs_current` | Diff a baseline's verification against the verification now |
+| `list_requirement_link_types`, `list_requirement_links` | Link types, and requirement version links (filter by source, target, type) |
+| `list_reviewers`, `get_my_permissions`, `list_saved_views` | Who can review, what the user may do (check before `set_approval`), saved requirement views |
+| `list_attachments` | Attachment metadata of a requirement or verification (needs both read scopes remotely) |
+| `get_attention` | Approvals, drafts and suspect links waiting for the user across projects (not project-scoped) |
+| `list_use_case_comments` | Comments on a use case, by version or step |
+| `get_close_out` | Close-out status of the project, or of one requirement |
+| `impacted_tests` | Suspect tests linked to a requirement that changed |
+| `list_verification_snapshots`, `compare_verification_snapshots` | Verification history from the audit log, and the diff of two snapshots |
 
 ### Draft write (`draft_write` only)
 
@@ -275,6 +288,11 @@ For Phase 2 requirement/baseline writes, set `MARREQ_MODE=draft_write`. For trac
 | `edit_use_case_draft` | Apply draft operations (or a whole document) at `base_revision`; a stale revision is refused |
 | `publish_use_case_draft` | Publish the draft as the next version for review; idempotent |
 | `link_use_case_element` | Link a use case or one of its steps to a requirement or verification |
+| `unlink_use_case_element` | Delete one use case link (destructive hint) |
+| `clear_use_case_link_suspect` | Clear the suspect flag of a use case link |
+| `create_use_case_comment` | Comment on a use case, a version or a step; idempotent |
+| `discard_use_case_draft` | Discard the shared draft of a use case (destructive hint) |
+| `set_verification_field` | Change one field of a verification without resending the rest |
 
 Use case approval is not exposed to agents. The use case tools need the `use_cases:read` / `use_cases:write` scopes in remote mode ([use-cases-api.md](use-cases-api.md)).
 
@@ -284,6 +302,15 @@ Use case approval is not exposed to agents. The use case tools need the `use_cas
 |------|-------------|
 | `put_verification_matrix` | Replace all requirement links for a verification |
 | `clear_suspect` | Clear suspect flag on a matrix link (`req_id`, `verification_id`) |
+| `link_requirements` | Link two requirement versions with a typed link; idempotent |
+| `unlink_requirements` | Delete one requirement version link by id (destructive hint) |
+
+### Resources, prompts and paging
+
+- **Resources:** `marreq://projects/{project_id}/requirements/{id}`, `marreq://projects/{project_id}/use-cases/{id}`, `marreq://projects/{project_id}/catalog` and `marreq://guide` (this workflow guide, `MARREQ_SKILL.md`). A read uses the same scope as the matching tool.
+- **Prompts:** `review_requirement`, `derive_children`, `coverage_gap_analysis`, `use_case_from_requirement`. Each names the tools it expects.
+- **Paging:** list tools accept `limit` (max 200) and an opaque `cursor`, and return `{ items, total, next_cursor }`. Tools added with #416 page from the start (50 rows); older list tools keep returning the whole list until you pass `limit` or `cursor`. The server slices the backend response, so paging fixes context size, not backend load.
+- **Remote scopes:** each new tool declares its OAuth scopes in `securitySchemes`; the backend enforces them per route. `get_attention` is user-wide, as `list_projects` is.
 
 All tools are scoped to `MARREQ_PROJECT_ID` where the API provides a project path.
 Local stdio audit entries are written via `POST /api/mcp/audit` using the personal
@@ -299,21 +326,22 @@ Reference: shared route list in `marreq-core/src/api/mod.rs` (plus deployment-sp
 | Auth (login, logout, CSRF, me) | **No** — use Bearer token |
 | Dashboard / session projects | **No** |
 | Requirements: list/get/versions/diff/patch/create/delete (global paths) | **Partial** — project-scoped get/list/versions/diff/patch/create; **no** delete via MCP |
-| Requirements: impacted tests | **No** |
+| Requirements: impacted tests | **Yes** (`impacted_tests`, extended read) |
 | Activity (`.../requirements/:id/activity`, `.../verifications/:id/activity`) | **Yes** (extended read) |
 | Comments list/create | **Yes** (extended / draft_write) |
-| Requirement hierarchy | **Create with parent links**; standalone link/unlink is not exposed |
-| Verifications | **List/get/create/update**; deletion is intentionally not exposed |
+| Requirement hierarchy | **Create with parent links**, and `link_requirements` / `unlink_requirements` (`MARREQ_TRACE_WRITE`) |
+| Verifications | **List/get/create/update**, `set_verification_field`, snapshots and diffs; deletion is intentionally not exposed |
 | Matrix get/put | **Yes** (extended read; put with `MARREQ_TRACE_WRITE`) |
 | Trace up/down, coverage | **Yes** (core read) |
 | `clear_suspect` | **Yes** (`MARREQ_TRACE_WRITE`) |
 | Baselines: list/get/bundle/diff/diff_vs_current | **Yes** list/get bundle/diff/diff_vs_current; create via draft_write |
-| Use cases: list/get/diff/links, create/edit draft/publish/link | **Yes** read in every mode, writes in draft_write; approval, delete and comments are **not** exposed |
+| Use cases: list/get/diff/links, create/edit draft/publish/link | **Yes** read in every mode, writes in draft_write; versions, comments, link delete and draft discard are **Yes**; approval and deleting a use case are **not** exposed |
 | Categories, applicability, statuses, methods, custom fields | **Read** via `list_project_catalog`; **CRUD** | **No** |
-| Members, reviewers, permissions | **No** |
+| Reviewers, my permissions | **Yes** (`list_reviewers`, `get_my_permissions`) |
+| Members | **No** |
 | Users, groups, projects (admin) | **No** |
 | Semantic search | **Yes** |
-| RAG ask / semantic reindex | **No** |
+| RAG ask | **Yes** (`ask_requirements`); semantic reindex **No** |
 | Cache admin | **No** |
 | MCP audit endpoint | **Internal** remote path + **legacy** stdio path (called after each tool) |
 

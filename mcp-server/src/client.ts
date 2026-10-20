@@ -60,10 +60,24 @@ export class MarreqClient {
     );
   }
 
-  async listRequirements(approvalState?: string, hasTests?: boolean) {
+  async listRequirements(
+    approvalState?: string,
+    hasTests?: boolean,
+    extra: {
+      status_id?: number;
+      category_id?: number;
+      q?: string;
+      sort_column?: string;
+      sort_dir?: "asc" | "desc";
+      view_id?: number;
+    } = {}
+  ) {
     const params = new URLSearchParams();
     if (approvalState != null) params.set("approval_state", approvalState);
     if (hasTests != null) params.set("has_tests", String(hasTests));
+    for (const [key, value] of Object.entries(extra)) {
+      if (value != null && value !== "") params.set(key, String(value));
+    }
     const q = params.toString();
     return this.request(
       `/api/projects/${this.ctx.projectId}/requirements${q ? `?${q}` : ""}`
@@ -191,6 +205,7 @@ export class MarreqClient {
       reviewer_id?: number;
       category_id?: number;
       applicability_id?: number;
+      justification?: string;
       custom_fields?: Array<{ field_id: number; value: string }>;
     }
   ) {
@@ -431,6 +446,155 @@ export class MarreqClient {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  }
+
+  // ----- Tool gaps (issue #416) -----
+
+  private project(path: string) {
+    return `/api/projects/${this.ctx.projectId}${path}`;
+  }
+
+  private withQuery(path: string, query: Record<string, string | number | boolean | undefined | null>) {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(query)) {
+      if (value != null && value !== "") params.set(key, String(value));
+    }
+    const q = params.toString();
+    return q ? `${path}?${q}` : path;
+  }
+
+  async listRequirementLinkTypes() {
+    return this.request(this.project("/requirement-version-links/link-types"));
+  }
+
+  async listRequirementLinks(query: { source_version_id?: number; target_version_id?: number; link_type?: string } = {}) {
+    return this.request(this.withQuery(this.project("/requirement-version-links"), query));
+  }
+
+  async createRequirementLink(
+    payload: {
+      source_version_id: number;
+      target_version_id: number;
+      link_type: string;
+      rationale?: string | null;
+    },
+    idempotencyKey: string
+  ) {
+    return this.request(this.project("/requirement-version-links"), {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async deleteRequirementLink(linkId: number) {
+    return this.request(this.project(`/requirement-version-links/${linkId}`), { method: "DELETE" });
+  }
+
+  async deleteUseCaseLink(useCaseId: number, linkId: number) {
+    return this.request(this.useCases(`/${useCaseId}/links/${linkId}`), { method: "DELETE" });
+  }
+
+  async clearUseCaseLinkSuspect(useCaseId: number, linkId: number) {
+    return this.request(this.useCases(`/${useCaseId}/links/${linkId}/clear_suspect`), { method: "POST" });
+  }
+
+  async listLinkedUseCases(kind: "requirement" | "verification", id: number) {
+    return this.request(this.project(`/${kind}s/${id}/use-cases`));
+  }
+
+  async askRequirements(payload: {
+    query: string;
+    k?: number;
+    status_filter?: number;
+    category_filter?: number;
+    applicability_filter?: number;
+    verification_filter?: number;
+  }) {
+    return this.request(this.project("/requirements/ask"), { method: "POST", body: JSON.stringify(payload) });
+  }
+
+  async listReviewers() {
+    return this.request(this.project("/reviewers"));
+  }
+
+  async getMyPermissions() {
+    return this.request(this.project("/me/permissions"));
+  }
+
+  async listSavedViews() {
+    return this.request(this.project("/saved_views"));
+  }
+
+  async listAttachments(entityType: "requirement" | "verification", entityId: number) {
+    return this.request(
+      this.withQuery(this.project("/attachments"), { entity_type: entityType, entity_id: entityId })
+    );
+  }
+
+  /** What needs the user's attention across projects (not project-scoped). */
+  async getAttention() {
+    return this.request("/api/home/attention");
+  }
+
+  async listUseCaseVersions(useCaseId: number) {
+    return this.request(this.useCases(`/${useCaseId}/versions`));
+  }
+
+  async listUseCaseComments(useCaseId: number, query: { version_id?: number; element_id?: string } = {}) {
+    return this.request(this.withQuery(this.useCases(`/${useCaseId}/comments`), query));
+  }
+
+  async createUseCaseComment(
+    useCaseId: number,
+    payload: { body: string; use_case_version_id?: number | null; element_id?: string | null },
+    idempotencyKey: string
+  ) {
+    return this.request(this.useCases(`/${useCaseId}/comments`), {
+      method: "POST",
+      headers: { "Idempotency-Key": idempotencyKey },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async discardUseCaseDraft(useCaseId: number) {
+    return this.request(this.useCases(`/${useCaseId}/draft`), { method: "DELETE" });
+  }
+
+  /** Project close-out, or one requirement's when requirementId is given. */
+  async getCloseOut(requirementId?: number) {
+    return this.request(
+      this.project(requirementId != null ? `/requirements/${requirementId}/close_out` : "/close_out")
+    );
+  }
+
+  async getImpactedTests(requirementId: number) {
+    return this.request(this.project(`/requirements/${requirementId}/impacted_tests`));
+  }
+
+  async listVerificationSnapshots(verificationId: number) {
+    return this.request(this.project(`/verifications/${verificationId}/snapshots`));
+  }
+
+  async compareVerificationSnapshots(verificationId: number, v1: number, v2: number) {
+    return this.request(this.project(`/verifications/${verificationId}/snapshots/${v1}/diff/${v2}`));
+  }
+
+  async setVerificationField(verificationId: number, field: string, value: string) {
+    return this.request(this.project(`/verifications/${verificationId}/field`), {
+      method: "POST",
+      body: JSON.stringify({ field, value }),
+    });
+  }
+
+  async getBaselineContents(baselineId: number, kind: "use_cases" | "verifications") {
+    return this.request(
+      this.project(`/baselines/${baselineId}/${kind === "use_cases" ? "use-cases" : "verifications"}`)
+    );
+  }
+
+  async diffBaselineVerificationVsCurrent(baselineId: number, verificationId: number) {
+    return this.request(this.project(`/baselines/${baselineId}/verifications/${verificationId}/diff/current`));
   }
 
   get projectId() {

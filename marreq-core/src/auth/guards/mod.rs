@@ -21,18 +21,21 @@ pub use api::ApiUser;
 pub use bearer::{
     ApiUserOrBearer, AuthenticationSource, BaselinesRead, BaselinesWrite, McpAuditAuth,
     McpPrincipalAuth, ProjectsRead, RequirementsAndBaselinesRead, RequirementsAndTraceabilityRead,
-    RequirementsApprove, RequirementsRead, RequirementsVerificationsAndTraceabilityRead,
-    RequirementsWrite, TraceabilityRead, TraceabilityWrite, UseCasesApprove, UseCasesRead,
-    UseCasesWrite, VerificationsRead, VerificationsWrite, request_has_valid_bearer,
+    RequirementsAndVerificationsRead, RequirementsApprove, RequirementsRead,
+    RequirementsVerificationsAndTraceabilityRead, RequirementsWrite, TraceabilityRead,
+    TraceabilityWrite, UseCasesApprove, UseCasesRead, UseCasesWrite, VerificationsAndBaselinesRead,
+    VerificationsRead, VerificationsWrite, request_has_valid_bearer,
 };
 pub use group::{HtmlGroupAccess, HtmlGroupManageAccess};
 pub use html::HtmlProjectAccess;
 pub use project::{
     ProjectAccess, ProjectAccessOrBearer, ProjectBaselinesRead, ProjectBaselinesWrite,
-    ProjectRequirementsAndBaselinesRead, ProjectRequirementsAndTraceabilityRead,
+    ProjectProjectsRead, ProjectRequirementsAndBaselinesRead,
+    ProjectRequirementsAndTraceabilityRead, ProjectRequirementsAndVerificationsRead,
     ProjectRequirementsApprove, ProjectRequirementsRead,
     ProjectRequirementsVerificationsAndTraceabilityRead, ProjectRequirementsWrite,
     ProjectTraceabilityRead, ProjectTraceabilityWrite, ProjectUseCasesApprove, ProjectUseCasesRead,
-    ProjectUseCasesWrite, ProjectVerificationsRead, ProjectVerificationsWrite,
+    ProjectUseCasesWrite, ProjectVerificationsAndBaselinesRead, ProjectVerificationsRead,
+    ProjectVerificationsWrite,
 };
 pub use session::SessionUser;

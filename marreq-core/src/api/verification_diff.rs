@@ -4,14 +4,14 @@
 //! API endpoints for verification snapshot diffs (read-only, reconstructed from the audit log).
 
 use crate::api::prelude::*;
-use crate::auth::guards::ProjectAccessOrBearer;
+use crate::auth::guards::{ProjectVerificationsAndBaselinesRead, ProjectVerificationsRead};
 use crate::diff::VerificationVersionDiff;
 use crate::services::verification_diff_service::{VerificationDiffService, VerificationSnapshot};
 
 /// Chronological verification snapshots reconstructed from the audit log.
 #[get("/projects/<project_id>/verifications/<id>/snapshots")]
 pub async fn list_snapshots_by_project(
-    access: ProjectAccessOrBearer,
+    access: ProjectVerificationsRead,
     project_id: i32,
     id: i32,
     state: &State<AppState>,
@@ -29,7 +29,7 @@ pub async fn list_snapshots_by_project(
 /// Diff two verification snapshots (v1 = old, v2 = new). Both ids must belong to the verification.
 #[get("/projects/<project_id>/verifications/<id>/snapshots/<v1>/diff/<v2>")]
 pub async fn diff_snapshots_by_project(
-    access: ProjectAccessOrBearer,
+    access: ProjectVerificationsRead,
     project_id: i32,
     id: i32,
     v1: i32,
@@ -49,7 +49,7 @@ pub async fn diff_snapshots_by_project(
 /// Diff the verification snapshot stored in a baseline against the current verification.
 #[get("/projects/<project_id>/baselines/<baseline_id>/verifications/<id>/diff/current")]
 pub async fn diff_baseline_vs_current(
-    access: ProjectAccessOrBearer,
+    access: ProjectVerificationsAndBaselinesRead,
     project_id: i32,
     baseline_id: i32,
     id: i32,

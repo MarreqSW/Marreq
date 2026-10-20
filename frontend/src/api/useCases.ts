@@ -3,7 +3,9 @@ import type {
   UseCaseDocument,
   UseCaseDraft,
   UseCaseDraftChange,
+  UseCaseLink,
   UseCaseOperation,
+  UseCaseRef,
   UseCaseRow,
   UseCaseVersion,
   UseCaseVersionSummary,
@@ -25,6 +27,7 @@ export interface UseCaseListQuery {
   q?: string;
   approval_state?: string;
   actor?: string;
+  has_suspect?: string;
   sort_column?: string;
   sort_dir?: 'asc' | 'desc';
 }
@@ -117,7 +120,7 @@ export async function publishUseCaseDraft(
   baseRevision: number,
   changeNote: string | null,
   csrfToken: string,
-): Promise<{ version: UseCaseVersion }> {
+): Promise<{ version: UseCaseVersion; removed_links: UseCaseLink[] }> {
   return fetchJson(
     `${base(projectId)}/${id}/draft/publish`,
     write('POST', { base_revision: baseRevision, change_note: changeNote }, csrfToken),
@@ -142,4 +145,58 @@ export async function setUseCaseVersionApproval(
     `${base(projectId)}/${id}/versions/${versionId}/approval`,
     write('PUT', { state }, csrfToken),
   );
+}
+
+export async function listUseCaseLinks(projectId: number, id: number): Promise<UseCaseLink[]> {
+  return fetchJson(`${base(projectId)}/${id}/links`);
+}
+
+export async function createUseCaseLink(
+  projectId: number,
+  id: number,
+  body: {
+    element_id?: string | null;
+    requirement_id?: number;
+    verification_id?: number;
+    rationale?: string | null;
+  },
+  csrfToken: string,
+): Promise<UseCaseLink> {
+  return fetchJson(`${base(projectId)}/${id}/links`, write('POST', body, csrfToken));
+}
+
+export async function deleteUseCaseLink(
+  projectId: number,
+  id: number,
+  linkId: number,
+  csrfToken: string,
+): Promise<void> {
+  await fetchJson(`${base(projectId)}/${id}/links/${linkId}`, write('DELETE', undefined, csrfToken));
+}
+
+export async function clearUseCaseLinkSuspect(
+  projectId: number,
+  id: number,
+  linkId: number,
+  csrfToken: string,
+): Promise<{ status: string; cleared: boolean }> {
+  return fetchJson(
+    `${base(projectId)}/${id}/links/${linkId}/clear_suspect`,
+    write('POST', undefined, csrfToken),
+  );
+}
+
+/** Use cases that link to a requirement ("Used in use cases"). */
+export async function listRequirementUseCases(
+  projectId: number,
+  requirementId: number,
+): Promise<UseCaseRef[]> {
+  return fetchJson(`/api/projects/${projectId}/requirements/${requirementId}/use-cases`);
+}
+
+export async function listVerificationUseCases(
+  projectId: number,
+  verificationId: number,
+): Promise<UseCaseRef[]> {
+  return fetchJson(`/api/projects/${projectId}/verifications/${verificationId}/use-cases`);
 }

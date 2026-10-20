@@ -926,6 +926,40 @@ pub trait UseCasesRepository {
         base_revision: i32,
         version: &NewUseCaseVersion,
     ) -> Result<Option<UseCaseVersion>, RepoError>;
+
+    // Links (issue #400).
+    fn list_use_case_links(&self, use_case_id: i32) -> Result<Vec<UseCaseLink>, RepoError>;
+    fn list_use_case_links_by_project(
+        &self,
+        project_id: i32,
+    ) -> Result<Vec<UseCaseLink>, RepoError>;
+    fn list_use_case_links_for_requirement(
+        &self,
+        requirement_id: i32,
+    ) -> Result<Vec<UseCaseLink>, RepoError>;
+    fn list_use_case_links_for_verification(
+        &self,
+        verification_id: i32,
+    ) -> Result<Vec<UseCaseLink>, RepoError>;
+    fn get_use_case_link(&self, id: i32) -> Result<UseCaseLink, RepoError>;
+    /// `RepoError::Duplicate` when the same element already links that target.
+    fn create_use_case_link(&mut self, new: &NewUseCaseLink) -> Result<UseCaseLink, RepoError>;
+    fn delete_use_case_link(&mut self, id: i32) -> Result<bool, RepoError>;
+    /// Clear the suspect flag and record `current_version_id` as the linked
+    /// requirement version. `false` if the link was not suspect.
+    fn clear_use_case_link_suspect(
+        &mut self,
+        id: i32,
+        user_id: i32,
+        current_version_id: Option<i32>,
+    ) -> Result<bool, RepoError>;
+    /// Delete the element links of a use case whose element is not in
+    /// `keep`, and return them. Links to the whole use case stay.
+    fn delete_use_case_links_outside(
+        &mut self,
+        use_case_id: i32,
+        keep: &[String],
+    ) -> Result<Vec<UseCaseLink>, RepoError>;
 }
 
 /// Verification control data for the VCD (issue #353): level, stage and

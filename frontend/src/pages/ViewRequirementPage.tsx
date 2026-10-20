@@ -6,6 +6,7 @@ import RequirementCommentComposer, {
 } from '@/components/RequirementCommentComposer';
 import { useDashboard } from '@/context/DashboardContext';
 import { useProjectArchived } from '@/hooks/useProjectArchived';
+import UsedInUseCasesCard from '@/components/useCases/UsedInUseCasesCard';
 import { useRecentDetail } from '@/hooks/useRecentDetail';
 import {
   getMyPermissions,
@@ -16,6 +17,7 @@ import {
   listRequirementActivityByProject,
   listRequirementComments,
   listRequirementStatuses,
+  listRequirementUseCases,
   setRequirementVersionApproval,
   listRequirementVersionLinks,
   listRequirementVersionsByProject,
@@ -122,6 +124,7 @@ export default function ViewRequirementPage() {
   const archived = useProjectArchived(pid);
   const { requirementId: requirementIdParam, versionId: versionIdParam } = useParams();
   const rid = Number(requirementIdParam);
+  const loadUseCaseRefs = useCallback(() => listRequirementUseCases(pid, rid), [pid, rid]);
   const requestedVersionId = versionIdParam != null ? Number(versionIdParam) : NaN;
   const viewingVersionParam = Number.isFinite(requestedVersionId);
 
@@ -796,6 +799,10 @@ export default function ViewRequirementPage() {
                     ))}
                   </ul>
                 </div>
+              ) : null}
+
+              {!isHistorical ? (
+                <UsedInUseCasesCard basePath={basePath} load={loadUseCaseRefs} variant="section" />
               ) : null}
 
               {!isHistorical ? (

@@ -56,6 +56,8 @@ const row = {
   approval_state: 'reviewed',
   current_version_number: 2,
   has_draft: true,
+  link_count: 7,
+  suspect_count: 1,
   updated_at: '2026-10-15T08:00:00',
 };
 
@@ -74,6 +76,9 @@ describe('UseCasesPage', () => {
     expect(screen.getByText('3 · 2')).toBeInTheDocument();
     expect(screen.getByText('Reviewed · v2')).toBeInTheDocument();
     expect(screen.getByText('Editing')).toBeInTheDocument();
+    expect(screen.getByText('7')).toBeInTheDocument();
+    expect(screen.getByTitle('1 suspect')).toBeInTheDocument();
+    expect(screen.getByText(/1 with suspect links/)).toBeInTheDocument();
   });
 
   it('filters and sorts on the server', async () => {
@@ -82,10 +87,12 @@ describe('UseCasesPage', () => {
     await screen.findByText('UC-004');
     await user.selectOptions(screen.getByLabelText('Approval state'), 'approved');
     await user.click(screen.getByRole('button', { name: /title/i }));
+    await user.click(screen.getByRole('button', { name: /has suspect links/i }));
     await waitFor(() =>
       expect(mocks.listUseCases).toHaveBeenLastCalledWith(5, {
         q: undefined,
         approval_state: 'approved',
+        has_suspect: 'true',
         sort_column: 'title',
         sort_dir: 'asc',
       }),

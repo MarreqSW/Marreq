@@ -13,9 +13,14 @@ use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
 use crate::auth::guards::{ProjectUseCasesApprove, ProjectUseCasesRead, ProjectUseCasesWrite};
-use crate::models::{ActionType, EntityType, NewLog, UseCase, UseCaseDraft, UseCaseVersion, User};
+use crate::models::{
+    ActionType, EntityType, NewLog, UseCase, UseCaseDraft, UseCaseLink, UseCaseVersion, User,
+};
 use crate::repository::errors::RepoError;
-use crate::repository::{LogRepository, UseCasesRepository, UserRepository};
+use crate::repository::{
+    LogRepository, RequirementsRepository, UseCasesRepository, UserRepository,
+    VerificationsRepository,
+};
 use crate::services::use_case_service::{
     CreateUseCase, DraftChange, UseCaseError, UseCaseService, parse_document,
 };
@@ -276,6 +281,9 @@ pub struct UseCaseRow {
     pub approval_state: Option<String>,
     pub current_version_number: Option<i32>,
     pub has_draft: bool,
+    /// Links to requirements and verifications, and how many are suspect.
+    pub link_count: usize,
+    pub suspect_count: usize,
     pub updated_at: chrono::NaiveDateTime,
 }
 
@@ -353,13 +361,18 @@ fn detail(
 
 /// GET /projects/{id}/use-cases — the project's use cases, filtered and sorted.
 #[allow(clippy::too_many_arguments)]
-#[get("/projects/<project_id>/use-cases?<q>&<approval_state>&<actor>&<sort_column>&<sort_dir>")]
+#[get(
+    "/projects/<project_id>/use-cases?<q>&<approval_state>&<actor>&<has_suspect>&<requirement_id>&<verification_id>&<sort_column>&<sort_dir>"
+)]
 pub async fn list(
     access: ProjectUseCasesRead,
     project_id: i32,
     q: Option<&str>,
     approval_state: Option<&str>,
     actor: Option<&str>,
+    has_suspect: Option<bool>,
+    requirement_id: Option<i32>,
+    verification_id: Option<i32>,
     sort_column: Option<&str>,
     sort_dir: Option<&str>,
     state: &State<AppState>,
@@ -370,16 +383,30 @@ pub async fn list(
         project_id,
         Permission::ViewRequirements,
     )?;
-    let (use_cases, versions, drafts) = {
+    let (use_cases, versions, drafts, links) = {
         let repo = state.repo_read();
         (
             repo.list_use_cases_by_project(project_id)?,
             repo.list_current_use_case_versions(project_id)?,
             repo.list_use_case_drafts_by_project(project_id)?,
+            repo.list_use_case_links_by_project(project_id)?,
         )
     };
+    // Use cases linked to the requirement or verification asked for.
+    let linked_to: Option<Vec<i32>> =
+        (requirement_id.is_some() || verification_id.is_some()).then(|| {
+            links
+                .iter()
+                .filter(|l| {
+                    (requirement_id.is_some() && l.requirement_id == requirement_id)
+                        || (verification_id.is_some() && l.verification_id == verification_id)
+                })
+                .map(|l| l.use_case_id)
+                .collect()
+        });
     let mut rows: Vec<UseCaseRow> = use_cases
         .iter()
+        .filter(|u| linked_to.as_ref().is_none_or(|ids| ids.contains(&u.id)))
         .map(|u| {
             let version = versions.iter().find(|v| Some(v.id) == u.current_version_id);
             let draft = drafts.iter().find(|d| d.use_case_id == u.id);
@@ -402,6 +429,11 @@ pub async fn list(
                 approval_state: version.map(|v| v.approval_state.clone()),
                 current_version_number: version.map(|v| v.version_number),
                 has_draft: draft.is_some(),
+                link_count: links.iter().filter(|l| l.use_case_id == u.id).count(),
+                suspect_count: links
+                    .iter()
+                    .filter(|l| l.use_case_id == u.id && l.suspect)
+                    .count(),
                 updated_at: u.updated_at,
             }
         })
@@ -415,6 +447,9 @@ pub async fn list(
                     .as_deref()
                     .is_some_and(|a| a.to_lowercase().contains(&q))
         });
+    }
+    if has_suspect == Some(true) {
+        rows.retain(|r| r.suspect_count > 0);
     }
     if let Some(wanted) = approval_state.map(str::trim).filter(|s| !s.is_empty()) {
         rows.retain(|r| match wanted {
@@ -736,6 +771,8 @@ pub struct PublishRequest {
 #[serde(crate = "rocket::serde")]
 pub struct PublishResponse {
     pub version: VersionView,
+    /// Links whose element the new version no longer has; they were removed.
+    pub removed_links: Vec<LinkView>,
 }
 
 /// POST /projects/{id}/use-cases/{uc}/draft/publish — publish the draft as
@@ -755,7 +792,7 @@ pub async fn publish(
     let use_case = service
         .get_in_project(project_id, id)
         .map_err(|e| into_api_error(state, None, e))?;
-    let version = service
+    let (version, removed) = service
         .publish(user, &use_case, body.base_revision, body.change_note)
         .map_err(|e| into_api_error(state, None, e))?;
     audit(
@@ -773,6 +810,7 @@ pub async fn publish(
         Status::Created,
         Json(PublishResponse {
             version: version_view(state, &version),
+            removed_links: link_views(state, &use_case, &removed),
         }),
     ))
 }
@@ -873,4 +911,335 @@ pub async fn set_version_approval(
         );
     }
     Ok(Json(version_view(state, &updated)))
+}
+
+// ----- Links (issue #400) -----
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct LinkView {
+    pub id: i32,
+    /// `null` for a link to the whole use case.
+    pub element_id: Option<String>,
+    /// The element's label in the current version, or in the draft.
+    pub element_label: Option<String>,
+    /// `requirement` or `verification`.
+    pub target_type: String,
+    pub requirement_id: Option<i32>,
+    pub verification_id: Option<i32>,
+    pub target_reference_code: String,
+    pub target_title: String,
+    pub rationale: Option<String>,
+    pub suspect: bool,
+    pub suspect_at: Option<chrono::NaiveDateTime>,
+    pub suspect_reason: Option<String>,
+    pub linked_requirement_version_id: Option<i32>,
+    pub current_requirement_version_id: Option<i32>,
+    pub created_by: Option<i32>,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+/// Labels of the current version, completed by the draft's for elements
+/// only the draft has.
+fn element_labels(state: &AppState, use_case: &UseCase) -> BTreeMap<String, String> {
+    let service = UseCaseService::new(state);
+    let mut out = BTreeMap::new();
+    if let Ok(Some(draft)) = service.draft(use_case) {
+        out.extend(doc_labels(&draft.document));
+    }
+    if let Ok(Some(version)) = service.current_version(use_case) {
+        out.extend(doc_labels(&version.document));
+    }
+    out
+}
+
+fn link_views(state: &AppState, use_case: &UseCase, links: &[UseCaseLink]) -> Vec<LinkView> {
+    let labels = element_labels(state, use_case);
+    let repo = state.repo_read();
+    links
+        .iter()
+        .map(|l| {
+            let (target_type, code, title, current) = match (l.requirement_id, l.verification_id) {
+                (Some(rid), _) => match repo.get_requirement_by_id(rid) {
+                    Ok(r) => (
+                        "requirement",
+                        r.reference_code,
+                        r.title,
+                        r.current_version_id,
+                    ),
+                    Err(_) => ("requirement", format!("#{rid}"), String::new(), None),
+                },
+                (_, Some(vid)) => match repo.get_verification_by_id(vid) {
+                    Ok(v) => ("verification", v.reference_code, v.name, None),
+                    Err(_) => ("verification", format!("#{vid}"), String::new(), None),
+                },
+                _ => ("requirement", String::new(), String::new(), None),
+            };
+            LinkView {
+                id: l.id,
+                element_id: l.element_id.clone(),
+                element_label: l.element_id.as_ref().and_then(|e| labels.get(e).cloned()),
+                target_type: target_type.into(),
+                requirement_id: l.requirement_id,
+                verification_id: l.verification_id,
+                target_reference_code: code,
+                target_title: title,
+                rationale: l.rationale.clone(),
+                suspect: l.suspect,
+                suspect_at: l.suspect_at,
+                suspect_reason: l.suspect_reason.clone(),
+                linked_requirement_version_id: l.linked_requirement_version_id,
+                current_requirement_version_id: current,
+                created_by: l.created_by,
+                created_at: l.created_at,
+            }
+        })
+        .collect()
+}
+
+/// GET /projects/{id}/use-cases/{uc}/links
+#[get("/projects/<project_id>/use-cases/<id>/links")]
+pub async fn list_links(
+    access: ProjectUseCasesRead,
+    project_id: i32,
+    id: i32,
+    state: &State<AppState>,
+) -> UcResult<Json<Vec<LinkView>>> {
+    require(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let use_case = UseCaseService::new(state.inner())
+        .get_in_project(project_id, id)
+        .map_err(|e| into_api_error(state, None, e))?;
+    let links = state.repo_read().list_use_case_links(use_case.id)?;
+    Ok(Json(link_views(state, &use_case, &links)))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct CreateLinkRequest {
+    #[serde(default)]
+    pub element_id: Option<String>,
+    #[serde(default)]
+    pub requirement_id: Option<i32>,
+    #[serde(default)]
+    pub verification_id: Option<i32>,
+    #[serde(default)]
+    pub rationale: Option<String>,
+}
+
+/// POST /projects/{id}/use-cases/{uc}/links — link the use case, or one of
+/// its elements, to a requirement or a verification.
+#[post("/projects/<project_id>/use-cases/<id>/links", data = "<body>")]
+pub async fn create_link(
+    access: ProjectUseCasesWrite,
+    project_id: i32,
+    id: i32,
+    body: Json<CreateLinkRequest>,
+    state: &State<AppState>,
+) -> UcResult<(Status, Json<LinkView>)> {
+    let user = access.user();
+    require(state, user, project_id, Permission::EditRequirements)?;
+    let body = body.into_inner();
+    let service = UseCaseService::new(state.inner());
+    let err = |e| into_api_error(state, None, e);
+    let use_case = service.get_in_project(project_id, id).map_err(err)?;
+    let link = service
+        .create_link(
+            user,
+            &use_case,
+            body.element_id,
+            body.requirement_id,
+            body.verification_id,
+            body.rationale,
+        )
+        .map_err(err)?;
+    let view = link_views(state, &use_case, std::slice::from_ref(&link))
+        .pop()
+        .expect("one link");
+    audit(
+        state,
+        user,
+        ActionType::Create,
+        &use_case,
+        format!(
+            "Linked use case {}{} to {}",
+            use_case.reference_code,
+            view.element_label
+                .as_ref()
+                .map(|l| format!(" step {l}"))
+                .unwrap_or_default(),
+            view.target_reference_code
+        ),
+        Some(json!({ "link_id": link.id })),
+    );
+    Ok((Status::Created, Json(view)))
+}
+
+/// DELETE /projects/{id}/use-cases/{uc}/links/{link}
+#[delete("/projects/<project_id>/use-cases/<id>/links/<link_id>")]
+pub async fn delete_link(
+    access: ProjectUseCasesWrite,
+    project_id: i32,
+    id: i32,
+    link_id: i32,
+    state: &State<AppState>,
+) -> UcResult<Status> {
+    let user = access.user();
+    require(state, user, project_id, Permission::EditRequirements)?;
+    let service = UseCaseService::new(state.inner());
+    let err = |e| into_api_error(state, None, e);
+    let use_case = service.get_in_project(project_id, id).map_err(err)?;
+    let link = service.get_link(&use_case, link_id).map_err(err)?;
+    let view = link_views(state, &use_case, std::slice::from_ref(&link))
+        .pop()
+        .expect("one link");
+    state.repo_write().delete_use_case_link(link.id)?;
+    audit(
+        state,
+        user,
+        ActionType::Delete,
+        &use_case,
+        format!(
+            "Removed the link from use case {} to {}",
+            use_case.reference_code, view.target_reference_code
+        ),
+        Some(json!({ "link_id": link.id })),
+    );
+    Ok(Status::NoContent)
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct ClearSuspectResponse {
+    /// `ok` when the flag was cleared, `no_change` when it was not set.
+    pub status: String,
+    pub cleared: bool,
+}
+
+/// POST /projects/{id}/use-cases/{uc}/links/{link}/clear_suspect
+#[post("/projects/<project_id>/use-cases/<id>/links/<link_id>/clear_suspect")]
+pub async fn clear_link_suspect(
+    access: ProjectUseCasesWrite,
+    project_id: i32,
+    id: i32,
+    link_id: i32,
+    state: &State<AppState>,
+) -> UcResult<Json<ClearSuspectResponse>> {
+    let user = access.user();
+    require(state, user, project_id, Permission::EditRequirements)?;
+    let service = UseCaseService::new(state.inner());
+    let err = |e| into_api_error(state, None, e);
+    let use_case = service.get_in_project(project_id, id).map_err(err)?;
+    let link = service.get_link(&use_case, link_id).map_err(err)?;
+    let cleared = service.clear_link_suspect(user, &link).map_err(err)?;
+    if cleared {
+        audit(
+            state,
+            user,
+            ActionType::Update,
+            &use_case,
+            format!(
+                "Cleared a suspect link of use case {}",
+                use_case.reference_code
+            ),
+            Some(json!({ "link_id": link.id })),
+        );
+    }
+    Ok(Json(ClearSuspectResponse {
+        status: if cleared { "ok" } else { "no_change" }.into(),
+        cleared,
+    }))
+}
+
+/// A use case that links to a requirement or a verification.
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct UseCaseRef {
+    pub use_case_id: i32,
+    pub reference_code: String,
+    pub title: String,
+    pub link_id: i32,
+    pub element_id: Option<String>,
+    pub element_label: Option<String>,
+    pub suspect: bool,
+}
+
+fn use_case_refs(
+    state: &AppState,
+    project_id: i32,
+    links: Vec<UseCaseLink>,
+) -> UcResult<Vec<UseCaseRef>> {
+    let service = UseCaseService::new(state);
+    let mut out = Vec::new();
+    for link in links.into_iter().filter(|l| l.project_id == project_id) {
+        let Ok(use_case) = service.get_in_project(project_id, link.use_case_id) else {
+            continue;
+        };
+        let labels = element_labels(state, &use_case);
+        let title = detail(
+            state,
+            &use_case,
+            service.current_version(&use_case).ok().flatten(),
+            service.draft(&use_case).ok().flatten(),
+        )
+        .title;
+        out.push(UseCaseRef {
+            use_case_id: use_case.id,
+            reference_code: use_case.reference_code.clone(),
+            title,
+            link_id: link.id,
+            element_label: link
+                .element_id
+                .as_ref()
+                .and_then(|e| labels.get(e).cloned()),
+            element_id: link.element_id,
+            suspect: link.suspect,
+        });
+    }
+    out.sort_by(|a, b| a.reference_code.cmp(&b.reference_code));
+    Ok(out)
+}
+
+/// GET /projects/{id}/requirements/{rid}/use-cases — where a requirement is used.
+#[get("/projects/<project_id>/requirements/<requirement_id>/use-cases")]
+pub async fn requirement_use_cases(
+    access: ProjectUseCasesRead,
+    project_id: i32,
+    requirement_id: i32,
+    state: &State<AppState>,
+) -> UcResult<Json<Vec<UseCaseRef>>> {
+    require(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let links = state
+        .repo_read()
+        .list_use_case_links_for_requirement(requirement_id)?;
+    Ok(Json(use_case_refs(state, project_id, links)?))
+}
+
+/// GET /projects/{id}/verifications/{vid}/use-cases — where a verification is used.
+#[get("/projects/<project_id>/verifications/<verification_id>/use-cases")]
+pub async fn verification_use_cases(
+    access: ProjectUseCasesRead,
+    project_id: i32,
+    verification_id: i32,
+    state: &State<AppState>,
+) -> UcResult<Json<Vec<UseCaseRef>>> {
+    require(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let links = state
+        .repo_read()
+        .list_use_case_links_for_verification(verification_id)?;
+    Ok(Json(use_case_refs(state, project_id, links)?))
 }

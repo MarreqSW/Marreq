@@ -630,6 +630,32 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    use_case_links (id) {
+        id -> Int4,
+        project_id -> Int4,
+        use_case_id -> Int4,
+        #[max_length = 40]
+        element_id -> Nullable<Varchar>,
+        requirement_id -> Nullable<Int4>,
+        verification_id -> Nullable<Int4>,
+        linked_requirement_version_id -> Nullable<Int4>,
+        rationale -> Nullable<Text>,
+        suspect -> Bool,
+        suspect_at -> Nullable<Timestamp>,
+        suspect_reason -> Nullable<Text>,
+        triggering_version_id -> Nullable<Int4>,
+        triggering_user_id -> Nullable<Int4>,
+        cleared_by -> Nullable<Int4>,
+        cleared_at -> Nullable<Timestamp>,
+        created_by -> Nullable<Int4>,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     use_case_versions (id) {
         id -> Int4,
         use_case_id -> Int4,
@@ -890,6 +916,7 @@ diesel::joinable!(verification_control -> verifications (verification_id));
 // Use cases (issue #398).
 diesel::joinable!(use_case_drafts -> use_cases (use_case_id));
 diesel::joinable!(use_cases -> projects (project_id));
+diesel::joinable!(use_case_links -> use_cases (use_case_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     applicability,
@@ -931,6 +958,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     saved_views,
     sessions,
     use_case_drafts,
+    use_case_links,
     use_case_versions,
     use_cases,
     user_api_tokens,

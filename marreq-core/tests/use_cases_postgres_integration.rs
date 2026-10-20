@@ -11,9 +11,11 @@
 use diesel::connection::SimpleConnection;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use marreq_core::models::{NewUseCase, NewUseCaseVersion};
+use marreq_core::models::{NewUseCase, NewUseCaseLink, NewUseCaseVersion};
 use marreq_core::repository::errors::RepoError;
-use marreq_core::repository::{DieselRepo, UseCasesRepository};
+use marreq_core::repository::{
+    DieselRepo, MatrixRepository, RequirementsRepository, UseCasesRepository,
+};
 use serde_json::json;
 
 #[test]
@@ -34,7 +36,17 @@ fn use_case_drafts_versions_and_approval() {
     conn.batch_execute(
         "TRUNCATE users, projects RESTART IDENTITY CASCADE;
          INSERT INTO users (id,username,name,email,password_hash,is_admin) VALUES (1,'rita','Rita','rita@example.test','!',false);
-         INSERT INTO projects (id,name,description,status,owner_id,slug) VALUES (1,'P','','active',1,'p'),(2,'Q','','active',1,'q');",
+         INSERT INTO projects (id,name,description,status,owner_id,slug) VALUES (1,'P','','active',1,'p'),(2,'Q','','active',1,'q');
+         INSERT INTO requirement_status (id,title,description,tag,project_id) VALUES (1,'Draft','','D',1);
+         INSERT INTO categories (id,title,description,tag,project_id) VALUES (1,'General','','G',1);
+         INSERT INTO applicability (id,title,description,tag,project_id) VALUES (1,'All','','A',1);
+         INSERT INTO requirements (id,project_id,stable_code) VALUES (1,1,'REQ-1');
+         INSERT INTO requirement_versions (id,requirement_id,title,description,status_id,author_id,reviewer_id,category_id,applicability_id)
+           VALUES (1,1,'Export','text',1,1,1,1,1);
+         UPDATE requirements SET current_version_id = 1 WHERE id = 1;
+         INSERT INTO verification_status (id,title,description,tag,project_id) VALUES (1,'Pending','','P',1);
+         INSERT INTO verifications (id,name,reference_code,description,source,status_id,project_id,author_id,reviewer_id)
+           VALUES (1,'Round trip','VER-1','','',1,1,1,1);",
     )
     .expect("seed");
 
@@ -140,6 +152,73 @@ fn use_case_drafts_versions_and_approval() {
     assert_eq!(approved.approval_state, "approved");
     assert!(approved.approved_at.is_some());
 
+    // Links: one per element and target, suspect when the requirement changes.
+    let link = |element: Option<&str>, requirement: Option<i32>, verification: Option<i32>| {
+        NewUseCaseLink {
+            project_id: 1,
+            use_case_id: use_case.id,
+            element_id: element.map(str::to_string),
+            requirement_id: requirement,
+            verification_id: verification,
+            linked_requirement_version_id: requirement.map(|_| 1),
+            rationale: None,
+            created_by: Some(1),
+        }
+    };
+    let step_link = repo
+        .create_use_case_link(&link(Some("s_A"), Some(1), None))
+        .expect("step link");
+    repo.create_use_case_link(&link(None, Some(1), None))
+        .expect("use case link to the same requirement");
+    repo.create_use_case_link(&link(Some("s_A"), None, Some(1)))
+        .expect("verification link");
+    assert!(matches!(
+        repo.create_use_case_link(&link(Some("s_A"), Some(1), None)),
+        Err(RepoError::Duplicate(_))
+    ));
+    assert!(
+        repo.create_use_case_link(&link(Some("s_B"), Some(1), Some(1)))
+            .is_err(),
+        "exactly one target"
+    );
+    repo.mark_links_suspect_for_requirement(1, "Requirement updated", Some(1), Some(1))
+        .expect("mark");
+    let links = repo.list_use_case_links(use_case.id).unwrap();
+    assert_eq!(
+        links.iter().map(|l| l.suspect).collect::<Vec<_>>(),
+        vec![true, true, false],
+        "only requirement links go suspect"
+    );
+    assert!(
+        repo.clear_use_case_link_suspect(step_link.id, 1, Some(1))
+            .unwrap()
+    );
+    assert!(
+        !repo
+            .clear_use_case_link_suspect(step_link.id, 1, Some(1))
+            .unwrap()
+    );
+    repo.set_requirement_version_approval(1, "reviewed", 1)
+        .expect("approval");
+    assert!(repo.get_use_case_link(step_link.id).unwrap().suspect);
+    assert_eq!(
+        repo.list_use_case_links_for_requirement(1).unwrap().len(),
+        2
+    );
+    assert_eq!(
+        repo.list_use_case_links_for_verification(1).unwrap().len(),
+        1
+    );
+    let removed = repo
+        .delete_use_case_links_outside(use_case.id, &["s_B".to_string()])
+        .unwrap();
+    assert_eq!(
+        removed.len(),
+        2,
+        "the s_A links go, the use case link stays"
+    );
+    assert_eq!(repo.list_use_case_links_by_project(1).unwrap().len(), 1);
+
     // Deleting the use case removes its versions and draft.
     repo.save_use_case_draft(use_case.id, None, Some(v2.id), &doc2, 1)
         .unwrap();
@@ -150,6 +229,7 @@ fn use_case_drafts_versions_and_approval() {
     ));
     assert!(repo.list_use_case_versions(use_case.id).unwrap().is_empty());
     assert!(repo.get_use_case_draft(use_case.id).unwrap().is_none());
+    assert!(repo.list_use_case_links_by_project(1).unwrap().is_empty());
     assert_eq!(repo.list_use_cases_by_project(2).unwrap().len(), 1);
 
     wait_for_quiet_pool(&repo);

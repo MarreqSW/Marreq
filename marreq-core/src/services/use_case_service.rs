@@ -12,9 +12,12 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::app::{AppState, DieselCachedRepo};
-use crate::models::{NewUseCase, NewUseCaseVersion, UseCase, UseCaseDraft, UseCaseVersion, User};
-use crate::repository::UseCasesRepository;
+use crate::models::{
+    NewUseCase, NewUseCaseLink, NewUseCaseVersion, UseCase, UseCaseDraft, UseCaseLink,
+    UseCaseVersion, User,
+};
 use crate::repository::errors::RepoError;
+use crate::repository::{RequirementsRepository, UseCasesRepository, VerificationsRepository};
 use crate::use_case_document::{
     DocumentError, Effect, Operation, OperationError, Stage, UseCaseDocument, apply_operations,
     validate,
@@ -306,6 +309,17 @@ impl<'a> UseCaseService<'a> {
         if !self.state.repo_write().delete_use_case_draft(use_case.id)? {
             return Err(UseCaseError::NotFound("there is no draft".into()));
         }
+        // Links made to elements that only the draft had go with it.
+        if let Some(version) = self.current_version(use_case)? {
+            let keep: Vec<String> = parse_document(&version.document)?
+                .ids()
+                .into_iter()
+                .map(str::to_string)
+                .collect();
+            self.state
+                .repo_write()
+                .delete_use_case_links_outside(use_case.id, &keep)?;
+        }
         Ok(())
     }
 
@@ -316,7 +330,7 @@ impl<'a> UseCaseService<'a> {
         use_case: &UseCase,
         base_revision: i32,
         change_note: Option<String>,
-    ) -> UseCaseResult<UseCaseVersion> {
+    ) -> UseCaseResult<(UseCaseVersion, Vec<UseCaseLink>)> {
         let Some(draft) = self.draft(use_case)? else {
             return Err(UseCaseError::NotFound("there is no draft".into()));
         };
@@ -335,14 +349,125 @@ impl<'a> UseCaseService<'a> {
                 .filter(|n| !n.is_empty()),
             created_by: actor.id,
         };
-        match self
+        let published = self
             .state
             .repo_write()
-            .publish_use_case_draft(base_revision, &version)?
-        {
-            Some(version) => Ok(version),
-            None => Err(UseCaseError::Stale(self.draft(use_case)?)),
+            .publish_use_case_draft(base_revision, &version)?;
+        let Some(published) = published else {
+            return Err(UseCaseError::Stale(self.draft(use_case)?));
+        };
+        // Links to elements the new version no longer has go with them.
+        let keep: Vec<String> = doc.ids().into_iter().map(str::to_string).collect();
+        let removed = self
+            .state
+            .repo_write()
+            .delete_use_case_links_outside(use_case.id, &keep)?;
+        Ok((published, removed))
+    }
+
+    /// A link of this use case.
+    pub fn get_link(&self, use_case: &UseCase, link_id: i32) -> UseCaseResult<UseCaseLink> {
+        let link = self
+            .state
+            .repo_read()
+            .get_use_case_link(link_id)
+            .map_err(|e| match e {
+                RepoError::NotFound => UseCaseError::NotFound("link not found".into()),
+                other => other.into(),
+            })?;
+        if link.use_case_id != use_case.id {
+            return Err(UseCaseError::NotFound("link not found".into()));
         }
+        Ok(link)
+    }
+
+    /// Link the use case, or one of its elements, to a requirement or a
+    /// verification of the same project. The element must exist in the
+    /// current version or in the draft.
+    pub fn create_link(
+        &self,
+        actor: &User,
+        use_case: &UseCase,
+        element_id: Option<String>,
+        requirement_id: Option<i32>,
+        verification_id: Option<i32>,
+        rationale: Option<String>,
+    ) -> UseCaseResult<UseCaseLink> {
+        if requirement_id.is_some() == verification_id.is_some() {
+            return Err(UseCaseError::BadRequest(
+                "give exactly one of requirement_id and verification_id".into(),
+            ));
+        }
+        let element_id = element_id
+            .map(|e| e.trim().to_string())
+            .filter(|e| !e.is_empty());
+        if let Some(element) = &element_id {
+            let mut known = false;
+            if let Some(version) = self.current_version(use_case)? {
+                known |= parse_document(&version.document)?.contains(element);
+            }
+            if !known && let Some(draft) = self.draft(use_case)? {
+                known |= parse_document(&draft.document)?.contains(element);
+            }
+            if !known {
+                return Err(UseCaseError::BadRequest(format!(
+                    "the use case has no element \"{element}\""
+                )));
+            }
+        }
+        let repo = self.state.repo_read();
+        let mut linked_version = None;
+        if let Some(rid) = requirement_id {
+            let requirement = repo.get_requirement_by_id(rid).map_err(|e| match e {
+                RepoError::NotFound => UseCaseError::NotFound("requirement not found".into()),
+                other => other.into(),
+            })?;
+            if requirement.project_id != use_case.project_id {
+                return Err(UseCaseError::NotFound("requirement not found".into()));
+            }
+            linked_version = requirement.current_version_id;
+        }
+        if let Some(vid) = verification_id {
+            let verification = repo.get_verification_by_id(vid).map_err(|e| match e {
+                RepoError::NotFound => UseCaseError::NotFound("verification not found".into()),
+                other => other.into(),
+            })?;
+            if verification.project_id != use_case.project_id {
+                return Err(UseCaseError::NotFound("verification not found".into()));
+            }
+        }
+        drop(repo);
+        let new = NewUseCaseLink {
+            project_id: use_case.project_id,
+            use_case_id: use_case.id,
+            element_id,
+            requirement_id,
+            verification_id,
+            linked_requirement_version_id: linked_version,
+            rationale: rationale
+                .map(|r| r.trim().to_string())
+                .filter(|r| !r.is_empty()),
+            created_by: Some(actor.id),
+        };
+        Ok(self.state.repo_write().create_use_case_link(&new)?)
+    }
+
+    /// Clear a suspect link against the requirement's current version.
+    /// `false` if it was not suspect.
+    pub fn clear_link_suspect(&self, actor: &User, link: &UseCaseLink) -> UseCaseResult<bool> {
+        let current = match link.requirement_id {
+            Some(rid) => {
+                self.state
+                    .repo_read()
+                    .get_requirement_by_id(rid)?
+                    .current_version_id
+            }
+            None => None,
+        };
+        Ok(self
+            .state
+            .repo_write()
+            .clear_use_case_link_suspect(link.id, actor.id, current)?)
     }
 
     pub fn set_approval(

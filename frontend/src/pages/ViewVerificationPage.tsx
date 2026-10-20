@@ -12,11 +12,13 @@ import {
   listVerificationStatuses,
   listUsersOptional,
   listVerifications,
+  listVerificationUseCases,
 } from '@/api/client';
 import { useDashboard } from '@/context/DashboardContext';
 import { useRecentDetail } from '@/hooks/useRecentDetail';
 import AttachmentsPanel from '@/components/AttachmentsPanel';
 import VerificationControlPanel from '@/components/VerificationControlPanel';
+import UsedInUseCasesCard from '@/components/useCases/UsedInUseCasesCard';
 import { StatusBadge } from '@/components/StatusBadge';
 import VerificationVersionDiffDialog from '@/components/VerificationVersionDiffDialog';
 import { formatUserLabel } from '@/utils/userLabel';
@@ -88,6 +90,7 @@ export default function ViewVerificationPage() {
   const { basePath, projectId: pid } = useOutletContext<ProjectOutletContext>();
   const { verificationId: verificationIdParam } = useParams();
   const vid = Number(verificationIdParam);
+  const loadUseCaseRefs = useCallback(() => listVerificationUseCases(pid, vid), [pid, vid]);
   const { dashboard, csrfToken } = useDashboard();
 
   const projectName = useMemo(
@@ -411,6 +414,8 @@ export default function ViewVerificationPage() {
         canEdit={canEdit}
         csrfToken={csrfToken ?? ''}
       />
+
+      <UsedInUseCasesCard basePath={basePath} load={loadUseCaseRefs} />
 
       <section className="mt-8 bg-stitch-surface rounded-xl border border-stitch-border shadow-stitch overflow-hidden">
         <div className="px-6 py-3 border-b border-stitch-border bg-stitch-elevated">

@@ -3,11 +3,15 @@ import { Link, useNavigate, useOutletContext, useParams, useSearchParams } from 
 import {
   type ApiError,
   applyUseCaseOperations,
+  clearUseCaseLinkSuspect,
+  createUseCaseLink,
   deleteUseCase,
+  deleteUseCaseLink,
   discardUseCaseDraft,
   getMyPermissions,
   getUseCase,
   getUseCaseDraft,
+  listUseCaseLinks,
   listUseCaseVersions,
   publishUseCaseDraft,
   setUseCaseVersionApproval,
@@ -20,11 +24,15 @@ import type {
   UseCaseDraftSummary,
   UseCaseEffect,
   UseCaseLabels,
+  UseCaseLink,
   UseCaseOperation,
   UseCaseVersionSummary,
 } from '@/api/types';
 import Dialog from '@/components/Dialog';
 import DeleteStepDialog, { type DependentBranch } from '@/components/useCases/DeleteStepDialog';
+import LinkDialog, { type LinkableElement } from '@/components/useCases/LinkDialog';
+import RelatedArtifactsPanel from '@/components/useCases/RelatedArtifactsPanel';
+import RequirementPeek from '@/components/useCases/RequirementPeek';
 import UseCaseDocumentView from '@/components/useCases/UseCaseDocumentView';
 import { useDashboard } from '@/context/DashboardContext';
 import { useProjectArchived } from '@/hooks/useProjectArchived';
@@ -105,6 +113,10 @@ export default function ViewUseCasePage() {
   const [changeNote, setChangeNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [links, setLinks] = useState<UseCaseLink[]>([]);
+  const [linkDialog, setLinkDialog] = useState<{ elementId: string | null } | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [peek, setPeek] = useState<UseCaseLink | null>(null);
 
   const editorRef = useRef<Editor | null>(null);
   editorRef.current = editor;
@@ -117,14 +129,16 @@ export default function ViewUseCasePage() {
   const load = useCallback(async () => {
     setLoadError(null);
     try {
-      const [d, v, p] = await Promise.all([
+      const [d, v, p, l] = await Promise.all([
         getUseCase(pid, id, requestedVersion),
         listUseCaseVersions(pid, id),
         getMyPermissions(pid).catch(() => null),
+        listUseCaseLinks(pid, id).catch(() => [] as UseCaseLink[]),
       ]);
       setDetail(d);
       setVersions(v);
       setPerms(p);
+      setLinks(l);
     } catch (e) {
       setLoadError(e instanceof Error ? e.message : 'Failed to load the use case');
     }
@@ -291,7 +305,22 @@ export default function ViewUseCasePage() {
     setActionError(null);
     try {
       await queue.current;
-      await publishUseCaseDraft(pid, id, editorRef.current!.revision!, changeNote.trim() || null, csrfToken);
+      const published = await publishUseCaseDraft(
+        pid,
+        id,
+        editorRef.current!.revision!,
+        changeNote.trim() || null,
+        csrfToken,
+      );
+      const removed = published.removed_links ?? [];
+      if (removed.length > 0) {
+        setToast({
+          message: `Removed ${removed.length} link${removed.length === 1 ? '' : 's'} to deleted steps: ${removed
+            .map((l) => l.target_reference_code)
+            .join(', ')}.`,
+          undo: false,
+        });
+      }
       setPublishOpen(false);
       setChangeNote('');
       setEditor(null);
@@ -352,6 +381,51 @@ export default function ViewUseCasePage() {
     }
   }
 
+  async function reloadLinks() {
+    setLinks(await listUseCaseLinks(pid, id).catch(() => links));
+  }
+
+  async function onCreateLink(body: Parameters<typeof createUseCaseLink>[2]) {
+    if (!csrfToken) return;
+    setBusy(true);
+    setLinkError(null);
+    try {
+      await createUseCaseLink(pid, id, body, csrfToken);
+      setLinkDialog(null);
+      await reloadLinks();
+    } catch (e) {
+      setLinkError(e instanceof Error ? e.message : 'Link failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onRemoveLink(link: UseCaseLink) {
+    if (!csrfToken) return;
+    if (!window.confirm(`Remove the link to ${link.target_reference_code}?`)) return;
+    try {
+      await deleteUseCaseLink(pid, id, link.id, csrfToken);
+      await reloadLinks();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Remove failed');
+    }
+  }
+
+  async function onClearLink(link: UseCaseLink) {
+    if (!csrfToken) return;
+    try {
+      await clearUseCaseLinkSuspect(pid, id, link.id, csrfToken);
+      await reloadLinks();
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : 'Clear failed');
+    }
+  }
+
+  function openLink(link: UseCaseLink) {
+    if (link.requirement_id != null) setPeek(link);
+    else if (link.verification_id != null) navigate(`${basePath}/verifications/${link.verification_id}`);
+  }
+
   const shown = useMemo(() => {
     if (editor) return { doc: editor.doc, labels: editor.labels };
     if (detail?.current_version) {
@@ -359,6 +433,33 @@ export default function ViewUseCasePage() {
     }
     return null;
   }, [editor, detail]);
+
+  const linksByElement = useMemo(() => {
+    const m = new Map<string, UseCaseLink[]>();
+    for (const l of links) {
+      if (!l.element_id) continue;
+      m.set(l.element_id, [...(m.get(l.element_id) ?? []), l]);
+    }
+    return m;
+  }, [links]);
+
+  const linkable: LinkableElement[] = useMemo(() => {
+    if (!shown) return [];
+    const { doc: d, labels: lb } = shown;
+    const els = [
+      ...d.preconditions,
+      ...d.main,
+      ...d.branches.flatMap((b) => b.steps),
+      ...d.postconditions,
+    ];
+    return els.map((e) => ({
+      id: e.id,
+      label: /^\d/.test(lb[e.id] ?? '') ? `Step ${lb[e.id]}` : (lb[e.id] ?? e.id),
+      text: e.text,
+    }));
+  }, [shown]);
+
+  const canLink = Boolean(perms?.edit_requirements) && !archived;
 
   if (loadError) {
     return (
@@ -535,6 +636,16 @@ export default function ViewUseCasePage() {
             apply={(ops) => send(ops)}
             selectedBranch={selectedBranch}
             onSelectBranch={setSelectedBranch}
+            linksByElement={linksByElement}
+            onOpenLink={openLink}
+            onLinkElement={
+              canLink
+                ? (elementId) => {
+                    setLinkError(null);
+                    setLinkDialog({ elementId });
+                  }
+                : undefined
+            }
           />
         ) : (
           <div className="flex-1 rounded-lg border border-dashed border-stitch-border p-8 text-center text-sm text-stitch-muted">
@@ -580,6 +691,19 @@ export default function ViewUseCasePage() {
               })()}
             </div>
           ) : null}
+
+          <RelatedArtifactsPanel
+            links={links}
+            labels={shown?.labels ?? {}}
+            canEdit={canLink}
+            onAdd={() => {
+              setLinkError(null);
+              setLinkDialog({ elementId: null });
+            }}
+            onOpen={openLink}
+            onRemove={(l) => void onRemoveLink(l)}
+            onClear={(l) => void onClearLink(l)}
+          />
 
           <div className="rounded-lg border border-stitch-border bg-stitch-surface px-4 py-3 text-xs shadow-sm">
             <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-stitch-muted">Details</p>
@@ -666,6 +790,19 @@ export default function ViewUseCasePage() {
           ) : null}
         </div>
       ) : null}
+
+      <LinkDialog
+        open={linkDialog != null}
+        projectId={pid}
+        elements={linkable}
+        elementId={linkDialog?.elementId ?? null}
+        busy={busy}
+        error={linkError}
+        onClose={() => setLinkDialog(null)}
+        onCreate={(body) => void onCreateLink(body)}
+      />
+
+      <RequirementPeek projectId={pid} basePath={basePath} link={peek} onClose={() => setPeek(null)} />
 
       <DeleteStepDialog
         open={dependents != null}

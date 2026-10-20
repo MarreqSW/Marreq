@@ -23,7 +23,7 @@ describe("create tool idempotentHint by transport", () => {
     apiToken: "test-token",
     projectId: 1,
     mode: "draft_write",
-    traceWrite: false,
+    traceWrite: true,
   };
 
   it("advertises idempotence for remote create tools only", async () => {
@@ -41,6 +41,8 @@ describe("create tool idempotentHint by transport", () => {
       "create_requirement_comment",
       "create_use_case",
       "publish_use_case_draft",
+      "link_requirements",
+      "create_use_case_comment",
     ]) {
       expect(remote[name]?.idempotentHint).toBe(true);
       expect(stdio[name]?.idempotentHint).toBe(false);

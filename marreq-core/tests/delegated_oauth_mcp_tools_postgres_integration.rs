@@ -220,6 +220,12 @@ async fn delegated_scopes_gate_the_routes_wrapped_by_mcp_tools() {
             "req-ver",
             Status::Ok,
         ),
+        (
+            format!("{RES_BASE}/attachments?entity_type=requirement&entity_id=1"),
+            "req-read",
+            "req-ver",
+            Status::Ok,
+        ),
     ];
     for (path, without, with, expected) in reads {
         let (status, body) = status_of(&client, "GET", &path, without, None, None).await;

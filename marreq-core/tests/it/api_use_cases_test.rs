@@ -1306,3 +1306,36 @@ async fn create_and_publish_replay_with_an_idempotency_key() {
     .await;
     assert_eq!(versions.as_array().unwrap().len(), 1);
 }
+
+#[rocket::async_test]
+async fn a_comment_replays_with_an_idempotency_key() {
+    let client = test_client(repo()).await;
+    let (_, created) = call_with_key(&client, BASE, "k-uc", json!({ "title": "Commented" })).await;
+    let id = created["id"].as_i64().unwrap();
+    let comments = format!("{BASE}/{id}/comments");
+    let body = json!({ "body": "Is step 1 enough?" });
+    let (s1, first) = call_with_key(&client, &comments, "k-comment", body.clone()).await;
+    let (s2, again) = call_with_key(&client, &comments, "k-comment", body).await;
+    assert_eq!((s1, s2), (Status::Created, Status::Created), "{again}");
+    assert_eq!(first["id"], again["id"]);
+    let (_, list) = call(&client, AUTHOR, "GET", &comments, None).await;
+    assert_eq!(
+        list.as_array().unwrap().len(),
+        1,
+        "the retry posted no second comment"
+    );
+    let (status, _) =
+        call_with_key(&client, &comments, "k-comment", json!({ "body": "Other" })).await;
+    assert_eq!(status, Status::Conflict, "same key, different payload");
+    // Without a key every post is a new comment.
+    let (_, _) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &comments,
+        Some(json!({ "body": "Again" })),
+    )
+    .await;
+    let (_, list) = call(&client, AUTHOR, "GET", &comments, None).await;
+    assert_eq!(list.as_array().unwrap().len(), 2);
+}

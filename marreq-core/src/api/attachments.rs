@@ -15,7 +15,9 @@ use rocket::http::{ContentType, Header};
 use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
-use crate::auth::guards::{ProjectAccessOrBearer, ProjectBaselinesRead};
+use crate::auth::guards::{
+    ProjectAccessOrBearer, ProjectBaselinesRead, ProjectRequirementsAndVerificationsRead,
+};
 use crate::models::Attachment;
 use crate::repository::{AttachmentsRepository, BaselineRepository, UserRepository};
 use crate::services::attachment_service::{
@@ -105,9 +107,10 @@ fn parse_entity(entity_type: &str) -> ApiResult<AttachmentEntity> {
 }
 
 /// `GET /projects/<project_id>/attachments?entity_type=&entity_id=` — live attachments of one entity.
+/// The entity may be a requirement or a verification, so a delegated token needs both read scopes.
 #[get("/projects/<project_id>/attachments?<entity_type>&<entity_id>")]
 pub async fn list(
-    access: ProjectAccessOrBearer,
+    access: ProjectRequirementsAndVerificationsRead,
     project_id: i32,
     entity_type: &str,
     entity_id: i32,

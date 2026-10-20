@@ -1,0 +1,108 @@
+# Use cases API
+
+Use cases (issue #398, epic #388) are a project artifact next to requirements and verifications. This page describes the HTTP API; the design discussion is on #388.
+
+All routes are under `/api/projects/{project_id}` and accept the session cookie (writes need `X-CSRF-Token`), a personal API token, or a delegated OAuth token with the scope shown. Reads need `ViewRequirements`; writes need `EditRequirements` and are refused on archived projects (**403**); approval needs a project reviewer (an instance administrator when the project has no reviewer list).
+
+## Model
+
+- A **use case** has a reference code (`UC-001`, unique per project) and a series of immutable **versions** `1, 2, …`. Each version holds one JSON document and an approval state (`draft → reviewed → approved`, as for requirement versions).
+- Edits go to **one shared working draft** per use case. Every write names the draft **revision** it is based on; a write based on an older revision is refused with **409** (there is no real-time co-editing). **Publishing** the draft creates the next version and removes the draft.
+- A new use case starts with a draft and no version. The first edit after a publish opens a new draft from the current version.
+
+## The document (`marreq.use-case.v1`)
+
+```json
+{
+  "schema": "marreq.use-case.v1",
+  "title": "Export requirements",
+  "primary_actor": "Project member",
+  "secondary_actors": ["Storage service"],
+  "summary": "A member exports a selection of requirements to a file.",
+  "preconditions":  [{ "id": "p_7Kq2", "text": "User is authenticated." }],
+  "main": [
+    { "id": "s_A1x9", "text": "User opens the requirements page." },
+    { "id": "s_C3mz", "text": "User selects requirements and requests an export." }
+  ],
+  "branches": [{
+    "id": "b_N0s1", "kind": "alternative", "title": "Nothing selected",
+    "from_step": "s_C3mz",
+    "steps": [{ "id": "s_Q4ee", "text": "System asks the user to select at least one requirement." }],
+    "end": { "type": "rejoin", "step": "s_C3mz" }
+  }],
+  "postconditions": [{ "id": "q_2Lm0", "text": "The export file is available to the user." }]
+}
+```
+
+Rules (a violation is **422** `invalid_document`, with every broken rule in `errors: [{path, message}]`):
+
+1. Ids match `^[pqsb]_[A-Za-z0-9]{4,32}$`; the prefix gives the kind (precondition, postcondition, step, branch) and must match the list. Ids are unique in the document. Clients may choose ids (the server generates one when an operation leaves it out). **An id that a published version dropped is never reused**, except to restore an element of the version the draft started from.
+2. `branches[].from_step` and a `rejoin` step are steps of `main`. Branches do not start from branch steps.
+3. `end` is `{"type": "rejoin", "step": <main step>}` or `{"type": "end", "outcome": "success" | "failure"}`; `kind` is `alternative` or `exception`.
+4. The title is 3–255 characters; texts are 1–2000 characters of statement Markdown; at most 20 secondary actors and 500 elements.
+5. `main` needs at least one step to publish (an empty draft is fine).
+6. Unknown keys are rejected.
+
+**Labels** are computed, never stored, and returned with every document as `labels: {id: label}`: main steps `1…n`; a branch is `A`/`E` and its origin's number (`A3`, then `A3b`, `A3c` for more branches of the same kind from the same step); branch steps `A3.1`; preconditions `P1…`, postconditions `Q1…`.
+
+## Endpoints
+
+| Method | Path | Scope | Description |
+|---|---|---|---|
+| `GET` | `/use-cases` | `use_cases:read` | Rows `id, reference_code, title, primary_actor, step_count, alternative_count, exception_count, approval_state, current_version_number, has_draft, updated_at`. Query: `q` (code, title, actor), `approval_state` (`draft`, `reviewed`, `approved`, or `unpublished`), `actor`, `sort_column` (`code`, `title`, `actor`, `approval`, `modified`), `sort_dir` (`asc`, `desc`). Title and counts come from the current version, or from the draft before the first publish; `approval_state` is `null` then. |
+| `GET` | `/use-cases/next-code` | `use_cases:read` | `{ "reference_code": "UC-008" }`: the highest `UC-NNN` plus one. A suggestion only. |
+| `POST` | `/use-cases` | `use_cases:write` | `{reference_code?, title?, primary_actor?, document?}`. Without a code the server takes the next `UC-NNN`; codes follow `^[A-Z]{2,4}(-[A-Z0-9]{1,6})+$` (**400**) and are unique per project (**409**). `document` starts the draft from a whole document; `title` and `primary_actor` override its header. **201** with the detail. |
+| `GET` | `/use-cases/{id}` | `use_cases:read` | `{id, project_id, reference_code, title, created_by, created_at, updated_at, current_version, draft}`. `current_version` is `{id, version_number, approval_state, title, primary_actor, change_note, created_by, created_by_name, created_at, reviewed_by/at, approved_by/at, document, labels}` or `null`; `?version_id=` returns that version instead. `draft` is `{revision, base_version_id, updated_by, updated_by_name, updated_at}` or `null`. |
+| `DELETE` | `/use-cases/{id}` | `use_cases:write` | **204**. Removes the versions and the draft. |
+| `GET` | `/use-cases/{id}/draft` | `use_cases:read` | `{use_case_id, revision, base_version_id, updated_by, updated_by_name, updated_at, document, labels}`; **404** when there is no draft. |
+| `PUT` | `/use-cases/{id}/draft` | `use_cases:write` | `{base_revision, document}`: replace the whole draft (`base_revision: null` opens one when there is none). Returns the draft plus `effects: []`. |
+| `POST` | `/use-cases/{id}/draft/operations` | `use_cases:write` | `{base_revision, operations: [...]}`: apply the operations below in order, all or nothing. `base_revision: null` opens a draft from the current version. Returns the draft plus `effects`. |
+| `DELETE` | `/use-cases/{id}/draft` | `use_cases:write` | **204**. **409** for a use case that was never published (delete the use case instead). |
+| `POST` | `/use-cases/{id}/draft/publish` | `use_cases:write` | `{base_revision, change_note?}`. Checks the publish rules, creates the next version in approval state `draft`, makes it current and removes the draft. **201** with `{version}`. |
+| `GET` | `/use-cases/{id}/versions` | `use_cases:read` | Version summaries (no document), newest first. |
+| `GET` | `/use-cases/{id}/versions/{version_id}` | `use_cases:read` | One version with `document` and `labels`. |
+| `PUT` | `/use-cases/{id}/versions/{version_id}/approval` | `use_cases:approve` | `{state: "reviewed" \| "approved"}`. Project reviewers only; `draft → reviewed → approved`, one step at a time (**400** otherwise; the same state again is a no-op). Returns the version. |
+
+Create, delete, publish and approval changes are audited with entity type `USE_CASE`. Draft edits are not audited one by one.
+
+### Draft operations
+
+Operations name elements by id. In `add_element` and `move_element`, `after` is the id to insert after; `null` means first and leaving it out means last. `list` is `"preconditions"`, `"main"`, `"postconditions"` or `{"branch": "<branch id>"}`.
+
+| `op` | Fields | Effect |
+|---|---|---|
+| `set_header` | `title?, primary_actor?, secondary_actors?, summary?` | Updates the header; `null` or `""` clears the actor or summary. |
+| `add_element` | `list, after?, element: {id?, text}` | Inserts an element; reports `created` with the id when the server generated it. |
+| `update_text` | `id, text` | Edits an element's text. |
+| `move_element` | `id, list?, after?` | Reorders within a list, or moves a step between `main` and a branch. |
+| `remove_element` | `id, dependents?` | Removes an element. A main step that branches start from or rejoin at needs `dependents: "cascade"` (remove those branches) or `dependents: {"rebranch_to": "<main step>"}`; without it the request fails with `element_has_dependents`. |
+| `add_branch` | `branch: {id?, kind, title, from_step, end, steps?}` | Adds an alternative or exception, placed with the other branches of its origin. |
+| `update_branch` | `id, title?, kind?, from_step?, end?` | Edits a branch. |
+| `remove_branch` | `id` | Removes a branch and its steps. |
+
+`effects` tell the client what the server did on its behalf, for toasts: `{type: "relabelled", id, from, to}` for every branch whose label changed, `{type: "removed", id}` for cascaded branches, `{type: "rebranched", id, from_step}` and `{type: "created", id}`. Undo is the client sending the inverse operations.
+
+Example: move step 3 above step 2.
+
+```http
+POST /api/projects/1/use-cases/7/draft/operations
+{ "base_revision": 12, "operations": [{ "op": "move_element", "id": "s_C3mz", "after": "s_A1x9" }] }
+```
+
+```json
+{ "use_case_id": 7, "revision": 13, "document": { "…": "…" },
+  "labels": { "s_C3mz": "2", "b_N0s1": "A2", "s_Q4ee": "A2.1", "…": "…" },
+  "effects": [{ "type": "relabelled", "id": "b_N0s1", "from": "A3", "to": "A2" }] }
+```
+
+### Errors
+
+The body is the usual `{status, error, message}`, with a `code` and details for these:
+
+| Status | `code` | Details |
+|---|---|---|
+| 409 | `stale_revision` | `current: {revision, base_version_id, updated_by, updated_by_name, updated_at}` or `null`. Reload the draft, then replay the edit if it still applies. |
+| 422 | `invalid_document` | `errors: [{path, message}]` |
+| 422 | `element_has_dependents` | `operation_index, element_id, element_label, branches: [{id, label, title}]` |
+| 422 | `unknown_element` | `operation_index, element_id` |
+| 422 | `invalid_operation` | `operation_index` |

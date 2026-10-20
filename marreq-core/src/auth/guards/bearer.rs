@@ -347,6 +347,9 @@ scoped_guard!(TraceabilityRead, "traceability:read");
 scoped_guard!(TraceabilityWrite, "traceability:write");
 scoped_guard!(BaselinesRead, "baselines:read");
 scoped_guard!(BaselinesWrite, "baselines:write");
+scoped_guard!(UseCasesRead, "use_cases:read");
+scoped_guard!(UseCasesWrite, "use_cases:write");
+scoped_guard!(UseCasesApprove, "use_cases:approve");
 
 pub struct RequirementsAndBaselinesRead(pub ApiUserOrBearer);
 impl Deref for RequirementsAndBaselinesRead {

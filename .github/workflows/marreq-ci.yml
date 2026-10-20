@@ -311,6 +311,10 @@ jobs:
         run: |
           cargo test -p marreq-core --test verification_control_postgres_integration -- --nocapture
 
+      - name: Run use case PostgreSQL integration tests
+        run: |
+          cargo test -p marreq-core --test use_cases_postgres_integration -- --nocapture
+
       - name: Run requirement update PostgreSQL integration tests
         run: |
           cargo test -p marreq-core --test requirement_update_postgres_integration -- --nocapture

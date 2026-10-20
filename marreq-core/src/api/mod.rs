@@ -134,6 +134,7 @@ pub fn routes_with_policies() -> Vec<(RoutePolicy, Route)> {
         requirements::get_version,
         requirements::get_version_by_project,
         requirements::get_impacted_tests,
+        requirements::get_impacted_tests_by_project,
         comments::list,
         comments::list_by_project,
         requirement_diff::diff_versions,

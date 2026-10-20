@@ -5,8 +5,9 @@
 
 use rocket::serde::{Deserialize, Serialize};
 
+use crate::api::idempotency::{self, OptionalIdempotencyKey};
 use crate::api::prelude::*;
-use crate::auth::guards::ProjectAccessOrBearer;
+use crate::auth::guards::{ProjectTraceabilityRead, ProjectTraceabilityWrite};
 use crate::models::RequirementVersionLink;
 use crate::repository::{RequirementVersionLinksRepository, RequirementsRepository};
 use crate::services::RequirementService;
@@ -26,8 +27,9 @@ pub struct CreateRequirementVersionLinkRequest {
 /// Create a requirement version link. Project-scoped; both versions must belong to the project.
 #[post("/projects/<project_id>/requirement-version-links", data = "<body>")]
 pub async fn create(
-    access: ProjectAccessOrBearer,
+    access: ProjectTraceabilityWrite,
     project_id: i32,
+    key: OptionalIdempotencyKey,
     body: Json<CreateRequirementVersionLinkRequest>,
     state: &State<AppState>,
 ) -> ApiResult<Json<RequirementVersionLink>> {
@@ -38,26 +40,76 @@ pub async fn create(
         Permission::EditRequirements,
     )?;
     let b = body.into_inner();
-    let service = RequirementService::new(state.inner());
-    let repo = state.inner().repo_read();
-    let source_ver = repo.get_requirement_version_by_id(b.source_version_id)?;
-    let source_req = repo.get_requirement_by_id(source_ver.requirement_id)?;
-    if source_req.project_id != project_id {
-        return Err(ApiError::NotFound("source version not in project".into()));
+    let user_id = access.user().id;
+    let principal = access.idempotency_principal();
+    let target = format!("project:{project_id}");
+    let payload = serde_json::json!({
+        "source_version_id": b.source_version_id,
+        "target_version_id": b.target_version_id,
+        "link_type": b.link_type,
+        "rationale": b.rationale,
+        "metadata": b.metadata,
+    });
+    if let Some(stored) = idempotency::claim(
+        state,
+        user_id,
+        &principal,
+        &target,
+        "create_requirement_version_link",
+        &key,
+        &payload,
+    )? {
+        return serde_json::from_value(stored)
+            .map(Json)
+            .map_err(|_| ApiError::Internal("invalid stored idempotency response".into()));
     }
-    let target_ver = repo.get_requirement_version_by_id(b.target_version_id)?;
-    let target_req = repo.get_requirement_by_id(target_ver.requirement_id)?;
-    if target_req.project_id != project_id {
-        return Err(ApiError::NotFound("target version not in project".into()));
-    }
-    drop(repo);
-    let link = service.create_requirement_version_link(
-        b.source_version_id,
-        b.target_version_id,
-        &b.link_type,
-        project_id,
-        b.rationale,
-        b.metadata,
+    let work = || -> ApiResult<RequirementVersionLink> {
+        let service = RequirementService::new(state.inner());
+        let repo = state.inner().repo_read();
+        let source_ver = repo.get_requirement_version_by_id(b.source_version_id)?;
+        let source_req = repo.get_requirement_by_id(source_ver.requirement_id)?;
+        if source_req.project_id != project_id {
+            return Err(ApiError::NotFound("source version not in project".into()));
+        }
+        let target_ver = repo.get_requirement_version_by_id(b.target_version_id)?;
+        let target_req = repo.get_requirement_by_id(target_ver.requirement_id)?;
+        if target_req.project_id != project_id {
+            return Err(ApiError::NotFound("target version not in project".into()));
+        }
+        drop(repo);
+        Ok(service.create_requirement_version_link(
+            b.source_version_id,
+            b.target_version_id,
+            &b.link_type,
+            project_id,
+            b.rationale.clone(),
+            b.metadata.clone(),
+        )?)
+    };
+    let link = match work() {
+        Ok(link) => link,
+        Err(error) => {
+            idempotency::release(
+                state,
+                user_id,
+                &principal,
+                &target,
+                "create_requirement_version_link",
+                &key,
+            );
+            return Err(error);
+        }
+    };
+    let stored = serde_json::to_value(&link)
+        .map_err(|_| ApiError::Internal("failed to serialize the response".into()))?;
+    idempotency::complete(
+        state,
+        user_id,
+        &principal,
+        &target,
+        "create_requirement_version_link",
+        &key,
+        &stored,
     )?;
     Ok(Json(link))
 }
@@ -67,7 +119,7 @@ pub async fn create(
     "/projects/<project_id>/requirement-version-links?<source_version_id>&<target_version_id>&<link_type>"
 )]
 pub async fn list(
-    access: ProjectAccessOrBearer,
+    access: ProjectTraceabilityRead,
     project_id: i32,
     source_version_id: Option<i32>,
     target_version_id: Option<i32>,
@@ -93,7 +145,7 @@ pub async fn list(
 /// Delete a requirement version link by id. Link must belong to the project.
 #[delete("/projects/<project_id>/requirement-version-links/<link_id>")]
 pub async fn delete(
-    access: ProjectAccessOrBearer,
+    access: ProjectTraceabilityWrite,
     project_id: i32,
     link_id: i32,
     state: &State<AppState>,
@@ -119,7 +171,7 @@ pub struct LinkTypeInfo {
 /// Route segment must be `<project_id>` (not `<_project_id>`) so `ProjectAccessOrBearer` can resolve it.
 #[get("/projects/<project_id>/requirement-version-links/link-types")]
 pub async fn link_types(
-    _access: ProjectAccessOrBearer,
+    _access: ProjectTraceabilityRead,
     project_id: i32,
 ) -> ApiResult<Json<LinkTypeInfo>> {
     let _ = project_id;

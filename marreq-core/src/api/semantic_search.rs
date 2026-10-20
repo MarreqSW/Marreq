@@ -121,12 +121,11 @@ pub async fn semantic_search(
 /// POST /api/projects/<project_id>/requirements/ask
 #[post("/projects/<project_id>/requirements/ask", data = "<request>")]
 pub async fn ask(
-    project_access: ProjectAccess,
+    _project_access: ProjectRequirementsRead,
     project_id: i32,
     request: Json<AskRequest>,
     state: &State<AppState>,
 ) -> ApiResult<Value> {
-    let _user = project_access.into_user();
     let config = SemanticSearchConfig::global();
 
     // Check if RAG is enabled

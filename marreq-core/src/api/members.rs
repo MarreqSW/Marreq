@@ -7,7 +7,7 @@ use rocket::State;
 use rocket::serde::Deserialize;
 
 use crate::api::prelude::*;
-use crate::auth::guards::ProjectAccessOrBearer;
+use crate::auth::guards::{ProjectAccessOrBearer, ProjectProjectsRead};
 use crate::models::NewProjectMember;
 use crate::permissions::{EffectivePermissions, effective_permissions, role_label};
 use crate::repository::{
@@ -28,7 +28,7 @@ pub struct MemberResponse {
 /// GET /api/projects/<project_id>/me/permissions — effective permissions for the current user.
 #[get("/projects/<project_id>/me/permissions")]
 pub async fn get_my_permissions(
-    access: ProjectAccessOrBearer,
+    access: ProjectProjectsRead,
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<EffectivePermissions>> {
@@ -163,7 +163,7 @@ pub struct ProjectReviewersResponse {
 
 #[get("/projects/<project_id>/reviewers")]
 pub async fn list_project_reviewers(
-    access: ProjectAccessOrBearer,
+    access: ProjectProjectsRead,
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<ProjectReviewersResponse>> {

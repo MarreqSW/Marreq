@@ -7,7 +7,8 @@ use rocket::serde::{Deserialize, Serialize};
 
 use crate::api::prelude::*;
 use crate::auth::guards::{
-    ProjectRequirementsApprove, ProjectRequirementsRead, ProjectRequirementsWrite,
+    ProjectRequirementsAndVerificationsRead, ProjectRequirementsApprove, ProjectRequirementsRead,
+    ProjectRequirementsWrite,
 };
 use crate::models::{
     CustomFieldValueDisplay, CustomFieldValueInput, NewRequirement, Requirement,
@@ -771,6 +772,29 @@ pub async fn get_impacted_tests(
     )?;
     let verifications = service.get_impacted_verifications(id)?;
     Ok(Json(verifications))
+}
+
+/// Project-scoped variant of `get_impacted_tests` for delegated tokens (needs
+/// `requirements:read` and `verifications:read`).
+#[get("/projects/<project_id>/requirements/<id>/impacted_tests")]
+pub async fn get_impacted_tests_by_project(
+    access: ProjectRequirementsAndVerificationsRead,
+    project_id: i32,
+    id: i32,
+    state: &State<AppState>,
+) -> ApiResult<Json<Vec<Verification>>> {
+    require_project_permission(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let service = RequirementService::new(state.inner());
+    let requirement = service.get_by_id(id)?;
+    if requirement.project_id != project_id {
+        return Err(ApiError::NotFound("requirement not in project".into()));
+    }
+    Ok(Json(service.get_impacted_verifications(id)?))
 }
 
 #[derive(Debug, Deserialize)]

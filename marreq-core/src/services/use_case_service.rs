@@ -201,7 +201,14 @@ impl<'a> UseCaseService<'a> {
             .create_use_case(&new, &to_value(&doc)?)?)
     }
 
+    /// Delete the use case. One that a baseline records stays: baselines
+    /// keep pointing at its versions.
     pub fn delete(&self, use_case: &UseCase) -> UseCaseResult<()> {
+        if self.state.repo_read().use_case_in_baseline(use_case.id)? {
+            return Err(UseCaseError::Conflict(
+                "a baseline records this use case, so it cannot be deleted".into(),
+            ));
+        }
         self.state.repo_write().delete_use_case(use_case.id)?;
         Ok(())
     }

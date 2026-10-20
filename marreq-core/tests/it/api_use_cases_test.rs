@@ -987,3 +987,322 @@ async fn comments_anchor_to_steps_and_notify() {
         .unwrap();
     assert_eq!(approval["title"], "UC-001 v1 is waiting for your approval");
 }
+
+#[rocket::async_test]
+async fn baselines_record_use_case_versions_and_links() {
+    let client = test_client(repo()).await;
+    let id = export_use_case(&client).await;
+    let publish = format!("{BASE}/{id}/draft/publish");
+    let (_, v1) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &publish,
+        Some(json!({ "base_revision": 2 })),
+    )
+    .await;
+    let v1 = v1["version"]["id"].as_i64().unwrap();
+    call(
+        &client,
+        AUTHOR,
+        "POST",
+        &format!("{BASE}/{id}/links"),
+        Some(json!({ "element_id": "s_Pick01", "requirement_id": 1 })),
+    )
+    .await;
+    // An unpublished use case is not recorded.
+    call(
+        &client,
+        AUTHOR,
+        "POST",
+        BASE,
+        Some(json!({ "title": "Not yet published" })),
+    )
+    .await;
+
+    let (status, a) = call(
+        &client,
+        ADMIN,
+        "POST",
+        "/api/projects/1/baselines",
+        Some(json!({ "name": "PDR" })),
+    )
+    .await;
+    assert_eq!(status, Status::Ok, "{a}");
+    let a = a["id"].as_i64().unwrap();
+    let (_, recorded) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("/api/projects/1/baselines/{a}/use-cases"),
+        None,
+    )
+    .await;
+    assert_eq!(recorded.as_array().unwrap().len(), 1);
+    assert_eq!(
+        (
+            recorded[0]["version_id"].as_i64(),
+            recorded[0]["link_count"].as_i64()
+        ),
+        (Some(v1), Some(1))
+    );
+
+    // A newer version: the baseline still points at v1, the diff shows the change.
+    ops(&client, id, Value::Null, json!([{ "op": "update_text", "id": "s_Make01", "text": "System generates the export file." }])).await;
+    let (_, v2) = call(
+        &client,
+        AUTHOR,
+        "POST",
+        &publish,
+        Some(json!({ "base_revision": 1 })),
+    )
+    .await;
+    let v2 = v2["version"]["id"].as_i64().unwrap();
+    let (_, recorded) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("/api/projects/1/baselines/{a}/use-cases"),
+        None,
+    )
+    .await;
+    assert_eq!(
+        (
+            recorded[0]["version_number"].as_i64(),
+            recorded[0]["current_version_number"].as_i64()
+        ),
+        (Some(1), Some(2))
+    );
+    let (_, diff) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("/api/projects/1/baselines/{a}/use-cases/{id}/diff/current"),
+        None,
+    )
+    .await;
+    assert_eq!(
+        (
+            diff["from"]["version_id"].as_i64(),
+            diff["to"]["version_id"].as_i64()
+        ),
+        (Some(v1), Some(v2))
+    );
+    assert_eq!(diff["summary"]["edited"], 1);
+
+    let (_, b) = call(
+        &client,
+        ADMIN,
+        "POST",
+        "/api/projects/1/baselines",
+        Some(json!({ "name": "CDR" })),
+    )
+    .await;
+    let b = b["id"].as_i64().unwrap();
+    let (_, compared) = call(
+        &client,
+        VIEWER,
+        "GET",
+        &format!("/api/projects/1/baselines/diff?baseline_a={a}&baseline_b={b}"),
+        None,
+    )
+    .await;
+    assert_eq!(
+        compared["use_cases_changed"],
+        json!([{ "use_case_id": id, "version_a": v1, "version_b": v2 }])
+    );
+    assert_eq!(compared["use_cases_only_in_a"], json!([]));
+
+    // A baselined use case cannot be deleted.
+    let (status, body) = call(&client, AUTHOR, "DELETE", &format!("{BASE}/{id}"), None).await;
+    assert_eq!(status, Status::Conflict, "{body}");
+}
+
+#[rocket::async_test]
+async fn the_global_search_finds_use_cases() {
+    let client = test_client(repo()).await;
+    let id = export_use_case(&client).await;
+    for q in ["UC-001", "export req", "selects requirements", "engineer"] {
+        let (status, hits) = call(
+            &client,
+            VIEWER,
+            "GET",
+            &format!("/api/search?q={}", q.replace(' ', "%20")),
+            None,
+        )
+        .await;
+        assert_eq!(status, Status::Ok);
+        let hit = hits
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|h| h["kind"] == "use_case")
+            .unwrap_or_else(|| panic!("{q}: {hits}"));
+        assert_eq!(
+            (hit["use_case_id"].as_i64(), hit["requirement_id"].clone()),
+            (Some(id), Value::Null),
+            "{q}"
+        );
+        assert_eq!(hit["title"], "Export requirements");
+    }
+    let (_, hits) = call(&client, VIEWER, "GET", "/api/search?q=SAT-PWR", None).await;
+    assert_eq!(hits[0]["kind"], "requirement");
+    let (_, hits) = call(&client, OUTSIDER, "GET", "/api/search?q=UC-001", None).await;
+    assert_eq!(hits, json!([]));
+}
+
+#[rocket::async_test]
+async fn the_project_bundle_carries_use_cases_and_their_links() {
+    use crate::api_project_bundle_test::test_support::json_file_body;
+    let client = test_client(repo()).await;
+    let id = export_use_case(&client).await;
+    call(
+        &client,
+        AUTHOR,
+        "POST",
+        &format!("{BASE}/{id}/draft/publish"),
+        Some(json!({ "base_revision": 2 })),
+    )
+    .await;
+    call(
+        &client,
+        AUTHOR,
+        "POST",
+        &format!("{BASE}/{id}/links"),
+        Some(json!({ "element_id": "s_Pick01", "requirement_id": 1, "rationale": "Selection" })),
+    )
+    .await;
+    call(
+        &client,
+        AUTHOR,
+        "POST",
+        &format!("{BASE}/{id}/links"),
+        Some(json!({ "verification_id": 1 })),
+    )
+    .await;
+    call(
+        &client,
+        AUTHOR,
+        "POST",
+        BASE,
+        Some(json!({ "reference_code": "UC-002", "title": "Only a draft" })),
+    )
+    .await;
+
+    let exported = client
+        .get("/api/projects/1/exports/bundle.json")
+        .private_cookie(session_cookie(&client, ADMIN))
+        .dispatch()
+        .await;
+    let json = exported.into_string().await.unwrap();
+    let bundle: Value = serde_json::from_str(&json).unwrap();
+    assert_eq!(bundle["use_cases"].as_array().unwrap().len(), 2);
+    assert_eq!(
+        bundle["use_cases"][0]["links"][0]["requirement_reference_code"],
+        "SAT-PWR-001"
+    );
+
+    let (ct, body) = json_file_body("bundle.json", &json);
+    let imported = client
+        .post("/api/projects/imports/bundle")
+        .header(ct)
+        .private_cookie(session_cookie(&client, ADMIN))
+        .body(body)
+        .dispatch()
+        .await;
+    let result: Value = imported.into_json().await.unwrap();
+    assert_eq!(
+        (
+            result["imported_counts"]["use_cases"].as_i64(),
+            result["imported_counts"]["use_case_links"].as_i64()
+        ),
+        (Some(2), Some(2)),
+        "{result}"
+    );
+    let new_id = result["project_id"].as_i64().unwrap();
+    let (_, rows) = call(
+        &client,
+        ADMIN,
+        "GET",
+        &format!("/api/projects/{new_id}/use-cases"),
+        None,
+    )
+    .await;
+    assert_eq!(
+        rows.as_array()
+            .unwrap()
+            .iter()
+            .map(|r| (
+                r["reference_code"].as_str().unwrap(),
+                r["current_version_number"].as_i64(),
+                r["link_count"].as_i64()
+            ))
+            .collect::<Vec<_>>(),
+        vec![("UC-001", Some(1), Some(2)), ("UC-002", None, Some(0))]
+    );
+}
+
+async fn call_with_key(client: &Client, path: &str, key: &str, body: Value) -> (Status, Value) {
+    let response = client
+        .post(path.to_string())
+        .private_cookie(session_cookie(client, AUTHOR))
+        .header(ContentType::JSON)
+        .header(rocket::http::Header::new(
+            "Idempotency-Key",
+            key.to_string(),
+        ))
+        .body(body.to_string())
+        .dispatch()
+        .await;
+    let status = response.status();
+    (status, response.into_json().await.unwrap_or(Value::Null))
+}
+
+#[rocket::async_test]
+async fn create_and_publish_replay_with_an_idempotency_key() {
+    let client = test_client(repo()).await;
+    let body = json!({ "title": "Retried creation" });
+    let (s1, first) = call_with_key(&client, BASE, "k-create", body.clone()).await;
+    let (s2, again) = call_with_key(&client, BASE, "k-create", body).await;
+    assert_eq!((s1, s2), (Status::Created, Status::Created));
+    assert_eq!(first["id"], again["id"]);
+    let (_, list) = call(&client, AUTHOR, "GET", BASE, None).await;
+    assert_eq!(list.as_array().unwrap().len(), 1);
+    let (status, _) = call_with_key(&client, BASE, "k-create", json!({ "title": "Another" })).await;
+    assert_eq!(status, Status::Conflict, "same key, different payload");
+
+    let id = first["id"].as_i64().unwrap();
+    ops(
+        &client,
+        id,
+        json!(1),
+        json!([{ "op": "add_element", "list": "main", "element": { "text": "A step." } }]),
+    )
+    .await;
+    let publish = format!("{BASE}/{id}/draft/publish");
+    let (s1, v1) = call_with_key(
+        &client,
+        &publish,
+        "k-publish",
+        json!({ "base_revision": 2 }),
+    )
+    .await;
+    let (s2, replay) = call_with_key(
+        &client,
+        &publish,
+        "k-publish",
+        json!({ "base_revision": 2 }),
+    )
+    .await;
+    assert_eq!((s1, s2), (Status::Created, Status::Created), "{replay}");
+    assert_eq!(v1["version"]["id"], replay["version"]["id"]);
+    let (_, versions) = call(
+        &client,
+        AUTHOR,
+        "GET",
+        &format!("{BASE}/{id}/versions"),
+        None,
+    )
+    .await;
+    assert_eq!(versions.as_array().unwrap().len(), 1);
+}

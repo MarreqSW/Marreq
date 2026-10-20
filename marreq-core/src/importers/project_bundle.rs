@@ -25,7 +25,7 @@ use crate::repository::{
     AttachmentsRepository, CustomFieldRepository, LookupRepository, MatrixRepository,
     ProjectMembersRepository, ProjectReviewersRepository, ProjectsRepository,
     RequirementCommentsRepository, RequirementVersionLinksRepository, RequirementsRepository,
-    UserRepository, VerificationsRepository,
+    UseCasesRepository, UserRepository, VerificationsRepository,
 };
 use crate::reqif::archive::{
     ArchiveFile, ArchiveLimits, ReqifArchive, is_precompressed, write_reqifz,
@@ -70,6 +70,39 @@ pub struct ProjectBundle {
     /// entry of that archive. Left out of the JSON-only bundle.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub attachments: Vec<BundleAttachment>,
+    /// Use cases (issue #402). Optional, so older bundles still import.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub use_cases: Vec<BundleUseCase>,
+}
+
+/// A use case: its current version's document (or its draft's, before the
+/// first publish) and its links, by reference code.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct BundleUseCase {
+    pub reference_code: String,
+    /// A `marreq.use-case.v1` document.
+    pub document: serde_json::Value,
+    /// Whether the use case had a published version; it is then published
+    /// again as version 1 on import.
+    #[serde(default)]
+    pub published: bool,
+    #[serde(default)]
+    pub links: Vec<BundleUseCaseLink>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct BundleUseCaseLink {
+    /// A step or condition id of the document; absent for the whole use case.
+    #[serde(default)]
+    pub element_id: Option<String>,
+    #[serde(default)]
+    pub requirement_reference_code: Option<String>,
+    #[serde(default)]
+    pub verification_reference_code: Option<String>,
+    #[serde(default)]
+    pub rationale: Option<String>,
 }
 
 /// One attachment file of a `bundle.zip`.
@@ -249,6 +282,8 @@ pub struct BundleImportedCounts {
     pub members: usize,
     pub reviewers: usize,
     pub attachments: usize,
+    pub use_cases: usize,
+    pub use_case_links: usize,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -432,6 +467,42 @@ pub fn export_bundle(
         }
     }
 
+    let mut use_cases = Vec::new();
+    let current = repo.list_current_use_case_versions(project_id)?;
+    let drafts = repo.list_use_case_drafts_by_project(project_id)?;
+    for use_case in repo.list_use_cases_by_project(project_id)? {
+        let version = current
+            .iter()
+            .find(|v| Some(v.id) == use_case.current_version_id);
+        let document = match version {
+            Some(v) => v.document.clone(),
+            None => match drafts.iter().find(|d| d.use_case_id == use_case.id) {
+                Some(d) => d.document.clone(),
+                None => continue,
+            },
+        };
+        let links = repo
+            .list_use_case_links(use_case.id)?
+            .into_iter()
+            .map(|l| BundleUseCaseLink {
+                element_id: l.element_id,
+                requirement_reference_code: l
+                    .requirement_id
+                    .and_then(|id| req_code.get(&id).cloned()),
+                verification_reference_code: l
+                    .verification_id
+                    .and_then(|id| ver_by_id.get(&id).cloned()),
+                rationale: l.rationale,
+            })
+            .collect();
+        use_cases.push(BundleUseCase {
+            reference_code: use_case.reference_code,
+            document,
+            published: version.is_some(),
+            links,
+        });
+    }
+
     Ok(ProjectBundle {
         format: FORMAT_V1.to_string(),
         project: BundleProject {
@@ -501,6 +572,7 @@ pub fn export_bundle(
         matrix,
         comments,
         attachments: Vec::new(),
+        use_cases,
     })
 }
 
@@ -617,6 +689,17 @@ fn import_bundle_with_files(
         actor,
         &bundle.comments,
         &req_ids,
+        &mut warnings,
+        &mut errors,
+        &mut counts,
+    )?;
+    import_use_cases(
+        state,
+        actor,
+        project_id,
+        &bundle.use_cases,
+        &req_ids,
+        &ver_ids,
         &mut warnings,
         &mut errors,
         &mut counts,
@@ -1366,6 +1449,136 @@ fn import_comments(
                 "comment on '{}': {err}",
                 comment.requirement_reference_code
             )),
+        }
+    }
+    Ok(())
+}
+
+/// Create the bundle's use cases with their documents, publish those that
+/// were published, and recreate their links by reference code (issue #402).
+fn import_use_cases(
+    state: &AppState<DieselCachedRepo>,
+    actor: &User,
+    project_id: i32,
+    use_cases: &[BundleUseCase],
+    req_ids: &HashMap<String, i32>,
+    ver_ids: &HashMap<String, i32>,
+    warnings: &mut Vec<String>,
+    errors: &mut Vec<String>,
+    counts: &mut BundleImportedCounts,
+) -> Result<(), RepoError> {
+    use crate::use_case_document::{Stage, UseCaseDocument, validate};
+    for bundled in use_cases {
+        let code = &bundled.reference_code;
+        let document: UseCaseDocument = match serde_json::from_value(bundled.document.clone()) {
+            Ok(d) => d,
+            Err(e) => {
+                errors.push(format!("use case '{code}': {e}"));
+                continue;
+            }
+        };
+        if let Some(problem) = validate(&document, Stage::Draft).first() {
+            errors.push(format!("use case '{code}': {problem}"));
+            continue;
+        }
+        let created = state.repo_write().create_use_case(
+            &crate::models::NewUseCase {
+                project_id,
+                reference_code: code.clone(),
+                created_by: Some(actor.id),
+            },
+            &bundled.document,
+        );
+        let (use_case, draft) = match created {
+            Ok(created) => created,
+            Err(e) => {
+                errors.push(format!("use case '{code}': {e}"));
+                continue;
+            }
+        };
+        counts.use_cases += 1;
+        if bundled.published {
+            if validate(&document, Stage::Publish).is_empty() {
+                state.repo_write().publish_use_case_draft(
+                    draft.revision,
+                    &crate::models::NewUseCaseVersion {
+                        use_case_id: use_case.id,
+                        document: bundled.document.clone(),
+                        title: document.title.trim().to_string(),
+                        primary_actor: document.primary_actor.clone(),
+                        change_note: Some("Imported from a project bundle".into()),
+                        created_by: actor.id,
+                    },
+                )?;
+            } else {
+                warnings.push(format!(
+                    "use case '{code}' kept as a draft: it cannot be published as it is"
+                ));
+            }
+        }
+        for link in &bundled.links {
+            if let Some(element) = &link.element_id
+                && !document.contains(element)
+            {
+                warnings.push(format!(
+                    "skipped a link of use case '{code}': no element '{element}'"
+                ));
+                continue;
+            }
+            let requirement_id = match &link.requirement_reference_code {
+                Some(rc) => match req_ids.get(rc) {
+                    Some(id) => Some(*id),
+                    None => {
+                        warnings.push(format!(
+                            "skipped a link of use case '{code}': requirement '{rc}' not imported"
+                        ));
+                        continue;
+                    }
+                },
+                None => None,
+            };
+            let verification_id = match &link.verification_reference_code {
+                Some(vc) => match ver_ids.get(vc) {
+                    Some(id) => Some(*id),
+                    None => {
+                        warnings.push(format!(
+                            "skipped a link of use case '{code}': verification '{vc}' not imported"
+                        ));
+                        continue;
+                    }
+                },
+                None => None,
+            };
+            if requirement_id.is_some() == verification_id.is_some() {
+                warnings.push(format!(
+                    "skipped a link of use case '{code}': it needs one requirement or one verification"
+                ));
+                continue;
+            }
+            let linked_version = match requirement_id {
+                Some(id) => {
+                    state
+                        .repo_read()
+                        .get_requirement_by_id(id)?
+                        .current_version_id
+                }
+                None => None,
+            };
+            match state
+                .repo_write()
+                .create_use_case_link(&crate::models::NewUseCaseLink {
+                    project_id,
+                    use_case_id: use_case.id,
+                    element_id: link.element_id.clone(),
+                    requirement_id,
+                    verification_id,
+                    linked_requirement_version_id: linked_version,
+                    rationale: link.rationale.clone(),
+                    created_by: Some(actor.id),
+                }) {
+                Ok(_) => counts.use_case_links += 1,
+                Err(e) => warnings.push(format!("skipped a link of use case '{code}': {e}")),
+            }
         }
     }
     Ok(())

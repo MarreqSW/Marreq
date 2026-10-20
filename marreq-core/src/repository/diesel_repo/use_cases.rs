@@ -5,14 +5,43 @@
 
 use super::{DieselRepo, map_db_error};
 use crate::models::{
-    NewUseCase, NewUseCaseComment, NewUseCaseLink, NewUseCaseVersion, UseCase, UseCaseComment,
-    UseCaseDraft, UseCaseLink, UseCaseVersion,
+    BaselineUseCase, BaselineUseCaseLink, NewUseCase, NewUseCaseComment, NewUseCaseLink,
+    NewUseCaseVersion, UseCase, UseCaseComment, UseCaseDraft, UseCaseLink, UseCaseVersion,
 };
 use crate::repository::UseCasesRepository;
 use crate::repository::errors::RepoError;
 use crate::schema;
 use crate::status_enums::ApprovalState;
 use diesel::prelude::*;
+
+/// Record the current version of every published use case of the project,
+/// and the use case links, in a new baseline (in its transaction).
+pub(crate) fn snapshot_use_cases(
+    conn: &mut PgConnection,
+    baseline_id: i32,
+    project_id: i32,
+) -> QueryResult<()> {
+    use diesel::sql_types::Integer;
+    diesel::sql_query(
+        "INSERT INTO baseline_use_cases (baseline_id, use_case_id, version_id)
+         SELECT $1, id, current_version_id FROM use_cases
+         WHERE project_id = $2 AND current_version_id IS NOT NULL",
+    )
+    .bind::<Integer, _>(baseline_id)
+    .bind::<Integer, _>(project_id)
+    .execute(conn)?;
+    diesel::sql_query(
+        "INSERT INTO baseline_use_case_links
+           (baseline_id, use_case_id, element_id, requirement_id, verification_id, suspect)
+         SELECT $1, l.use_case_id, l.element_id, l.requirement_id, l.verification_id, l.suspect
+         FROM use_case_links l
+         JOIN baseline_use_cases b ON b.use_case_id = l.use_case_id AND b.baseline_id = $1
+         ORDER BY l.id",
+    )
+    .bind::<Integer, _>(baseline_id)
+    .execute(conn)?;
+    Ok(())
+}
 
 /// Mark the use case links to a requirement suspect, in the caller's
 /// connection or transaction (the matrix rule, issue #400).
@@ -461,5 +490,35 @@ impl UseCasesRepository for DieselRepo {
         Ok(diesel::insert_into(schema::use_case_comments::table)
             .values(new)
             .get_result(conn.as_mut())?)
+    }
+
+    fn list_baseline_use_cases(&self, baseline_id: i32) -> Result<Vec<BaselineUseCase>, RepoError> {
+        use schema::baseline_use_cases::dsl;
+        let mut conn = self.get_conn()?;
+        Ok(dsl::baseline_use_cases
+            .filter(dsl::baseline_id.eq(baseline_id))
+            .order(dsl::use_case_id)
+            .load(conn.as_mut())?)
+    }
+
+    fn list_baseline_use_case_links(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<BaselineUseCaseLink>, RepoError> {
+        use schema::baseline_use_case_links::dsl;
+        let mut conn = self.get_conn()?;
+        Ok(dsl::baseline_use_case_links
+            .filter(dsl::baseline_id.eq(baseline_id))
+            .order(dsl::id)
+            .load(conn.as_mut())?)
+    }
+
+    fn use_case_in_baseline(&self, use_case_id: i32) -> Result<bool, RepoError> {
+        use schema::baseline_use_cases::dsl;
+        let mut conn = self.get_conn()?;
+        Ok(diesel::select(diesel::dsl::exists(
+            dsl::baseline_use_cases.filter(dsl::use_case_id.eq(use_case_id)),
+        ))
+        .get_result(conn.as_mut())?)
     }
 }

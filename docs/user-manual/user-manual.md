@@ -617,7 +617,7 @@ In **Create baseline** on the Baselines page:
 2. Optionally choose **From saved view** ([§4.1](#41-requirements-views)): only the requirements matching that view are included, and the view is **locked** so it keeps describing the baseline. Views already used by a baseline are not offered.
 3. Select **Create**.
 
-The system captures the **current** version of each included requirement, the **current** traceability links (requirement–verification), a **snapshot of each verification** (name, status, type, …) and the list of attached files at that moment. A baseline cannot be edited.
+The system captures the **current** version of each included requirement, the **current** traceability links (requirement–verification), a **snapshot of each verification** (name, status, type, …), the list of attached files, and the current version of every published **use case** with its links ([§14](#14-use-cases)) at that moment. A baseline cannot be edited.
 
 ### 7.3 Viewing a Baseline
 
@@ -631,6 +631,7 @@ You see:
   - **Compare with baseline** (above the table) picks another baseline; **Diff baselines** then compares the two frozen versions of a requirement (the older baseline is shown as the "before").
 - **Verification snapshots**: reference, the status and type at baseline time next to the current ones, and a comparison of the frozen name, description, source, reference, status, type and parent with the current verification (*Unchanged*, or *Unavailable* when the verification was deleted since).
 - **Sample traceability**: the first rows of the frozen requirement–verification links (by requirement and verification number), with their suspect flag.
+- **Use cases**: the version of each use case the baseline recorded, its approval state and number of links. When the use case has a newer version, **vN: compare** opens its review view comparing the recorded version with the current one.
 - **Attachments**: the files attached to the included requirements and verifications when the baseline was taken. Files deleted since stay downloadable here and are marked *deleted since*; they keep counting toward the project's storage until the baseline no longer needs them.
 - **Export ReqIF** and **Export ReqIFZ (with files)** ([§7.4](#74-exporting-a-baseline-as-reqif)).
 
@@ -972,6 +973,13 @@ Deleting a step that has links asks first; its links are removed when the next v
 Choose the two sides with **Compare … with …**; **Show unchanged** lists every element.
 
 The **Discussion** below the use case collects comments. Comment on the whole use case or on one step: pick it under **Comment on**, use **Comment on this step** in the step's **⋯** menu, or the comment icon in the review. Steps with comments show a count; click it to see only that step's thread. Type **@** to mention a project member, as on requirements ([§4.6](#46-comments)). Mentioned members are notified, and so are the use case's creator and the person who published the current version. Publishing a version notifies the project's reviewers, and the start screen lists reviewed use case versions waiting for approval.
+
+### 14.7 Baselines, Search, Export and Assistants
+
+- **Baselines** record the current version of every published use case and its links ([§7.2](#72-creating-a-baseline)). A use case that a baseline records cannot be deleted.
+- The **start screen search** also finds use cases, by code, title, actor or the text of their steps, listed under **Use cases**.
+- **Project bundles** ([§9.5](#95-exporting-a-project-bundle), [§10.3](#103-importing-a-project-bundle)) carry the use cases and their links; on import, published use cases become version 1 again, waiting for review.
+- **AI assistants** connected through MCP can read use cases and, in draft mode, create them, edit their draft, publish versions and link steps. They cannot approve use cases.
 
 ## 15. Tips & Shortcuts
 

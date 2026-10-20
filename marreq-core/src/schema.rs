@@ -148,6 +148,33 @@ diesel::table! {
     use diesel::sql_types::*;
     use pgvector::sql_types::*;
 
+    baseline_use_case_links (id) {
+        id -> Int4,
+        baseline_id -> Int4,
+        use_case_id -> Int4,
+        #[max_length = 40]
+        element_id -> Nullable<Varchar>,
+        requirement_id -> Nullable<Int4>,
+        verification_id -> Nullable<Int4>,
+        suspect -> Bool,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
+    baseline_use_cases (baseline_id, use_case_id) {
+        baseline_id -> Int4,
+        use_case_id -> Int4,
+        version_id -> Int4,
+    }
+}
+
+diesel::table! {
+    use diesel::sql_types::*;
+    use pgvector::sql_types::*;
+
     baseline_verifications (baseline_id, verification_id) {
         baseline_id -> Int4,
         verification_id -> Int4,
@@ -930,6 +957,8 @@ diesel::joinable!(requirement_compliance -> requirements (requirement_id));
 diesel::joinable!(verification_control -> projects (project_id));
 diesel::joinable!(verification_control -> verifications (verification_id));
 // Use cases (issue #398).
+diesel::joinable!(baseline_use_cases -> baselines (baseline_id));
+diesel::joinable!(baseline_use_case_links -> baselines (baseline_id));
 diesel::joinable!(use_case_comments -> use_cases (use_case_id));
 diesel::joinable!(use_case_drafts -> use_cases (use_case_id));
 diesel::joinable!(use_cases -> projects (project_id));
@@ -941,6 +970,8 @@ diesel::allow_tables_to_appear_in_same_query!(
     baseline_attachments,
     baseline_requirements,
     baseline_traceability,
+    baseline_use_case_links,
+    baseline_use_cases,
     baseline_verifications,
     baselines,
     categories,

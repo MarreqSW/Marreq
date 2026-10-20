@@ -974,6 +974,15 @@ pub trait UseCasesRepository {
         &mut self,
         new: &NewUseCaseComment,
     ) -> Result<UseCaseComment, RepoError>;
+
+    // Baselines (issue #402); the snapshot is taken by `create_baseline`.
+    fn list_baseline_use_cases(&self, baseline_id: i32) -> Result<Vec<BaselineUseCase>, RepoError>;
+    fn list_baseline_use_case_links(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<BaselineUseCaseLink>, RepoError>;
+    /// Whether a baseline records this use case (it cannot be deleted then).
+    fn use_case_in_baseline(&self, use_case_id: i32) -> Result<bool, RepoError>;
 }
 
 /// Verification control data for the VCD (issue #353): level, stage and

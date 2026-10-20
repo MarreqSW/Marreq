@@ -39,6 +39,8 @@ describe("create tool idempotentHint by transport", () => {
       "create_verification",
       "create_baseline",
       "create_requirement_comment",
+      "create_use_case",
+      "publish_use_case_draft",
     ]) {
       expect(remote[name]?.idempotentHint).toBe(true);
       expect(stdio[name]?.idempotentHint).toBe(false);

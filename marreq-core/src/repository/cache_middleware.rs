@@ -1701,6 +1701,18 @@ impl<R: Repository> UseCasesRepository for CacheRepository<R> {
     ) -> Result<UseCaseComment, RepoError> {
         self.inner.create_use_case_comment(new)
     }
+    fn list_baseline_use_cases(&self, baseline_id: i32) -> Result<Vec<BaselineUseCase>, RepoError> {
+        self.inner.list_baseline_use_cases(baseline_id)
+    }
+    fn list_baseline_use_case_links(
+        &self,
+        baseline_id: i32,
+    ) -> Result<Vec<BaselineUseCaseLink>, RepoError> {
+        self.inner.list_baseline_use_case_links(baseline_id)
+    }
+    fn use_case_in_baseline(&self, use_case_id: i32) -> Result<bool, RepoError> {
+        self.inner.use_case_in_baseline(use_case_id)
+    }
 }
 
 // Attachments are not cached: listings are small and per entity.
@@ -2204,6 +2216,8 @@ mod tests {
             use_case_drafts: Vec::new(),
             use_case_links: Vec::new(),
             use_case_comments: Vec::new(),
+            baseline_use_cases: Vec::new(),
+            baseline_use_case_links: Vec::new(),
             next_use_case_id: 1,
             custom_field_definitions: HashMap::new(),
             custom_field_values: Vec::new(),

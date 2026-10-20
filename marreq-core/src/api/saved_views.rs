@@ -7,7 +7,7 @@ use rocket::State;
 use rocket::serde::json::Json;
 
 use crate::api::prelude::*;
-use crate::auth::guards::ProjectAccessOrBearer;
+use crate::auth::guards::{ProjectAccessOrBearer, ProjectRequirementsRead};
 use crate::models::{SavedView, SavedViewPayload, User};
 use crate::permissions::{Permission, ROLE_ADMIN};
 use crate::repository::{ProjectMembersRepository, ProjectsRepository};
@@ -38,7 +38,7 @@ fn ensure_visible(_state: &AppState, user: &User, view: &SavedView) -> ApiResult
 
 #[get("/projects/<project_id>/saved_views")]
 pub async fn list(
-    access: ProjectAccessOrBearer,
+    access: ProjectRequirementsRead,
     project_id: i32,
     state: &State<AppState>,
 ) -> ApiResult<Json<Vec<SavedView>>> {

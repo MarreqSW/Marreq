@@ -162,7 +162,7 @@ impl ReqifArchive {
         let mut total: u64 = 0;
         for index in 0..zip.len() {
             let file = zip.by_index_raw(index)?;
-            let raw = file.name().to_string();
+            let raw = file.name()?.to_string();
             if file.is_dir() {
                 if normalize_entry_name(&raw).is_none() && !raw.trim_matches('/').is_empty() {
                     return Err(ArchiveError::UnsafePath(raw));

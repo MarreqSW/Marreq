@@ -11,11 +11,11 @@ use crate::app::AppState;
 use crate::auth::guards::route_params::extract_route_param;
 use crate::auth::guards::session::session_user_has_project_access;
 use crate::auth::guards::{
-    ApiUserOrBearer, BaselinesRead, BaselinesWrite, RequirementsAndBaselinesRead,
-    RequirementsAndTraceabilityRead, RequirementsApprove, RequirementsRead,
-    RequirementsVerificationsAndTraceabilityRead, RequirementsWrite, SessionUser, TraceabilityRead,
-    TraceabilityWrite, UseCasesApprove, UseCasesRead, UseCasesWrite, VerificationsRead,
-    VerificationsWrite,
+    ApiUserOrBearer, BaselinesRead, BaselinesWrite, ProjectsRead, RequirementsAndBaselinesRead,
+    RequirementsAndTraceabilityRead, RequirementsAndVerificationsRead, RequirementsApprove,
+    RequirementsRead, RequirementsVerificationsAndTraceabilityRead, RequirementsWrite, SessionUser,
+    TraceabilityRead, TraceabilityWrite, UseCasesApprove, UseCasesRead, UseCasesWrite,
+    VerificationsAndBaselinesRead, VerificationsRead, VerificationsWrite,
 };
 use crate::models::User;
 
@@ -222,6 +222,15 @@ macro_rules! scoped_project_guard {
         }
     };
 }
+scoped_project_guard!(ProjectProjectsRead, ProjectsRead);
+scoped_project_guard!(
+    ProjectVerificationsAndBaselinesRead,
+    VerificationsAndBaselinesRead
+);
+scoped_project_guard!(
+    ProjectRequirementsAndVerificationsRead,
+    RequirementsAndVerificationsRead
+);
 scoped_project_guard!(ProjectRequirementsRead, RequirementsRead);
 scoped_project_guard!(ProjectRequirementsWrite, RequirementsWrite);
 scoped_project_guard!(ProjectRequirementsApprove, RequirementsApprove);

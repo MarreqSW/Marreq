@@ -39,6 +39,7 @@ import RelatedArtifactsPanel from '@/components/useCases/RelatedArtifactsPanel';
 import RequirementPeek from '@/components/useCases/RequirementPeek';
 import UseCaseDiscussion from '@/components/useCases/UseCaseDiscussion';
 import UseCaseDocumentView from '@/components/useCases/UseCaseDocumentView';
+import UseCaseFlowView from '@/components/useCases/UseCaseFlowView';
 import UseCaseReviewView from '@/components/useCases/UseCaseReviewView';
 import { useDashboard } from '@/context/DashboardContext';
 import { useProjectArchived } from '@/hooks/useProjectArchived';
@@ -126,7 +127,10 @@ export default function ViewUseCasePage() {
   const [comments, setComments] = useState<UseCaseComment[]>([]);
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [commentFocus, setCommentFocus] = useState<string | null>(null);
-  const reviewing = params.get('view') === 'review';
+  const view: 'document' | 'flow' | 'review' =
+    params.get('view') === 'review' ? 'review' : params.get('view') === 'flow' ? 'flow' : 'document';
+  const reviewing = view === 'review';
+  const [flowSelected, setFlowSelected] = useState<string | null>(null);
 
   const editorRef = useRef<Editor | null>(null);
   editorRef.current = editor;
@@ -481,11 +485,29 @@ export default function ViewUseCasePage() {
     return m;
   }, [comments]);
 
-  function setReviewing(on: boolean) {
-    const next = new URLSearchParams(params);
-    if (on) next.set('view', 'review');
-    else next.delete('view');
-    setParams(next, { replace: true });
+  function setView(next: 'document' | 'flow' | 'review') {
+    const p = new URLSearchParams(params);
+    if (next === 'document') p.delete('view');
+    else p.set('view', next);
+    if (next !== 'review') p.delete('from');
+    setParams(p, { replace: true });
+  }
+
+  /** From the flow: select a branch (shared with the document) or a step. */
+  function selectInFlow(elementId: string | null) {
+    setFlowSelected(elementId);
+    setSelectedBranch(elementId?.startsWith('b_') ? elementId : null);
+  }
+
+  function showInDocument(elementId: string) {
+    setView('document');
+    window.setTimeout(
+      () =>
+        document
+          .querySelector(`[data-element-id="${elementId}"], #branch-${elementId}`)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' }),
+      50,
+    );
   }
 
   if (loadError) {
@@ -656,22 +678,25 @@ export default function ViewUseCasePage() {
 
       <div className="flex flex-col gap-5 lg:flex-row">
         <div className="min-w-0 flex-1">
-        {!editing && (versions.length > 1 || (draft && versions.length > 0)) ? (
+        {!editing && shown ? (
           <div role="tablist" aria-label="View" className="mb-3 flex gap-1">
             {(
               [
-                [false, 'article', 'Document'],
-                [true, 'compare', 'Review changes'],
+                ['document', 'article', 'Document'],
+                ['flow', 'schema', 'Flow'],
+                ...(versions.length > 1 || (draft && versions.length > 0)
+                  ? ([['review', 'compare', 'Review changes']] as const)
+                  : []),
               ] as const
-            ).map(([on, icon, text]) => (
+            ).map(([key, icon, text]) => (
               <button
-                key={text}
+                key={key}
                 type="button"
                 role="tab"
-                aria-selected={reviewing === on}
-                onClick={() => setReviewing(on)}
+                aria-selected={view === key}
+                onClick={() => setView(key)}
                 className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-semibold ${
-                  reviewing === on
+                  view === key
                     ? 'border-stitch-accent bg-stitch-accent/10 text-stitch-accent'
                     : 'border-stitch-border bg-stitch-surface text-stitch-fg'
                 }`}
@@ -682,7 +707,15 @@ export default function ViewUseCasePage() {
             ))}
           </div>
         ) : null}
-        {reviewing && !editing ? (
+        {view === 'flow' && !editing && shown ? (
+          <UseCaseFlowView
+            doc={shown.doc}
+            labels={shown.labels}
+            selected={flowSelected ?? selectedBranch}
+            onSelect={selectInFlow}
+          />
+        ) : null}
+        {view === 'flow' && !editing && shown ? null : reviewing && !editing ? (
           <UseCaseReviewView
             projectId={pid}
             useCaseId={id}
@@ -736,6 +769,22 @@ export default function ViewUseCasePage() {
         </div>
 
         <aside className="w-full shrink-0 space-y-3 lg:w-72">
+          {view === 'flow' && flowSelected && !flowSelected.startsWith('b_') && shown ? (
+            <div className="space-y-2 rounded-lg border border-stitch-border bg-stitch-surface px-4 py-3 text-xs shadow-sm">
+              <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-stitch-muted">
+                Selected: {shown.labels[flowSelected]}
+              </p>
+              <p className="text-stitch-fg">{locate(shown.doc, flowSelected)?.element.text}</p>
+              <button
+                type="button"
+                onClick={() => showInDocument(flowSelected)}
+                className="flex items-center gap-1.5 font-semibold text-stitch-accent"
+              >
+                <span className="material-symbols-outlined text-sm">article</span>
+                Show in document
+              </button>
+            </div>
+          ) : null}
           {selectedBranch && doc ? (
             <div className="space-y-2 rounded-lg border border-stitch-border bg-stitch-surface px-4 py-3 text-xs shadow-sm">
               {(() => {
@@ -752,11 +801,7 @@ export default function ViewUseCasePage() {
                     </p>
                     <button
                       type="button"
-                      onClick={() =>
-                        document
-                          .querySelector(`[data-element-id="${b.from_step}"]`)
-                          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                      }
+                      onClick={() => showInDocument(b.from_step)}
                       className="flex items-center gap-1.5 font-semibold text-stitch-accent"
                     >
                       <span className="material-symbols-outlined text-sm">north_west</span>

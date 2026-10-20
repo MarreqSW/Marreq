@@ -1508,26 +1508,39 @@ pub async fn create_comment(
     project_id: i32,
     id: i32,
     body: Json<CreateCommentRequest>,
+    idempotency_key: crate::api::idempotency::OptionalIdempotencyKey,
     state: &State<AppState>,
 ) -> UcResult<(Status, Json<UseCaseCommentView>)> {
     let user = access.user();
     require(state, user, project_id, Permission::EditRequirements)?;
     let body = body.into_inner();
-    let service = UseCaseService::new(state.inner());
-    let err = |e| into_api_error(state, None, e);
-    let use_case = service.get_in_project(project_id, id).map_err(err)?;
-    let comment = service
-        .create_comment(
-            user,
-            &use_case,
-            body.use_case_version_id,
-            body.element_id,
-            &body.body,
-        )
-        .map_err(err)?;
-    let view = comment_views(state, &use_case, std::slice::from_ref(&comment))
-        .pop()
-        .expect("one comment");
+    let view = idempotent(
+        state,
+        access.auth(),
+        &format!("project:{project_id}:use_case:{id}:comments"),
+        "create_use_case_comment",
+        &idempotency_key,
+        &body,
+        || {
+            let service = UseCaseService::new(state.inner());
+            let err = |e| into_api_error(state, None, e);
+            let use_case = service.get_in_project(project_id, id).map_err(err)?;
+            let comment = service
+                .create_comment(
+                    user,
+                    &use_case,
+                    body.use_case_version_id,
+                    body.element_id.clone(),
+                    &body.body,
+                )
+                .map_err(err)?;
+            Ok(
+                comment_views(state, &use_case, std::slice::from_ref(&comment))
+                    .pop()
+                    .expect("one comment"),
+            )
+        },
+    )?;
     Ok((Status::Created, Json(view)))
 }
 

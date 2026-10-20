@@ -11,7 +11,7 @@ use chrono::NaiveDateTime;
 use rocket::serde::Serialize;
 
 use crate::api::prelude::*;
-use crate::auth::guards::SessionUser;
+use crate::auth::guards::{ProjectsRead, SessionUser};
 use crate::models::{Project, User};
 use crate::permissions::{has_permission, may_change_review_gates};
 use crate::repository::{
@@ -99,13 +99,31 @@ fn visible_projects(state: &AppState, user: &User) -> Vec<Project> {
 
 /// GET /api/home/attention — what needs the user's attention, newest first.
 #[get("/home/attention")]
-pub fn attention(user: SessionUser, state: &State<AppState>) -> ApiResult<Json<AttentionResponse>> {
-    let user = user.into_inner();
-    Ok(Json(collect_attention(state.inner(), &user)?))
+pub fn attention(
+    auth: ProjectsRead,
+    state: &State<AppState>,
+) -> ApiResult<Json<AttentionResponse>> {
+    // A project-scoped API token only sees the project it is limited to.
+    Ok(Json(collect_attention_in(
+        state.inner(),
+        auth.user(),
+        auth.token_project_scope(),
+    )?))
 }
 
 pub fn collect_attention(state: &AppState, user: &User) -> ApiResult<AttentionResponse> {
-    let projects = visible_projects(state, user);
+    collect_attention_in(state, user, None)
+}
+
+fn collect_attention_in(
+    state: &AppState,
+    user: &User,
+    only_project: Option<i32>,
+) -> ApiResult<AttentionResponse> {
+    let mut projects = visible_projects(state, user);
+    if let Some(project_id) = only_project {
+        projects.retain(|project| project.id == project_id);
+    }
     let repo = state.repo_read();
     let mut items = Vec::new();
     let (mut approvals, mut reviews, mut suspect_links) = (0, 0, 0);

@@ -218,7 +218,7 @@ mod tests {
     fn odt_parts(bytes: &[u8]) -> (Vec<String>, String, String, String) {
         let mut zip = zip::ZipArchive::new(std::io::Cursor::new(bytes)).unwrap();
         let names: Vec<String> = (0..zip.len())
-            .map(|i| zip.by_index(i).unwrap().name().to_string())
+            .map(|i| zip.by_index(i).unwrap().name().unwrap().to_string())
             .collect();
         let first = zip.by_index(0).unwrap();
         assert_eq!(first.compression(), zip::CompressionMethod::Stored);

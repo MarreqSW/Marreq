@@ -171,6 +171,20 @@ describe("remote Streamable HTTP transport", () => {
     expect(composite?.securitySchemes).toEqual([
       { type: "oauth2", scopes: ["requirements:read", "baselines:read"] },
     ]);
+    const schemes = (name: string) => wireTools.find((tool) => tool.name === name)?.securitySchemes;
+    for (const [name, scopes] of Object.entries({
+      link_requirements: ["traceability:write"],
+      unlink_requirements: ["traceability:write"],
+      list_requirement_links: ["traceability:read"],
+      get_my_permissions: ["projects:read"],
+      list_saved_views: ["requirements:read"],
+      impacted_tests: ["requirements:read", "verifications:read"],
+      set_verification_field: ["verifications:write"],
+      create_use_case_comment: ["use_cases:write"],
+      diff_baseline_verification_vs_current: ["verifications:read", "baselines:read"],
+    })) {
+      expect(schemes(name), name).toEqual([{ type: "oauth2", scopes }]);
+    }
     const result = await remote.client.callTool({
       name: "get_requirement",
       arguments: { project_id: 7, requirement_id: "42" },

@@ -384,6 +384,14 @@ macro_rules! composite_guard {
 }
 
 composite_guard!(
+    VerificationsAndBaselinesRead,
+    ["verifications:read", "baselines:read"]
+);
+composite_guard!(
+    RequirementsAndVerificationsRead,
+    ["requirements:read", "verifications:read"]
+);
+composite_guard!(
     RequirementsAndTraceabilityRead,
     ["requirements:read", "traceability:read"]
 );

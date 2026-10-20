@@ -1,5 +1,7 @@
 import type {
+  UseCaseComment,
   UseCaseDetail,
+  UseCaseDiff,
   UseCaseDocument,
   UseCaseDraft,
   UseCaseDraftChange,
@@ -199,4 +201,39 @@ export async function listVerificationUseCases(
   verificationId: number,
 ): Promise<UseCaseRef[]> {
   return fetchJson(`/api/projects/${projectId}/verifications/${verificationId}/use-cases`);
+}
+
+/** The draft against the version it started from. */
+export async function getUseCaseDraftDiff(
+  projectId: number,
+  id: number,
+  includeUnchanged = false,
+): Promise<UseCaseDiff> {
+  return fetchJson(`${base(projectId)}/${id}/draft/diff${includeUnchanged ? '?include_unchanged=true' : ''}`);
+}
+
+/** Version `from` (before) against version `to` (after). */
+export async function getUseCaseVersionDiff(
+  projectId: number,
+  id: number,
+  from: number,
+  to: number,
+  includeUnchanged = false,
+): Promise<UseCaseDiff> {
+  return fetchJson(
+    `${base(projectId)}/${id}/versions/${from}/diff/${to}${includeUnchanged ? '?include_unchanged=true' : ''}`,
+  );
+}
+
+export async function listUseCaseComments(projectId: number, id: number): Promise<UseCaseComment[]> {
+  return fetchJson(`${base(projectId)}/${id}/comments`);
+}
+
+export async function createUseCaseComment(
+  projectId: number,
+  id: number,
+  body: { body: string; use_case_version_id?: number | null; element_id?: string | null },
+  csrfToken: string,
+): Promise<UseCaseComment> {
+  return fetchJson(`${base(projectId)}/${id}/comments`, write('POST', body, csrfToken));
 }

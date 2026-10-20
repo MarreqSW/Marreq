@@ -960,6 +960,20 @@ pub trait UseCasesRepository {
         use_case_id: i32,
         keep: &[String],
     ) -> Result<Vec<UseCaseLink>, RepoError>;
+
+    // Comments (issue #401).
+    /// Comments of a use case, oldest first, optionally only those of one
+    /// version (and the ones on no version) or of one element.
+    fn list_use_case_comments(
+        &self,
+        use_case_id: i32,
+        version_id: Option<i32>,
+        element_id: Option<&str>,
+    ) -> Result<Vec<UseCaseComment>, RepoError>;
+    fn create_use_case_comment(
+        &mut self,
+        new: &NewUseCaseComment,
+    ) -> Result<UseCaseComment, RepoError>;
 }
 
 /// Verification control data for the VCD (issue #353): level, stage and

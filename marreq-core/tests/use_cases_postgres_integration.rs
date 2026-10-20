@@ -11,7 +11,7 @@
 use diesel::connection::SimpleConnection;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
-use marreq_core::models::{NewUseCase, NewUseCaseLink, NewUseCaseVersion};
+use marreq_core::models::{NewUseCase, NewUseCaseComment, NewUseCaseLink, NewUseCaseVersion};
 use marreq_core::repository::errors::RepoError;
 use marreq_core::repository::{
     DieselRepo, MatrixRepository, RequirementsRepository, UseCasesRepository,
@@ -219,6 +219,31 @@ fn use_case_drafts_versions_and_approval() {
     );
     assert_eq!(repo.list_use_case_links_by_project(1).unwrap().len(), 1);
 
+    // Comments: by version (plus the ones on no version) and by element.
+    let comment = |version: Option<i32>, element: Option<&str>, body: &str| NewUseCaseComment {
+        use_case_id: use_case.id,
+        use_case_version_id: version,
+        element_id: element.map(str::to_string),
+        author_id: 1,
+        body: body.into(),
+    };
+    repo.create_use_case_comment(&comment(Some(v1.id), Some("s_A"), "On v1 step"))
+        .expect("comment");
+    repo.create_use_case_comment(&comment(Some(v2.id), None, "On v2"))
+        .expect("comment");
+    repo.create_use_case_comment(&comment(None, None, "General"))
+        .expect("comment");
+    let bodies = |version: Option<i32>, element: Option<&str>| -> Vec<String> {
+        repo.list_use_case_comments(use_case.id, version, element)
+            .unwrap()
+            .into_iter()
+            .map(|c| c.body)
+            .collect()
+    };
+    assert_eq!(bodies(None, None), vec!["On v1 step", "On v2", "General"]);
+    assert_eq!(bodies(Some(v1.id), None), vec!["On v1 step", "General"]);
+    assert_eq!(bodies(None, Some("s_A")), vec!["On v1 step"]);
+
     // Deleting the use case removes its versions and draft.
     repo.save_use_case_draft(use_case.id, None, Some(v2.id), &doc2, 1)
         .unwrap();
@@ -230,6 +255,11 @@ fn use_case_drafts_versions_and_approval() {
     assert!(repo.list_use_case_versions(use_case.id).unwrap().is_empty());
     assert!(repo.get_use_case_draft(use_case.id).unwrap().is_none());
     assert!(repo.list_use_case_links_by_project(1).unwrap().is_empty());
+    assert!(
+        repo.list_use_case_comments(use_case.id, None, None)
+            .unwrap()
+            .is_empty()
+    );
     assert_eq!(repo.list_use_cases_by_project(2).unwrap().len(), 1);
 
     wait_for_quiet_pool(&repo);

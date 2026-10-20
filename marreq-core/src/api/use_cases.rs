@@ -14,7 +14,8 @@ use rocket::serde::{Deserialize, Serialize};
 use crate::api::prelude::*;
 use crate::auth::guards::{ProjectUseCasesApprove, ProjectUseCasesRead, ProjectUseCasesWrite};
 use crate::models::{
-    ActionType, EntityType, NewLog, UseCase, UseCaseDraft, UseCaseLink, UseCaseVersion, User,
+    ActionType, EntityType, NewLog, UseCase, UseCaseComment, UseCaseDraft, UseCaseLink,
+    UseCaseVersion, User,
 };
 use crate::repository::errors::RepoError;
 use crate::repository::{
@@ -24,6 +25,7 @@ use crate::repository::{
 use crate::services::use_case_service::{
     CreateUseCase, DraftChange, UseCaseError, UseCaseService, parse_document,
 };
+use crate::use_case_document::diff::{DocumentDiff, diff_documents};
 use crate::use_case_document::{
     BranchKind, Effect, Operation, OperationError, UseCaseDocument, labels,
 };
@@ -90,6 +92,7 @@ fn into_api_error(
         UseCaseError::NotFound(m) => UseCaseApiError::new(Status::NotFound, m, Value::Null),
         UseCaseError::BadRequest(m) => UseCaseApiError::new(Status::BadRequest, m, Value::Null),
         UseCaseError::Conflict(m) => UseCaseApiError::new(Status::Conflict, m, Value::Null),
+        UseCaseError::Forbidden(m) => UseCaseApiError::new(Status::Forbidden, m, Value::Null),
         UseCaseError::InvalidDocument(errors) => UseCaseApiError::new(
             Status::UnprocessableEntity,
             format!(
@@ -1242,4 +1245,224 @@ pub async fn verification_use_cases(
         .repo_read()
         .list_use_case_links_for_verification(verification_id)?;
     Ok(Json(use_case_refs(state, project_id, links)?))
+}
+
+// ----- Structural diff (issue #401) -----
+
+#[derive(Debug, Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct DiffEnd {
+    pub version_id: Option<i32>,
+    pub version_number: Option<i32>,
+    /// Set when this side is the draft.
+    pub draft_revision: Option<i32>,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct DiffView {
+    pub from: Option<DiffEnd>,
+    pub to: DiffEnd,
+    #[serde(flatten)]
+    pub diff: DocumentDiff,
+}
+
+fn version_end(v: &UseCaseVersion) -> DiffEnd {
+    DiffEnd {
+        version_id: Some(v.id),
+        version_number: Some(v.version_number),
+        draft_revision: None,
+    }
+}
+
+/// An empty document, the "before" of a use case never published.
+fn empty_document() -> UseCaseDocument {
+    UseCaseDocument::new("", None)
+}
+
+/// GET /projects/{id}/use-cases/{uc}/draft/diff — the draft against the
+/// version it started from (everything is added before the first publish).
+#[get("/projects/<project_id>/use-cases/<id>/draft/diff?<include_unchanged>")]
+pub async fn draft_diff(
+    access: ProjectUseCasesRead,
+    project_id: i32,
+    id: i32,
+    include_unchanged: Option<bool>,
+    state: &State<AppState>,
+) -> UcResult<Json<DiffView>> {
+    require(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let service = UseCaseService::new(state.inner());
+    let err = |e| into_api_error(state, None, e);
+    let use_case = service.get_in_project(project_id, id).map_err(err)?;
+    let Some(draft) = service.draft(&use_case).map_err(err)? else {
+        return Err(UseCaseApiError::new(
+            Status::NotFound,
+            "there is no draft",
+            Value::Null,
+        ));
+    };
+    let base = match draft.base_version_id {
+        Some(vid) => Some(service.get_version(&use_case, vid).map_err(err)?),
+        None => None,
+    };
+    let old = match &base {
+        Some(v) => parse_document(&v.document).map_err(err)?,
+        None => empty_document(),
+    };
+    let new = parse_document(&draft.document).map_err(err)?;
+    Ok(Json(DiffView {
+        from: base.as_ref().map(version_end),
+        to: DiffEnd {
+            version_id: None,
+            version_number: None,
+            draft_revision: Some(draft.revision),
+        },
+        diff: diff_documents(&old, &new, include_unchanged.unwrap_or(false)),
+    }))
+}
+
+/// GET /projects/{id}/use-cases/{uc}/versions/{a}/diff/{b} — version `a`
+/// (before) against version `b` (after).
+#[get("/projects/<project_id>/use-cases/<id>/versions/<a>/diff/<b>?<include_unchanged>")]
+pub async fn version_diff(
+    access: ProjectUseCasesRead,
+    project_id: i32,
+    id: i32,
+    a: i32,
+    b: i32,
+    include_unchanged: Option<bool>,
+    state: &State<AppState>,
+) -> UcResult<Json<DiffView>> {
+    require(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let service = UseCaseService::new(state.inner());
+    let err = |e| into_api_error(state, None, e);
+    let use_case = service.get_in_project(project_id, id).map_err(err)?;
+    let from = service.get_version(&use_case, a).map_err(err)?;
+    let to = service.get_version(&use_case, b).map_err(err)?;
+    let diff = diff_documents(
+        &parse_document(&from.document).map_err(err)?,
+        &parse_document(&to.document).map_err(err)?,
+        include_unchanged.unwrap_or(false),
+    );
+    Ok(Json(DiffView {
+        from: Some(version_end(&from)),
+        to: version_end(&to),
+        diff,
+    }))
+}
+
+// ----- Comments (issue #401) -----
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct UseCaseCommentView {
+    pub id: i32,
+    pub use_case_id: i32,
+    pub use_case_version_id: Option<i32>,
+    pub element_id: Option<String>,
+    pub element_label: Option<String>,
+    pub author_id: i32,
+    pub author_name: String,
+    pub body: String,
+    pub created_at: chrono::NaiveDateTime,
+}
+
+fn comment_views(
+    state: &AppState,
+    use_case: &UseCase,
+    comments: &[UseCaseComment],
+) -> Vec<UseCaseCommentView> {
+    let labels = element_labels(state, use_case);
+    comments
+        .iter()
+        .map(|c| UseCaseCommentView {
+            id: c.id,
+            use_case_id: c.use_case_id,
+            use_case_version_id: c.use_case_version_id,
+            element_label: c.element_id.as_ref().and_then(|e| labels.get(e).cloned()),
+            element_id: c.element_id.clone(),
+            author_id: c.author_id,
+            author_name: user_name(state, Some(c.author_id))
+                .unwrap_or_else(|| format!("User#{}", c.author_id)),
+            body: c.body.clone(),
+            created_at: c.created_at,
+        })
+        .collect()
+}
+
+/// GET /projects/{id}/use-cases/{uc}/comments?version_id=&element_id= —
+/// oldest first.
+#[get("/projects/<project_id>/use-cases/<id>/comments?<version_id>&<element_id>")]
+pub async fn list_comments(
+    access: ProjectUseCasesRead,
+    project_id: i32,
+    id: i32,
+    version_id: Option<i32>,
+    element_id: Option<&str>,
+    state: &State<AppState>,
+) -> UcResult<Json<Vec<UseCaseCommentView>>> {
+    require(
+        state,
+        access.user(),
+        project_id,
+        Permission::ViewRequirements,
+    )?;
+    let use_case = UseCaseService::new(state.inner())
+        .get_in_project(project_id, id)
+        .map_err(|e| into_api_error(state, None, e))?;
+    let comments = state
+        .repo_read()
+        .list_use_case_comments(use_case.id, version_id, element_id)?;
+    Ok(Json(comment_views(state, &use_case, &comments)))
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(crate = "rocket::serde")]
+pub struct CreateCommentRequest {
+    pub body: String,
+    #[serde(default)]
+    pub use_case_version_id: Option<i32>,
+    #[serde(default)]
+    pub element_id: Option<String>,
+}
+
+/// POST /projects/{id}/use-cases/{uc}/comments — `@username` mentions of
+/// project members notify them.
+#[post("/projects/<project_id>/use-cases/<id>/comments", data = "<body>")]
+pub async fn create_comment(
+    access: ProjectUseCasesWrite,
+    project_id: i32,
+    id: i32,
+    body: Json<CreateCommentRequest>,
+    state: &State<AppState>,
+) -> UcResult<(Status, Json<UseCaseCommentView>)> {
+    let user = access.user();
+    require(state, user, project_id, Permission::EditRequirements)?;
+    let body = body.into_inner();
+    let service = UseCaseService::new(state.inner());
+    let err = |e| into_api_error(state, None, e);
+    let use_case = service.get_in_project(project_id, id).map_err(err)?;
+    let comment = service
+        .create_comment(
+            user,
+            &use_case,
+            body.use_case_version_id,
+            body.element_id,
+            &body.body,
+        )
+        .map_err(err)?;
+    let view = comment_views(state, &use_case, std::slice::from_ref(&comment))
+        .pop()
+        .expect("one comment");
+    Ok((Status::Created, Json(view)))
 }

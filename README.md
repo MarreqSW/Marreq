@@ -288,6 +288,8 @@ Behind the Docker frontend (or Vite dev), use the **same origin** as the SPA (e.
 - `POST /projects/{project_id}/use-cases/{id}/draft/publish` - Publish the draft as the next version
 - `GET /projects/{project_id}/use-cases/{id}/versions[/{version_id}]` - Versions; `PUT .../versions/{version_id}/approval` to review or approve
 - `GET|POST /projects/{project_id}/use-cases/{id}/links` - Links to requirements and verifications (`DELETE .../{link_id}`, `POST .../{link_id}/clear_suspect`); `GET /projects/{project_id}/requirements/{id}/use-cases` and `.../verifications/{id}/use-cases` for the reverse direction
+- `GET /projects/{project_id}/use-cases/{id}/draft/diff`, `.../versions/{a}/diff/{b}` - Structural diff (added, removed, edited, moved, rebranched)
+- `GET|POST /projects/{project_id}/use-cases/{id}/comments` - Comments on the use case or one step, with @mentions
 - Details: [docs/developer/use-cases-api.md](docs/developer/use-cases-api.md)
 
 #### Users

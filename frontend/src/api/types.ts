@@ -919,6 +919,8 @@ export interface AttentionItem {
   project_id: number;
   title: string;
   requirement_id: number | null;
+  /** Set for use case items instead of `requirement_id` (issue #401). */
+  use_case_id?: number | null;
   reference_code: string | null;
   /** Drafts or suspect links, for the per-project rows. */
   count: number | null;
@@ -1120,4 +1122,52 @@ export interface UseCaseRef {
   element_id: string | null;
   element_label: string | null;
   suspect: boolean;
+}
+
+/** Structural diff of two use case documents (issue #401). */
+export type UseCaseChange = 'added' | 'removed' | 'edited' | 'moved' | 'rebranched';
+
+export interface UseCaseDiffSide {
+  list: 'preconditions' | 'main' | 'postconditions' | 'branch' | 'branches';
+  branch_id?: string;
+  label: string | null;
+  text: string;
+  from_step?: string;
+  end?: UseCaseBranchEnd;
+  kind?: UseCaseBranchKind;
+}
+
+export interface UseCaseElementDiff {
+  id: string;
+  kind: 'precondition' | 'postcondition' | 'step' | 'branch';
+  changes: UseCaseChange[];
+  old: UseCaseDiffSide | null;
+  new: UseCaseDiffSide | null;
+  text_diff?: { op: 'equal' | 'delete' | 'insert'; text: string }[];
+}
+
+export interface UseCaseDiffEnd {
+  version_id: number | null;
+  version_number: number | null;
+  draft_revision: number | null;
+}
+
+export interface UseCaseDiff {
+  from: UseCaseDiffEnd | null;
+  to: UseCaseDiffEnd;
+  summary: Record<UseCaseChange, number>;
+  header: Partial<Record<'title' | 'primary_actor' | 'secondary_actors' | 'summary', { old: unknown; new: unknown }>>;
+  elements: UseCaseElementDiff[];
+}
+
+export interface UseCaseComment {
+  id: number;
+  use_case_id: number;
+  use_case_version_id: number | null;
+  element_id: string | null;
+  element_label: string | null;
+  author_id: number;
+  author_name: string;
+  body: string;
+  created_at: string;
 }

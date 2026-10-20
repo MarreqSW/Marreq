@@ -9,6 +9,7 @@
 //! reordering. Display numbers (`3`, `A3`, `A3.1`, `E4`) are never stored:
 //! [`labels`] computes them from order and branch origin.
 
+pub mod diff;
 pub mod operations;
 
 use std::collections::{BTreeMap, HashMap, HashSet};

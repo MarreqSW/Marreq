@@ -119,3 +119,43 @@ The body is the usual `{status, error, message}`, with a `code` and details for 
 | 422 | `element_has_dependents` | `operation_index, element_id, element_label, branches: [{id, label, title}]` |
 | 422 | `unknown_element` | `operation_index, element_id` |
 | 422 | `invalid_operation` | `operation_index` |
+
+### Structural diff
+
+| Method | Path | Scope | Description |
+|---|---|---|---|
+| `GET` | `/use-cases/{id}/draft/diff` | `use_cases:read` | The draft against the version it started from; before the first publish, against an empty document. **404** when there is no draft. |
+| `GET` | `/use-cases/{id}/versions/{a}/diff/{b}` | `use_cases:read` | Version `a` (before) against version `b` (after). |
+
+Both take `?include_unchanged=true` and return:
+
+```json
+{
+  "from": { "version_id": 31, "version_number": 2, "draft_revision": null },
+  "to":   { "version_id": null, "version_number": null, "draft_revision": 13 },
+  "summary": { "added": 1, "removed": 1, "edited": 2, "moved": 1, "rebranched": 1 },
+  "header": { "title": { "old": "Export requirements", "new": "Export a selection" } },
+  "elements": [
+    { "id": "s_C3mz", "kind": "step", "changes": ["moved"],
+      "old": { "list": "main", "label": "3", "text": "…" }, "new": { "list": "main", "label": "2", "text": "…" } },
+    { "id": "s_D8pw", "kind": "step", "changes": ["edited"], "old": { "…": "…" }, "new": { "…": "…" },
+      "text_diff": [{ "op": "equal", "text": "System generates the file in the " },
+                    { "op": "delete", "text": "chosen" }, { "op": "insert", "text": "selected" },
+                    { "op": "equal", "text": " format." }] },
+    { "id": "b_N0s1", "kind": "branch", "changes": ["rebranched"],
+      "old": { "list": "branches", "label": "A3", "text": "Nothing selected", "from_step": "s_C3mz", "end": { "type": "rejoin", "step": "s_C3mz" }, "kind": "alternative" },
+      "new": { "…": "…" } }
+  ]
+}
+```
+
+Elements are matched by id. **added** / **removed**: the id is on one side only. **edited**: the text (or a branch's title or kind) changed; `text_diff` is a word-level diff. **moved**: the element changed list (for example from the main scenario into a branch), or its place among the elements that kept their relative order; when two adjacent steps swap, the one that came forward is the one reported. **rebranched**: a branch's origin step or end changed. `old` / `new` give each side's list (`preconditions`, `main`, `postconditions`, `branch` with `branch_id`, or `branches` for a branch itself), label and text. Elements follow the new document's order; removed ones come last. Unchanged elements are left out unless asked for.
+
+### Comments
+
+| Method | Path | Scope | Description |
+|---|---|---|---|
+| `GET` | `/use-cases/{id}/comments` | `use_cases:read` | Oldest first: `[{id, use_case_id, use_case_version_id, element_id, element_label, author_id, author_name, body, created_at}]`. `?version_id=` keeps that version's comments and the ones on no version; `?element_id=` one element's. |
+| `POST` | `/use-cases/{id}/comments` | `use_cases:write` | `{body, use_case_version_id?, element_id?}`. **201**. The element must exist in that version, the current version or the draft (**400**). With `LOCK_APPROVED_VERSION_COMMENTS`, an approved version refuses comments (**403**). |
+
+Comments are immutable. `@username` mentions of project members send a `mentioned` notification; the use case's creator and the publisher of its current version get `comment_added` (nobody gets two for one comment, and never for their own). Publishing a version sends `approval_requested` to the project's reviewers. These notifications have `entity_type: "use_case"`. On the start screen (`/api/home/attention`), notification items carry `use_case_id`, and current use case versions marked reviewed appear as approvals for reviewers.

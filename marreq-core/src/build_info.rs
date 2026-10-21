@@ -53,7 +53,7 @@ mod tests {
     fn compatibility_json_loads() {
         let c = frontend_compatibility();
         assert_eq!(c.min_version, "0.1.0");
-        assert_eq!(c.max_version, "0.1.99");
+        assert_eq!(c.max_version, "0.2.99");
     }
 
     #[test]

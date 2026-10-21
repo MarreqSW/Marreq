@@ -25,11 +25,11 @@ Ranges are plain semver strings (`major.minor.patch`), not npm-style range synta
 
 | Backend | Compatible frontend |
 | --- | --- |
-| `0.1.0` | `0.1.0` – `0.1.99` |
+| `0.1.0` – `0.2.99` | `0.1.0` – `0.2.99` |
 
 | Frontend | Compatible backend |
 | --- | --- |
-| `0.1.0` | `0.1.0` – `0.1.99` |
+| `0.1.0` – `0.2.99` | `0.1.0` – `0.2.99` |
 
 Widen or tighten the JSON files when introducing a breaking API or UI contract change. Bump the corresponding package version in the same change.
 

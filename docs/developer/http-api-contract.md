@@ -212,3 +212,102 @@ A minimal **OpenAPI 3** sketch for auth and session project listing lives in [`o
 - **Adminer:** host port **8081** (to avoid clashing with the frontend).
 
 See [`../../docker/README.md`](../../docker/README.md).
+
+## Consumer-aware contract verification (#423 / #424)
+
+`docs/developer/openapi.yaml` is the single wire contract. Only operations used by
+frontend or MCP belong in release compatibility checks. A route inventory is not
+serialization evidence: `x-marreq-unverified` means the operation still needs an
+audit and cannot be used in a releasable consumer bundle. Unconsumed backend
+endpoints are outside this contract; adding/changing them does not itself block
+an existing consumer.
+
+**The refactor remains draft.** The earlier 245-operation global completeness gate
+was removed, but most remaining gaps are genuinely consumed APIs. Completing their
+wire schemas, binding more producer DTO serialization to those schemas, and
+retaining actual historical artifact evidence are still release blockers. A
+passing document validator alone is not a compatibility guarantee.
+
+### Architecture and rationale
+
+- `tools/marreq-contracts` is a workspace Rust CLI/library. Serde/serde_yaml_ng parse
+  data, `semver` validates versions, `sha2` pins bundle content, and `jsonschema`
+  validates actual request/response bodies offline.
+- OpenAPI validation and breaking-change analysis use checksum-pinned **oasdiff
+  1.34.0**, not a custom JSON Schema subset algorithm. See the upstream
+  [breaking-change semantics](https://github.com/oasdiff/oasdiff/blob/main/docs/BREAKING-CHANGES.md).
+  Request acceptance and response guarantees are compared in their respective
+  directions. Unknown advanced schema semantics fail for the affected selected
+  schema; they never silently certify a combination.
+- Consumer calls are parsed with the established TypeScript/TSX **tree-sitter**
+  grammar. The analyzer follows finite URL helpers, local constants, templates,
+  branch alternatives and explicit HTTP methods. It includes awaited generic
+  calls, direct fetches, shared transports, multipart/download wrappers, and API
+  browser navigation. Unknown paths/methods fail; there is no source regex parser,
+  source-review checksum or separately maintained full route list.
+- The small protocol dependency list covers browser/OAuth callbacks and discovery
+  which are not ordinary `fetch` expressions. Its IDs must exist in OpenAPI. All
+  other dependencies are discovered from consumer source. The only dynamic href
+  exclusion is `StatementText`'s sanitized user-content link: user-authored
+  navigation is not an application HTTP client operation. It does not exclude
+  fetches or fixed API links in that component.
+- Compiled Rocket mount tests check every declared consumer operation against
+  Server/Cloud registration. Extra backend routes are permitted. Four public
+  account routes are Cloud-only; shared deployment capabilities remain runtime
+  behavior rather than invented Server/Cloud route differences.
+- Standard `openapi-typescript` emits only schemas reachable by each consumer.
+  Committed declarations keep Rust/global OpenAPI out of frontend/MCP Docker
+  builds. Each consumer owns its minimal build input; the duplicate global type
+  snapshots were replaced by independently selected declarations.
+
+The old Python comparator, regex inventory parser, source-review hashes,
+generated route JSON and separate reusable workflow were removed. The unrelated
+existing requirements-compliance Python script is retained.
+
+### Developer commands
+
+Install the pinned upstream engine once (`scripts/install-oasdiff.sh`; CI does
+this automatically), add its destination to PATH, or set `OASDIFF` to that binary.
+The installer currently handles Linux x86_64; other platforms may install the same
+upstream version themselves. No contract command downloads refs or schemas.
+
+```sh
+cargo test --locked -p marreq-contracts
+cargo run --locked -p marreq-contracts -- validate
+cargo run --locked -p marreq-contracts -- coverage --component frontend
+cargo run --locked -p marreq-contracts -- coverage --component mcp
+node scripts/generate-api-types.mjs
+node scripts/generate-api-types.mjs --check
+cargo test --locked -p marreq-cloud --test api_contract_inventory
+scripts/test-api-contracts.sh
+```
+
+`validate` checks document/policy validity and requires a verified schema for
+**every discovered consumer dependency**. `--document-only` checks the document
+without certifying consumer coverage; it cannot create a consumer release bundle.
+`select --allow-unverified` is used only for development type generation, never
+for bundle export or compatibility verification.
+
+When adding/changing an HTTP call, update the actual Rocket implementation and
+OpenAPI, then regenerate declarations and extend existing consumer/producer tests.
+A new unknown call, unresolved dynamic call, or newly used unverified operation
+fails validation. Remove `x-marreq-unverified` only after auditing request defaults,
+response nullability/required fields, errors/statuses, media, guards and scopes.
+Do not infer a schema from one response or from a TypeScript assertion.
+
+The isolated smoke test runs migrated tmpfs PostgreSQL plus real Server and Cloud
+binaries, exercising the actual frontend transport/session flow and MCP HTTP
+client. Test processes use a clean directory/environment, loopback addresses and
+synthetic credentials; existing `.env`/database/SMTP configuration is excluded.
+Transcripts omit headers/cookies and redact login credentials. Default workspace
+unit tests can unify `test-helpers`; the separate production-path run is essential.
+It remains representative evidence, not certification of all unmodeled APIs.
+
+### Scope limits
+
+The CLI reports exact operation and call-site counts. Keep the PR draft while any
+required operation is unverified, a producer behavior lacks adequate contract
+protection, or a required check fails. Hand-maintained schemas still need broader
+Rust DTO/serialization verification; compiled route presence alone is insufficient.
+The remaining upstream Rust advisory is tracked in
+[#425](https://github.com/MarreqSW/Marreq/issues/425); the security gate is unchanged.

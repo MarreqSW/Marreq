@@ -159,6 +159,7 @@ describe('ReportBuilderPage', () => {
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('?type=vcd'));
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Include Contents' }));
+    await screen.findByText('Unsaved changes.');
     vi.mocked(window.confirm).mockReturnValue(false);
     await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Report' }), 'coverage');
     expect(screen.getByTestId('where')).toHaveTextContent('?type=vcd');

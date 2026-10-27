@@ -12,7 +12,63 @@ permissions:
   packages: write
 
 jobs:
+  compatibility:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Install pinned OpenAPI standards engine
+        run: scripts/install-oasdiff.sh
+      - name: Test contract semantics and validate producer document
+        run: |
+          cargo test --locked -p marreq-contracts
+          cargo run --locked -p marreq-contracts -- validate --document-only
+          cargo test --locked -p marreq-cloud --test api_contract_inventory
+      - name: Require immutable deployment-plan revision
+        id: plan
+        env:
+          PLAN_SHA: ${{ vars.MARREQ_RELEASE_CONTRACTS_SHA }}
+        run: |
+          if [[ ! "$PLAN_SHA" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "Set MARREQ_RELEASE_CONTRACTS_SHA to an immutable source revision containing deployment.json and exact retained contract bundles." >&2
+            exit 1
+          fi
+          echo "sha=$PLAN_SHA" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.plan.outputs.sha }}
+          path: .release-contracts
+      - name: Verify exact candidate and unchanged deployment artifacts
+        env:
+          CANDIDATE_TAG: ${{ github.ref_name }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          case "$CANDIDATE_TAG" in
+            marreq-server-v*) component=backend; version=${CANDIDATE_TAG#marreq-server-v} ;;
+            marreq-frontend-v*) component=frontend; version=${CANDIDATE_TAG#marreq-frontend-v} ;;
+            marreq-mcp-v*) component=mcp; version=${CANDIDATE_TAG#marreq-mcp-v} ;;
+            *) echo "unsupported component tag" >&2; exit 1 ;;
+          esac
+          if [[ "$component" == backend ]]; then
+            cargo run --locked -p marreq-contracts -- bundle --component backend --variant server --version "$version" --output /tmp/candidate-contract.json
+          else
+            cargo run --locked -p marreq-contracts -- bundle --component "$component" --version "$version" --output /tmp/candidate-contract.json
+          fi
+          scripts/check-api-compatibility.sh \
+            --manifest .release-contracts/deployment.json \
+            --candidate-component "$component" --candidate-version "$version" \
+            --candidate-source-sha "$CANDIDATE_SHA" \
+            --candidate-bundle /tmp/candidate-contract.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: candidate-api-contract
+          path: /tmp/candidate-contract.json
+
   backend:
+    needs: compatibility
     if: startsWith(github.ref_name, 'marreq-server-v')
     runs-on: ubuntu-latest
     steps:
@@ -51,6 +107,7 @@ jobs:
             MARREQ_GIT_SHA=${{ github.sha }}
 
   frontend:
+    needs: compatibility
     if: startsWith(github.ref_name, 'marreq-frontend-v')
     runs-on: ubuntu-latest
     steps:
@@ -88,6 +145,7 @@ jobs:
             MARREQ_GIT_SHA=${{ github.sha }}
 
   mcp:
+    needs: compatibility
     if: startsWith(github.ref_name, 'marreq-mcp-v')
     runs-on: ubuntu-latest
     steps:

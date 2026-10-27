@@ -85,10 +85,12 @@ async fn status_of(
     body: Option<serde_json::Value>,
     key: Option<&str>,
 ) -> (Status, String) {
+    let recorded_body = body.clone();
     let mut request = match method {
         "GET" => client.get(path.to_owned()),
         "POST" => client.post(path.to_owned()),
         "DELETE" => client.delete(path.to_owned()),
+        "PUT" => client.put(path.to_owned()),
         other => panic!("unsupported method {other}"),
     }
     .header(bearer(token));
@@ -100,7 +102,22 @@ async fn status_of(
     }
     let response = request.dispatch().await;
     let status = response.status();
-    (status, response.into_string().await.unwrap_or_default())
+    let text = response.into_string().await.unwrap_or_default();
+    if let Ok(output) = std::env::var("MARREQ_CONTRACT_TRANSCRIPT") {
+        use std::io::Write;
+        let record = serde_json::json!({
+            "method": method, "path": path, "status": status.code,
+            "request": recorded_body,
+            "response": serde_json::from_str::<serde_json::Value>(&text).unwrap_or(serde_json::Value::Null),
+        });
+        let mut file = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(output)
+            .expect("contract transcript");
+        writeln!(file, "{record}").expect("record actual Rocket exchange");
+    }
+    (status, text)
 }
 
 #[rocket::async_test]
@@ -152,9 +169,18 @@ async fn delegated_scopes_gate_the_routes_wrapped_by_mcp_tools() {
          SELECT setval(pg_get_serial_sequence('requirement_version_links','id'), 500);",
     )
     .expect("seed fixtures");
+    // Isolated browser-session fixture, also used by the real HTTP smoke test.
+    let password_hash =
+        marreq_core::auth::password::hash_password("Contract-only-fixture-58!z").unwrap();
+    diesel::sql_query("UPDATE users SET password_hash=$1, email_verified=true WHERE id=1")
+        .bind::<Text, _>(password_hash)
+        .execute(&mut conn)
+        .unwrap();
 
     for (raw, scopes) in [
         ("projects", vec!["projects:read"]),
+        ("uc-read", vec!["use_cases:read"]),
+        ("uc-write", vec!["use_cases:read", "use_cases:write"]),
         ("req-read", vec!["requirements:read"]),
         ("trace-read", vec!["traceability:read"]),
         ("trace-write", vec!["traceability:write"]),
@@ -173,6 +199,48 @@ async fn delegated_scopes_gate_the_routes_wrapped_by_mcp_tools() {
         vec![],
     );
     let client = Client::tracked(rocket).await.expect("Rocket client");
+
+    // Contract verification uses the real Rocket handlers and migrated PostgreSQL.
+    // Credentials never enter the transcript; only synthetic payloads are recorded.
+    for path in ["/api/meta/build", "/api/meta/deployment"] {
+        let (status, _) = status_of(&client, "GET", path, "uc-read", None, None).await;
+        assert_eq!(status, Status::Ok);
+    }
+    let use_cases = format!("{RES_BASE}/use-cases");
+    let (status, _) = status_of(&client, "GET", &use_cases, "req-read", None, None).await;
+    assert_eq!(status, Status::Forbidden);
+    let (status, created) = status_of(
+        &client,
+        "POST",
+        &use_cases,
+        "uc-write",
+        Some(serde_json::json!({"title": "Contract use case", "primary_actor": "Tester"})),
+        Some("contract-create-use-case"),
+    )
+    .await;
+    assert_eq!(status, Status::Created, "{created}");
+    let created: serde_json::Value = serde_json::from_str(&created).unwrap();
+    let uc_id = created["id"].as_i64().unwrap();
+    let revision = created["draft"]["revision"].as_i64().unwrap();
+    let draft_path = format!("{use_cases}/{uc_id}/draft");
+    let document = serde_json::json!({
+        "schema": "marreq.use-case.v1", "title": "Contract use case",
+        "main": [{"id": "s_test1", "text": "Verify the API contract"}]
+    });
+    let (status, body) = status_of(
+        &client,
+        "PUT",
+        &draft_path,
+        "uc-write",
+        Some(serde_json::json!({"base_revision": revision, "document": document})),
+        None,
+    )
+    .await;
+    assert_eq!(status, Status::Ok, "{body}");
+    let (status, _) = status_of(&client, "GET", &use_cases, "uc-read", None, None).await;
+    assert_eq!(status, Status::Ok);
+    let (status, _) = status_of(&client, "GET", &draft_path, "uc-read", None, None).await;
+    assert_eq!(status, Status::Ok);
 
     // (method, path, token lacking the scope, token holding it, expected status with scope)
     let links = format!("{RES_BASE}/requirement-version-links");

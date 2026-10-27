@@ -166,3 +166,13 @@ Comments are immutable. `@username` mentions of project members send a `mentione
 - **Search.** `GET /api/search` hits have `kind: "requirement" | "use_case"` and `use_case_id`; use cases match on code, title, actors and step text.
 - **Project bundle.** `bundle.json` has an optional `use_cases` section (see the HTTP API contract).
 - **MCP.** `list_use_cases`, `get_use_case`, `get_use_case_diff` and `list_use_case_links` (`use_cases:read`); `create_use_case`, `edit_use_case_draft`, `publish_use_case_draft` and `link_use_case_element` (`use_cases:write`, `MARREQ_MODE=draft_write`). Approval is not exposed to agents. See [mcp-setup.md](mcp-setup.md).
+
+## Executable contract checks
+
+Use-case request/response definitions are in `openapi.yaml`; consumer declarations
+are generated with standard `openapi-typescript` through
+`node scripts/generate-api-types.mjs`. Native Rust tests and
+`scripts/test-api-contracts.sh` check representative real read/write, session,
+Bearer-scope and project-boundary behavior. See the
+[contract workflow](http-api-contract.md#consumer-aware-contract-verification-423--424)
+for scope limits and the required schema-update procedure.

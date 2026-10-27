@@ -1,7 +1,7 @@
 # Virtual workspace: three-crate split — marreq-core (lib), marreq-server (bin), marreq-cloud (bin).
 [workspace]
 resolver = "2"
-members = ["marreq-core", "marreq-server", "marreq-cloud"]
+members = ["marreq-core", "marreq-server", "marreq-cloud", "tools/marreq-contracts"]
 
 [workspace.package]
 edition = "2024"

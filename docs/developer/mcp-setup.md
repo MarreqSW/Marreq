@@ -359,3 +359,14 @@ Reference: shared route list in `marreq-core/src/api/mod.rs` (plus deployment-sp
 - **Forbidden (403)**: The token’s project scope (if set) must match `MARREQ_PROJECT_ID`; or the user must be a member of the project with permission for the action.
 - **Connection refused**: Ensure Marreq is running and `MARREQ_BASE_URL` is correct (e.g. `http://localhost:8000`).
 - **Tool not found**: Confirm `MARREQ_MODE` and `MARREQ_TRACE_WRITE` — extended and trace tools are only registered when those settings enable them.
+
+## Artifact compatibility
+
+`mcp-server/compatibility.json` declares its backend range independently of MCP's
+version and remains in the MCP image. The complete global OpenAPI is not copied
+into that image or the public nginx directory. Consumer-specific immutable bundles
+are retained alongside release artifacts and verified by the Rust
+`marreq-contracts` CLI; see [release verification](../releases.md#exact-artifact-api-compatibility-423).
+A missing historical bundle or an unknown operation fails safely. Backend ranges
+alone are not compatibility evidence. The existing mocked tool tests remain,
+with actual HTTP/session/OAuth smoke checks in `scripts/test-api-contracts.sh`.

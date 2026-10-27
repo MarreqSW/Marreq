@@ -114,7 +114,7 @@ export default function SystemLogsPage() {
           listVerificationStatuses().catch(() => []),
           listCategories().catch(() => []),
           listApplicability().catch(() => []),
-          listVerificationMethods().catch(() => []),
+          Promise.all((dashboard?.projects ?? []).map((p) => listVerificationMethods(p.id).catch(() => []))).then((rows) => rows.flat()),
         ]);
         setItems(res.items);
         setTotal(res.total);
@@ -131,7 +131,7 @@ export default function SystemLogsPage() {
         setLoading(false);
       }
     },
-    [filterParams],
+    [filterParams, dashboard?.projects],
   );
 
   useEffect(() => {

@@ -1,0 +1,20 @@
+[package]
+name = "marreq-contracts"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+sha2.workspace = true
+clap = { version = "4.6", features = ["derive"] }
+semver = { version = "1.0", features = ["serde"] }
+serde_yaml_ng = "0.10"
+jsonschema = { version = "0.60", default-features = false }
+tempfile = "3"
+walkdir = "2"
+tree-sitter = "0.25"
+tree-sitter-typescript = "0.23.2"

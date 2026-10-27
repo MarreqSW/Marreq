@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
-//! Compare the compiled Rocket mount inventory with the OpenAPI-derived artifact.
-//! No database or test-double routing: declared_mounts is also used by production.
+//! Consumer contracts must correspond to compiled production Rocket mounts.
+//! Additional, unconsumed backend routes deliberately do not fail this check.
 use std::collections::BTreeSet;
 
 #[test]
-fn compiled_server_and_cloud_routes_match_openapi_inventory() {
-    let expected: Vec<serde_json::Value> = serde_json::from_str(include_str!(
-        "../../docs/developer/api-contract-routes.json"
-    ))
-    .expect("generated route inventory");
-    let parameter = regex::Regex::new(r"<([\w]+)(?:\.\.)?>").unwrap();
+fn consumed_contract_routes_exist_in_server_and_cloud() {
+    let spec = marreq_contracts::contract::load(
+        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../docs/developer/openapi.yaml"),
+    )
+    .unwrap();
     for (variant, extra) in [
         ("server", Vec::new()),
         ("cloud", marreq_cloud::routes::routes()),
@@ -18,39 +17,35 @@ fn compiled_server_and_cloud_routes_match_openapi_inventory() {
         let actual: BTreeSet<_> = [("/api", mounts.api), ("", mounts.root)]
             .into_iter()
             .flat_map(|(base, routes)| {
-                let parameter = &parameter;
-                routes.into_iter().filter_map(move |(_, route)| {
-                    let path = route.uri.path().to_owned();
-                    // Origin root UI and internal CSRF denial routes are not
-                    // HTTP consumer APIs. OAuth routes under root are included.
-                    if base.is_empty()
-                        && !(path.starts_with("/oauth/")
-                            || path.starts_with("/.well-known/")
-                            || path.starts_with("/api/"))
-                    {
-                        return None;
-                    }
-                    let normalized = parameter.replace_all(&path, "{$1}");
-                    Some((route.method.to_string(), format!("{base}{normalized}")))
+                routes.into_iter().map(move |(_, route)| {
+                    (
+                        route.method.to_string().to_lowercase(),
+                        format!(
+                            "{base}{}",
+                            route.uri.path().replace('<', "{").replace('>', "}")
+                        ),
+                    )
                 })
             })
             .collect();
-        let documented: BTreeSet<_> = expected
-            .iter()
-            .filter(|op| {
-                op["variants"]
-                    .as_array()
-                    .unwrap()
-                    .iter()
-                    .any(|v| v == variant)
-            })
-            .map(|op| {
-                (
-                    op["method"].as_str().unwrap().to_owned(),
-                    op["path"].as_str().unwrap().to_owned(),
-                )
-            })
-            .collect();
-        assert_eq!(actual, documented, "{variant} route contract drift");
+        let documented = marreq_contracts::contract::operations(&spec, Some(variant)).unwrap();
+        for key in documented.keys() {
+            assert!(
+                actual.contains(&(key.method.clone(), key.path.clone())),
+                "{variant}: missing compiled {key}"
+            );
+        }
+        for (key, op) in marreq_contracts::contract::operations(&spec, None).unwrap() {
+            if op
+                .get("x-marreq-variants")
+                .and_then(serde_json::Value::as_array)
+                .is_some_and(|a| !a.iter().any(|x| x == variant))
+            {
+                assert!(
+                    !actual.contains(&(key.method, key.path)),
+                    "deployment-specific endpoint leaked into {variant}"
+                );
+            }
+        }
     }
 }

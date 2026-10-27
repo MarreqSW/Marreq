@@ -79,7 +79,3 @@ _bmad-output/
 .cursorignore
 
 AGENTS.md
-
-# Python contract tooling
-__pycache__/
-*.pyc

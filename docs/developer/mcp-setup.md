@@ -360,14 +360,13 @@ Reference: shared route list in `marreq-core/src/api/mod.rs` (plus deployment-sp
 - **Connection refused**: Ensure Marreq is running and `MARREQ_BASE_URL` is correct (e.g. `http://localhost:8000`).
 - **Tool not found**: Confirm `MARREQ_MODE` and `MARREQ_TRACE_WRITE` — extended and trace tools are only registered when those settings enable them.
 
-## Backend compatibility metadata
+## Artifact compatibility
 
-`mcp-server/compatibility.json` records the build-time supported backend range,
-independently of the MCP component's version. It is retained in the MCP image.
-CI validates its shape and release verification combines it with the exact
-released MCP contract bundle; ranges alone do not establish compatibility.
-See [release contract verification](../releases.md#api-compatibility-gate-and-retained-artifact-contracts-423-p0).
-The current bootstrap still has unverified API operations and intentionally cannot
-certify an independently deployed production combination. Existing mocked MCP
-unit tests remain; `scripts/contracts/test-backend.sh` additionally executes the
-actual client against a real loopback Rocket server and an isolated database.
+`mcp-server/compatibility.json` declares its backend range independently of MCP's
+version and remains in the MCP image. The complete global OpenAPI is not copied
+into that image or the public nginx directory. Consumer-specific immutable bundles
+are retained alongside release artifacts and verified by the Rust
+`marreq-contracts` CLI; see [release verification](../releases.md#exact-artifact-api-compatibility-423).
+A missing historical bundle or an unknown operation fails safely. Backend ranges
+alone are not compatibility evidence. The existing mocked tool tests remain,
+with actual HTTP/session/OAuth smoke checks in `scripts/test-api-contracts.sh`.

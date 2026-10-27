@@ -169,6 +169,13 @@ async fn delegated_scopes_gate_the_routes_wrapped_by_mcp_tools() {
          SELECT setval(pg_get_serial_sequence('requirement_version_links','id'), 500);",
     )
     .expect("seed fixtures");
+    // Isolated browser-session fixture, also used by the real HTTP smoke test.
+    let password_hash =
+        marreq_core::auth::password::hash_password("Contract-only-fixture-58!z").unwrap();
+    diesel::sql_query("UPDATE users SET password_hash=$1, email_verified=true WHERE id=1")
+        .bind::<Text, _>(password_hash)
+        .execute(&mut conn)
+        .unwrap();
 
     for (raw, scopes) in [
         ("projects", vec!["projects:read"]),

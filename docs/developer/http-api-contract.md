@@ -213,179 +213,101 @@ A minimal **OpenAPI 3** sketch for auth and session project listing lives in [`o
 
 See [`../../docker/README.md`](../../docker/README.md).
 
-## P0 contract-hardening audit and current coverage (#423)
+## Consumer-aware contract verification (#423 / #424)
 
-**This is an incomplete bootstrap, not completion of the P0 prerequisite.** The
-OpenAPI inventory lists all 245 compiled HTTP API operations: 241 on Server and
-245 on Cloud, including origin-root OAuth routes. Currently 39 operations have
-explicit wire schemas; 206 are marked `x-marreq-unverified` and are inventory
-entries only. The release completeness gate deliberately rejects them. A passing
-OpenAPI validator or PR check does **not** establish full API compatibility.
+`docs/developer/openapi.yaml` is the single wire contract. Only operations used by
+frontend or MCP belong in release compatibility checks. A route inventory is not
+serialization evidence: `x-marreq-unverified` means the operation still needs an
+audit and cannot be used in a releasable consumer bundle. Unconsumed backend
+endpoints are outside this contract; adding/changing them does not itself block
+an existing consumer.
 
-Architecture assessment:
+**The refactor remains draft.** The earlier 245-operation global completeness gate
+was removed, but most remaining gaps are genuinely consumed APIs. Completing their
+wire schemas, binding more producer DTO serialization to those schemas, and
+retaining actual historical artifact evidence are still release blockers. A
+passing document validator alone is not a compatibility guarantee.
 
-| Boundary | Implementation and observations |
-| --- | --- |
-| Shared backend | `marreq-core/src/app.rs::declared_mounts` composes policy-classified API and root OAuth routes. Rocket guards enforce sessions, Bearer scopes, membership and permissions. Diesel models are not automatically wire schemas: flattened DTOs, computed JSON, omitted fields and custom responders matter. |
-| Server | `marreq-server/src/routes.rs` currently adds no endpoints. User creation/admin promotion and database backup are shared endpoints with deployment-mode restrictions, not absent Server/Cloud routes. |
-| Cloud | Four additional public account endpoints: register, verify-email, forgot-password and reset-password. Their presence differs from Server; shared capabilities also differ at runtime. |
-| Frontend | `frontend/src/api/*.ts`, plus direct fetches in pages/components. Session credentials and CSRF are essential; binary downloads, multipart imports and redirects cannot be modeled as ordinary JSON. Only metadata/provider discovery and selected use-case response models have migrated to generated types so far. |
-| MCP | `mcp-server/src/client.ts` wraps project-scoped REST calls; `index.ts` defines tools, `remote.ts` owns MCP HTTP sessions and delegated credentials. Principal identity has nullable `client_id`/`grant_id`, even though the previous TypeScript definitions described optional strings/numbers. The Node MCP transport and `/healthz` are outside the Rust HTTP API. |
-| Authentication | `/api/home/attention` now accepts `ProjectsRead` scoped credentials; the older session-only description above is stale. `/api/search` remains session-only. `/oauth/*` and `/.well-known/*` are mounted at the origin root. Guard/fairing responses can be empty or framework-generated; consumers must not assume every error is an `ApiError` JSON object. |
-| Release | Existing component tags remain the publishing triggers. Independent artifact versions are allowed. Current `main` is never substituted for an unavailable historical contract. No deployment or global release migration is implemented here. |
+### Architecture and rationale
 
-The explicitly modeled surface includes public build/deployment/CSRF/provider
-metadata, current user, MCP principal, the four Cloud account routes, three OAuth
-discovery routes, and all 25 use-case operations (including draft operations,
-publishing, versions, approvals, comments, links, baseline content and diffs).
-Use-case document requests distinguish omitted defaults from response properties
-that Serde always emits. Unmodeled inventory entries do not promise fabricated
-response bodies/status codes. Origin-root UI/HTML and internal CSRF-denial routes
-are excluded from the API inventory comparison.
+- `tools/marreq-contracts` is a workspace Rust CLI/library. Serde/serde_yaml_ng parse
+  data, `semver` validates versions, `sha2` pins bundle content, and `jsonschema`
+  validates actual request/response bodies offline.
+- OpenAPI validation and breaking-change analysis use checksum-pinned **oasdiff
+  1.34.0**, not a custom JSON Schema subset algorithm. See the upstream
+  [breaking-change semantics](https://github.com/oasdiff/oasdiff/blob/main/docs/BREAKING-CHANGES.md).
+  Request acceptance and response guarantees are compared in their respective
+  directions. Unknown advanced schema semantics fail for the affected selected
+  schema; they never silently certify a combination.
+- Consumer calls are parsed with the established TypeScript/TSX **tree-sitter**
+  grammar. The analyzer follows finite URL helpers, local constants, templates,
+  branch alternatives and explicit HTTP methods. It includes awaited generic
+  calls, direct fetches, shared transports, multipart/download wrappers, and API
+  browser navigation. Unknown paths/methods fail; there is no source regex parser,
+  source-review checksum or separately maintained full route list.
+- The small protocol dependency list covers browser/OAuth callbacks and discovery
+  which are not ordinary `fetch` expressions. Its IDs must exist in OpenAPI. All
+  other dependencies are discovered from consumer source. The only dynamic href
+  exclusion is `StatementText`'s sanitized user-content link: user-authored
+  navigation is not an application HTTP client operation. It does not exclude
+  fetches or fixed API links in that component.
+- Compiled Rocket mount tests check every declared consumer operation against
+  Server/Cloud registration. Extra backend routes are permitted. Four public
+  account routes are Cloud-only; shared deployment capabilities remain runtime
+  behavior rather than invented Server/Cloud route differences.
+- Standard `openapi-typescript` emits only schemas reachable by each consumer.
+  Committed declarations keep Rust/global OpenAPI out of frontend/MCP Docker
+  builds. Each consumer owns its minimal build input; the duplicate global type
+  snapshots were replaced by independently selected declarations.
 
-### Source of truth and change workflow
+The old Python comparator, regex inventory parser, source-review hashes,
+generated route JSON and separate reusable workflow were removed. The unrelated
+existing requirements-compliance Python script is retained.
 
-`openapi.yaml` is the wire contract. This retains Rocket/Diesel and introduces no
-backend runtime dependency. `api-contract-routes.json` and both
-`generated-contract.ts` files are reproducible derivatives, not independently
-maintained contracts. The source-review digest records which producer/consumer
-sources were audited. It detects changes requiring review, but **does not prove
-serialization correctness** and is not a replacement for integration tests.
+### Developer commands
 
-When changing an endpoint:
+Install the pinned upstream engine once (`scripts/install-oasdiff.sh`; CI does
+this automatically), add its destination to PATH, or set `OASDIFF` to that binary.
+The installer currently handles Linux x86_64; other platforms may install the same
+upstream version themselves. No contract command downloads refs or schemas.
 
-1. Inspect the actual Rocket mount, guards, Serde serialization/default/flatten/
-   skip behavior, response status, and both consumers. Update OpenAPI accordingly.
-2. Add or extend producer exchanges and consumer tests. Remove
-   `x-marreq-unverified` only after auditing the complete operation, not merely
-   because its route exists. Preserve unknown error-body handling.
-3. Regenerate derived artifacts and explicitly record the source review:
+```sh
+cargo test --locked -p marreq-contracts
+cargo run --locked -p marreq-contracts -- validate
+cargo run --locked -p marreq-contracts -- coverage --component frontend
+cargo run --locked -p marreq-contracts -- coverage --component mcp
+node scripts/generate-api-types.mjs
+node scripts/generate-api-types.mjs --check
+cargo test --locked -p marreq-cloud --test api_contract_inventory
+scripts/test-api-contracts.sh
+```
 
-   ```sh
-   python3 scripts/contracts/generate.py
-   python3 scripts/contracts/check.py --record-source-review
-   python3 scripts/contracts/check.py
-   python3 -m unittest discover -s scripts/contracts -v
-   ```
+`validate` checks document/policy validity and requires a verified schema for
+**every discovered consumer dependency**. `--document-only` checks the document
+without certifying consumer coverage; it cannot create a consumer release bundle.
+`select --allow-unverified` is used only for development type generation, never
+for bundle export or compatibility verification.
 
-4. Run the compiled route check and isolated real-backend checks:
+When adding/changing an HTTP call, update the actual Rocket implementation and
+OpenAPI, then regenerate declarations and extend existing consumer/producer tests.
+A new unknown call, unresolved dynamic call, or newly used unverified operation
+fails validation. Remove `x-marreq-unverified` only after auditing request defaults,
+response nullability/required fields, errors/statuses, media, guards and scopes.
+Do not infer a schema from one response or from a TypeScript assertion.
 
-   ```sh
-   cargo test --locked -p marreq-cloud --test api_contract_inventory
-   npm ci --prefix frontend
-   npm ci --prefix mcp-server
-   scripts/contracts/test-backend.sh
-   ```
+The isolated smoke test runs migrated tmpfs PostgreSQL plus real Server and Cloud
+binaries, exercising the actual frontend transport/session flow and MCP HTTP
+client. Test processes use a clean directory/environment, loopback addresses and
+synthetic credentials; existing `.env`/database/SMTP configuration is excluded.
+Transcripts omit headers/cookies and redact login credentials. Default workspace
+unit tests can unify `test-helpers`; the separate production-path run is essential.
+It remains representative evidence, not certification of all unmodeled APIs.
 
-Install Python tooling with `python3 -m pip install -r
-scripts/contracts/requirements.txt` in a virtual environment. Backend builds need
-`libpq-dev`; Docker and Node 22 are needed for the isolated smoke check. The script
-creates a new loopback-only PostgreSQL container with tmpfs storage, applies
-migrations, seeds synthetic OAuth credentials through the integration test, and
-starts a real `marreq-server` process. It exercises the actual frontend transport
-and built MCP client over HTTP. It records requests/responses, never Authorization
-headers or cookies. It ignores existing database URLs when creating its test DB;
-it never connects to a production database. Cleanup runs on exit. Missing/skipped
-critical producer exchanges fail transcript validation.
+### Scope limits
 
-### Remaining risks before P0 can be accepted
-
-- Audit the remaining **206** operations: authentication protocol/session flows,
-  projects/groups, requirements/verifications, traceability, matrices, baselines,
-  catalogs, administration, search, imports, exports, reports and attachments.
-  Presence in the inventory is not schema coverage.
-- Complete per-consumer operation selection and generated request/response type
-  adoption, including direct frontend fetches. Bundles currently conservatively
-  require the entire backend surface; this can reject unrelated changes.
-- Add exhaustive consumer request checks and live Cloud/session/OAuth protocol
-  coverage. Current executable producer/consumer coverage is representative,
-  not exhaustive, and no historical release is retrospectively certified.
-- Retain verified bundles for real released artifact versions and bootstrap an
-  accurate deployment plan. Versions in package manifests alone are insufficient.
-- Close existing test/security failures before making this a release-ready change.
-
-Until these are resolved, leave the PR in draft and keep publication blocked by
-`check.py --require-complete`. Do not remove that gate to make a release green.
-
-### Implementation validation record (2026-10-27)
-
-All npm installs used the committed lockfiles (`npm ci` at root, in `frontend`,
-and in `mcp-server`). Rust commands on the development host used temporary
-`LIBRARY_PATH`/`LD_LIBRARY_PATH` settings pointing to an extracted `libpq` package;
-no system/production database configuration was changed.
-
-| Exact command | Result |
-| --- | --- |
-| `python3 scripts/contracts/check.py` | PASS; 245 inventoried operations, 39 modeled operations, 206 explicit gaps |
-| `python3 scripts/contracts/generate.py --check` | PASS; generated types and compiled-route expectations reproducible |
-| `python3 -m unittest discover -s scripts/contracts -v` | PASS; 39 positive/negative tests, including historical plans and process exit codes |
-| `python3 scripts/contracts/check.py --require-complete` | EXPECTED FAIL (exit 1); incomplete producer contract plus 206 unverified operations |
-| `python3 scripts/contracts/compatibility.py --manifest /tmp/marreq-nonexistent-plan.json` | EXPECTED FAIL (exit 1); structured missing-evidence error |
-| `cargo test --locked -p marreq-cloud --test api_contract_inventory` | PASS; compiled Server and Cloud routes match derived expectations |
-| `scripts/contracts/test-backend.sh` | PASS; disposable migrated PostgreSQL, production Rocket handlers, real Server HTTP process and actual frontend/MCP clients; 15 validated exchanges, 33 explicitly inventory-only exchanges, three corrupted-traffic negative controls rejected |
-| `cargo test --workspace` | PASS; 2,061 passed, one ignored. Default workspace feature unification enables test helpers; DB-specific tests without explicit test DB may skip internally. The separate isolated production-path run above is required evidence. |
-| `cargo fmt --all -- --check` | PASS |
-| `cargo clippy --workspace --all-targets -- -D warnings` | PASS |
-| `npm run build --prefix frontend` | PASS; existing large-chunk warning |
-| `npm run build --prefix mcp-server` | PASS |
-| `npm test --prefix mcp-server` | PASS; 51 tests |
-| `npm run test:coverage --prefix frontend` | PASS; 108 suites, 704 tests, 70.36% line coverage. An earlier ordinary full run had one report-builder failure; its isolated rerun and full coverage rerun passed. |
-| `npx vitest run marreq-core/tests/js` | PASS; 411 tests, seven skipped |
-| `npx --no-install stylelint 'frontend/static/**/*.css' --config .stylelintrc.json` | PASS |
-| `npm run check:unused-css` | PASS (exit 0); existing warning reports 379 unused selectors |
-| `npm audit --prefix frontend --omit=dev --audit-level=high` | PASS; no production vulnerabilities reported |
-| `npm audit --prefix mcp-server --omit=dev --audit-level=high` | FAIL; existing lockfile reports one high and three moderate advisories |
-| `cargo deny check advisories` | FAIL; existing locked dependencies trigger RUSTSEC-2026-0384, RUSTSEC-2026-0385 and RUSTSEC-2026-0387, plus yanked-crate warnings |
-| `bash -n scripts/check-api-compatibility.sh scripts/contracts/test-backend.sh` | PASS |
-| `git diff --check` | PASS |
-
-Dependency/security failures are reported, not suppressed or allowlisted. Their
-remediation remains necessary before release readiness. The source-review digest
-is deliberately conservative: backend service/model/guard changes and direct
-frontend calls outside API modules require renewed review as well. This does not
-replace the remaining serialization/consumer verification work.
-
-Changed files in this draft implementation (including generated artifacts):
-
-- `.github/workflows/api-contracts.yml`
-- `.github/workflows/marreq-ci.yml`
-- `.github/workflows/release-artifacts.yml`
-- `.gitignore`
-- `Cargo.lock`
-- `docker/Dockerfile`
-- `docker/frontend/Dockerfile`
-- `docs/developer/api-contract-routes.json`
-- `docs/developer/api-contract-source-review.json`
-- `docs/developer/http-api-contract.md`
-- `docs/developer/mcp-setup.md`
-- `docs/developer/openapi.yaml`
-- `docs/developer/use-cases-api.md`
-- `docs/releases.md`
-- `frontend/src/api/generated-contract.ts`
-- `frontend/src/api/types.ts`
-- `frontend/src/hooks/__tests__/useBuildInfo.test.ts`
-- `frontend/src/pages/__tests__/AccountPage.test.tsx`
-- `frontend/src/pages/__tests__/AdminPage.test.tsx`
-- `frontend/src/pages/__tests__/HelpPage.test.tsx`
-- `frontend/src/pages/__tests__/LoginPage.test.tsx`
-- `marreq-cloud/Cargo.toml`
-- `marreq-cloud/tests/api_contract_inventory.rs`
-- `marreq-core/tests/delegated_oauth_mcp_tools_postgres_integration.rs`
-- `mcp-server/Dockerfile`
-- `mcp-server/compatibility.json`
-- `mcp-server/src/client.ts`
-- `mcp-server/src/generated-contract.ts`
-- `mcp-server/src/remote.ts`
-- `scripts/check-api-compatibility.sh`
-- `scripts/contracts/bundle.py`
-- `scripts/contracts/check.py`
-- `scripts/contracts/check_baseline.py`
-- `scripts/contracts/compatibility.py`
-- `scripts/contracts/generate.py`
-- `scripts/contracts/inventory.py`
-- `scripts/contracts/requirements.txt`
-- `scripts/contracts/smoke-consumers.mjs`
-- `scripts/contracts/test-backend.sh`
-- `scripts/contracts/test_compatibility.py`
-- `scripts/contracts/test_contract_tooling.py`
-- `scripts/contracts/verify_transcript.py`
+The CLI reports exact operation and call-site counts. Keep the PR draft while any
+required operation is unverified, a producer behavior lacks adequate contract
+protection, or a required check fails. Hand-maintained schemas still need broader
+Rust DTO/serialization verification; compiled route presence alone is insufficient.
+The remaining upstream Rust advisory is tracked in
+[#425](https://github.com/MarreqSW/Marreq/issues/425); the security gate is unchanged.

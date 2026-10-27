@@ -1,10 +1,9 @@
-import type {
-  McpPrincipalResponse,
-  use_cases_UseCaseRow_response as UseCaseRow,
-  use_cases_UseCaseDetail_response as UseCaseDetail,
-  use_cases_DraftView_response as UseCaseDraft,
-  use_cases_DraftChangeView_response as UseCaseDraftChange,
-} from "./generated-contract.js";
+import type { components } from "./generated-contract.js";
+type McpPrincipalResponse = components["schemas"]["McpPrincipalResponse"];
+type UseCaseRow = components["schemas"]["use_cases_UseCaseRow_response"];
+type UseCaseDetail = components["schemas"]["use_cases_UseCaseDetail_response"];
+type UseCaseDraft = components["schemas"]["use_cases_DraftView_response"];
+type UseCaseDraftChange = components["schemas"]["use_cases_DraftChangeView_response"];
 import type { SessionContext } from "./context.js";
 import { currentBearer } from "./credentials.js";
 

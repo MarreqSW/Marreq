@@ -15,7 +15,34 @@ concurrency:
 
 jobs:
   api-contracts:
-    uses: ./.github/workflows/api-contracts.yml
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned standards tooling
+        run: scripts/install-oasdiff.sh
+      - name: Test native compatibility semantics and CLI failures
+        run: cargo test --locked -p marreq-contracts
+      - name: Install TypeScript tooling and consumers
+        run: |
+          npm ci
+          npm ci --prefix frontend
+          npm ci --prefix mcp-server
+      - name: Check generated consumer schemas
+        run: node scripts/generate-api-types.mjs --check
+      - name: Verify compiled Server/Cloud operations
+        run: cargo test --locked -p marreq-cloud --test api_contract_inventory
+      - name: Exercise isolated real Server/Cloud and HTTP consumers
+        run: scripts/test-api-contracts.sh
+      - name: Require verified contracts for every current consumer operation
+        run: cargo run --locked -p marreq-contracts -- validate
 
   lint:
     runs-on: ubuntu-latest

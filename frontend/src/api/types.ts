@@ -1,3 +1,4 @@
+import type { components as ApiComponents } from './generated-contract';
 /** API shapes aligned with marreq-core JSON (snake_case). */
 
 export interface RequirementStatus {
@@ -187,9 +188,9 @@ export interface DashboardPayload {
   csrf_token: string;
 }
 
-export type DeploymentInfo = import('./generated-contract').DeploymentInfo;
+export type DeploymentInfo = ApiComponents['schemas']['DeploymentInfo'];
 
-export type AuthProviderDiscovery = import('./generated-contract').external_ProviderDiscovery_response;
+export type AuthProviderDiscovery = ApiComponents['schemas']['external_ProviderDiscovery_response'];
 
 export interface ConnectedIdentity {
   id: number;
@@ -217,7 +218,7 @@ export interface FrontendCompatibility {
 }
 
 /** Response from `GET /api/meta/build` (issue #213). */
-export type BuildInfo = import('./generated-contract').BuildInfo;
+export type BuildInfo = ApiComponents['schemas']['BuildInfo'];
 
 export type RegistrationBody = {
   username: string;
@@ -972,16 +973,16 @@ export interface UseCaseDocument {
 /** Display labels by element id: `3`, `A3`, `A3.1`, `E4`, `P1`, `Q1`. */
 export type UseCaseLabels = Record<string, string>;
 
-export type UseCaseRow = import('./generated-contract').use_cases_UseCaseRow_response;
+export type UseCaseRow = ApiComponents['schemas']['use_cases_UseCaseRow_response'];
 
-export type UseCaseVersionSummary = import('./generated-contract').use_cases_VersionSummary_response;
+export type UseCaseVersionSummary = ApiComponents['schemas']['use_cases_VersionSummary_response'];
 
 export interface UseCaseVersion extends UseCaseVersionSummary {
   document: UseCaseDocument;
   labels: UseCaseLabels;
 }
 
-export type UseCaseDraftSummary = import('./generated-contract').use_cases_DraftSummary_response;
+export type UseCaseDraftSummary = ApiComponents['schemas']['use_cases_DraftSummary_response'];
 
 export interface UseCaseDraft extends UseCaseDraftSummary {
   use_case_id: number;
@@ -1043,10 +1044,10 @@ export type UseCaseOperation =
   | { op: 'remove_branch'; id: string };
 
 /** A link from a use case, or one of its elements, to a requirement or verification (issue #400). */
-export type UseCaseLink = import('./generated-contract').use_cases_LinkView_response;
+export type UseCaseLink = ApiComponents['schemas']['use_cases_LinkView_response'];
 
 /** A use case that links to a requirement or verification. */
-export type UseCaseRef = import('./generated-contract').use_cases_UseCaseRef_response;
+export type UseCaseRef = ApiComponents['schemas']['use_cases_UseCaseRef_response'];
 
 /** Structural diff of two use case documents (issue #401). */
 export type UseCaseChange = 'added' | 'removed' | 'edited' | 'moved' | 'rebranched';
@@ -1084,7 +1085,7 @@ export interface UseCaseDiff {
   elements: UseCaseElementDiff[];
 }
 
-export type UseCaseComment = import('./generated-contract').use_cases_UseCaseCommentView_response;
+export type UseCaseComment = ApiComponents['schemas']['use_cases_UseCaseCommentView_response'];
 
 /** A use case version a baseline recorded (issue #402). */
-export type BaselineUseCase = import('./generated-contract').use_cases_BaselineUseCaseView_response;
+export type BaselineUseCase = ApiComponents['schemas']['use_cases_BaselineUseCaseView_response'];

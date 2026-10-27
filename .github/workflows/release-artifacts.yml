@@ -12,20 +12,21 @@ permissions:
   packages: write
 
 jobs:
-  contract-tests:
-    uses: ./.github/workflows/api-contracts.yml
-
   compatibility:
-    needs: contract-tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
-          python-version: '3.12'
-      - run: python -m pip install -r scripts/contracts/requirements.txt
-      - name: Require complete producer contracts before publication
-        run: python scripts/contracts/check.py --require-complete
+          toolchain: stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - name: Install pinned OpenAPI standards engine
+        run: scripts/install-oasdiff.sh
+      - name: Test contract semantics and validate producer document
+        run: |
+          cargo test --locked -p marreq-contracts
+          cargo run --locked -p marreq-contracts -- validate --document-only
+          cargo test --locked -p marreq-cloud --test api_contract_inventory
       - name: Require immutable deployment-plan revision
         id: plan
         env:
@@ -52,9 +53,9 @@ jobs:
             *) echo "unsupported component tag" >&2; exit 1 ;;
           esac
           if [[ "$component" == backend ]]; then
-            python scripts/contracts/bundle.py --component backend --variant server --version "$version" --output /tmp/candidate-contract.json
+            cargo run --locked -p marreq-contracts -- bundle --component backend --variant server --version "$version" --output /tmp/candidate-contract.json
           else
-            python scripts/contracts/bundle.py --component "$component" --version "$version" --output /tmp/candidate-contract.json
+            cargo run --locked -p marreq-contracts -- bundle --component "$component" --version "$version" --output /tmp/candidate-contract.json
           fi
           scripts/check-api-compatibility.sh \
             --manifest .release-contracts/deployment.json \

@@ -7,6 +7,10 @@ import { z } from "zod";
 import { contextAllowsReadExtended, loadContext } from "./context.js";
 import { MarreqAuthenticationError, MarreqClient } from "./client.js";
 import { loadTransportConfig, startRemoteServer } from "./remote.js";
+import { registerGapTools } from "./gap-tools.js";
+import { paginate, paginationFields } from "./pagination.js";
+import { registerResources } from "./resources.js";
+import { registerPrompts } from "./prompts.js";
 /** Requirement statements and verification descriptions use "Marreq statement Markdown" (marreq-core/src/rich_text.rs). */
 const DESCRIPTION_FORMAT = "Verification description in Marreq statement Markdown: paragraphs separated by a blank line, '- ' bulleted and '1. ' numbered lists, **bold**, *italic*, `code`, [label](https://...) links (http/https/mailto only). Max 2000 bytes including markup.";
 const STATEMENT_FORMAT = "Requirement statement in Marreq statement Markdown: paragraphs separated by a blank line, '- ' bulleted and '1. ' numbered lists, **bold**, *italic*, `code`, [label](https://...) links (http/https/mailto only). Max 2000 bytes including markup.";
@@ -129,6 +133,31 @@ export function createMarreqServer(ctx) {
         edit_use_case_draft: ["use_cases:write"],
         publish_use_case_draft: ["use_cases:write"],
         link_use_case_element: ["use_cases:write"],
+        // Tool gaps (issue #416)
+        list_requirement_link_types: ["traceability:read"],
+        list_requirement_links: ["traceability:read"],
+        link_requirements: ["traceability:write"],
+        unlink_requirements: ["traceability:write"],
+        unlink_use_case_element: ["use_cases:write"],
+        clear_use_case_link_suspect: ["use_cases:write"],
+        list_linked_use_cases: ["use_cases:read"],
+        ask_requirements: ["requirements:read"],
+        list_reviewers: ["projects:read"],
+        get_my_permissions: ["projects:read"],
+        list_saved_views: ["requirements:read"],
+        list_attachments: ["requirements:read", "verifications:read"],
+        get_attention: ["projects:read"],
+        list_use_case_versions: ["use_cases:read"],
+        list_use_case_comments: ["use_cases:read"],
+        create_use_case_comment: ["use_cases:write"],
+        discard_use_case_draft: ["use_cases:write"],
+        get_close_out: ["requirements:read"],
+        impacted_tests: ["requirements:read", "verifications:read"],
+        list_verification_snapshots: ["verifications:read"],
+        compare_verification_snapshots: ["verifications:read"],
+        set_verification_field: ["verifications:write"],
+        get_baseline_contents: ["baselines:read"],
+        diff_baseline_verification_vs_current: ["verifications:read", "baselines:read"],
     };
     const originalRegisterTool = server.registerTool.bind(server);
     const unsafeRegisterTool = originalRegisterTool;
@@ -142,6 +171,8 @@ export function createMarreqServer(ctx) {
             "create_verification",
             "create_use_case",
             "publish_use_case_draft",
+            "link_requirements",
+            "create_use_case_comment",
         ].includes(name);
         const annotations = {
             readOnlyHint: !mutating,
@@ -172,11 +203,11 @@ export function createMarreqServer(ctx) {
     });
     server.registerTool("list_projects", {
         description: "List only projects accessible to the authenticated Marreq user.",
-        inputSchema: z.object({}),
+        inputSchema: z.object({ ...paginationFields }),
         annotations: { readOnlyHint: true },
-    }, async () => {
+    }, async (args) => {
         const out = await withAudit(client, "list_projects", "{}", false, () => client.listProjects());
-        return { content: [jsonContent(out)] };
+        return { content: [jsonContent(paginate(out, args ?? {}))] };
     });
     server.registerTool("get_requirement", {
         description: "Get a requirement by id (project-scoped, with trace summary)",
@@ -188,21 +219,35 @@ export function createMarreqServer(ctx) {
         return { content: [jsonContent(out)] };
     });
     server.registerTool("list_requirements", {
-        description: "List requirements in the project with optional filters (approval_state, has_tests)",
+        description: "List requirements in the project with optional filters (approval_state, has_tests, status_id, category_id, free-text q, a saved view_id from list_saved_views) and sorting (sort_column, sort_dir). Pass limit (and cursor from next_cursor) to page; without them the whole list is returned.",
         inputSchema: z.object({
             ...projectField,
             filter: z
                 .object({
                 approval_state: z.enum(["draft", "reviewed", "approved"]).optional(),
                 has_tests: z.boolean().optional(),
+                status_id: z.number().int().positive().optional(),
+                category_id: z.number().int().positive().optional(),
+                q: z.string().optional().describe("Text to find in code, title or statement"),
+                view_id: z.number().int().positive().optional().describe("Saved view id (list_saved_views)"),
             })
                 .optional(),
+            sort_column: z.string().optional(),
+            sort_dir: z.enum(["asc", "desc"]).optional(),
+            ...paginationFields,
         }),
     }, async (args) => {
         const f = args?.filter;
         const toolClient = forProject(args?.project_id);
-        const out = await withAudit(toolClient, "list_requirements", JSON.stringify(args ?? {}), false, () => toolClient.listRequirements(f?.approval_state, f?.has_tests));
-        return { content: [jsonContent(out)] };
+        const out = await withAudit(toolClient, "list_requirements", JSON.stringify(args ?? {}), false, () => toolClient.listRequirements(f?.approval_state, f?.has_tests, {
+            status_id: f?.status_id,
+            category_id: f?.category_id,
+            q: f?.q,
+            view_id: f?.view_id,
+            sort_column: args?.sort_column,
+            sort_dir: args?.sort_dir,
+        }));
+        return { content: [jsonContent(paginate(out, args ?? {}))] };
     });
     server.registerTool("get_versions", {
         description: "Get version history for a requirement",
@@ -311,11 +356,12 @@ export function createMarreqServer(ctx) {
             q: z.string().optional().describe("Filter on code, title or actor"),
             approval_state: z.enum(["draft", "reviewed", "approved", "unpublished"]).optional(),
             has_suspect: z.boolean().optional().describe("Only use cases with suspect links"),
+            ...paginationFields,
         }),
-    }, async ({ project_id, q, approval_state, has_suspect }) => {
+    }, async ({ project_id, q, approval_state, has_suspect, limit, cursor }) => {
         const toolClient = forProject(project_id);
         const out = await withAudit(toolClient, "list_use_cases", JSON.stringify({ q, approval_state, has_suspect }), false, () => toolClient.listUseCases({ q, approval_state, has_suspect }));
-        return { content: [jsonContent(out)] };
+        return { content: [jsonContent(paginate(out, { limit, cursor }))] };
     });
     server.registerTool("get_use_case", {
         description: "Get a use case: its current version (or version_id) as a marreq.use-case.v1 document with computed labels (1, 2, A3, A3.1, E4), and the shared draft (document, labels, revision) when one exists. Element ids such as s_… and b_… are stable; labels are not.",
@@ -347,21 +393,21 @@ export function createMarreqServer(ctx) {
     });
     server.registerTool("list_use_case_links", {
         description: "Requirements and verifications linked to a use case or to one of its steps, with suspect flags (a linked requirement changed since the link was made or cleared).",
-        inputSchema: z.object({ ...projectField, use_case_id: z.number().int().positive() }),
-    }, async ({ project_id, use_case_id }) => {
+        inputSchema: z.object({ ...projectField, use_case_id: z.number().int().positive(), ...paginationFields }),
+    }, async ({ project_id, use_case_id, limit, cursor }) => {
         const toolClient = forProject(project_id);
         const out = await withAudit(toolClient, "list_use_case_links", JSON.stringify({ use_case_id }), false, () => toolClient.listUseCaseLinks(use_case_id));
-        return { content: [jsonContent(out)] };
+        return { content: [jsonContent(paginate(out, { limit, cursor }))] };
     });
     // read_extended / draft_write: extra read tools (catalog, verifications, audit, matrix read, …)
     if (contextAllowsReadExtended(ctx)) {
         server.registerTool("list_verifications", {
             description: "List verifications (tests) in the project. Requires MARREQ_MODE=read_extended or draft_write.",
-            inputSchema: z.object({ ...projectField }),
-        }, async ({ project_id }) => {
+            inputSchema: z.object({ ...projectField, ...paginationFields }),
+        }, async ({ project_id, limit, cursor }) => {
             const toolClient = forProject(project_id);
             const out = await withAudit(toolClient, "list_verifications", "{}", false, () => toolClient.listVerificationsByProject());
-            return { content: [jsonContent(out)] };
+            return { content: [jsonContent(paginate(out, { limit, cursor }))] };
         });
         server.registerTool("get_verification", {
             description: "Get one verification by id. The record must belong to MARREQ_PROJECT_ID. Requires read_extended or draft_write mode.",
@@ -381,11 +427,11 @@ export function createMarreqServer(ctx) {
         });
         server.registerTool("list_baselines", {
             description: "List baselines for the project (metadata only). Use get_baseline for full snapshot.",
-            inputSchema: z.object({ ...projectField }),
-        }, async ({ project_id }) => {
+            inputSchema: z.object({ ...projectField, ...paginationFields }),
+        }, async ({ project_id, limit, cursor }) => {
             const toolClient = forProject(project_id);
             const out = await withAudit(toolClient, "list_baselines", "{}", false, () => toolClient.listBaselinesByProject());
-            return { content: [jsonContent(out)] };
+            return { content: [jsonContent(paginate(out, { limit, cursor }))] };
         });
         server.registerTool("get_requirement_activity", {
             description: "Audit log entries for a requirement (create/update history with field summaries).",
@@ -411,12 +457,13 @@ export function createMarreqServer(ctx) {
                 ...projectField,
                 requirement_id: z.string(),
                 requirement_version_id: z.number().optional(),
+                ...paginationFields,
             }),
-        }, async ({ project_id, requirement_id, requirement_version_id }) => {
+        }, async ({ project_id, requirement_id, requirement_version_id, limit, cursor }) => {
             const id = parseInt(requirement_id, 10);
             const toolClient = forProject(project_id);
             const out = await withAudit(toolClient, "list_requirement_comments", JSON.stringify({ requirement_id, requirement_version_id }), false, () => toolClient.listRequirementComments(id, requirement_version_id ?? null));
-            return { content: [jsonContent(out)] };
+            return { content: [jsonContent(paginate(out, { limit, cursor }))] };
         });
         server.registerTool("get_verification_matrix", {
             description: "Requirement ids linked to a verification in the traceability matrix (read).",
@@ -531,6 +578,7 @@ export function createMarreqServer(ctx) {
                     reviewer_id: z.number().optional(),
                     category_id: z.number().optional(),
                     applicability_id: z.number().optional(),
+                    justification: z.string().optional().describe("Why the requirement exists; an empty string clears it."),
                     custom_fields: z
                         .array(z.object({ field_id: z.number(), value: z.string() }))
                         .optional(),
@@ -708,6 +756,18 @@ export function createMarreqServer(ctx) {
             return { content: [jsonContent(out)] };
         });
     }
+    registerGapTools({
+        server: server,
+        ctx,
+        client,
+        forProject,
+        projectField,
+        operationKey,
+        withAudit,
+        jsonContent,
+    });
+    registerResources(server, { ctx, client, withAudit });
+    registerPrompts(server);
     return server;
 }
 async function main() {

@@ -14,6 +14,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  api-contracts:
+    uses: ./.github/workflows/api-contracts.yml
+
   lint:
     runs-on: ubuntu-latest
     steps:

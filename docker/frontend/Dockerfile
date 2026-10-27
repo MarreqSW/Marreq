@@ -28,6 +28,8 @@ ENV MARREQ_UMAMI_WEBSITE_ID=
 ENV MARREQ_UMAMI_HOST=umami
 ENV MARREQ_UMAMI_PORT=3000
 COPY --from=build /build/frontend/dist /usr/share/nginx/html
+COPY frontend/compatibility.json /usr/share/nginx/html/contracts/compatibility.json
+COPY docs/developer/openapi.yaml /usr/share/nginx/html/contracts/openapi.yaml
 COPY docker/frontend/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --chmod=755 docker/frontend/40-marreq-umami.sh /docker-entrypoint.d/40-marreq-umami.sh
 EXPOSE 80

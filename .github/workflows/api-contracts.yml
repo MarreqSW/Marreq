@@ -1,0 +1,56 @@
+name: API contracts
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: scripts/contracts/requirements.txt
+      - name: Install contract validation tooling
+        run: python -m pip install -r scripts/contracts/requirements.txt
+      - name: Validate OpenAPI, source review, metadata and generated consumers
+        run: python scripts/contracts/check.py
+      - name: Exercise compatible and breaking historical combinations
+        run: python -m unittest discover -s scripts/contracts -v
+      - name: Check audited contracts against PR base
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          git show "$BASE_SHA:docs/developer/openapi.yaml" > /tmp/base-openapi.yaml
+          python scripts/contracts/check_baseline.py /tmp/base-openapi.yaml
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          shared-key: api-contracts
+      - name: Install PostgreSQL link dependency
+        run: sudo apt-get update && sudo apt-get install -y libpq-dev
+      - name: Verify actual compiled Server and Cloud route mounts
+        run: cargo test --locked -p marreq-cloud --test api_contract_inventory
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Typecheck and test consumers of generated wire types
+        run: |
+          npm ci --prefix frontend
+          npm ci --prefix mcp-server
+          npm run build --prefix frontend
+          npm run build --prefix mcp-server
+          npm test --prefix frontend
+          npm test --prefix mcp-server
+      - name: Verify real Rocket and HTTP consumers with isolated migrated PostgreSQL
+        run: scripts/contracts/test-backend.sh

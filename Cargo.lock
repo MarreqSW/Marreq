@@ -2994,6 +2994,7 @@ dependencies = [
  "lettre",
  "marreq-core",
  "rand 0.10.3",
+ "regex",
  "rocket",
  "serde",
  "serde_json",

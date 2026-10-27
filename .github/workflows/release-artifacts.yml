@@ -12,7 +12,62 @@ permissions:
   packages: write
 
 jobs:
+  contract-tests:
+    uses: ./.github/workflows/api-contracts.yml
+
+  compatibility:
+    needs: contract-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r scripts/contracts/requirements.txt
+      - name: Require complete producer contracts before publication
+        run: python scripts/contracts/check.py --require-complete
+      - name: Require immutable deployment-plan revision
+        id: plan
+        env:
+          PLAN_SHA: ${{ vars.MARREQ_RELEASE_CONTRACTS_SHA }}
+        run: |
+          if [[ ! "$PLAN_SHA" =~ ^[a-f0-9]{40}$ ]]; then
+            echo "Set MARREQ_RELEASE_CONTRACTS_SHA to an immutable source revision containing deployment.json and exact retained contract bundles." >&2
+            exit 1
+          fi
+          echo "sha=$PLAN_SHA" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.plan.outputs.sha }}
+          path: .release-contracts
+      - name: Verify exact candidate and unchanged deployment artifacts
+        env:
+          CANDIDATE_TAG: ${{ github.ref_name }}
+          CANDIDATE_SHA: ${{ github.sha }}
+        run: |
+          case "$CANDIDATE_TAG" in
+            marreq-server-v*) component=backend; version=${CANDIDATE_TAG#marreq-server-v} ;;
+            marreq-frontend-v*) component=frontend; version=${CANDIDATE_TAG#marreq-frontend-v} ;;
+            marreq-mcp-v*) component=mcp; version=${CANDIDATE_TAG#marreq-mcp-v} ;;
+            *) echo "unsupported component tag" >&2; exit 1 ;;
+          esac
+          if [[ "$component" == backend ]]; then
+            python scripts/contracts/bundle.py --component backend --variant server --version "$version" --output /tmp/candidate-contract.json
+          else
+            python scripts/contracts/bundle.py --component "$component" --version "$version" --output /tmp/candidate-contract.json
+          fi
+          scripts/check-api-compatibility.sh \
+            --manifest .release-contracts/deployment.json \
+            --candidate-component "$component" --candidate-version "$version" \
+            --candidate-source-sha "$CANDIDATE_SHA" \
+            --candidate-bundle /tmp/candidate-contract.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: candidate-api-contract
+          path: /tmp/candidate-contract.json
+
   backend:
+    needs: compatibility
     if: startsWith(github.ref_name, 'marreq-server-v')
     runs-on: ubuntu-latest
     steps:
@@ -51,6 +106,7 @@ jobs:
             MARREQ_GIT_SHA=${{ github.sha }}
 
   frontend:
+    needs: compatibility
     if: startsWith(github.ref_name, 'marreq-frontend-v')
     runs-on: ubuntu-latest
     steps:
@@ -88,6 +144,7 @@ jobs:
             MARREQ_GIT_SHA=${{ github.sha }}
 
   mcp:
+    needs: compatibility
     if: startsWith(github.ref_name, 'marreq-mcp-v')
     runs-on: ubuntu-latest
     steps:

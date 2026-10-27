@@ -359,3 +359,15 @@ Reference: shared route list in `marreq-core/src/api/mod.rs` (plus deployment-sp
 - **Forbidden (403)**: The token’s project scope (if set) must match `MARREQ_PROJECT_ID`; or the user must be a member of the project with permission for the action.
 - **Connection refused**: Ensure Marreq is running and `MARREQ_BASE_URL` is correct (e.g. `http://localhost:8000`).
 - **Tool not found**: Confirm `MARREQ_MODE` and `MARREQ_TRACE_WRITE` — extended and trace tools are only registered when those settings enable them.
+
+## Backend compatibility metadata
+
+`mcp-server/compatibility.json` records the build-time supported backend range,
+independently of the MCP component's version. It is retained in the MCP image.
+CI validates its shape and release verification combines it with the exact
+released MCP contract bundle; ranges alone do not establish compatibility.
+See [release contract verification](../releases.md#api-compatibility-gate-and-retained-artifact-contracts-423-p0).
+The current bootstrap still has unverified API operations and intentionally cannot
+certify an independently deployed production combination. Existing mocked MCP
+unit tests remain; `scripts/contracts/test-backend.sh` additionally executes the
+actual client against a real loopback Rocket server and an isolated database.

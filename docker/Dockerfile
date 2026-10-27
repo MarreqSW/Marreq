@@ -85,6 +85,8 @@ COPY ${MARREQ_BIN}/Rocket.toml ./Rocket.toml
 
 # diesel CLI uses /app/diesel.toml + /app/migrations (see docker-entrypoint.sh)
 COPY marreq-core/diesel.toml ./diesel.toml
+COPY docs/developer/openapi.yaml /app/contracts/openapi.yaml
+COPY marreq-core/frontend_compatibility.json /app/contracts/frontend_compatibility.json
 
 # Attachment storage (MARREQ_ATTACHMENTS_DIR). Created here so a new named
 # volume mounted on it inherits the marreq owner.

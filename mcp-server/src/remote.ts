@@ -1,3 +1,4 @@
+import type { McpPrincipalResponse } from "./generated-contract.js";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
 import type { Request, Response } from "express";
@@ -9,13 +10,7 @@ import { loadContext, type SessionContext } from "./context.js";
 import { MarreqAuthenticationError, MarreqClient } from "./client.js";
 import { withBearer } from "./credentials.js";
 
-interface Principal {
-  user_id: number;
-  authentication_type: string;
-  principal_id: string;
-  client_id?: string;
-  grant_id?: number;
-}
+type Principal = McpPrincipalResponse;
 
 type PrincipalResolution =
   | { kind: "ok"; principal: Principal }

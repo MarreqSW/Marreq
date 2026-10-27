@@ -13,6 +13,8 @@ COPY --from=build --chown=node:node /app/package.json ./
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --chown=node:node mcp-server/MARREQ_SKILL.md ./MARREQ_SKILL.md
+COPY --chown=node:node mcp-server/compatibility.json ./compatibility.json
+COPY docs/developer/openapi.yaml /app/contracts/openapi.yaml
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \

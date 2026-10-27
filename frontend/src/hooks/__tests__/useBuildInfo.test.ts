@@ -7,7 +7,7 @@ vi.mock('@/api/client');
 const build = {
   backend_version: '0.1.3',
   backend_git_sha: 'abc',
-  deployment_mode: 'server',
+  deployment_mode: 'server' as const,
   frontend_compatibility: { min_version: '0.1.0', max_version: '0.1.99' },
 };
 

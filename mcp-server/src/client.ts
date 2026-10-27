@@ -1,3 +1,10 @@
+import type {
+  McpPrincipalResponse,
+  use_cases_UseCaseRow_response as UseCaseRow,
+  use_cases_UseCaseDetail_response as UseCaseDetail,
+  use_cases_DraftView_response as UseCaseDraft,
+  use_cases_DraftChangeView_response as UseCaseDraftChange,
+} from "./generated-contract.js";
 import type { SessionContext } from "./context.js";
 import { currentBearer } from "./credentials.js";
 
@@ -18,13 +25,7 @@ export class MarreqClient {
     return this.request("/api/projects");
   }
 
-  async getPrincipal(): Promise<{
-    user_id: number;
-    authentication_type: string;
-    principal_id: string;
-    client_id?: string;
-    grant_id?: number;
-  }> {
+  async getPrincipal(): Promise<McpPrincipalResponse> {
     return this.request("/api/mcp/principal");
   }
 
@@ -360,7 +361,7 @@ export class MarreqClient {
     return `/api/projects/${this.ctx.projectId}/use-cases${path}`;
   }
 
-  async listUseCases(query: { q?: string; approval_state?: string; has_suspect?: boolean } = {}) {
+  async listUseCases(query: { q?: string; approval_state?: string; has_suspect?: boolean } = {}): Promise<UseCaseRow[]> {
     const params = new URLSearchParams();
     if (query.q) params.set("q", query.q);
     if (query.approval_state) params.set("approval_state", query.approval_state);
@@ -369,14 +370,14 @@ export class MarreqClient {
     return this.request(this.useCases(q ? `?${q}` : ""));
   }
 
-  async getUseCase(id: number, versionId?: number) {
+  async getUseCase(id: number, versionId?: number): Promise<UseCaseDetail> {
     return this.request(this.useCases(`/${id}${versionId != null ? `?version_id=${versionId}` : ""}`));
   }
 
   /** The shared draft, or null when there is none. */
-  async getUseCaseDraft(id: number) {
+  async getUseCaseDraft(id: number): Promise<UseCaseDraft | null> {
     try {
-      return await this.request(this.useCases(`/${id}/draft`));
+      return await this.request<UseCaseDraft>(this.useCases(`/${id}/draft`));
     } catch (e) {
       if (e instanceof Error && e.message.startsWith("Marreq API 404")) return null;
       throw e;
@@ -399,7 +400,7 @@ export class MarreqClient {
     payload: { reference_code?: string; title?: string; primary_actor?: string; document?: unknown },
     idempotencyKey: string
   ) {
-    return this.request(this.useCases(), {
+    return this.request<UseCaseDetail>(this.useCases(), {
       method: "POST",
       headers: { "Idempotency-Key": idempotencyKey },
       body: JSON.stringify(payload),
@@ -413,7 +414,7 @@ export class MarreqClient {
     });
   }
 
-  async putUseCaseDraft(id: number, baseRevision: number | null, document: unknown) {
+  async putUseCaseDraft(id: number, baseRevision: number | null, document: unknown): Promise<UseCaseDraftChange> {
     return this.request(this.useCases(`/${id}/draft`), {
       method: "PUT",
       body: JSON.stringify({ base_revision: baseRevision, document }),

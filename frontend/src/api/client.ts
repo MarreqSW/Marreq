@@ -17,6 +17,7 @@ export * from './meta';
 export * from './imports';
 export * from './exports';
 export * from './logs';
+export * from './cache';
 export * from './attachments';
 export * from './verificationControl';
 export * from './reports';

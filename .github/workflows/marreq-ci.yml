@@ -299,37 +299,45 @@ jobs:
       - name: Initialize database
         run: ./marreq-core/scripts/db_setup.sh
 
+      # The PostgreSQL integration tests compile out when `test-helpers` is on
+      # (`#![cfg(not(feature = "test-helpers"))]`), and the workspace run below
+      # turns it on through marreq-server/marreq-cloud. They therefore have to
+      # run as their own instrumented `-p marreq-core` builds; `--no-report`
+      # keeps their profile data so the report merges it with the workspace run.
+      # Without this the real `repository/diesel_repo` layer reads as 0% covered.
+      - name: Clean coverage data
+        run: cargo cov clean --workspace
+
       - name: Run delegated OAuth PostgreSQL integration tests
         run: |
-          cargo test -p marreq-core --test delegated_oauth_postgres_integration -- --nocapture
+          cargo cov --no-report -p marreq-core --test delegated_oauth_postgres_integration -- --nocapture
 
       - name: Run project deletion PostgreSQL integration tests
         run: |
-          cargo test -p marreq-core --test project_delete_postgres_integration -- --nocapture
+          cargo cov --no-report -p marreq-core --test project_delete_postgres_integration -- --nocapture
 
       - name: Run verification control PostgreSQL integration tests
         run: |
-          cargo test -p marreq-core --test verification_control_postgres_integration -- --nocapture
+          cargo cov --no-report -p marreq-core --test verification_control_postgres_integration -- --nocapture
 
       - name: Run use case PostgreSQL integration tests
         run: |
-          cargo test -p marreq-core --test use_cases_postgres_integration -- --nocapture
+          cargo cov --no-report -p marreq-core --test use_cases_postgres_integration -- --nocapture
 
       - name: Run requirement update PostgreSQL integration tests
         run: |
-          cargo test -p marreq-core --test requirement_update_postgres_integration -- --nocapture
+          cargo cov --no-report -p marreq-core --test requirement_update_postgres_integration -- --nocapture
 
       - name: Run login rate limit PostgreSQL integration tests
         run: |
-          cargo test -p marreq-core --test login_rate_limit_postgres_integration -- --nocapture
+          cargo cov --no-report -p marreq-core --test login_rate_limit_postgres_integration -- --nocapture
 
       - name: Run session expiry PostgreSQL integration tests
         run: |
-          cargo test -p marreq-core --test session_expiry_postgres_integration -- --nocapture
+          cargo cov --no-report -p marreq-core --test session_expiry_postgres_integration -- --nocapture
 
       - name: Generate coverage reports
         run: |
-          cargo cov clean --workspace
           cargo cov --workspace --no-report
           cargo cov report --cobertura --output-path coverage.xml
           cargo cov report --html --output-dir coverage_html

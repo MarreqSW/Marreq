@@ -23,6 +23,7 @@ import AdminPage from '@/pages/AdminPage';
 import SystemLogsPage from '@/pages/SystemLogsPage';
 import LogAnalyticsPage from '@/pages/LogAnalyticsPage';
 import BackupPage from '@/pages/BackupPage';
+import CachePage from '@/pages/CachePage';
 import CreateRequirementPage from '@/pages/CreateRequirementPage';
 import CreateVerificationPage from '@/pages/CreateVerificationPage';
 import DashboardPage from '@/pages/DashboardPage';
@@ -134,6 +135,7 @@ export default function App() {
           <Route path="logs" element={<SystemLogsPage />} />
           <Route path="logs/analytics" element={<LogAnalyticsPage />} />
           <Route path="backup" element={<BackupPage />} />
+          <Route path="cache" element={<CachePage />} />
         </Route>
         {/* Project workspace: /:projectSlug/... */}
         <Route path=":projectSlug" element={<ProjectLayout />}>

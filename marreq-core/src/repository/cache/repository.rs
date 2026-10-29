@@ -23,8 +23,6 @@ pub struct Cache {
     pub(super) hits: Arc<AtomicU64>,
     pub(super) misses: Arc<AtomicU64>,
     pub(super) total_access_time: Arc<AtomicU64>,
-    pub(super) active_entries: Arc<AtomicU64>,
-    pub(super) expired_entries: Arc<AtomicU64>,
     pub(super) last_cleanup: Arc<Mutex<chrono::DateTime<chrono::Utc>>>,
 }
 
@@ -43,8 +41,6 @@ impl Cache {
             hits: Arc::new(AtomicU64::new(0)),
             misses: Arc::new(AtomicU64::new(0)),
             total_access_time: Arc::new(AtomicU64::new(0)),
-            active_entries: Arc::new(AtomicU64::new(0)),
-            expired_entries: Arc::new(AtomicU64::new(0)),
             last_cleanup: Arc::new(Mutex::new(chrono::Utc::now())),
         }
     }
@@ -83,9 +79,6 @@ impl Cache {
                 None
             }
             Status::Expired => {
-                // Update counters: move from active to expired before removal
-                self.active_entries.fetch_sub(1, Ordering::Relaxed);
-                self.expired_entries.fetch_add(1, Ordering::Relaxed);
                 self.misses.fetch_add(1, Ordering::Relaxed);
                 self.remove(key);
                 None
@@ -110,54 +103,25 @@ impl Cache {
             expires_at: Instant::now() + ttl,
         };
 
-        let mut data = self.data.write().unwrap();
-        // Check if this key already exists to update counters correctly
-        let existed = data.contains_key(key);
-        data.insert(key.to_string(), entry);
-
-        // Update active entries counter
-        if !existed {
-            self.active_entries.fetch_add(1, Ordering::Relaxed);
-        }
+        self.data.write().unwrap().insert(key.to_string(), entry);
     }
 
     /// Remove a key from cache
     pub fn remove(&self, key: &str) {
-        let mut data = self.data.write().unwrap();
-        if let Some(entry) = data.remove(key) {
-            let now = Instant::now();
-
-            // Always decrement active count first
-            self.active_entries
-                .try_update(Ordering::Relaxed, Ordering::Relaxed, |v| v.checked_sub(1))
-                .ok();
-
-            // If expired, also decrement expired count
-            if entry.expires_at <= now {
-                self.expired_entries
-                    .try_update(Ordering::Relaxed, Ordering::Relaxed, |v| v.checked_sub(1))
-                    .ok();
-            }
-        }
+        self.data.write().unwrap().remove(key);
     }
 
     /// Clear all cache entries
     pub fn clear(&self) {
-        let mut data = self.data.write().unwrap();
-        data.clear();
-
-        // Reset entry counters
-        self.active_entries.store(0, Ordering::Relaxed);
-        self.expired_entries.store(0, Ordering::Relaxed);
+        self.data.write().unwrap().clear();
     }
 
-    /// Reset performance counters
+    /// Reset the hit/miss/access-time counters. The cached entries stay, and
+    /// so do the entry counts, which are derived from them.
     pub fn reset_counters(&self) {
         self.hits.store(0, Ordering::Relaxed);
         self.misses.store(0, Ordering::Relaxed);
         self.total_access_time.store(0, Ordering::Relaxed);
-        self.active_entries.store(0, Ordering::Relaxed);
-        self.expired_entries.store(0, Ordering::Relaxed);
     }
 
     /// Clean up expired entries and return count of cleaned entries
@@ -166,43 +130,15 @@ impl Cache {
         let now = Instant::now();
         let initial_count = data.len();
 
-        // Count expired entries before removal
-        let expired_count = data
-            .values()
-            .filter(|entry| entry.expires_at <= now)
-            .count();
-
         data.retain(|_, entry| entry.expires_at > now);
 
         let cleaned_count = initial_count - data.len();
-
-        // Update counters for cleaned entries
-        if expired_count > 0 {
-            self.expired_entries
-                .fetch_sub(expired_count as u64, Ordering::Relaxed);
-        }
 
         // Update last cleanup time
         let mut last_cleanup = self.last_cleanup.lock().unwrap();
         *last_cleanup = chrono::Utc::now();
 
         cleaned_count
-    }
-
-    /// Sync counters with actual data (useful for maintenance and debugging)
-    pub fn sync_counters(&self) {
-        let data = self.data.read().unwrap();
-        let now = Instant::now();
-
-        let actual_active = data.values().filter(|entry| entry.expires_at > now).count() as u64;
-        let actual_expired = data
-            .values()
-            .filter(|entry| entry.expires_at <= now)
-            .count() as u64;
-
-        self.active_entries.store(actual_active, Ordering::Relaxed);
-        self.expired_entries
-            .store(actual_expired, Ordering::Relaxed);
     }
 
     /// Invalidate all project-related cache entries

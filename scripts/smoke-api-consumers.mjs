@@ -4,7 +4,8 @@ import assert from 'node:assert/strict';
 import { appendFileSync } from 'node:fs';
 import { MarreqClient } from '../mcp-server/dist/client.js';
 import { fetchJson } from '../frontend/src/api/transport.ts';
-import { getCsrfToken, loginJson, getMe, logoutJson } from '../frontend/src/api/auth.ts';
+import { getCsrfToken, loginJson, getMe, logoutJson, getConnectedIdentities,
+  getConnectedApplications, updateMyProfile, changePassword } from '../frontend/src/api/auth.ts';
 import { requestPasswordReset } from '../frontend/src/api/publicAuth.ts';
 
 const base = process.env.MARREQ_CONTRACT_BACKEND_URL;
@@ -50,6 +51,14 @@ assert.deepEqual(discovery.token_endpoint_auth_methods_supported, ['none']);
 const csrf = await getCsrfToken();
 await loginJson('manager', 'Contract-only-fixture-58!z', csrf);
 assert.equal((await getMe()).username, 'manager');
+assert.equal(typeof (await getConnectedIdentities()).password_configured, 'boolean');
+assert.ok(Array.isArray(await getConnectedApplications()));
+const user = await getMe();
+const sessionCsrf = await getCsrfToken();
+assert.equal((await updateMyProfile({name:user.name, email:user.email}, sessionCsrf)).id, user.id);
+await assert.rejects(() => changePassword({current_password:'wrong',new_password:'new',confirm_password:'different'}, sessionCsrf), (error) => error.status === 400);
+// The real session is a project manager, not an instance administrator.
+await assert.rejects(() => fetchJson('/api/cache/stats'), (error) => error.status === 403);
 await logoutJson(await getCsrfToken());
 await assert.rejects(() => getMe(), (error) => error.status === 401);
 if (mode === 'cloud') await requestPasswordReset({email:'absent-contract-user@example.test'});

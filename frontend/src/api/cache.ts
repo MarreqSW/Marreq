@@ -41,24 +41,26 @@ export async function getCacheRecommendations(): Promise<CacheRecommendations> {
   return fetchJson<CacheRecommendations>('/api/cache/recommendations');
 }
 
-function cachePost(path: string, csrfToken: string): Promise<CacheActionResult> {
-  return fetchJson<CacheActionResult>(path, {
+/** Drops every cached entry; the next requests rebuild it from the database. */
+export function clearCache(csrfToken: string): Promise<CacheActionResult> {
+  return fetchJson<CacheActionResult>('/api/cache/clear', {
     method: 'POST',
     headers: { 'X-CSRF-Token': csrfToken },
   });
 }
 
-/** Drops every cached entry; the next requests rebuild it from the database. */
-export function clearCache(csrfToken: string): Promise<CacheActionResult> {
-  return cachePost('/api/cache/clear', csrfToken);
-}
-
 /** Drops only the expired entries. */
 export function cleanupCache(csrfToken: string): Promise<CacheActionResult> {
-  return cachePost('/api/cache/cleanup', csrfToken);
+  return fetchJson<CacheActionResult>('/api/cache/cleanup', {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrfToken },
+  });
 }
 
 /** Zeroes the hit/miss counters without touching the cached entries. */
 export function resetCacheCounters(csrfToken: string): Promise<CacheActionResult> {
-  return cachePost('/api/cache/reset-counters', csrfToken);
+  return fetchJson<CacheActionResult>('/api/cache/reset-counters', {
+    method: 'POST',
+    headers: { 'X-CSRF-Token': csrfToken },
+  });
 }

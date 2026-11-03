@@ -323,6 +323,25 @@ fn tampered_contract_hash() {
             .contains("SHA-256 mismatch")
     );
 }
+
+#[test]
+fn candidate_identity_requires_exact_source_version_and_bundle() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = plan(dir.path(), "0.2.4", "0.3.0", false);
+    let bundle = dir.path().join("backend.json");
+    let version = "0.2.4".parse().unwrap();
+    let wrong_version = "0.2.5".parse().unwrap();
+    let source = "a".repeat(40);
+    artifact::verify(&path, Some(("backend", &version, &source, &bundle))).unwrap();
+    for (version, source) in [(&wrong_version, source.clone()), (&version, "b".repeat(40))] {
+        assert!(artifact::verify(&path, Some(("backend", version, &source, &bundle))).is_err());
+    }
+    let altered = dir.path().join("altered.json");
+    let mut document = contract::load(&bundle).unwrap();
+    document["contract"]["paths"] = json!({});
+    contract::write(&altered, &document).unwrap();
+    assert!(artifact::verify(&path, Some(("backend", &version, &source, &altered))).is_err());
+}
 #[test]
 fn cli_exit_codes_and_json_diagnostics() {
     let dir = tempfile::tempdir().unwrap();

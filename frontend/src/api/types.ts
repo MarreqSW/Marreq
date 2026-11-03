@@ -192,17 +192,9 @@ export type DeploymentInfo = ApiComponents['schemas']['DeploymentInfo'];
 
 export type AuthProviderDiscovery = ApiComponents['schemas']['external_ProviderDiscovery_response'];
 
-export interface ConnectedIdentity {
-  id: number;
-  provider: string;
-  created_at: string;
-  last_login_at: string | null;
-}
+export type ConnectedIdentity = ConnectedIdentities['identities'][number];
 
-export interface ConnectedIdentities {
-  password_configured: boolean;
-  identities: ConnectedIdentity[];
-}
+export type ConnectedIdentities = ApiComponents['schemas']['AuthIdentities'];
 
 export interface ConnectedApplication {
   id: number;
@@ -236,11 +228,7 @@ export type ResetPasswordBody = {
   new_password: string;
 };
 
-export type ChangePasswordBody = {
-  current_password: string;
-  new_password: string;
-  confirm_password: string;
-};
+export type ChangePasswordBody = ApiComponents['schemas']['AuthChangePassword'];
 
 /** `GET /api/projects/:pid/requirements/:id` — requirement fields flattened + trace_summary. */
 export interface RequirementVersionLink {
@@ -608,12 +596,7 @@ export interface User {
 }
 
 /** Body for `PUT /api/auth/me`: the signed-in user's own name and email. */
-export interface ProfileUpdateRequest {
-  name: string;
-  email: string;
-  /** Required when the email changes and the account has a password. */
-  current_password?: string;
-}
+export type ProfileUpdateRequest = ApiComponents['schemas']['AuthProfileUpdate'];
 
 /** Body for `PUT /api/users/:id` (admin only). */
 export interface UserUpdateRequest {
@@ -827,31 +810,10 @@ export interface ProjectUpdateBody {
 export type AttachmentEntityType = 'requirement' | 'verification';
 
 /** A file attached to a requirement or verification (`GET /projects/{id}/attachments`). */
-export interface Attachment {
-  id: number;
-  entity_type: AttachmentEntityType;
-  entity_id: number;
-  filename: string;
-  content_type: string;
-  size_bytes: number;
-  uploaded_by: number | null;
-  uploaded_by_name: string | null;
-  created_at: string;
-  /** Only true in baseline listings, for files deleted after the baseline. */
-  deleted: boolean;
-}
+export type Attachment = ApiComponents['schemas']['AttachmentView'];
 
 /** `GET /projects/{id}/storage`: attachment storage used by a project and the limits. */
-export interface ProjectStorage {
-  used_bytes: number;
-  quota_bytes: number;
-  quota_is_default: boolean;
-  default_quota_bytes: number;
-  /** Part of `used_bytes` taken by deleted files that baselines still keep. */
-  retained_by_baselines_bytes: number;
-  max_file_bytes: number;
-  allowed_extensions: string[];
-}
+export type ProjectStorage = ApiComponents['schemas']['AttachmentStorage'];
 
 /** `GET|PUT /api/projects/:pid/verifications/:vid/control` (issue #353). */
 export interface VerificationControl {

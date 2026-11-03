@@ -236,11 +236,15 @@ audit and cannot be used in a releasable consumer bundle. Unconsumed backend
 endpoints are outside this contract; adding/changing them does not itself block
 an existing consumer.
 
-**The refactor remains draft.** The earlier 245-operation global completeness gate
-was removed, but most remaining gaps are genuinely consumed APIs. Completing their
-wire schemas, binding more producer DTO serialization to those schemas, and
-retaining actual historical artifact evidence are still release blockers. A
-passing document validator alone is not a compatibility guarantee.
+**PR #424 remains draft.** Discovery currently selects 195 frontend operations and
+79 MCP operations: 217 distinct dependencies, of which 59 have audited wire
+contracts and 158 remain unverified. The audited additions cover cache
+administration, session/profile/identity flows, connected grants, multipart
+attachments, file downloads and storage quotas, alongside the existing metadata,
+OAuth, Cloud account and use-case contracts. These counts describe the current
+source, not a separate inventory to maintain. Complete the remaining consumed
+wire audits and producer regression protection before treating this as merge-ready.
+A passing document validator alone is not a compatibility guarantee.
 
 ### Architecture and rationale
 
@@ -269,7 +273,8 @@ passing document validator alone is not a compatibility guarantee.
   Server/Cloud registration. Extra backend routes are permitted. Four public
   account routes are Cloud-only; shared deployment capabilities remain runtime
   behavior rather than invented Server/Cloud route differences.
-- Standard `openapi-typescript` emits only schemas reachable by each consumer.
+- Standard `openapi-typescript` and the TypeScript compiler emit only schemas
+  imported by each consumer and their type dependencies, in sorted order.
   Committed declarations keep Rust/global OpenAPI out of frontend/MCP Docker
   builds. Each consumer owns its minimal build input; the duplicate global type
   snapshots were replaced by independently selected declarations.
@@ -280,12 +285,16 @@ existing requirements-compliance Python script is retained.
 
 ### Developer commands
 
-Install the pinned upstream engine once (`scripts/install-oasdiff.sh`; CI does
-this automatically), add its destination to PATH, or set `OASDIFF` to that binary.
+Workspace tests, including coverage, require the pinned upstream engine. Install
+it once and expose its destination on PATH (or set `OASDIFF` to that binary).
+Both contract CI and workspace coverage CI use the same installer.
 The installer currently handles Linux x86_64; other platforms may install the same
 upstream version themselves. No contract command downloads refs or schemas.
 
 ```sh
+scripts/install-oasdiff.sh
+export PATH="$HOME/.cache/marreq-contracts:$PATH"
+npm ci # pinned generator and TypeScript compiler
 cargo test --locked -p marreq-contracts
 cargo run --locked -p marreq-contracts -- validate
 cargo run --locked -p marreq-contracts -- coverage --component frontend
@@ -323,5 +332,8 @@ The CLI reports exact operation and call-site counts. Keep the PR draft while an
 required operation is unverified, a producer behavior lacks adequate contract
 protection, or a required check fails. Hand-maintained schemas still need broader
 Rust DTO/serialization verification; compiled route presence alone is insufficient.
-The remaining upstream Rust advisory is tracked in
-[#425](https://github.com/MarreqSW/Marreq/issues/425); the security gate is unchanged.
+The advisory policy is inherited unchanged from `main`, including its
+`crypto-bigint` exception tracked in [#425](https://github.com/MarreqSW/Marreq/issues/425).
+The newly reported `calamine` advisory RUSTSEC-2026-0436 is fixed with the targeted
+0.38.0 update; no additional ignores are introduced. MCP production audit still
+reports a moderate advisory below the existing high-severity failure threshold.

@@ -136,8 +136,9 @@ Optional request fields and additional response fields are compatible where the
 old contract accepts them. Removed guaranteed response properties, new required
 request properties, narrowed request enums, widened closed response enums,
 incompatible types/authentication, or missing required operations fail. Per-operation
-Bearer scopes and stable CSRF policy IDs are checked separately; unused global
-security schemes and exact global status/header set equality do not couple APIs.
+Bearer scopes, authorization policies and stable CSRF policy IDs are checked
+separately; unused global security schemes and exact global status/header set
+equality do not couple APIs.
 The pinned standards engine decides ordinary OpenAPI changes, not homegrown rules.
 Missing evidence, altered hashes, mismatched source/version, invalid policy,
 unsupported semantics and uncertain required operations exit nonzero with JSON
@@ -150,7 +151,15 @@ candidate, and verifies its version, source and bundle hash against the plan bef
 any image publisher runs. The release gate uses the **actual artifact combination**;
 it does not require the latest checkout's unchanged consumers. The PR gate instead
 checks all calls in current source. No gate requires coverage of unconsumed routes.
-No global release migration or production deployment is performed here.
+To provision `MARREQ_RELEASE_CONTRACTS_SHA`, export each bundle from its actual
+clean release source, retain the files together, and write `deployment.json` with
+their printed SHA-256 values, versions and source SHAs. Run `verify --manifest`
+locally, commit that plan and its bundles, then set the repository Actions variable
+to that immutable commit SHA before pushing the component tag. For a candidate,
+the plan must reference the exact tagged source-exported bundle. Do not reuse a
+previous plan unchanged or synthesize a manifest from current `main`; missing
+historical evidence deliberately prevents publication. No global release migration
+or production deployment is performed here.
 
 The PR remains draft until required consumer schema gaps and security failures are
 resolved; a document-only check is not a merge/release-readiness assertion.

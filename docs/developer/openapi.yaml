@@ -5,6 +5,114 @@ info: {title: Marreq HTTP API, version: 0.1.0, description: Consumer-facing HTTP
 servers:
 - {url: /}
 paths:
+  /api/cache/stats:
+    get:
+      operationId: cache_stats
+      description: Audited against api/cache.rs, repository/cache/stats.rs and auth/guards/admin.rs. Session
+        administrator only; identical in Server and Cloud.
+      security:
+        - cookieAuth: []
+      x-marreq-authorization: instance-admin
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CacheStats"
+        "401":
+          description: Missing or expired session; guard response may be empty.
+        "403":
+          description: Not an administrator, or CSRF check failed; body may be framework-generated.
+        "500":
+          $ref: "#/components/responses/ApiError"
+  /api/cache/recommendations:
+    get:
+      operationId: cache_recommendations
+      description: Audited against api/cache.rs, repository/cache/stats.rs and auth/guards/admin.rs. Session
+        administrator only; identical in Server and Cloud.
+      security:
+        - cookieAuth: []
+      x-marreq-authorization: instance-admin
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CacheRecommendations"
+        "401":
+          description: Missing or expired session; guard response may be empty.
+        "403":
+          description: Not an administrator, or CSRF check failed; body may be framework-generated.
+        "500":
+          $ref: "#/components/responses/ApiError"
+  /api/cache/clear:
+    post:
+      operationId: cache_clear
+      description: Audited against api/cache.rs, repository/cache/stats.rs and auth/guards/admin.rs. Session
+        administrator only; identical in Server and Cloud.
+      security:
+        - cookieAuth: []
+      x-marreq-authorization: instance-admin
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CacheActionResult"
+        "401":
+          description: Missing or expired session; guard response may be empty.
+        "403":
+          description: Not an administrator, or CSRF check failed; body may be framework-generated.
+        "500":
+          $ref: "#/components/responses/ApiError"
+      x-marreq-csrf: session-csrf
+  /api/cache/cleanup:
+    post:
+      operationId: cache_cleanup
+      description: Audited against api/cache.rs, repository/cache/stats.rs and auth/guards/admin.rs. Session
+        administrator only; identical in Server and Cloud.
+      security:
+        - cookieAuth: []
+      x-marreq-authorization: instance-admin
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CacheCleanupResult"
+        "401":
+          description: Missing or expired session; guard response may be empty.
+        "403":
+          description: Not an administrator, or CSRF check failed; body may be framework-generated.
+        "500":
+          $ref: "#/components/responses/ApiError"
+      x-marreq-csrf: session-csrf
+  /api/cache/reset-counters:
+    post:
+      operationId: cache_reset_counters
+      description: Audited against api/cache.rs, repository/cache/stats.rs and auth/guards/admin.rs. Session
+        administrator only; identical in Server and Cloud.
+      security:
+        - cookieAuth: []
+      x-marreq-authorization: instance-admin
+      responses:
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CacheActionResult"
+        "401":
+          description: Missing or expired session; guard response may be empty.
+        "403":
+          description: Not an administrator, or CSRF check failed; body may be framework-generated.
+        "500":
+          $ref: "#/components/responses/ApiError"
+      x-marreq-csrf: session-csrf
   /api/projects/{project_id}/requirements/{id}/activity:
     get:
       operationId: activity_requirement_activity_by_project
@@ -93,121 +201,394 @@ paths:
     get:
       operationId: attachments_list
       parameters:
-      - in: path
-        name: project_id
-        required: true
-        schema: {type: integer}
+        - in: path
+          name: project_id
+          required: true
+          schema:
+            type: integer
+        - in: query
+          name: entity_type
+          required: true
+          schema:
+            type: string
+            enum:
+              - requirement
+              - verification
+        - in: query
+          name: entity_id
+          required: true
+          schema:
+            type: integer
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Wire contract pending audit; required consumers fail verification.
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttachmentView"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "403":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "422":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "500":
+          $ref: "#/components/responses/ApiError"
+        "503":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+      description: Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same
+        routes and wire types in Server and Cloud; configured storage limits remain instance policy.
       security:
-      - cookieAuth: []
-      - bearerAuth: []
+        - cookieAuth: []
+        - bearerAuth: []
+      x-marreq-authorization: project-membership;ViewRequirements;delegated-requirements-and-verifications-read
+      x-marreq-bearer-scopes:
+        - requirements:read
+        - verifications:read
     post:
       operationId: attachments_upload
       parameters:
-      - in: path
-        name: project_id
-        required: true
-        schema: {type: integer}
+        - in: path
+          name: project_id
+          required: true
+          schema:
+            type: integer
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Wire contract pending audit; required consumers fail verification.
+        "201":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttachmentView"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "403":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "413":
+          description: Upload exceeds the file or project quota, or Rocket's request limit. The handler returns
+            ApiError JSON; Rocket can reject an oversized form before the handler with a framework-generated body.
+        "415":
+          $ref: "#/components/responses/ApiError"
+        "422":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "500":
+          $ref: "#/components/responses/ApiError"
+        "503":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+      description: Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same
+        routes and wire types in Server and Cloud; configured storage limits remain instance policy.
       security:
-      - cookieAuth: []
-      - bearerAuth: []
+        - cookieAuth: []
+        - bearerAuth: []
+      x-marreq-authorization: project-membership;EditRequirements;not-archived;personal-token-or-session;delegated-denied
+      x-marreq-csrf: session-csrf
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                entity_type:
+                  type: string
+                  enum:
+                    - requirement
+                    - verification
+                entity_id:
+                  type: integer
+              required:
+                - file
+                - entity_type
+                - entity_id
+              additionalProperties: true
   /api/projects/{project_id}/attachments/{attachment_id}/download:
     get:
       operationId: attachments_download
       parameters:
-      - in: path
-        name: project_id
-        required: true
-        schema: {type: integer}
-      - in: path
-        name: attachment_id
-        required: true
-        schema: {type: integer}
+        - in: path
+          name: project_id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: attachment_id
+          required: true
+          schema:
+            type: integer
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Wire contract pending audit; required consumers fail verification.
+        "200":
+          description: Stored file served as a download using its detected media type.
+          headers:
+            Content-Disposition:
+              required: true
+              schema:
+                type: string
+            X-Content-Type-Options:
+              required: true
+              schema:
+                type: string
+                const: nosniff
+            Content-Security-Policy:
+              required: true
+              schema:
+                type: string
+                const: default-src 'none'; sandbox
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                const: private, no-cache
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "403":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "500":
+          $ref: "#/components/responses/ApiError"
+        "503":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+      description: Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same
+        routes and wire types in Server and Cloud; configured storage limits remain instance policy.
       security:
-      - cookieAuth: []
-      - bearerAuth: []
+        - cookieAuth: []
+        - bearerAuth: []
+      x-marreq-authorization: project-membership;ViewRequirements;personal-token-or-session;delegated-denied
   /api/projects/{project_id}/storage:
     get:
       operationId: attachments_get_storage
       parameters:
-      - in: path
-        name: project_id
-        required: true
-        schema: {type: integer}
+        - in: path
+          name: project_id
+          required: true
+          schema:
+            type: integer
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Wire contract pending audit; required consumers fail verification.
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttachmentStorage"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "403":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "500":
+          $ref: "#/components/responses/ApiError"
+        "503":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+      description: Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same
+        routes and wire types in Server and Cloud; configured storage limits remain instance policy.
       security:
-      - cookieAuth: []
-      - bearerAuth: []
+        - cookieAuth: []
+        - bearerAuth: []
+      x-marreq-authorization: project-membership;ViewRequirements;personal-token-or-session;delegated-denied
   /api/projects/{project_id}/storage/quota:
     put:
       operationId: attachments_set_quota
       parameters:
-      - in: path
-        name: project_id
-        required: true
-        schema: {type: integer}
+        - in: path
+          name: project_id
+          required: true
+          schema:
+            type: integer
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Wire contract pending audit; required consumers fail verification.
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttachmentStorage"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "403":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "422":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "500":
+          $ref: "#/components/responses/ApiError"
+        "503":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+      description: Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same
+        routes and wire types in Server and Cloud; configured storage limits remain instance policy.
       security:
-      - cookieAuth: []
+        - cookieAuth: []
+      x-marreq-authorization: instance-admin;not-archived
+      x-marreq-csrf: session-csrf
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                quota_mb:
+                  anyOf:
+                    - type: integer
+                      minimum: 1
+                      maximum: 1073741824
+                    - type: "null"
+              additionalProperties: false
   /api/projects/{project_id}/baselines/{baseline_id}/attachments:
     get:
       operationId: attachments_list_for_baseline
       parameters:
-      - in: path
-        name: project_id
-        required: true
-        schema: {type: integer}
-      - in: path
-        name: baseline_id
-        required: true
-        schema: {type: integer}
+        - in: path
+          name: project_id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: baseline_id
+          required: true
+          schema:
+            type: integer
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Wire contract pending audit; required consumers fail verification.
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AttachmentView"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "403":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "500":
+          $ref: "#/components/responses/ApiError"
+      description: Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same
+        routes and wire types in Server and Cloud; configured storage limits remain instance policy.
       security:
-      - cookieAuth: []
-      - bearerAuth: []
+        - cookieAuth: []
+        - bearerAuth: []
+      x-marreq-authorization: project-membership;ViewRequirements;delegated-baselines-read
+      x-marreq-bearer-scopes:
+        - baselines:read
   /api/projects/{project_id}/baselines/{baseline_id}/attachments/{attachment_id}/download:
     get:
       operationId: attachments_download_for_baseline
       parameters:
-      - in: path
-        name: project_id
-        required: true
-        schema: {type: integer}
-      - in: path
-        name: baseline_id
-        required: true
-        schema: {type: integer}
-      - in: path
-        name: attachment_id
-        required: true
-        schema: {type: integer}
+        - in: path
+          name: project_id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: baseline_id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: attachment_id
+          required: true
+          schema:
+            type: integer
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Wire contract pending audit; required consumers fail verification.
+        "200":
+          description: Stored file served as a download using its detected media type.
+          headers:
+            Content-Disposition:
+              required: true
+              schema:
+                type: string
+            X-Content-Type-Options:
+              required: true
+              schema:
+                type: string
+                const: nosniff
+            Content-Security-Policy:
+              required: true
+              schema:
+                type: string
+                const: default-src 'none'; sandbox
+            Cache-Control:
+              required: true
+              schema:
+                type: string
+                const: private, no-cache
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "403":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "500":
+          $ref: "#/components/responses/ApiError"
+        "503":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+      description: Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same
+        routes and wire types in Server and Cloud; configured storage limits remain instance policy.
       security:
-      - cookieAuth: []
-      - bearerAuth: []
+        - cookieAuth: []
+        - bearerAuth: []
+      x-marreq-authorization: project-membership;ViewRequirements;delegated-baselines-read
+      x-marreq-bearer-scopes:
+        - baselines:read
   /api/auth/providers:
     get:
       operationId: auth_auth_providers
@@ -223,38 +604,94 @@ paths:
     get:
       operationId: auth_auth_external_start
       parameters:
-      - in: path
-        name: provider
-        required: true
-        schema: {type: string}
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: return_to
+          schema:
+            type: string
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Wire contract pending audit; required consumers fail verification.
+        "303":
+          description: Redirect to the provider or validated local return path.
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "500":
+          $ref: "#/components/responses/ApiError"
+      description: Audited api/auth.rs and models/forms.rs. Session-scoped authentication; identical routes in
+        Server and Cloud.
       security: []
   /api/auth/external/{provider}/callback:
     get:
       operationId: auth_auth_external_callback
       parameters:
-      - in: path
-        name: provider
-        required: true
-        schema: {type: string}
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: code
+          schema:
+            type: string
+        - in: query
+          name: state
+          schema:
+            type: string
+        - in: query
+          name: error
+          schema:
+            type: string
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Wire contract pending audit; required consumers fail verification.
+        "303":
+          description: Redirect to the provider or validated local return path.
+          headers:
+            Location:
+              required: true
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          $ref: "#/components/responses/ApiError"
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "409":
+          $ref: "#/components/responses/ApiError"
+        "500":
+          $ref: "#/components/responses/ApiError"
+      description: Audited api/auth.rs and models/forms.rs. Session-scoped authentication; identical routes in
+        Server and Cloud.
       security: []
+      x-marreq-authorization: single-use-oauth-transaction;link-requires-original-session
   /api/auth/identities:
     get:
       operationId: auth_auth_identities
       parameters: []
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Wire contract pending audit; required consumers fail verification.
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthIdentities"
+        "401":
+          $ref: "#/components/responses/ApiError"
+        "500":
+          $ref: "#/components/responses/ApiError"
+      description: Audited api/auth.rs and models/forms.rs. Session-scoped authentication; identical routes in
+        Server and Cloud.
       security:
-      - cookieAuth: []
+        - cookieAuth: []
   /api/auth/me:
     get:
       operationId: auth_auth_me
@@ -278,11 +715,38 @@ paths:
       operationId: auth_auth_update_me
       parameters: []
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Wire contract pending audit; required consumers fail verification.
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/entities_User_response"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          $ref: "#/components/responses/ApiError"
+        "403":
+          description: Authentication or CSRF failure; body may be framework-generated or empty.
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "409":
+          $ref: "#/components/responses/ApiError"
+        "422":
+          description: Authentication or CSRF failure; body may be framework-generated or empty.
+        "500":
+          $ref: "#/components/responses/ApiError"
+      description: Audited api/auth.rs and services/user_service.rs. Own profile only. Email changes require the
+        current password when configured; Cloud rejects email changes. Other profile changes work in both
+        variants.
       security:
-      - cookieAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthProfileUpdate"
+      x-marreq-csrf: session-csrf
   /api/admin/backup/info:
     get:
       operationId: backup_info
@@ -3666,17 +4130,29 @@ paths:
     delete:
       operationId: auth_auth_identity_delete
       parameters:
-      - in: path
-        name: identity_id
-        required: true
-        schema: {type: integer}
+        - in: path
+          name: identity_id
+          required: true
+          schema:
+            type: integer
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Route inventory only. Request/response serialization, status codes and authorization require
-        audit before compatibility can be established.
+        "204":
+          description: Owned identity removed; no body.
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          $ref: "#/components/responses/ApiError"
+        "403":
+          description: Authentication or CSRF failure; body may be framework-generated or empty.
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "500":
+          $ref: "#/components/responses/ApiError"
+      description: Audited api/auth.rs and models/forms.rs. Session-scoped authentication; identical routes in
+        Server and Cloud.
       security:
-      - cookieAuth: []
+        - cookieAuth: []
+      x-marreq-csrf: session-csrf
   /api/auth/register:
     post:
       operationId: auth_public_auth_register
@@ -3780,37 +4256,89 @@ paths:
     delete:
       operationId: attachments_delete
       parameters:
-      - in: path
-        name: project_id
-        required: true
-        schema: {type: integer}
-      - in: path
-        name: attachment_id
-        required: true
-        schema: {type: integer}
+        - in: path
+          name: project_id
+          required: true
+          schema:
+            type: integer
+        - in: path
+          name: attachment_id
+          required: true
+          schema:
+            type: integer
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Route inventory only. Request/response serialization, status codes and authorization require
-        audit before compatibility can be established.
+        "204":
+          description: Attachment deleted; empty body. Baseline retention can keep the stored bytes.
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "403":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "500":
+          $ref: "#/components/responses/ApiError"
+        "503":
+          description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or
+            framework-generated.
+      description: Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same
+        routes and wire types in Server and Cloud; configured storage limits remain instance policy.
       security:
-      - cookieAuth: []
-      - bearerAuth: []
+        - cookieAuth: []
+        - bearerAuth: []
+      x-marreq-authorization: project-membership;EditRequirements;not-archived;personal-token-or-session;delegated-denied
+      x-marreq-csrf: session-csrf
   /api/auth/external/{provider}/link:
     post:
       operationId: auth_auth_external_link_start
       parameters:
-      - in: path
-        name: provider
-        required: true
-        schema: {type: string}
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Route inventory only. Request/response serialization, status codes and authorization require
-        audit before compatibility can be established.
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  authorization_url:
+                    type: string
+                required:
+                  - authorization_url
+                additionalProperties: true
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          $ref: "#/components/responses/ApiError"
+        "403":
+          description: Authentication or CSRF failure; body may be framework-generated or empty.
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "422":
+          description: Authentication or CSRF failure; body may be framework-generated or empty.
+        "500":
+          $ref: "#/components/responses/ApiError"
+      description: Audited api/auth.rs and models/forms.rs. Session-scoped authentication; identical routes in
+        Server and Cloud.
       security:
-      - cookieAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              description: Any JSON value is accepted; an object return_to string overrides the default /settings/account.
+              properties:
+                return_to:
+                  type: string
+      x-marreq-csrf: session-csrf
   /api/auth/verify-email:
     get:
       operationId: auth_public_auth_verify_email
@@ -3909,38 +4437,107 @@ paths:
       operationId: auth_auth_change_password
       parameters: []
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Route inventory only. Request/response serialization, status codes and authorization require
-        audit before compatibility can be established.
+        "200":
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+        "400":
+          $ref: "#/components/responses/ApiError"
+        "401":
+          $ref: "#/components/responses/ApiError"
+        "403":
+          description: Authentication or CSRF failure; body may be framework-generated or empty.
+        "422":
+          description: Authentication or CSRF failure; body may be framework-generated or empty.
+        "500":
+          $ref: "#/components/responses/ApiError"
+      description: Audited api/auth.rs and models/forms.rs. Session-scoped authentication; identical routes in
+        Server and Cloud.
       security:
-      - cookieAuth: []
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AuthChangePassword"
+      x-marreq-csrf: session-csrf
   /api/oauth/grants:
     get:
       operationId: oauth_grants
       parameters: []
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Route inventory only. Request/response serialization, status codes and authorization require
-        audit before compatibility can be established.
+        "200":
+          description: Connected applications
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - grants
+                properties:
+                  grants:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - id
+                        - application_name
+                        - scopes
+                        - created_at
+                        - last_used_at
+                      properties:
+                        id:
+                          type: integer
+                        application_name:
+                          type: string
+                        scopes:
+                          type: array
+                          items:
+                            type: string
+                        created_at:
+                          type: string
+                        last_used_at:
+                          type:
+                            - string
+                            - "null"
+                      additionalProperties: true
+                additionalProperties: true
+        "401":
+          description: Missing or expired session; guard response may be empty.
+        "500":
+          $ref: "#/components/responses/ApiError"
+      description: Audited api/oauth.rs grants/revoke_grant and models/entities.rs OAuthGrant. Owned session grants
+        only, identical in Server and Cloud; no Bearer authentication.
       security:
-      - cookieAuth: []
+        - cookieAuth: []
   /api/oauth/grants/{id}:
     delete:
       operationId: oauth_revoke_grant
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema: {type: integer}
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: integer
       responses:
-        default: {description: Wire behavior has not yet been verified.}
-      x-marreq-unverified: true
-      description: Route inventory only. Request/response serialization, status codes and authorization require
-        audit before compatibility can be established.
+        "204":
+          description: Owned grant revoked; empty body.
+        "401":
+          description: Missing or expired session; guard response may be empty.
+        "403":
+          description: CSRF failure; body may be framework-generated.
+        "404":
+          $ref: "#/components/responses/ApiError"
+        "500":
+          $ref: "#/components/responses/ApiError"
+      description: Audited api/oauth.rs grants/revoke_grant and models/entities.rs OAuthGrant. Owned session grants
+        only, identical in Server and Cloud; no Bearer authentication.
       security:
-      - cookieAuth: []
+        - cookieAuth: []
+      x-marreq-csrf: session-csrf
   /api/dashboard:
     get:
       operationId: dashboard_dashboard_json
@@ -3993,6 +4590,239 @@ components:
     mcpServiceAuth: {type: apiKey, in: header, name: X-Marreq-Mcp-Audit-Secret, description: Private service-to-service
         audit secret; never browser or delegated caller configuration.}
   schemas:
+    AttachmentView:
+      type: object
+      properties:
+        id:
+          type: integer
+        entity_type:
+          type: string
+          enum:
+            - requirement
+            - verification
+        entity_id:
+          type: integer
+        filename:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+        uploaded_by:
+          type:
+            - integer
+            - "null"
+        uploaded_by_name:
+          type:
+            - string
+            - "null"
+        created_at:
+          type: string
+        deleted:
+          type: boolean
+      required:
+        - id
+        - entity_type
+        - entity_id
+        - filename
+        - content_type
+        - size_bytes
+        - uploaded_by
+        - uploaded_by_name
+        - created_at
+        - deleted
+      additionalProperties: true
+    AttachmentStorage:
+      type: object
+      properties:
+        used_bytes:
+          type: integer
+        quota_bytes:
+          type: integer
+        quota_is_default:
+          type: boolean
+        default_quota_bytes:
+          type: integer
+        retained_by_baselines_bytes:
+          type: integer
+        max_file_bytes:
+          type: integer
+        allowed_extensions:
+          type: array
+          items:
+            type: string
+      required:
+        - used_bytes
+        - quota_bytes
+        - quota_is_default
+        - default_quota_bytes
+        - retained_by_baselines_bytes
+        - max_file_bytes
+        - allowed_extensions
+      additionalProperties: true
+    AuthProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        current_password:
+          type:
+            - string
+            - "null"
+      required:
+        - name
+        - email
+      additionalProperties: true
+    AuthIdentities:
+      type: object
+      properties:
+        password_configured:
+          type: boolean
+        identities:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: integer
+              provider:
+                type: string
+              created_at:
+                type: string
+              last_login_at:
+                type:
+                  - string
+                  - "null"
+            required:
+              - id
+              - provider
+              - created_at
+              - last_login_at
+            additionalProperties: true
+      required:
+        - password_configured
+        - identities
+      additionalProperties: true
+    AuthChangePassword:
+      type: object
+      properties:
+        current_password:
+          type: string
+        new_password:
+          type: string
+        confirm_password:
+          type: string
+      required:
+        - current_password
+        - new_password
+        - confirm_password
+      additionalProperties: true
+    AuthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          const: ok
+      required:
+        - status
+      additionalProperties: true
+    CacheStats:
+      type: object
+      properties:
+        total_entries:
+          type: integer
+          minimum: 0
+        active_entries:
+          type: integer
+          minimum: 0
+        expired_entries:
+          type: integer
+          minimum: 0
+        hits:
+          type: integer
+          minimum: 0
+        misses:
+          type: integer
+          minimum: 0
+        total_requests:
+          type: integer
+          minimum: 0
+        average_access_time_ns:
+          type: integer
+          minimum: 0
+        total_access_time_ns:
+          type: integer
+          minimum: 0
+        cache_size_bytes:
+          type: integer
+          minimum: 0
+        hit_rate:
+          type: number
+        miss_rate:
+          type: number
+        last_cleanup:
+          type: string
+          format: date-time
+      required:
+        - total_entries
+        - active_entries
+        - expired_entries
+        - hits
+        - misses
+        - total_requests
+        - average_access_time_ns
+        - total_access_time_ns
+        - cache_size_bytes
+        - hit_rate
+        - miss_rate
+        - last_cleanup
+      additionalProperties: true
+    CacheRecommendations:
+      type: object
+      properties:
+        recommendations:
+          type: array
+          items:
+            type: string
+        priority:
+          type: string
+          enum:
+            - high
+            - medium
+            - low
+        analysis_timestamp:
+          type: string
+          format: date-time
+      required:
+        - recommendations
+        - priority
+        - analysis_timestamp
+      additionalProperties: true
+    CacheActionResult:
+      type: object
+      properties:
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      required:
+        - message
+        - timestamp
+      additionalProperties: true
+    CacheCleanupResult:
+      allOf:
+        - $ref: "#/components/schemas/CacheActionResult"
+        - type: object
+          properties:
+            cleaned_entries:
+              type: integer
+              minimum: 0
+          required:
+            - cleaned_entries
+          additionalProperties: true
     external_ProviderDiscovery_response:
       type: object
       properties:

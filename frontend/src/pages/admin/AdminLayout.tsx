@@ -47,6 +47,7 @@ export default function AdminLayout() {
     { to: `${ADMIN_BASE}/logs`, label: 'System logs', icon: 'history', end: true },
     { to: `${ADMIN_BASE}/logs/analytics`, label: 'Log analytics', icon: 'monitoring' },
     { to: `${ADMIN_BASE}/backup`, label: 'Backup', icon: 'backup', hidden: !backupAllowed },
+    { to: `${ADMIN_BASE}/cache`, label: 'Cache', icon: 'cached' },
   ];
 
   return (

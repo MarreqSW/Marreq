@@ -6,7 +6,7 @@ use super::repository::Cache;
 use chrono;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// Cache statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,7 +28,7 @@ pub struct CacheStats {
 impl Cache {
     /// Get cache statistics
     pub fn stats(&self) -> CacheStats {
-        // Use atomic counters for O(1) performance instead of O(n) calculations
+        // Hit/miss/access-time use atomic counters, so reading them is O(1).
         let hits = self.hits.load(std::sync::atomic::Ordering::Relaxed);
         let misses = self.misses.load(std::sync::atomic::Ordering::Relaxed);
         let total_requests = hits + misses;
@@ -47,23 +47,28 @@ impl Cache {
             )
         };
 
-        let active_entries = self
-            .active_entries
-            .load(std::sync::atomic::Ordering::Relaxed) as usize;
-        let expired_entries = self
-            .expired_entries
-            .load(std::sync::atomic::Ordering::Relaxed) as usize;
+        // Count the entries from the map itself. Entries expire by the clock
+        // without anything touching them, so incrementally maintained counters
+        // drift (and used to underflow); one pass under the read lock cannot.
+        let (active_entries, expired_entries, cache_size_bytes) = {
+            let data = self.data.read().unwrap();
+            let now = Instant::now();
+            let mut active = 0usize;
+            let mut expired = 0usize;
+            let mut size = 0usize;
+            for (key, entry) in data.iter() {
+                if entry.expires_at > now {
+                    active += 1;
+                } else {
+                    expired += 1;
+                }
+                size += key.len() + entry.data.len();
+            }
+            (active, expired, size)
+        };
         let total_entries = active_entries + expired_entries;
 
         let last_cleanup = *self.last_cleanup.lock().unwrap();
-
-        // Only calculate cache size when needed (this is still O(n) but less frequent)
-        let cache_size_bytes = if total_entries > 0 {
-            let data = self.data.read().unwrap();
-            data.iter().map(|(k, e)| k.len() + e.data.len()).sum()
-        } else {
-            0
-        };
 
         CacheStats {
             total_entries,
@@ -245,19 +250,71 @@ mod tests {
         let stats = cache.stats();
         assert_eq!(stats.hits, 0);
         assert_eq!(stats.misses, 0);
-        assert_eq!(stats.active_entries, 0);
+        assert_eq!(stats.active_entries, 1);
     }
 
+    /// Entries that expire by the clock are never touched by `get`, so the
+    /// entry counts have to reflect what is really in the cache.
     #[test]
-    fn test_sync_counters_updates_expired() {
+    fn test_expired_entries_are_counted_before_cleanup() {
         let cache = Cache::new(300);
-        cache.set_with_ttl("active", "v".to_string(), Duration::from_secs(1));
-        cache.set_with_ttl("expired", "v".to_string(), Duration::from_millis(1));
+        cache.set_with_ttl("old1", "v".to_string(), Duration::from_millis(1));
+        cache.set_with_ttl("old2", "v".to_string(), Duration::from_millis(1));
+        cache.set("keep", "v".to_string());
         thread::sleep(Duration::from_millis(10));
-        cache.sync_counters();
         let stats = cache.stats();
+        assert_eq!(stats.total_entries, 3);
         assert_eq!(stats.active_entries, 1);
-        assert_eq!(stats.expired_entries, 1);
+        assert_eq!(stats.expired_entries, 2);
+    }
+
+    /// Regression: `cleanup` used to subtract from an unsigned counter that
+    /// had never been incremented, so `expired_entries` wrapped to u64::MAX.
+    #[test]
+    fn test_cleanup_does_not_underflow_the_entry_counts() {
+        let cache = Cache::new(300);
+        cache.set_with_ttl("old1", "v".to_string(), Duration::from_millis(1));
+        cache.set_with_ttl("old2", "v".to_string(), Duration::from_millis(1));
+        cache.set("keep", "v".to_string());
+        thread::sleep(Duration::from_millis(10));
+        assert_eq!(cache.cleanup(), 2);
+        let stats = cache.stats();
+        assert_eq!(stats.total_entries, 1);
+        assert_eq!(stats.active_entries, 1);
+        assert_eq!(stats.expired_entries, 0);
+    }
+
+    /// Regression: reading an expired entry after `reset_counters` used to
+    /// subtract from a zeroed counter and wrap `active_entries`.
+    #[test]
+    fn test_reading_an_expired_entry_does_not_underflow_the_entry_counts() {
+        let cache = Cache::new(300);
+        cache.set_with_ttl("old", "v".to_string(), Duration::from_millis(1));
+        cache.reset_counters();
+        thread::sleep(Duration::from_millis(10));
+        assert_eq!(cache.get("old"), None);
+        let stats = cache.stats();
+        assert_eq!(stats.total_entries, 0);
+        assert_eq!(stats.active_entries, 0);
+        assert_eq!(stats.expired_entries, 0);
+        assert_eq!(stats.misses, 1);
+    }
+
+    /// `reset_counters` only zeroes the performance counters; the cached
+    /// entries (and therefore the entry counts) stay.
+    #[test]
+    fn test_reset_counters_keeps_the_entries() {
+        let cache = Cache::new(300);
+        cache.set("a", "1".to_string());
+        assert_eq!(cache.get("a"), Some("1".to_string()));
+        cache.reset_counters();
+        let stats = cache.stats();
+        assert_eq!(stats.hits, 0);
+        assert_eq!(stats.misses, 0);
+        assert_eq!(stats.total_requests, 0);
+        assert_eq!(stats.active_entries, 1);
+        assert_eq!(stats.total_entries, 1);
+        assert_eq!(cache.get("a"), Some("1".to_string()));
     }
 
     #[test]
@@ -267,14 +324,12 @@ mod tests {
         cache.set("keep", "v".to_string());
         cache.set_with_ttl("gone", "v".to_string(), Duration::from_millis(1));
         thread::sleep(Duration::from_millis(10));
-        cache.sync_counters();
         let stats = cache.get_stats();
         assert_eq!(stats["total_entries"].as_u64(), Some(2));
         assert_eq!(stats["active_entries"].as_u64(), Some(1));
         assert_eq!(stats["expired_entries"].as_u64(), Some(1));
         assert_eq!(stats["cleanup_available"].as_bool(), Some(true));
         cache.cleanup();
-        cache.sync_counters();
         let stats = cache.get_stats();
         assert_eq!(stats["total_entries"].as_u64(), Some(1));
         assert_eq!(stats["active_entries"].as_u64(), Some(1));
@@ -314,12 +369,26 @@ mod tests {
         cache.hits.store(1, Ordering::Relaxed);
         cache.misses.store(2, Ordering::Relaxed);
         cache.total_access_time.store(6_000_000, Ordering::Relaxed);
-        cache.active_entries.store(10, Ordering::Relaxed);
-        cache.expired_entries.store(11, Ordering::Relaxed);
+        // `get_performance` caches its own snapshot, so count the active entries
+        // instead of assuming how many there are.
+        let active = cache.stats().active_entries;
+        let add_expired = |from: usize, to: usize| {
+            for i in from..to {
+                cache.set_with_ttl(
+                    &format!("old{i}"),
+                    "v".to_string(),
+                    Duration::from_millis(1),
+                );
+            }
+            thread::sleep(Duration::from_millis(10));
+        };
+        // expired > active -> degraded
+        add_expired(0, active + 1);
         let health_degraded = cache.get_health();
         assert_eq!(health_degraded["status"].as_str(), Some("degraded"));
         assert!(health_degraded["cleanup_needed"].as_bool().unwrap());
-        cache.expired_entries.store(25, Ordering::Relaxed);
+        // expired > 2 * active -> warning
+        add_expired(active + 1, active * 2 + 1);
         let health_warning = cache.get_health();
         assert_eq!(health_warning["status"].as_str(), Some("warning"));
         let recs_bad = cache.get_recommendations();
@@ -354,8 +423,6 @@ mod tests {
         cache.reset_counters();
         cache.hits.store(10, Ordering::Relaxed);
         cache.total_access_time.store(10, Ordering::Relaxed);
-        cache.active_entries.store(1, Ordering::Relaxed);
-        cache.expired_entries.store(0, Ordering::Relaxed);
         let recs_good = cache.get_recommendations();
         let recs_good_arr = recs_good["recommendations"].as_array().unwrap();
         assert_eq!(recs_good_arr.len(), 1);

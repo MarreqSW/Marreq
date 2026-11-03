@@ -174,6 +174,20 @@ Self-hosted only; requires a **global administrator**.
 | `GET` | `/api/admin/backup/info` | `{ attachments_available, attachment_files, attachment_bytes }`: what a backup with files would contain (`attachments_available: false` when attachment storage is not configured). **403** for non-admins, **410** like below. |
 | `POST` | `/api/admin/backup` | No body; needs the CSRF header. Query `attachments` (default `true`). Runs `pg_dump --no-owner --no-privileges` against `DATABASE_URL` and returns **200** with `Content-Type: application/gzip` and `Content-Disposition: attachment; filename="marreq-backup_<YYYYMMDD>_<HHMMSS>.tar.gz"`: a tar.gz with `marreq-backup_<…>/database.sql` (plain SQL), `attachments/` (the attachment store, unless `attachments=false` or storage is not configured) and `manifest.json` (`format: "marreq.backup.v1"`, `includes_attachments`, `attachment_files`, `attachment_bytes`). Before issue #341 this was a `.sql.gz`. **403** for non-admins; **410** when the deployment mode disallows backups (`allows_database_backup: false` in `GET /api/meta/deployment`, i.e. cloud); **500** with the `pg_dump` error summary if the dump fails. Success and failure are recorded as `EXPORT` audit rows. The `pg_dump` binary can be overridden with `MARREQ_PG_DUMP`. The Compose nginx allows up to 15 minutes for this route. |
 
+## Admin application cache
+
+Instance-wide (the in-memory cache of the running process); served by both `marreq-server` and `marreq-cloud`. The SPA page is Administration → Cache. Every route except `health` requires a **global administrator**; other authenticated users receive **403**. The `POST` routes take no body and need the CSRF header.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/cache/stats` | `{ total_entries, active_entries, expired_entries, hits, misses, total_requests, hit_rate, miss_rate, average_access_time_ns, total_access_time_ns, last_cleanup, cache_size_bytes }`. `hit_rate` and `miss_rate` are fractions in 0..1. This is the source the SPA uses. |
+| `GET` | `/api/cache/recommendations` | `{ recommendations: string[], priority: "high" \| "medium" \| "low", analysis_timestamp }`. |
+| `POST` | `/api/cache/clear` | Drops every entry. Response `{ message, timestamp }`. |
+| `POST` | `/api/cache/cleanup` | Drops only the expired entries. Response `{ message, cleaned_entries, timestamp }`. |
+| `POST` | `/api/cache/reset-counters` | Zeroes the hit/miss counters; entries are kept. Response `{ message, timestamp }`. |
+| `GET` | `/api/cache/performance` | Derived metrics (JSON object). Not used by the SPA: `hit_rate_percentage` is the 0..1 fraction rounded to two decimals, not a percentage, and `memory_usage_mb` is not in megabytes. Use `stats` instead. |
+| `GET` | `/api/cache/health` | **Public.** `{ status, total_entries, active_entries, expired_entries, memory_usage, cleanup_needed, last_cleanup }`. `memory_usage` is the entry count, and `last_cleanup` is the time of the request. |
+
 ## User management
 
 Instance-wide. All routes require a **global administrator** (`users.is_admin`); other authenticated users receive **403**. Mutating routes need the CSRF header like any other SPA write.

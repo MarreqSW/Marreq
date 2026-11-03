@@ -26,4 +26,12 @@ ignore = [
     # all file access. No citationberg release with quick-xml >= 0.41 yet.
     { id = "RUSTSEC-2026-0194", reason = "quick-xml 0.38 only via typst's CSL parser, which report rendering never reaches; no patched citationberg yet" },
     { id = "RUSTSEC-2026-0195", reason = "quick-xml 0.38 only via typst's CSL parser, which report rendering never reaches; no patched citationberg yet" },
+    # crypto-bigint 0.5.5 (via openidconnect -> p256/p384 -> elliptic-curve
+    # 0.13): timing variability in constant-time operations. The fix needs
+    # crypto-bigint >= 0.7.6, but elliptic-curve 0.13 pins 0.5 and
+    # openidconnect 4.0.1 is the latest release. Marreq only verifies ES256/ES384
+    # ID-token signatures against providers' public keys, so no secret-key
+    # operation runs through it. Drop this once openidconnect moves to a newer
+    # RustCrypto release.
+    { id = "RUSTSEC-2026-0387", reason = "crypto-bigint 0.5 pinned by elliptic-curve 0.13 via openidconnect (public-key verification only); no compatible fix yet" },
 ]

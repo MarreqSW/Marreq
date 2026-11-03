@@ -21,6 +21,7 @@ function renderAt(entry: string | { pathname: string; state?: unknown }) {
           <Route path="logs" element={<p>logs page</p>} />
           <Route path="logs/analytics" element={<p>analytics page</p>} />
           <Route path="backup" element={<p>backup page</p>} />
+          <Route path="cache" element={<p>cache page</p>} />
         </Route>
         <Route path="/:projectSlug/admin/*" element={<MovedRedirect to="/admin" />} />
       </Routes>
@@ -42,7 +43,7 @@ describe('AdminLayout', () => {
     renderAt('/admin/logs');
     expect(screen.getByText('logs page')).toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: 'Administration sections' });
-    await waitFor(() => expect(nav.querySelectorAll('a')).toHaveLength(4));
+    await waitFor(() => expect(nav.querySelectorAll('a')).toHaveLength(5));
     expect(screen.getByRole('link', { name: /system logs/i })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Users' })).not.toHaveAttribute('aria-current');
   });

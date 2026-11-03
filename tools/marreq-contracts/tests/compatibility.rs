@@ -54,6 +54,31 @@ fn additive_request_and_response() {
     response(&mut new)["properties"]["extra"] = json!({"type":"boolean"});
     contract::compare(&spec(), &new, "server").unwrap();
 }
+
+#[test]
+fn multipart_required_field_changes_use_the_standards_engine() {
+    let mut old = spec();
+    let schema = request(&mut old).clone();
+    old["paths"]["/api/things"]["post"]["requestBody"]["content"] =
+        json!({"multipart/form-data":{"schema":schema}});
+    let mut new = old.clone();
+    let schema = &mut new["paths"]["/api/things"]["post"]["requestBody"]["content"]["multipart/form-data"]
+        ["schema"];
+    schema["properties"]["new_field"] = json!({"type":"string"});
+    schema["required"] = json!(["title", "new_field"]);
+    assert!(contract::compare(&old, &new, "server").is_err());
+}
+
+#[test]
+fn file_download_media_type_removal_fails() {
+    let mut old = spec();
+    old["paths"]["/api/things"]["post"]["responses"]["200"]["content"] =
+        json!({"application/pdf":{"schema":{"type":"string","format":"binary"}}});
+    let mut new = old.clone();
+    new["paths"]["/api/things"]["post"]["responses"]["200"]["content"] =
+        json!({"application/json":{"schema":{"type":"object"}}});
+    assert!(contract::compare(&old, &new, "server").is_err());
+}
 #[test]
 fn response_enum_extension() {
     let mut new = spec();
@@ -215,6 +240,44 @@ fn compatible_backend_only_and_mcp_only_updates() {
 fn incompatible_backend_only_update() {
     let dir = tempfile::tempdir().unwrap();
     assert!(artifact::verify(&plan(dir.path(), "0.2.4", "0.3.0", true), None).is_err());
+}
+
+#[test]
+fn compatible_frontend_only_update() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = plan(dir.path(), "0.2.4", "0.3.0", false);
+    let bundle_path = dir.path().join("frontend.json");
+    let mut bundle: Bundle = serde_json::from_value(contract::load(&bundle_path).unwrap()).unwrap();
+    bundle.version = "0.2.2".parse().unwrap();
+    contract::write(&bundle_path, &bundle).unwrap();
+    let mut deployment: Plan = serde_json::from_value(contract::load(&path).unwrap()).unwrap();
+    deployment.frontend.version = bundle.version;
+    deployment.frontend.sha256 = artifact::hash(&std::fs::read(bundle_path).unwrap());
+    contract::write(&path, &deployment).unwrap();
+    assert_eq!(artifact::verify(&path, None).unwrap()["compatible"], true);
+}
+
+#[test]
+fn changed_authorization_guard_fails() {
+    let mut old = spec();
+    old["paths"]["/api/things"]["post"]["x-marreq-authorization"] = json!("project-member");
+    let mut new = old.clone();
+    new["paths"]["/api/things"]["post"]["x-marreq-authorization"] = json!("instance-admin");
+    assert!(contract::compare(&old, &new, "server").is_err());
+}
+
+#[test]
+fn shared_transport_does_not_hide_concrete_calls() {
+    let ops = contract::operations(&spec(), None).unwrap();
+    for source in [
+        "function fetchJson(path:string){return fetch('/api/missing');}",
+        "class Client {request(path:string){const url='/api/missing';return fetch(url);}}",
+    ] {
+        assert!(
+            coverage::analyze(source, false, &ops, true).is_err(),
+            "{source}"
+        );
+    }
 }
 #[test]
 fn missing_historical_artifact() {

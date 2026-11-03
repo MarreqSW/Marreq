@@ -63,9 +63,11 @@ backups/
 # nodejs
 node_modules
 frontend/dist
+mcp-server/dist/
 
-# MCP server: do not ship compiled Vitest sources
-mcp-server/dist/*.test.js
+# Python bytecode
+__pycache__/
+*.py[cod]
 
 # Export files
 exports/

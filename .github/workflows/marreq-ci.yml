@@ -323,6 +323,9 @@ jobs:
         with:
           tool: cargo-llvm-cov
 
+      - name: Install pinned OpenAPI standards engine for workspace tests
+        run: scripts/install-oasdiff.sh
+
       - name: Install diesel CLI
         run: cargo install diesel_cli --no-default-features --features postgres
 

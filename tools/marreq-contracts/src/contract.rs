@@ -324,10 +324,12 @@ pub fn compare(consumer: &Value, backend: &Value, variant: &str) -> Result<Value
     let a = operations(&old, None)?;
     let b = operations(&new, None)?;
     for (key, op) in &a {
-        ensure!(
-            op.get("x-marreq-csrf") == b[key].get("x-marreq-csrf"),
-            "{key}: CSRF authentication requirement changed"
-        );
+        for policy in ["x-marreq-csrf", "x-marreq-authorization"] {
+            ensure!(
+                op.get(policy) == b[key].get(policy),
+                "{key}: {policy} authentication/authorization requirement changed"
+            );
+        }
         let scopes = |v: &Value| -> Result<BTreeSet<String>> {
             v.as_array()
                 .context("scope declarations must be arrays")?

@@ -514,10 +514,22 @@ fn analyze_file(
             let owner = enclosing(call)
                 .child_by_field_name("name")
                 .map(|n| text(n, source));
-            if matches!(
-                owner,
-                Some("request" | "fetchJson" | "fetchBlob" | "fetchDownload")
-            ) {
+            let args = children(field(call, "arguments")?);
+            let forwarded = args.first().is_some_and(|arg| {
+                let expression = text(*arg, source);
+                (expression == "path" && owner != Some("request"))
+                    || (expression == "url"
+                        && owner == Some("request")
+                        && !values(*arg, source, root, &BTreeMap::new(), 0)
+                            .iter()
+                            .any(|path| path.contains("/api/")))
+            });
+            if forwarded
+                && matches!(
+                    owner,
+                    Some("request" | "fetchJson" | "fetchBlob" | "fetchDownload")
+                )
+            {
                 continue;
             }
         }

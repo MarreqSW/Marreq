@@ -61,7 +61,7 @@ and `/oauth/token`. See [authentication.md](authentication.md#delegated-applicat
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/dashboard` | Authenticated dashboard payload: `user`, decorated `projects` (same shape as the legacy HTML index), `projects_count`, `selected_project_id`, `selected_project_slug`, `csrf_token`. **401** if not logged in. |
-| `GET` | `/api/home/attention` | What needs the user's attention across the projects listed for them (the start screen, issue #387), newest first, at most 50 `items`. Each item has `kind`, `project_id`, `title`, `at`, and, depending on the kind, `requirement_id`, `reference_code`, `count`, `notification_id`, `notification_type`. Kinds: **`approval`** (one per requirement whose current version is *reviewed*, in projects where the user may change review gates); **`review`** (one per such project, `count` = draft requirements); **`suspect`** (one per project where the user has `EditRequirements`, `count` = suspect matrix links); **`notification`** (unread `review_assigned`, `comment_added` and `mentioned` notifications; `mentioned` is created when a new requirement comment mentions a project member as `@username`, issue #389). Archived projects are skipped, except for notifications. Also returns the totals `approvals`, `reviews`, `suspect_links`, `notifications`. Session only (no Bearer tokens). **401** if not logged in. |
+| `GET` | `/api/home/attention` | What needs the user's attention across the projects listed for them (the start screen, issue #387), newest first, at most 50 `items`. Each item has `kind`, `project_id`, `title`, `at`, and, depending on the kind, `requirement_id`, `reference_code`, `count`, `notification_id`, `notification_type`. Kinds: **`approval`** (one per requirement whose current version is *reviewed*, in projects where the user may change review gates); **`review`** (one per such project, `count` = draft requirements); **`suspect`** (one per project where the user has `EditRequirements`, `count` = suspect matrix links); **`notification`** (unread `review_assigned`, `comment_added` and `mentioned` notifications; `mentioned` is created when a new requirement comment mentions a project member as `@username`, issue #389). Archived projects are skipped, except for notifications. Also returns the totals `approvals`, `reviews`, `suspect_links`, `notifications`. Session or Bearer; delegated OAuth requires `projects:read`, and a token project scope narrows the result. **401** if not logged in. |
 | `GET` | `/api/search?q=&limit=` | Requirements whose reference code or title contains `q` (case-insensitive, at least 2 characters; shorter returns `[]`), across the projects the user can view. Ordered exact reference code, code prefix, code substring, then title match; `limit` defaults to 20, at most 50. Returns `[{project_id, requirement_id, reference_code, title}]`. Session only (no Bearer tokens). **401** if not logged in. |
 
 Successful login response (200): `{ "status": "ok", "user": { ... } }` (serialized `User` model).
@@ -236,15 +236,12 @@ audit and cannot be used in a releasable consumer bundle. Unconsumed backend
 endpoints are outside this contract; adding/changing them does not itself block
 an existing consumer.
 
-**PR #424 remains draft.** Discovery currently selects 195 frontend operations and
-79 MCP operations: 217 distinct dependencies, of which 59 have audited wire
-contracts and 158 remain unverified. The audited additions cover cache
-administration, session/profile/identity flows, connected grants, multipart
-attachments, file downloads and storage quotas, alongside the existing metadata,
-OAuth, Cloud account and use-case contracts. These counts describe the current
-source, not a separate inventory to maintain. Complete the remaining consumed
-wire audits and producer regression protection before treating this as merge-ready.
-A passing document validator alone is not a compatibility guarantee.
+The current source selects **195 frontend operations and 79 MCP operations: 217
+distinct HTTP dependencies, all wire-audited** against the Rust routes, serializers
+and guards. This includes JSON, multipart uploads, downloads, browser navigation,
+sessions, OAuth and Server/Cloud differences. The unconsumed index-status inventory
+entry remains outside mandatory consumer compatibility. Newly consumed unverified
+or undocumented operations still fail closed.
 
 ### Architecture and rationale
 
@@ -261,13 +258,15 @@ A passing document validator alone is not a compatibility guarantee.
   grammar. The analyzer follows finite URL helpers, local constants, templates,
   branch alternatives and explicit HTTP methods. It includes awaited generic
   calls, direct fetches, shared transports, multipart/download wrappers, and API
-  browser navigation. Unknown paths/methods fail; there is no source regex parser,
+  browser navigation, including location calls and assignments. Unsupported raw
+  network transports require an adapter; unknown paths/methods fail; there is no source regex parser,
   source-review checksum or separately maintained full route list.
 - The small protocol dependency list covers browser/OAuth callbacks and discovery
   which are not ordinary `fetch` expressions. Its IDs must exist in OpenAPI. All
   other dependencies are discovered from consumer source. The only dynamic href
-  exclusion is `StatementText`'s sanitized user-content link: user-authored
-  navigation is not an application HTTP client operation. It does not exclude
+  link exclusion is `StatementText`'s sanitized user-content link. Login return
+  navigation is user-selected, and identity linking follows the URL from its
+  audited API response; both existing flows have explicit source associations. It does not exclude
   fetches or fixed API links in that component.
 - Compiled Rocket mount tests check every declared consumer operation against
   Server/Cloud registration. Extra backend routes are permitted. Four public
@@ -308,8 +307,8 @@ scripts/test-api-contracts.sh
 `validate` checks document/policy validity and requires a verified schema for
 **every discovered consumer dependency**. `--document-only` checks the document
 without certifying consumer coverage; it cannot create a consumer release bundle.
-`select --allow-unverified` is used only for development type generation, never
-for bundle export or compatibility verification.
+`select` and type generation require verified consumer contracts too; there is
+no development bypass for an unverified consumer operation.
 
 When adding/changing an HTTP call, update the actual Rocket implementation and
 OpenAPI, then regenerate declarations and extend existing consumer/producer tests.
@@ -324,14 +323,21 @@ client. Test processes use a clean directory/environment, loopback addresses and
 synthetic credentials; existing `.env`/database/SMTP configuration is excluded.
 Transcripts omit headers/cookies and redact login credentials. Default workspace
 unit tests can unify `test-helpers`; the separate production-path run is essential.
-It remains representative evidence, not certification of all unmodeled APIs.
+It validates 87 exchanges with no unverified exchanges, requiring critical
+evidence from **both** deployment variants. The existing Rocket integration tests
+also assert actual response status, media, required headers and JSON bodies against
+OpenAPI. Request mutation tests compare schema acceptance with the real handler
+deserializers; report defaults and catalogs use their actual Rust serializers.
 
 ### Scope limits
 
-The CLI reports exact operation and call-site counts. Keep the PR draft while any
-required operation is unverified, a producer behavior lacks adequate contract
-protection, or a required check fails. Hand-maintained schemas still need broader
-Rust DTO/serialization verification; compiled route presence alone is insufficient.
+The CLI reports operation and call-site counts; no generated inventory is kept.
+Schemas remain reviewed declarations: update them alongside Rust changes and run
+the handler/DTO contract checks. Extra backend routes are not completeness blockers.
+Exact consumer bundle export also requires committed build configuration, including
+Vite settings, rather than just committed source files. Release plans require real
+historical evidence as described in the release guide; missing evidence is never
+replaced by current main.
 The advisory policy is inherited unchanged from `main`, including its
 `crypto-bigint` exception tracked in [#425](https://github.com/MarreqSW/Marreq/issues/425).
 The newly reported `calamine` advisory RUSTSEC-2026-0436 is fixed with the targeted

@@ -161,5 +161,6 @@ previous plan unchanged or synthesize a manifest from current `main`; missing
 historical evidence deliberately prevents publication. No global release migration
 or production deployment is performed here.
 
-The PR remains draft until required consumer schema gaps and security failures are
-resolved; a document-only check is not a merge/release-readiness assertion.
+A document-only check is not a release-readiness assertion. Publication also
+requires passing consumer/handler tests and a provisioned immutable plan with
+genuine historical bundles. Missing release evidence must continue to fail closed.

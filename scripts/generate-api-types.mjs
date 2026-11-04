@@ -76,9 +76,7 @@ const directory = mkdtempSync(join(tmpdir(), 'marreq-types-'));
 try {
   for (const component of ['frontend', 'mcp']) {
     const path = join(directory, `${component}.json`);
-    // Inventory-only entries generate no invented types. Strict release/CI
-    // coverage is checked separately by `marreq-contracts validate`.
-    execFileSync('cargo', ['run', '--quiet', '--locked', '-p', 'marreq-contracts', '--', 'select', '--component', component, '--allow-unverified', '--output', path]);
+    execFileSync('cargo', ['run', '--quiet', '--locked', '-p', 'marreq-contracts', '--', 'select', '--component', component, '--output', path]);
     const spec = JSON.parse(readFileSync(path, 'utf8'));
     spec.paths = {}; // Clients currently import schemas, not generated SDK paths.
     const ast = await openapiTS(spec, { alphabetize: true });

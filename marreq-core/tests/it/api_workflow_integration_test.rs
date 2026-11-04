@@ -40,7 +40,9 @@ mod test_support {
             .manage(marreq_core::auth::rate_limiter::LoginRateLimiter::new())
             .mount("/api", marreq_core::api::routes());
 
-        Client::tracked(rocket).await.expect("rocket instance")
+        crate::contract::tracked(rocket)
+            .await
+            .expect("rocket instance")
     }
 
     pub fn base_repo() -> DieselRepoMock {

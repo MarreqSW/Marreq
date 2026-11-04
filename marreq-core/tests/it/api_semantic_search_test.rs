@@ -30,7 +30,7 @@ async fn client_with_repo(repo: DieselRepoMock) -> Client {
         .manage(marreq_core::auth::AuthConfig::default())
         .manage(marreq_core::auth::rate_limiter::LoginRateLimiter::new())
         .mount("/api", marreq_core::api::routes());
-    Client::tracked(rocket).await.unwrap()
+    crate::contract::tracked(rocket).await.unwrap()
 }
 
 fn auth_cookie(client: &Client) -> Cookie<'static> {

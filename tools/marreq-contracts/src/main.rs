@@ -62,8 +62,6 @@ enum Action {
         spec: PathBuf,
         #[arg(long)]
         output: PathBuf,
-        #[arg(long)]
-        allow_unverified: bool,
     },
     Compare {
         consumer: PathBuf,
@@ -133,13 +131,12 @@ fn run() -> anyhow::Result<serde_json::Value> {
             component,
             spec,
             output,
-            allow_unverified,
         } => {
             let spec = contract::load(&spec)?;
             let coverage = coverage::scan(&root, &component, &spec)?;
             contract::write(
                 &output,
-                &contract::select(&spec, &coverage.operations, None, !allow_unverified)?,
+                &contract::select(&spec, &coverage.operations, None)?,
             )?;
             Ok(
                 serde_json::json!({"component":component,"operations":coverage.operations.len(),"output":output}),
@@ -169,7 +166,7 @@ fn run() -> anyhow::Result<serde_json::Value> {
             if !document_only {
                 for who in ["frontend", "mcp"] {
                     let c = coverage::scan(&root, who, &spec)?;
-                    let selected = contract::select(&spec, &c.operations, None, true)?;
+                    let selected = contract::select(&spec, &c.operations, None)?;
                     contract::validate_wire_contract(&selected)?;
                     counts.insert(who.into(), serde_json::json!(c.operations.len()));
                 }

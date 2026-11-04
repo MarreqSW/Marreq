@@ -149,3 +149,154 @@ fn attachment_dtos_preserve_nullable_fields_and_storage_limits() {
         assert!(marreq_contracts::contract::validate_instance(&spec, schema, &broken).is_err());
     }
 }
+
+fn request_model<T: serde::de::DeserializeOwned>(operation_id: &str, value: serde_json::Value) {
+    let spec = spec();
+    let op = marreq_contracts::contract::operations(&spec, None)
+        .unwrap()
+        .into_values()
+        .find(|op| op["operationId"] == operation_id)
+        .unwrap();
+    let schema = op
+        .pointer("/requestBody/content/application~1json/schema")
+        .unwrap();
+    marreq_contracts::contract::validate_instance(&spec, schema, &value).unwrap();
+    assert!(
+        serde_json::from_value::<T>(value.clone()).is_ok(),
+        "{operation_id}: real Rust request rejected its fixture"
+    );
+    // The declared wire language must not accept missing/null/wrongly typed
+    // fields which the actual handler's Serde type would reject.
+    for key in value.as_object().unwrap().keys() {
+        let mut omitted = value.clone();
+        omitted.as_object_mut().unwrap().remove(key);
+        let mut candidates = vec![omitted];
+        for replacement in [
+            serde_json::Value::Null,
+            serde_json::json!(false),
+            serde_json::json!(42),
+            serde_json::json!({}),
+            serde_json::json!([]),
+        ] {
+            let mut changed = value.clone();
+            changed[key] = replacement;
+            candidates.push(changed);
+        }
+        for candidate in candidates {
+            if marreq_contracts::contract::validate_instance(&spec, schema, &candidate).is_ok() {
+                assert!(
+                    serde_json::from_value::<T>(candidate).is_ok(),
+                    "{operation_id}: contract accepts an invalid Rust field {key}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn consumed_json_requests_match_real_handler_deserializers() {
+    use marreq_core::{api, models};
+    use serde_json::json;
+    let tagged = json!({"title":"General","description":"Description","tag":"GEN","project_id":1});
+    request_model::<models::NewCategory>("categories_create", tagged.clone());
+    request_model::<models::NewApplicability>("applicability_create", tagged.clone());
+    request_model::<models::NewVerificationMethod>(
+        "verification_methods_create_by_project",
+        tagged.clone(),
+    );
+    request_model::<models::NewRequirementStatus>(
+        "status_create_requirement_status",
+        tagged.clone(),
+    );
+    request_model::<models::NewVerificationStatus>(
+        "verification_status_create_verification_status",
+        tagged,
+    );
+    request_model::<models::UserCreateRequest>(
+        "users_create",
+        json!({"username":"user","name":"Name","email":"user@example.test","password":"test-only","is_admin":false}),
+    );
+    request_model::<models::UpdateUser>(
+        "users_update",
+        json!({"username":"user","name":"Name","email":"user@example.test","is_admin":false}),
+    );
+    request_model::<models::NewGroup>(
+        "groups_create",
+        json!({"name":"Group","description":null,"owner_id":null}),
+    );
+    request_model::<models::CustomFieldDefinitionPayload>(
+        "custom_fields_create",
+        json!({"label":"Field","field_type":"text","enum_values":null,"sort_order":null}),
+    );
+    request_model::<models::SavedViewPayload>(
+        "saved_views_create",
+        json!({"name":"View","visibility":"private","definition":{}}),
+    );
+    request_model::<api::projects::CreateProjectRequest>(
+        "projects_create",
+        json!({"name":"Project"}),
+    );
+    request_model::<api::projects::UpdateProjectRequest>(
+        "projects_update",
+        json!({"name":"Project","description":null,"status":"Active","owner_id":1,"group_id":null}),
+    );
+    request_model::<api::requirements::RequirementCreateRequest>(
+        "requirements_create_by_project",
+        json!({"title":"Title","description":"Description","author_id":1,"category_id":1,"status_id":1,"reference_code":"REQ-1","reviewer_id":1,"applicability_id":1,"project_id":1,"verification_method_ids":[1]}),
+    );
+    request_model::<api::requirements::RequirementPatch>(
+        "requirements_patch_by_project",
+        json!({"title":"Changed","status_id":1,"custom_fields":[]}),
+    );
+    request_model::<models::NewVerification>(
+        "verifications_create_by_project",
+        json!({"name":"Verification","reference_code":"VER-1","description":"Description","source":"manual","status_id":1,"project_id":1,"author_id":1,"reviewer_id":1}),
+    );
+    request_model::<api::comments::CreateCommentRequest>(
+        "comments_create_by_project",
+        json!({"body":"Comment","requirement_version_id":null}),
+    );
+    request_model::<api::baselines::CreateBaselineRequest>(
+        "baselines_create",
+        json!({"name":"Baseline","saved_view_id":null}),
+    );
+    request_model::<api::mcp::McpAuditRequest>(
+        "mcp_internal_audit",
+        json!({"tool_name":"list_projects","is_write":false}),
+    );
+}
+
+#[test]
+fn report_defaults_and_section_catalog_match_the_contract() {
+    use marreq_core::reports::{
+        definition::{DefaultContext, ReportDefinition, ReportType},
+        sections,
+    };
+    let spec = spec();
+    let context = DefaultContext {
+        project_name: "Project".into(),
+        project_slug: "project".into(),
+        user_name: "Tester".into(),
+        today: "2026-11-03".into(),
+    };
+    for kind in ReportType::ALL {
+        let value = serde_json::to_value(ReportDefinition::default_for(kind, &context)).unwrap();
+        for name in ["ReportDefinition", "ReportDefinitionInput"] {
+            marreq_contracts::contract::validate_instance(
+                &spec,
+                &spec["components"]["schemas"][name],
+                &value,
+            )
+            .unwrap();
+        }
+    }
+    for section in sections::catalog() {
+        let value = serde_json::to_value(section).unwrap();
+        marreq_contracts::contract::validate_instance(
+            &spec,
+            &spec["components"]["schemas"]["ReportSectionSpec"],
+            &value,
+        )
+        .unwrap();
+    }
+}

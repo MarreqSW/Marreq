@@ -155,7 +155,7 @@ pub fn export(root: &Path, who: &str, version: Version, mode: Option<String>) ->
     } else {
         coverage::scan(root, who, &spec)?.operations
     };
-    let selected = contract::select(&spec, &required, mode.as_deref(), true)?;
+    let selected = contract::select(&spec, &required, mode.as_deref())?;
     if who == "backend" {
         contract::validate(&selected)?;
     } else {
@@ -178,16 +178,9 @@ pub fn export(root: &Path, who: &str, version: Version, mode: Option<String>) ->
                 .map(String::from),
         );
     } else {
-        inputs.extend(
-            [
-                "src",
-                "package.json",
-                "package-lock.json",
-                "compatibility.json",
-            ]
-            .into_iter()
-            .map(|path| format!("{directory}/{path}")),
-        );
+        // Build configuration (for example Vite's API routing) belongs to the
+        // exact consumer source evidence too, not just src/ and package files.
+        inputs.push(directory.into());
     }
     let status = Command::new("git")
         .args(["status", "--porcelain", "--untracked-files=all", "--"])

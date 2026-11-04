@@ -37,8 +37,10 @@ jobs:
           npm ci --prefix mcp-server
       - name: Check generated consumer schemas
         run: node scripts/generate-api-types.mjs --check
-      - name: Verify compiled Server/Cloud operations
-        run: cargo test --locked -p marreq-cloud --test api_contract_inventory
+      - name: Verify compiled routes and handler wire contracts
+        run: |
+          cargo test --locked -p marreq-cloud --test api_contract_inventory
+          cargo test --locked -p marreq-core --features test-helpers --test it
       - name: Exercise isolated real Server/Cloud and HTTP consumers
         run: scripts/test-api-contracts.sh
       - name: Require verified contracts for every current consumer operation

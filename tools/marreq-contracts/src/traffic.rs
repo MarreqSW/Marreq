@@ -28,7 +28,8 @@ pub fn verify(spec: &Value, path: &Path) -> Result<Value> {
         let mut matches: Vec<_> = operations
             .iter()
             .filter(|(key, _)| {
-                key.method == method && coverage::intersects(actual, &route_pattern(&key.path))
+                key.method == method
+                    && coverage::intersects(actual, &coverage::route_pattern(&key.path))
             })
             .collect();
         matches.sort_by_key(|(key, _)| key.path.matches('{').count());
@@ -65,39 +66,30 @@ pub fn verify(spec: &Value, path: &Path) -> Result<Value> {
             contract::validate_instance(spec, schema, &record["request"])?;
         }
         checked += 1;
-        seen.insert((key.method.clone(), key.path.clone(), status));
+        seen.insert((
+            mode.to_owned(),
+            key.method.clone(),
+            key.path.clone(),
+            status,
+        ));
     }
-    for (method, path, status) in [
-        ("get", "/api/meta/build", "200"),
-        ("get", "/api/meta/deployment", "200"),
-        ("post", "/api/projects/{project_id}/use-cases", "201"),
-        (
-            "put",
-            "/api/projects/{project_id}/use-cases/{id}/draft",
-            "200",
-        ),
-        ("get", "/api/projects/{project_id}/use-cases", "403"),
-    ] {
-        ensure!(
-            seen.contains(&(method.into(), path.into(), status.into())),
-            "critical real-backend evidence missing: {method} {path} {status}"
-        );
-    }
-    Ok(json!({"validated_exchanges":checked,"unverified_exchanges":unverified}))
-}
-fn route_pattern(path: &str) -> String {
-    let mut out = String::new();
-    let mut param = false;
-    for c in path.chars() {
-        match c {
-            '{' => {
-                param = true;
-                out.push('*');
-            }
-            '}' => param = false,
-            _ if !param => out.push(c),
-            _ => (),
+    for mode in ["server", "cloud"] {
+        for (method, path, status) in [
+            ("get", "/api/meta/build", "200"),
+            ("get", "/api/meta/deployment", "200"),
+            ("post", "/api/projects/{project_id}/use-cases", "201"),
+            (
+                "put",
+                "/api/projects/{project_id}/use-cases/{id}/draft",
+                "200",
+            ),
+            ("get", "/api/projects/{project_id}/use-cases", "403"),
+        ] {
+            ensure!(
+                seen.contains(&(mode.into(), method.into(), path.into(), status.into())),
+                "critical {mode} real-backend evidence missing: {method} {path} {status}"
+            );
         }
     }
-    out
+    Ok(json!({"validated_exchanges":checked,"unverified_exchanges":unverified}))
 }

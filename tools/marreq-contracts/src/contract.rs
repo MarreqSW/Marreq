@@ -72,7 +72,6 @@ pub fn select(
     spec: &Value,
     required: &BTreeSet<Operation>,
     variant: Option<&str>,
-    verified: bool,
 ) -> Result<Value> {
     let available = operations(spec, variant)?;
     let mut selected = json!({"openapi":spec["openapi"],"info":spec["info"],"servers":spec.get("servers").cloned().unwrap_or(json!([{ "url":"/" }])),"paths":{},"components":{}});
@@ -83,10 +82,9 @@ pub fn select(
                 variant.unwrap_or("selected")
             )
         })?;
-        if verified
-            && op
-                .get("x-marreq-unverified")
-                .is_some_and(|v| v != &Value::Bool(false))
+        if op
+            .get("x-marreq-unverified")
+            .is_some_and(|v| v != &Value::Bool(false))
         {
             bail!("required consumer operation has unverified wire contract: {key}");
         }
@@ -315,8 +313,8 @@ pub fn validate_wire_contract(document: &Value) -> Result<()> {
 pub fn compare(consumer: &Value, backend: &Value, variant: &str) -> Result<Value> {
     crate::artifact::variant(variant)?;
     let required = operations(consumer, Some(variant))?.into_keys().collect();
-    let old = select(consumer, &required, Some(variant), true)?;
-    let new = select(backend, &required, Some(variant), true)?;
+    let old = select(consumer, &required, Some(variant))?;
+    let new = select(backend, &required, Some(variant))?;
     validate_wire_contract(&old)?;
     validate_wire_contract(&new)?;
     // These are Marreq-specific authorization semantics not standard OpenAPI

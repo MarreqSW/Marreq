@@ -3283,6 +3283,7 @@ dependencies = [
  "infer 0.22.0",
  "lazy_static",
  "lettre",
+ "marreq-contracts",
  "oauth2",
  "openidconnect",
  "pgvector",

@@ -193,6 +193,9 @@ fn values(
                 return vec!["*".into()];
             };
             let fun_name = name(fun, source);
+            if text(fun, source) == "URL.createObjectURL" {
+                return vec!["blob:*".into()];
+            }
             let args = node
                 .child_by_field_name("arguments")
                 .map(children)
@@ -366,7 +369,7 @@ pub fn intersects(a: &str, b: &str) -> bool {
     }
     go(a.as_bytes(), b.as_bytes(), 0, 0, &mut HashSet::new())
 }
-fn path_glob(path: &str) -> String {
+pub fn route_pattern(path: &str) -> String {
     let mut out = String::new();
     let mut param = false;
     for c in path.chars() {
@@ -388,7 +391,23 @@ pub fn analyze(
     declared: &BTreeMap<Operation, Value>,
     transport: bool,
 ) -> Result<Coverage> {
-    analyze_file(source, tsx, declared, transport, false)
+    analyze_file(source, tsx, declared, transport, None)
+}
+
+fn navigation(node: Node<'_>, source: &str) -> bool {
+    let object = node.child_by_field_name("object").map(|n| text(n, source));
+    match name(node, source).as_str() {
+        "assign" | "replace" | "href" => {
+            object.is_some_and(|s| s == "location" || s.ends_with(".location"))
+        }
+        "location" => object == Some("window"),
+        "open" => object == Some("window"),
+        _ => false,
+    }
+}
+
+fn api_navigation(path: &str) -> bool {
+    path.starts_with("/api/") || path.starts_with("/oauth/") || path.starts_with("/.well-known/")
 }
 
 fn analyze_file(
@@ -396,7 +415,7 @@ fn analyze_file(
     tsx: bool,
     declared: &BTreeMap<Operation, Value>,
     transport: bool,
-    user_content_links: bool,
+    source_path: Option<&str>,
 ) -> Result<Coverage> {
     let mut parser = tree_sitter::Parser::new();
     parser.set_language(&if tsx {
@@ -424,6 +443,45 @@ fn analyze_file(
                     .iter()
                     .map(|n| (n.start_position().row + 1, text(*n, source)))
                     .collect::<Vec<_>>()
+            );
+        }
+    }
+    // Alternate networking implementations need an adapter instead of escaping
+    // the shared-transport checks with an unresolved dynamic URL.
+    let mut constructors = vec![];
+    descend(root, "new_expression", &mut constructors);
+    for expression in constructors {
+        let constructor = name(field(expression, "constructor")?, source);
+        anyhow::ensure!(
+            !matches!(
+                constructor.as_str(),
+                "XMLHttpRequest" | "EventSource" | "WebSocket"
+            ),
+            "{constructor} needs an explicit contract transport adapter"
+        );
+    }
+    let mut import_statements = vec![];
+    descend(root, "import_statement", &mut import_statements);
+    for import in import_statements {
+        if text(import, source).starts_with("import type ") {
+            continue;
+        }
+        if let Some(module) = import.child_by_field_name("source") {
+            let module = text(module, source).trim_matches(['\'', '"']);
+            anyhow::ensure!(
+                !matches!(
+                    module,
+                    "axios"
+                        | "ky"
+                        | "got"
+                        | "undici"
+                        | "superagent"
+                        | "http"
+                        | "https"
+                        | "node:http"
+                        | "node:https"
+                ),
+                "network module {module} needs an explicit contract transport adapter"
             );
         }
     }
@@ -470,8 +528,17 @@ fn analyze_file(
     }
     for call in calls {
         let fun = field(call, "function")?;
+        let is_navigation = navigation(fun, source);
         let fun_name = name(fun, source);
-        let fun_name = aliases.get(&fun_name).cloned().unwrap_or(fun_name);
+        let fun_name = if is_navigation {
+            "fetch".into()
+        } else {
+            aliases.get(&fun_name).cloned().unwrap_or(fun_name)
+        };
+        anyhow::ensure!(
+            fun_name != "sendBeacon",
+            "sendBeacon needs an explicit contract transport adapter"
+        );
         if !matches!(
             fun_name.as_str(),
             "fetch" | "fetchJson" | "fetchBlob" | "fetchDownload" | "request" | "download"
@@ -481,10 +548,13 @@ fn analyze_file(
                 .map(children)
                 .unwrap_or_default();
             let mut endpoints = vec![];
-            if let Some(first) = args.first() {
-                endpoints.extend(values(*first, source, root, &BTreeMap::new(), 0));
-                if first.kind() == "object" {
-                    for pair in children(*first).into_iter().filter(|n| n.kind() == "pair") {
+            for argument in &args {
+                endpoints.extend(values(*argument, source, root, &BTreeMap::new(), 0));
+                if argument.kind() == "object" {
+                    for pair in children(*argument)
+                        .into_iter()
+                        .filter(|n| n.kind() == "pair")
+                    {
                         if pair
                             .child_by_field_name("key")
                             .is_some_and(|n| matches!(text(n, source), "url" | "path" | "uri"))
@@ -559,6 +629,21 @@ fn analyze_file(
             bail!("HTTP call has no path")
         };
         let mut paths = values(*path, source, root, &BTreeMap::new(), 0);
+        if is_navigation {
+            // These existing flows navigate to user-selected UI paths or the
+            // external provider URL returned by the audited identity-link API.
+            // Neither is a new, statically chosen application HTTP operation.
+            let explicit_flow = (source_path == Some("frontend/src/pages/LoginPage.tsx")
+                && text(*path, source) == "returnTo")
+                || (source_path == Some("frontend/src/pages/AccountPage.tsx")
+                    && text(*path, source).starts_with("await startIdentityLink("));
+            if paths == ["*"] && explicit_flow {
+                continue;
+            }
+            if paths.iter().all(|p| p != "*" && !api_navigation(p)) {
+                continue;
+            }
+        }
         // A forwarding download helper is covered at each concrete call site.
         if fun_name == "fetchDownload"
             && paths == ["*"]
@@ -575,7 +660,7 @@ fn analyze_file(
         paths.sort();
         paths.dedup();
         let method = methods(
-            if fun_name == "download" {
+            if fun_name == "download" || is_navigation {
                 None
             } else {
                 args.get(1).copied()
@@ -584,7 +669,7 @@ fn analyze_file(
         )
         .with_context(|| format!("line {}", call.start_position().row + 1))?;
         for path in paths {
-            if !path.starts_with("/api/") {
+            if !api_navigation(&path) {
                 bail!(
                     "unresolved HTTP dependency at line {}: {}",
                     call.start_position().row + 1,
@@ -594,7 +679,9 @@ fn analyze_file(
             for method in &method {
                 let found: Vec<_> = declared
                     .keys()
-                    .filter(|op| op.method == *method && intersects(&path, &path_glob(&op.path)))
+                    .filter(|op| {
+                        op.method == *method && intersects(&path, &route_pattern(&op.path))
+                    })
                     .cloned()
                     .collect();
                 if found.is_empty() {
@@ -626,7 +713,9 @@ fn analyze_file(
         } else {
             *value
         };
-        if user_content_links && text(value, source) == "n.href" {
+        if source_path == Some("frontend/src/components/StatementText.tsx")
+            && text(value, source) == "n.href"
+        {
             continue;
         }
         for path in values(value, source, root, &BTreeMap::new(), 0) {
@@ -637,18 +726,47 @@ fn analyze_file(
                     attribute.start_position().row + 1
                 );
             }
-            if !path.starts_with("/api/") {
+            if !api_navigation(path) {
                 continue;
             }
             let keys: Vec<_> = declared
                 .keys()
-                .filter(|key| key.method == "get" && intersects(path, &path_glob(&key.path)))
+                .filter(|key| key.method == "get" && intersects(path, &route_pattern(&key.path)))
                 .cloned()
                 .collect();
             if keys.is_empty() {
                 bail!("undocumented browser API dependency {path}");
             }
             result.operations.extend(keys);
+        }
+    }
+    let mut assignments = vec![];
+    descend(root, "assignment_expression", &mut assignments);
+    for assignment in assignments {
+        if !navigation(field(assignment, "left")?, source) {
+            continue;
+        }
+        for path in values(
+            field(assignment, "right")?,
+            source,
+            root,
+            &BTreeMap::new(),
+            0,
+        ) {
+            let path = path.split('?').next().unwrap();
+            anyhow::ensure!(path != "*", "unresolved browser navigation assignment");
+            if api_navigation(path) {
+                let required: Vec<_> = declared
+                    .keys()
+                    .filter(|op| op.method == "get" && intersects(path, &route_pattern(&op.path)))
+                    .cloned()
+                    .collect();
+                anyhow::ensure!(
+                    !required.is_empty(),
+                    "undocumented browser API dependency {path}"
+                );
+                result.operations.extend(required);
+            }
         }
     }
     Ok(result)
@@ -695,7 +813,7 @@ pub fn scan(root: &Path, component: &str, spec: &Value) -> Result<Coverage> {
             path.extension().is_some_and(|x| x == "tsx"),
             &declared,
             transport,
-            relative == "frontend/src/components/StatementText.tsx",
+            Some(relative.as_ref()),
         )
         .with_context(|| relative.to_string())?;
         result.call_sites += coverage.call_sites;

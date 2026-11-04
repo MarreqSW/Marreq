@@ -55,7 +55,9 @@ async fn harness(max_file_bytes: u64, quota_bytes: u64) -> Harness {
         .manage(marreq_core::auth::rate_limiter::LoginRateLimiter::new())
         .mount("/api", marreq_core::api::routes());
     Harness {
-        client: Client::tracked(rocket).await.expect("rocket instance"),
+        client: crate::contract::tracked(rocket)
+            .await
+            .expect("rocket instance"),
         dir,
     }
 }

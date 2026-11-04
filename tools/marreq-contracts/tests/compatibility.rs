@@ -123,7 +123,7 @@ fn unrelated_backend_endpoint_can_change() {
         method: "post".into(),
         path: "/api/things".into(),
     }]);
-    let consumer = contract::select(&old, &required, None, true).unwrap();
+    let consumer = contract::select(&old, &required, None).unwrap();
     contract::compare(&consumer, &new, "server").unwrap();
 }
 #[test]
@@ -384,7 +384,7 @@ fn dynamic_unverified_dependency_is_rejected() {
         false,
     )
     .unwrap();
-    assert!(contract::select(&doc, &coverage.operations, None, true).is_err());
+    assert!(contract::select(&doc, &coverage.operations, None).is_err());
 }
 #[test]
 fn segment_globs_do_not_capture_unrelated_children() {
@@ -485,6 +485,13 @@ fn aliases_and_unrecognized_clients_cannot_hide_new_calls() {
         "import {fetchJson as api} from './transport'; api('/api/missing');",
         "axios.get('/api/missing');",
         "axios({url:'/api/missing'});",
+        "client.open('POST', '/api/missing');",
+        "new XMLHttpRequest();",
+        "new EventSource(endpoint);",
+        "new WebSocket(endpoint);",
+        "navigator.sendBeacon(endpoint, data);",
+        "import client from 'axios'; client.get(endpoint);",
+        "import {request} from 'node:https';",
     ] {
         assert!(
             coverage::analyze(source, false, &ops, false).is_err(),
@@ -538,4 +545,159 @@ fn relative_plan_paths_work() {
         "{}",
         String::from_utf8_lossy(&result.stdout)
     );
+}
+
+#[test]
+fn browser_calls_and_assignments_cannot_hide_dependencies() {
+    let mut document = spec();
+    document["paths"]["/api/things"]["get"] = json!({"responses":{"200":{"description":"ok"}}});
+    let operations = contract::operations(&document, None).unwrap();
+    for source in [
+        "window.location.assign('/api/missing')",
+        "window.open('/api/missing')",
+        "window.location.href='/api/missing'",
+        "window.location.href=unknown",
+        "window.location.assign(unknown)",
+    ] {
+        assert!(
+            coverage::analyze(source, false, &operations, false).is_err(),
+            "{source}"
+        );
+    }
+    for source in [
+        "window.location.assign('/api/things')",
+        "window.open('/api/things', '_blank')",
+        "window.location.href='/api/things'",
+    ] {
+        assert_eq!(
+            coverage::analyze(source, false, &operations, false)
+                .unwrap()
+                .operations
+                .len(),
+            1,
+            "{source}"
+        );
+    }
+    assert!(
+        coverage::analyze(
+            "const url=URL.createObjectURL(blob);window.location.href=url",
+            false,
+            &operations,
+            false
+        )
+        .unwrap()
+        .operations
+        .is_empty()
+    );
+}
+
+#[test]
+fn consumer_bundle_requires_committed_build_configuration() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    std::fs::create_dir_all(root.join("docs/developer")).unwrap();
+    std::fs::create_dir_all(root.join("frontend/src")).unwrap();
+    std::fs::copy(
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/developer/openapi.yaml"),
+        root.join("docs/developer/openapi.yaml"),
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("frontend/src/client.ts"),
+        "fetch('/api/meta/build');",
+    )
+    .unwrap();
+    std::fs::write(
+        root.join("frontend/compatibility.json"),
+        r#"{"requires_backend_min":"0.2.0","requires_backend_max":"0.2.99"}"#,
+    )
+    .unwrap();
+    std::fs::write(root.join("frontend/vite.config.ts"), "export default {};").unwrap();
+    for args in [
+        vec!["init", "--quiet"],
+        vec!["add", "."],
+        vec![
+            "-c",
+            "user.name=Contract Test",
+            "-c",
+            "user.email=contract@example.test",
+            "commit",
+            "--quiet",
+            "-m",
+            "fixture",
+        ],
+    ] {
+        assert!(
+            Command::new("git")
+                .args(args)
+                .current_dir(root)
+                .status()
+                .unwrap()
+                .success()
+        );
+    }
+    let version = "0.2.1".parse().unwrap();
+    let clean = artifact::export(root, "frontend", version, None).unwrap();
+    assert_eq!(clean.source_sha.len(), 40);
+    std::fs::write(
+        root.join("frontend/vite.config.ts"),
+        "export default { define: {api:'/changed'} };",
+    )
+    .unwrap();
+    let error = artifact::export(root, "frontend", "0.2.1".parse().unwrap(), None).unwrap_err();
+    assert!(error.to_string().contains("commit source/contract inputs"));
+}
+
+#[test]
+fn traffic_requires_both_real_backend_variants() {
+    let mut document = spec();
+    document["paths"] = json!({});
+    let targets = [
+        ("get", "/api/meta/build", 200),
+        ("get", "/api/meta/deployment", 200),
+        ("post", "/api/projects/{project_id}/use-cases", 201),
+        (
+            "put",
+            "/api/projects/{project_id}/use-cases/{id}/draft",
+            200,
+        ),
+        ("get", "/api/projects/{project_id}/use-cases", 403),
+    ];
+    let mut records = vec![];
+    for (method, path, status) in targets {
+        document["paths"][path][method] = json!({"responses":{status.to_string():{"description":"fixture","content":{"application/json":{"schema":{"type":"object","required":["id"],"properties":{"id":{"type":"integer"}}}}}}}});
+        for variant in ["server", "cloud"] {
+            records.push(json!({"variant":variant,"method":method,"path":path.replace("{project_id}","1").replace("{id}","2"),"status":status,"response":{"id":1}}));
+        }
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("traffic.jsonl");
+    let write = |records: &[Value]| {
+        std::fs::write(
+            &path,
+            records
+                .iter()
+                .map(Value::to_string)
+                .collect::<Vec<_>>()
+                .join("\n"),
+        )
+        .unwrap()
+    };
+    write(&records);
+    marreq_contracts::traffic::verify(&document, &path).unwrap();
+    let server_only: Vec<_> = records
+        .iter()
+        .filter(|r| r["variant"] == "server")
+        .cloned()
+        .collect();
+    write(&server_only);
+    assert!(
+        marreq_contracts::traffic::verify(&document, &path)
+            .unwrap_err()
+            .to_string()
+            .contains("cloud real-backend evidence missing")
+    );
+    records[0]["response"]["id"] = json!("wrong type");
+    write(&records);
+    assert!(marreq_contracts::traffic::verify(&document, &path).is_err());
 }

@@ -108,8 +108,10 @@ impl Fairing for WireContract {
     }
 }
 
-pub async fn tracked(rocket: Rocket<Build>) -> Result<Client, rocket::Error> {
-    Client::tracked(rocket.attach(WireContract)).await
+pub async fn tracked(rocket: Rocket<Build>) -> Result<Client, Box<rocket::Error>> {
+    Client::tracked(rocket.attach(WireContract))
+        .await
+        .map_err(Box::new)
 }
 
 #[rocket::get("/categories")]

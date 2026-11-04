@@ -157,6 +157,8 @@ describe('ReportBuilderPage', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
     expect(apiClient.deleteReportTemplate).toHaveBeenCalledWith(5, 7, 'csrf');
     await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('?type=vcd'));
+    // The route changes before the effect restores the default definition.
+    await waitFor(() => expect(sectionTitles()).toEqual(['Cover page', 'Contents', 'Verification control matrix']));
 
     await userEvent.click(screen.getByRole('checkbox', { name: 'Include Contents' }));
     await screen.findByText('Unsaved changes.');

@@ -1,0 +1,141 @@
+OAuthTokenRequest:
+  oneOf:
+    - type: object
+      properties:
+        client_id: {type: string}
+        resource: {type: string}
+        grant_type: {type: string, const: authorization_code}
+        code: {type: string}
+        redirect_uri: {type: string}
+        code_verifier: {type: string}
+        refresh_token: {type: string}
+      required:
+        - grant_type
+        - client_id
+        - resource
+        - code
+        - redirect_uri
+        - code_verifier
+      additionalProperties: true
+    - type: object
+      properties:
+        client_id: {type: string}
+        resource: {type: string}
+        grant_type: {type: string, const: refresh_token}
+        refresh_token: {type: string}
+        code: {type: string}
+        redirect_uri: {type: string}
+        code_verifier: {type: string}
+      required:
+        - grant_type
+        - client_id
+        - resource
+        - refresh_token
+      additionalProperties: true
+AuthProfileUpdate:
+  type: object
+  properties:
+    name:
+      type: string
+    email:
+      type: string
+    current_password:
+      type:
+        - string
+        - 'null'
+  required:
+    - name
+    - email
+  additionalProperties: true
+AuthIdentities:
+  type: object
+  properties:
+    password_configured:
+      type: boolean
+    identities:
+      type: array
+      items:
+        type: object
+        properties: {id: {type: integer}, provider: {type: string}, created_at: {type: string}, last_login_at: {type: [string, 'null']}}
+        required: [id, provider, created_at, last_login_at]
+        additionalProperties: true
+  required:
+    - password_configured
+    - identities
+  additionalProperties: true
+AuthChangePassword:
+  type: object
+  properties:
+    current_password:
+      type: string
+    new_password:
+      type: string
+    confirm_password:
+      type: string
+  required:
+    - current_password
+    - new_password
+    - confirm_password
+  additionalProperties: true
+AuthStatus:
+  type: object
+  properties:
+    status:
+      type: string
+      const: ok
+  required:
+    - status
+  additionalProperties: true
+external_ProviderDiscovery_response:
+  type: object
+  properties:
+    password_enabled:
+      type: boolean
+    external:
+      type: array
+      items:
+        $ref: ../schemas/auth.yaml#/external_PublicAuthProvider_response
+  additionalProperties: true
+  required:
+    - password_enabled
+    - external
+external_PublicAuthProvider_response:
+  type: object
+  properties:
+    id:
+      type: string
+    display_name:
+      type: string
+  additionalProperties: true
+  required:
+    - id
+    - display_name
+entities_User_response:
+  type: object
+  properties:
+    id:
+      type: integer
+    username:
+      type: string
+    name:
+      type: string
+    email:
+      type: string
+    creation_date:
+      type: string
+    last_login:
+      type: string
+    is_admin:
+      type: boolean
+    email_verified:
+      type: boolean
+  additionalProperties: true
+  required:
+    - id
+    - username
+    - name
+    - email
+    - creation_date
+    - last_login
+    - is_admin
+    - email_verified

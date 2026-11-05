@@ -1,0 +1,636 @@
+/api/projects/{project_id}/catalog:
+  get:
+    operationId: catalog_get
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {categories: {type: array, items: {$ref: ../schemas/catalog.yaml#/Category}}, applicability: {type: array, items: {$ref: ../schemas/catalog.yaml#/Applicability}}, requirement_statuses: {type: array, items: {$ref: ../schemas/catalog.yaml#/RequirementStatus}}, verification_statuses: {type: array, items: {$ref: ../schemas/catalog.yaml#/VerificationStatus}}, verification_methods: {type: array, items: {$ref: ../schemas/verifications.yaml#/VerificationMethod}}, custom_fields: {type: array, items: {$ref: ../schemas/projects.yaml#/CustomFieldDefinition}}}, required: [categories, applicability, requirement_statuses, verification_statuses, verification_methods, custom_fields], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: Audited api/catalog.rs repository serializers. Project-scoped lookup arrays in both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - requirements:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/home/attention:
+  get:
+    operationId: home_attention
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {items: {type: array, items: {$ref: ../schemas/projects.yaml#/AttentionItem}}, approvals: {type: integer}, reviews: {type: integer}, suspect_links: {type: integer}, notifications: {type: integer}}, required: [items, approvals, reviews, suspect_links, notifications], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/home.rs AttentionItem/AttentionResponse and ProjectsRead guard. Both variants; at most 50
+      attention items, nullable entity fields are serialized explicitly.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - projects:read
+    x-marreq-authorization: current-project-membership;token-project-scope
+/api/search:
+  get:
+    operationId: home_search
+    parameters:
+      - in: query
+        name: q
+        schema: {type: string}
+        required: true
+      - in: query
+        name: limit
+        schema: {type: integer, minimum: 0}
+        required: false
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {type: object, properties: {kind: {type: string, enum: [requirement, use_case]}, project_id: {type: integer}, requirement_id: {anyOf: [{type: integer}, {type: 'null'}]}, use_case_id: {anyOf: [{type: integer}, {type: 'null'}]}, reference_code: {type: string}, title: {type: string}}, required: [kind, project_id, requirement_id, use_case_id, reference_code, title], additionalProperties: true}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/home.rs SearchHit and search. Session-only in both variants; limit is clamped, short queries
+      yield an empty array.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session;ViewRequirements
+/api/projects/{project_id}/me/permissions:
+  get:
+    operationId: members_get_my_permissions
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/projects.yaml#/EffectivePermissions}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/members.rs, permissions.rs and auth/guards/project.rs. Both variants enforce current
+      membership. Reviewer writes require project members; the last project admin cannot be removed.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - projects:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/members:
+  get:
+    operationId: members_list_members
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/projects.yaml#/MemberResponse}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/members.rs, permissions.rs and auth/guards/project.rs. Both variants enforce current
+      membership. Reviewer writes require project members; the last project admin cannot be removed.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+/api/projects/{project_id}/members/{user_id}:
+  put:
+    operationId: members_set_member_role
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: user_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/projects.yaml#/MemberResponse}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/members.rs, permissions.rs and auth/guards/project.rs. Both variants enforce current
+      membership. Reviewer writes require project members; the last project admin cannot be removed.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {role: {type: integer, minimum: 1, maximum: 4}}, required: [role], additionalProperties: true}}
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ManageProjectMembers;not-archived
+    x-marreq-csrf: session-csrf
+  delete:
+    operationId: members_remove_member
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: user_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Success; empty body.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/members.rs, permissions.rs and auth/guards/project.rs. Both variants enforce current
+      membership. Reviewer writes require project members; the last project admin cannot be removed.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ManageProjectMembers;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/reviewers:
+  get:
+    operationId: members_list_project_reviewers
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/projects.yaml#/ProjectReviewersResponse}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/members.rs, permissions.rs and auth/guards/project.rs. Both variants enforce current
+      membership. Reviewer writes require project members; the last project admin cannot be removed.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - projects:read
+    x-marreq-authorization: project-membership;ViewRequirements
+  put:
+    operationId: members_put_project_reviewers
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/projects.yaml#/ProjectReviewersResponse}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/members.rs, permissions.rs and auth/guards/project.rs. Both variants enforce current
+      membership. Reviewer writes require project members; the last project admin cannot be removed.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/projects.yaml#/ProjectReviewersResponse}}
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ManageProjectMembers;not-archived
+    x-marreq-csrf: session-csrf
+/api/meta/deployment:
+  get:
+    operationId: meta_deployment_info
+    security: []
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/common.yaml#/DeploymentInfo}}}
+/api/meta/build:
+  get:
+    operationId: meta_build_info
+    security: []
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/common.yaml#/BuildInfo}}}
+/api/projects:
+  post:
+    operationId: projects_create
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {id: {type: integer}, name: {type: string}, slug: {type: string}, description: {anyOf: [{type: string}, {type: 'null'}]}, group_id: {anyOf: [{type: integer}, {type: 'null'}]}, project_base_path: {type: string}, status: {type: string, const: ok}}, required: [id, name, slug, description, group_id, project_base_path, status], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/projects.rs and ProjectService. Shared wire types in both variants; project and group
+      permissions, ownership, archive status and strict PATCH field handling apply.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {name: {type: string}, description: {anyOf: [{type: string}, {type: 'null'}]}, group_id: {anyOf: [{type: integer}, {type: 'null'}]}}, required: [name], additionalProperties: true}}
+    x-marreq-authorization: personal-token-or-session;delegated-denied;group-ManageProjects
+    x-marreq-csrf: session-csrf
+  get:
+    operationId: projects_session_list_for_session
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/projects.yaml#/Project}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/projects_session.rs and models::Project. Admin all-project view, otherwise current
+      memberships; bearer project scope narrows the list. Shared in both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - projects:read
+    x-marreq-authorization: current-project-membership;token-project-scope
+/api/projects/{project_id}:
+  patch:
+    operationId: projects_update
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {id: {type: integer}, name: {type: string}, slug: {type: string}, project_base_path: {type: string}, description: {anyOf: [{type: string}, {type: 'null'}]}, creation_date: {anyOf: [{type: string}, {type: 'null'}]}, update_date: {anyOf: [{type: string}, {type: 'null'}]}, owner_id: {anyOf: [{type: integer}, {type: 'null'}]}, group_id: {anyOf: [{type: integer}, {type: 'null'}]}, status: {$ref: ../schemas/catalog.yaml#/ProjectStatus}}, required: [id, name, slug, project_base_path, description, creation_date, update_date, owner_id, group_id, status], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/projects.rs and ProjectService. Shared wire types in both variants; project and group
+      permissions, ownership, archive status and strict PATCH field handling apply.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {name: {anyOf: [{type: string}, {type: 'null'}]}, description: {anyOf: [{type: string}, {type: 'null'}]}, status: {anyOf: [{$ref: ../schemas/catalog.yaml#/ProjectStatus}, {type: 'null'}]}, owner_id: {anyOf: [{type: integer}, {type: 'null'}]}, group_id: {anyOf: [{type: integer}, {type: 'null'}]}}, required: [], additionalProperties: false}}
+    x-marreq-authorization: personal-token-or-session;delegated-denied;ManageProjectConfiguration;group-ManageProjects;not-archived
+    x-marreq-csrf: session-csrf
+  delete:
+    operationId: projects_delete
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Success; empty body.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/projects.rs and ProjectService. Shared wire types in both variants; project and group
+      permissions, ownership, archive status and strict PATCH field handling apply.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {confirm_slug: {type: string}}, required: [confirm_slug], additionalProperties: false}}
+    x-marreq-authorization: session;project-owner-or-instance-admin;confirm-slug
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/archive:
+  post:
+    operationId: projects_archive
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/projects.yaml#/Project}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/projects.rs and ProjectService. Shared wire types in both variants; project and group
+      permissions, ownership, archive status and strict PATCH field handling apply.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session;project-owner-or-instance-admin
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/unarchive:
+  post:
+    operationId: projects_unarchive
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/projects.yaml#/Project}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/projects.rs and ProjectService. Shared wire types in both variants; project and group
+      permissions, ownership, archive status and strict PATCH field handling apply.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session;project-owner-or-instance-admin
+    x-marreq-csrf: session-csrf
+/api/project-from-path/{slug}:
+  get:
+    operationId: projects_session_project_from_path
+    parameters:
+      - in: path
+        name: slug
+        required: true
+        schema: {type: string}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {id: {type: integer}, name: {type: string}, description: {anyOf: [{type: string}, {type: 'null'}]}, slug: {type: string}, route_slug: {type: string}}, required: [id, name, description, slug, route_slug], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/projects_session.rs project_from_path. Session-only slug lookup with membership checks,
+      shared in both variants.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session;project-membership-or-instance-admin
+/api/projects/{project_id}/close_out:
+  get:
+    operationId: verification_control_get_project_close_out
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, additionalProperties: {$ref: ../schemas/traceability.yaml#/RequirementCloseOutView}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/verification_control.rs and verification_control_service.rs. Optional nullable inputs are
+      cleared when absent; unknown fields rejected. Both variants enforce scoped guards, permissions,
+      trimming/length validation and reviewer rules.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - requirements:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/dashboard:
+  get:
+    operationId: dashboard_dashboard_json
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {user: {$ref: ../schemas/auth.yaml#/entities_User_response}, projects: {type: array, items: {$ref: ../schemas/projects.yaml#/DashboardProject}}, projects_count: {type: integer}, selected_project_id: {anyOf: [{type: integer}, {type: 'null'}]}, selected_project_slug: {anyOf: [{type: string}, {type: 'null'}]}, csrf_token: {type: string}}, required: [user, projects, projects_count, selected_project_id, selected_project_slug, csrf_token], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/dashboard.rs and routes/helpers.rs decorate_projects_for_listing. Project cards include the
+      exact decoration keys; nulls reflect absent selection/metadata. Both variants share this session
+      payload.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session-user-project-memberships

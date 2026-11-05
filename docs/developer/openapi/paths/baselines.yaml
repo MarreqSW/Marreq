@@ -1,0 +1,368 @@
+/api/projects/{project_id}/baselines:
+  get:
+    operationId: baselines_list
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/baselines.yaml#/Baseline}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/baselines.rs, BaselineService and baseline models. Immutable snapshots with nullable source
+      view metadata. Both variants enforce project boundaries. Optional Idempotency-Key applies to create.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - baselines:read
+    x-marreq-authorization: project-membership;ViewRequirements
+  post:
+    operationId: baselines_create
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema: {type: string}
+        description: Optional replay identity, trimmed then validated as 1–200 ASCII letters, digits, dot, underscore or hyphen. Reuse with a different payload returns 409.
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/baselines.yaml#/Baseline}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/baselines.rs, BaselineService and baseline models. Immutable snapshots with nullable source
+      view metadata. Both variants enforce project boundaries. Optional Idempotency-Key applies to create.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {name: {type: string}, description: {anyOf: [{type: string}, {type: 'null'}]}, saved_view_id: {anyOf: [{type: integer}, {type: 'null'}]}}, required: [name], additionalProperties: true}}
+    x-marreq-bearer-scopes:
+      - baselines:write
+    x-marreq-authorization: project-membership;EditRequirements;visible-saved-view;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/baselines/{baseline_id}:
+  get:
+    operationId: baselines_get
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: baseline_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/baselines.yaml#/Baseline}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/baselines.rs, BaselineService and baseline models. Immutable snapshots with nullable source
+      view metadata. Both variants enforce project boundaries. Optional Idempotency-Key applies to create.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - baselines:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/baselines/{baseline_id}/requirements:
+  get:
+    operationId: baselines_get_requirements
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: baseline_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/requirements.yaml#/Requirement}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/baselines.rs, BaselineService and baseline models. Immutable snapshots with nullable source
+      view metadata. Both variants enforce project boundaries. Optional Idempotency-Key applies to create.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - baselines:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/baselines/{baseline_id}/traceability:
+  get:
+    operationId: baselines_get_traceability
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: baseline_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/baselines.yaml#/BaselineTraceability}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/baselines.rs, BaselineService and baseline models. Immutable snapshots with nullable source
+      view metadata. Both variants enforce project boundaries. Optional Idempotency-Key applies to create.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - baselines:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/baselines/{baseline_id}/verifications:
+  get:
+    operationId: baselines_get_verifications
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: baseline_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/baselines.yaml#/BaselineVerification}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/baselines.rs, BaselineService and baseline models. Immutable snapshots with nullable source
+      view metadata. Both variants enforce project boundaries. Optional Idempotency-Key applies to create.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - baselines:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/baselines/diff:
+  get:
+    operationId: baselines_diff_baselines
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: query
+        name: baseline_a
+        schema: {type: integer}
+        required: true
+      - in: query
+        name: baseline_b
+        schema: {type: integer}
+        required: true
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/baselines.yaml#/BaselineDiff}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/baselines.rs, BaselineService and baseline models. Immutable snapshots with nullable source
+      view metadata. Both variants enforce project boundaries. Optional Idempotency-Key applies to create.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - baselines:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/baselines/{baseline_id}/requirements/{req_id}/diff/current:
+  get:
+    operationId: requirement_diff_diff_baseline_vs_current
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: baseline_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: req_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/baselines.yaml#/RequirementDiff}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api requirement/verification diff routes, diff/mod.rs and diff services. Both versions/snapshots
+      must belong to the requested entity and project. Optional SingleValueDiff/label fields are omitted, not
+      null. Shared wire representation in both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - requirements:read
+      - baselines:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/baselines/{baseline_id}/verifications/{id}/diff/current:
+  get:
+    operationId: verification_diff_diff_baseline_vs_current
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: baseline_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/baselines.yaml#/VerificationVersionDiff}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api requirement/verification diff routes, diff/mod.rs and diff services. Both versions/snapshots
+      must belong to the requested entity and project. Optional SingleValueDiff/label fields are omitted, not
+      null. Shared wire representation in both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - verifications:read
+      - baselines:read
+    x-marreq-authorization: project-membership;ViewRequirements

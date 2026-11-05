@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand};
-use marreq_contracts::{artifact, contract, coverage, traffic};
+use marreq_contracts::{artifact, contract, coverage, source, traffic};
 use std::path::PathBuf;
 #[derive(Parser)]
 struct Cli {
@@ -11,13 +11,13 @@ enum Action {
     Coverage {
         #[arg(long, default_value = ".")]
         root: PathBuf,
-        #[arg(long, default_value = "docs/developer/openapi.yaml")]
+        #[arg(long, default_value = source::DEFAULT_SPEC)]
         spec: PathBuf,
         #[arg(long)]
         component: String,
     },
     Validate {
-        #[arg(long, default_value = "docs/developer/openapi.yaml")]
+        #[arg(long, default_value = source::DEFAULT_SPEC)]
         spec: PathBuf,
         #[arg(long, default_value = ".")]
         root: PathBuf,
@@ -50,7 +50,7 @@ enum Action {
     },
     VerifyTraffic {
         transcript: PathBuf,
-        #[arg(long, default_value = "docs/developer/openapi.yaml")]
+        #[arg(long, default_value = source::DEFAULT_SPEC)]
         spec: PathBuf,
     },
     Select {
@@ -58,7 +58,7 @@ enum Action {
         root: PathBuf,
         #[arg(long)]
         component: String,
-        #[arg(long, default_value = "docs/developer/openapi.yaml")]
+        #[arg(long, default_value = source::DEFAULT_SPEC)]
         spec: PathBuf,
         #[arg(long)]
         output: PathBuf,
@@ -79,7 +79,7 @@ fn run() -> anyhow::Result<serde_json::Value> {
         } => Ok(serde_json::to_value(coverage::scan(
             &root,
             &component,
-            &contract::load(&spec)?,
+            &source::load(&spec)?,
         )?)?),
         Action::Bundle {
             root,
@@ -124,7 +124,7 @@ fn run() -> anyhow::Result<serde_json::Value> {
             artifact::verify(&manifest, candidate)
         }
         Action::VerifyTraffic { transcript, spec } => {
-            traffic::verify(&contract::load(&spec)?, &transcript)
+            traffic::verify(&source::load(&spec)?, &transcript)
         }
         Action::Select {
             root,
@@ -132,7 +132,7 @@ fn run() -> anyhow::Result<serde_json::Value> {
             spec,
             output,
         } => {
-            let spec = contract::load(&spec)?;
+            let spec = source::load(&spec)?;
             let coverage = coverage::scan(&root, &component, &spec)?;
             contract::write(
                 &output,
@@ -147,7 +147,7 @@ fn run() -> anyhow::Result<serde_json::Value> {
             root,
             document_only,
         } => {
-            let spec = contract::load(&spec)?;
+            let spec = source::load(&spec)?;
             contract::validate(&spec)?;
             for dir in ["frontend", "mcp-server"] {
                 let p: artifact::Policy = serde_json::from_value(contract::load(

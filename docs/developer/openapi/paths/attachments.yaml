@@ -1,0 +1,301 @@
+/api/projects/{project_id}/attachments:
+  get:
+    operationId: attachments_list
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: query
+        name: entity_type
+        required: true
+        schema: {type: string, enum: [requirement, verification]}
+      - in: query
+        name: entity_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/attachments.yaml#/AttachmentView}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '403':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+      '503':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+    description: >-
+      Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same routes and
+      wire types in Server and Cloud; configured storage limits remain instance policy.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: project-membership;ViewRequirements;delegated-requirements-and-verifications-read
+    x-marreq-bearer-scopes:
+      - requirements:read
+      - verifications:read
+  post:
+    operationId: attachments_upload
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '201':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/attachments.yaml#/AttachmentView}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '403':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '413':
+        description: Upload exceeds the file or project quota, or Rocket's request limit. The handler returns ApiError JSON; Rocket can reject an oversized form before the handler with a framework-generated body.
+      '415':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+      '503':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+    description: >-
+      Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same routes and
+      wire types in Server and Cloud; configured storage limits remain instance policy.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: project-membership;EditRequirements;not-archived;personal-token-or-session;delegated-denied
+    x-marreq-csrf: session-csrf
+    requestBody:
+      required: true
+      content:
+        multipart/form-data: {schema: {type: object, properties: {file: {type: string, format: binary}, entity_type: {type: string, enum: [requirement, verification]}, entity_id: {type: integer}}, required: [file, entity_type, entity_id], additionalProperties: true}}
+/api/projects/{project_id}/attachments/{attachment_id}/download:
+  get:
+    operationId: attachments_download
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: attachment_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Stored file served as a download using its detected media type.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}, X-Content-Type-Options: {required: true, schema: {type: string, const: nosniff}}, Content-Security-Policy: {required: true, schema: {type: string, const: default-src 'none'; sandbox}}, Cache-Control: {required: true, schema: {type: string, const: 'private, no-cache'}}}
+        content: {'*/*': {schema: {type: string, format: binary}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '403':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+      '503':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+    description: >-
+      Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same routes and
+      wire types in Server and Cloud; configured storage limits remain instance policy.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: project-membership;ViewRequirements;personal-token-or-session;delegated-denied
+/api/projects/{project_id}/storage:
+  get:
+    operationId: attachments_get_storage
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/attachments.yaml#/AttachmentStorage}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '403':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+      '503':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+    description: >-
+      Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same routes and
+      wire types in Server and Cloud; configured storage limits remain instance policy.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: project-membership;ViewRequirements;personal-token-or-session;delegated-denied
+/api/projects/{project_id}/storage/quota:
+  put:
+    operationId: attachments_set_quota
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/attachments.yaml#/AttachmentStorage}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '403':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+      '503':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+    description: >-
+      Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same routes and
+      wire types in Server and Cloud; configured storage limits remain instance policy.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: instance-admin;not-archived
+    x-marreq-csrf: session-csrf
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {quota_mb: {anyOf: [{type: integer, minimum: 1, maximum: 1073741824}, {type: 'null'}]}}, additionalProperties: false}}
+/api/projects/{project_id}/baselines/{baseline_id}/attachments:
+  get:
+    operationId: attachments_list_for_baseline
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: baseline_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/attachments.yaml#/AttachmentView}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '403':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same routes and
+      wire types in Server and Cloud; configured storage limits remain instance policy.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: project-membership;ViewRequirements;delegated-baselines-read
+    x-marreq-bearer-scopes:
+      - baselines:read
+/api/projects/{project_id}/baselines/{baseline_id}/attachments/{attachment_id}/download:
+  get:
+    operationId: attachments_download_for_baseline
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: baseline_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: attachment_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Stored file served as a download using its detected media type.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}, X-Content-Type-Options: {required: true, schema: {type: string, const: nosniff}}, Content-Security-Policy: {required: true, schema: {type: string, const: default-src 'none'; sandbox}}, Cache-Control: {required: true, schema: {type: string, const: 'private, no-cache'}}}
+        content: {'*/*': {schema: {type: string, format: binary}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '403':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+      '503':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+    description: >-
+      Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same routes and
+      wire types in Server and Cloud; configured storage limits remain instance policy.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: project-membership;ViewRequirements;delegated-baselines-read
+    x-marreq-bearer-scopes:
+      - baselines:read
+/api/projects/{project_id}/attachments/{attachment_id}:
+  delete:
+    operationId: attachments_delete
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: attachment_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Attachment deleted; empty body. Baseline retention can keep the stored bytes.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '403':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+      '503':
+        description: Guard, CSRF, storage configuration, or Rocket form validation failed; body may be empty or framework-generated.
+    description: >-
+      Audited api/attachments.rs, attachment_service.rs, auth/guards/project.rs and bearer.rs. Same routes and
+      wire types in Server and Cloud; configured storage limits remain instance policy.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: project-membership;EditRequirements;not-archived;personal-token-or-session;delegated-denied
+    x-marreq-csrf: session-csrf

@@ -1,0 +1,501 @@
+UseCaseElement:
+  type: object
+  properties:
+    id:
+      type: string
+    text:
+      type: string
+  additionalProperties: false
+  required:
+    - id
+    - text
+UseCaseBranchEnd:
+  oneOf:
+    - type: object
+      properties:
+        type: {const: rejoin, type: string}
+        step: {type: string}
+      additionalProperties: false
+      required:
+        - type
+        - step
+    - type: object
+      properties:
+        type: {const: end, type: string}
+        outcome: {type: string, enum: [success, failure]}
+      additionalProperties: false
+      required:
+        - type
+        - outcome
+UseCaseDocument:
+  type: object
+  properties:
+    schema:
+      type: string
+      const: marreq.use-case.v1
+    title:
+      type: string
+    primary_actor:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    secondary_actors:
+      type: array
+      items:
+        type: string
+    summary:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    preconditions:
+      type: array
+      items:
+        $ref: ../schemas/use-cases.yaml#/UseCaseElement
+    main:
+      type: array
+      items:
+        $ref: ../schemas/use-cases.yaml#/UseCaseElement
+    branches:
+      type: array
+      items:
+        $ref: ../schemas/use-cases.yaml#/UseCaseBranch
+    postconditions:
+      type: array
+      items:
+        $ref: ../schemas/use-cases.yaml#/UseCaseElement
+  additionalProperties: false
+  required:
+    - title
+UseCaseBranch:
+  type: object
+  properties:
+    id:
+      type: string
+    kind:
+      type: string
+      enum:
+        - alternative
+        - exception
+    title:
+      type: string
+    from_step:
+      type: string
+    end:
+      $ref: ../schemas/use-cases.yaml#/UseCaseBranchEnd
+    steps:
+      type: array
+      items:
+        $ref: ../schemas/use-cases.yaml#/UseCaseElement
+  additionalProperties: false
+  required:
+    - id
+    - kind
+    - title
+    - from_step
+    - end
+UseCaseEffect:
+  oneOf:
+    - type: object
+      properties:
+        type: {type: string, const: relabelled}
+        id: {type: string}
+        from: {type: string}
+        to: {type: string}
+      additionalProperties: true
+      required:
+        - type
+        - id
+        - from
+        - to
+    - type: object
+      properties:
+        type: {type: string, const: removed}
+        id: {type: string}
+      additionalProperties: true
+      required:
+        - type
+        - id
+    - type: object
+      properties:
+        type: {type: string, const: rebranched}
+        id: {type: string}
+        from_step: {type: string}
+      additionalProperties: true
+      required:
+        - type
+        - id
+        - from_step
+    - type: object
+      properties:
+        type: {type: string, const: created}
+        id: {type: string}
+      additionalProperties: true
+      required:
+        - type
+        - id
+UseCaseDocumentResponse:
+  type: object
+  properties:
+    schema:
+      type: string
+      const: marreq.use-case.v1
+    title:
+      type: string
+    primary_actor:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    secondary_actors:
+      type: array
+      items:
+        type: string
+    summary:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    preconditions:
+      type: array
+      items:
+        $ref: ../schemas/use-cases.yaml#/UseCaseElement
+    main:
+      type: array
+      items:
+        $ref: ../schemas/use-cases.yaml#/UseCaseElement
+    branches:
+      type: array
+      items:
+        $ref: ../schemas/use-cases.yaml#/UseCaseBranchResponse
+    postconditions:
+      type: array
+      items:
+        $ref: ../schemas/use-cases.yaml#/UseCaseElement
+  additionalProperties: false
+  required:
+    - schema
+    - title
+    - primary_actor
+    - secondary_actors
+    - summary
+    - preconditions
+    - main
+    - branches
+    - postconditions
+UseCaseBranchResponse:
+  type: object
+  properties:
+    id:
+      type: string
+    kind:
+      type: string
+      enum:
+        - alternative
+        - exception
+    title:
+      type: string
+    from_step:
+      type: string
+    end:
+      $ref: ../schemas/use-cases.yaml#/UseCaseBranchEnd
+    steps:
+      type: array
+      items:
+        $ref: ../schemas/use-cases.yaml#/UseCaseElement
+  additionalProperties: false
+  required:
+    - id
+    - kind
+    - title
+    - from_step
+    - end
+    - steps
+UseCaseListRef:
+  oneOf:
+    - type: string
+      enum:
+        - preconditions
+        - main
+        - postconditions
+    - type: object
+      properties:
+        branch: {type: string}
+      additionalProperties: true
+      required:
+        - branch
+UseCaseNewElement:
+  type: object
+  properties:
+    id:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    text:
+      type: string
+  additionalProperties: false
+  required:
+    - text
+UseCaseNewBranch:
+  type: object
+  properties:
+    id:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    kind:
+      type: string
+      enum:
+        - alternative
+        - exception
+    title:
+      type: string
+    from_step:
+      type: string
+    end:
+      $ref: ../schemas/use-cases.yaml#/UseCaseBranchEnd
+    steps:
+      type: array
+      items:
+        $ref: ../schemas/use-cases.yaml#/UseCaseNewElement
+  additionalProperties: false
+  required:
+    - kind
+    - title
+    - from_step
+    - end
+UseCaseDependents:
+  oneOf:
+    - type: string
+      enum:
+        - cascade
+    - type: object
+      properties:
+        rebranch_to: {type: string}
+      additionalProperties: true
+      required:
+        - rebranch_to
+UseCaseOperation:
+  oneOf:
+    - type: object
+      properties:
+        op: {type: string, const: set_header}
+        title: {anyOf: [{type: string}, {type: 'null'}]}
+        primary_actor: {anyOf: [{type: string}, {type: 'null'}]}
+        secondary_actors: {anyOf: [{type: array, items: {type: string}}, {type: 'null'}]}
+        summary: {anyOf: [{type: string}, {type: 'null'}]}
+      additionalProperties: false
+      required:
+        - op
+    - type: object
+      properties:
+        op: {type: string, const: add_element}
+        list: {$ref: ../schemas/use-cases.yaml#/UseCaseListRef}
+        after: {anyOf: [{type: string}, {type: 'null'}]}
+        element: {$ref: ../schemas/use-cases.yaml#/UseCaseNewElement}
+      additionalProperties: false
+      required:
+        - op
+        - list
+        - element
+    - type: object
+      properties:
+        op: {type: string, const: update_text}
+        id: {type: string}
+        text: {type: string}
+      additionalProperties: false
+      required:
+        - op
+        - id
+        - text
+    - type: object
+      properties:
+        op: {type: string, const: move_element}
+        id: {type: string}
+        list: {anyOf: [{$ref: ../schemas/use-cases.yaml#/UseCaseListRef}, {type: 'null'}]}
+        after: {anyOf: [{type: string}, {type: 'null'}]}
+      additionalProperties: false
+      required:
+        - op
+        - id
+    - type: object
+      properties:
+        op: {type: string, const: remove_element}
+        id: {type: string}
+        dependents: {anyOf: [{$ref: ../schemas/use-cases.yaml#/UseCaseDependents}, {type: 'null'}]}
+      additionalProperties: false
+      required:
+        - op
+        - id
+    - type: object
+      properties:
+        op: {type: string, const: add_branch}
+        branch: {$ref: ../schemas/use-cases.yaml#/UseCaseNewBranch}
+      additionalProperties: false
+      required:
+        - op
+        - branch
+    - type: object
+      properties:
+        op: {type: string, const: update_branch}
+        id: {type: string}
+        title: {anyOf: [{type: string}, {type: 'null'}]}
+        kind: {anyOf: [{type: string, enum: [alternative, exception]}, {type: 'null'}]}
+        from_step: {anyOf: [{type: string}, {type: 'null'}]}
+        end: {anyOf: [{$ref: ../schemas/use-cases.yaml#/UseCaseBranchEnd}, {type: 'null'}]}
+      additionalProperties: false
+      required:
+        - op
+        - id
+    - type: object
+      properties:
+        op: {type: string, const: remove_branch}
+        id: {type: string}
+      additionalProperties: false
+      required:
+        - op
+        - id
+UseCaseDiffSide:
+  type: object
+  properties:
+    list:
+      type: string
+      enum:
+        - preconditions
+        - main
+        - postconditions
+        - branch
+        - branches
+    branch_id:
+      type: string
+    label:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    text:
+      type: string
+    from_step:
+      type: string
+    end:
+      $ref: ../schemas/use-cases.yaml#/UseCaseBranchEnd
+    kind:
+      type: string
+      enum:
+        - alternative
+        - exception
+  additionalProperties: true
+  required:
+    - list
+    - label
+    - text
+UseCaseElementDiff:
+  type: object
+  properties:
+    id:
+      type: string
+    kind:
+      type: string
+      enum:
+        - precondition
+        - postcondition
+        - step
+        - branch
+    changes:
+      type: array
+      items:
+        type: string
+        enum: [added, removed, edited, moved, rebranched]
+    old:
+      anyOf:
+        - {$ref: ../schemas/use-cases.yaml#/UseCaseDiffSide}
+        - {type: 'null'}
+    new:
+      anyOf:
+        - {$ref: ../schemas/use-cases.yaml#/UseCaseDiffSide}
+        - {type: 'null'}
+    text_diff:
+      type: array
+      items:
+        type: object
+        properties: {op: {type: string, enum: [equal, delete, insert]}, text: {type: string}}
+        additionalProperties: true
+        required: [op, text]
+  additionalProperties: true
+  required:
+    - id
+    - kind
+    - changes
+    - old
+    - new
+UseCaseDiffEnd:
+  type: object
+  properties:
+    version_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    version_number:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    draft_revision:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+  additionalProperties: true
+  required:
+    - version_id
+    - version_number
+    - draft_revision
+UseCaseDiff:
+  type: object
+  properties:
+    from:
+      anyOf:
+        - {$ref: ../schemas/use-cases.yaml#/UseCaseDiffEnd}
+        - {type: 'null'}
+    to:
+      $ref: ../schemas/use-cases.yaml#/UseCaseDiffEnd
+    summary:
+      type: object
+      properties:
+        added: {type: integer}
+        removed: {type: integer}
+        edited: {type: integer}
+        moved: {type: integer}
+        rebranched: {type: integer}
+      additionalProperties: true
+      required:
+        - added
+        - removed
+        - edited
+        - moved
+        - rebranched
+    header:
+      type: object
+      additionalProperties:
+        type: object
+        properties: {old: {oneOf: [{type: string}, {type: 'null'}, {type: array, items: {type: string}}]}, new: {oneOf: [{type: string}, {type: 'null'}, {type: array, items: {type: string}}]}}
+        additionalProperties: true
+        required: [old, new]
+    elements:
+      type: array
+      items:
+        $ref: ../schemas/use-cases.yaml#/UseCaseElementDiff
+  additionalProperties: true
+  required:
+    - from
+    - to
+    - summary
+    - header
+    - elements
+UseCasePublishResponse:
+  type: object
+  properties:
+    version:
+      $ref: ../schemas/use-case-views.yaml#/use_cases_VersionView_response
+    removed_links:
+      type: array
+      items:
+        $ref: ../schemas/use-case-views.yaml#/use_cases_LinkView_response
+  additionalProperties: true
+  required:
+    - version
+    - removed_links

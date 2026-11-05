@@ -1,0 +1,612 @@
+openapi: 3.1.0
+info:
+  title: Marreq HTTP API
+  version: 0.1.0
+  description: >-
+    Consumer-facing HTTP contracts. Unconsumed backend routes are outside compatibility enforcement. Required
+    operations marked x-marreq-unverified fail verification; no missing schemas are inferred from inventory
+    entries.
+servers:
+  - url: /
+paths:
+  /api/cache/stats:
+    $ref: ./paths/admin.yaml#/~1api~1cache~1stats
+  /api/cache/recommendations:
+    $ref: ./paths/admin.yaml#/~1api~1cache~1recommendations
+  /api/cache/clear:
+    $ref: ./paths/admin.yaml#/~1api~1cache~1clear
+  /api/cache/cleanup:
+    $ref: ./paths/admin.yaml#/~1api~1cache~1cleanup
+  /api/cache/reset-counters:
+    $ref: ./paths/admin.yaml#/~1api~1cache~1reset-counters
+  /api/projects/{project_id}/requirements/{id}/activity:
+    $ref: ./paths/requirement-history.yaml#/~1api~1projects~1{project_id}~1requirements~1{id}~1activity
+  /api/projects/{project_id}/verifications/{id}/activity:
+    $ref: ./paths/verifications.yaml#/~1api~1projects~1{project_id}~1verifications~1{id}~1activity
+  /api/applicability:
+    $ref: ./paths/catalog.yaml#/~1api~1applicability
+  /api/applicability/{id}:
+    $ref: ./paths/catalog.yaml#/~1api~1applicability~1{id}
+  /api/projects/{project_id}/attachments:
+    $ref: ./paths/attachments.yaml#/~1api~1projects~1{project_id}~1attachments
+  /api/projects/{project_id}/attachments/{attachment_id}/download:
+    $ref: ./paths/attachments.yaml#/~1api~1projects~1{project_id}~1attachments~1{attachment_id}~1download
+  /api/projects/{project_id}/storage:
+    $ref: ./paths/attachments.yaml#/~1api~1projects~1{project_id}~1storage
+  /api/projects/{project_id}/storage/quota:
+    $ref: ./paths/attachments.yaml#/~1api~1projects~1{project_id}~1storage~1quota
+  /api/projects/{project_id}/baselines/{baseline_id}/attachments:
+    $ref: ./paths/attachments.yaml#/~1api~1projects~1{project_id}~1baselines~1{baseline_id}~1attachments
+  /api/projects/{project_id}/baselines/{baseline_id}/attachments/{attachment_id}/download:
+    $ref: >-
+      ./paths/attachments.yaml#/~1api~1projects~1{project_id}~1baselines~1{baseline_id}~1attachments~1{attachment_id}~1download
+  /api/auth/providers:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1providers
+  /api/auth/external/{provider}/start:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1external~1{provider}~1start
+  /api/auth/external/{provider}/callback:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1external~1{provider}~1callback
+  /api/auth/identities:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1identities
+  /api/auth/me:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1me
+  /api/admin/backup/info:
+    $ref: ./paths/admin.yaml#/~1api~1admin~1backup~1info
+  /api/admin/backup:
+    $ref: ./paths/admin.yaml#/~1api~1admin~1backup
+  /api/projects/{project_id}/baselines:
+    $ref: ./paths/baselines.yaml#/~1api~1projects~1{project_id}~1baselines
+  /api/projects/{project_id}/baselines/{baseline_id}:
+    $ref: ./paths/baselines.yaml#/~1api~1projects~1{project_id}~1baselines~1{baseline_id}
+  /api/projects/{project_id}/baselines/{baseline_id}/requirements:
+    $ref: ./paths/baselines.yaml#/~1api~1projects~1{project_id}~1baselines~1{baseline_id}~1requirements
+  /api/projects/{project_id}/baselines/{baseline_id}/traceability:
+    $ref: ./paths/baselines.yaml#/~1api~1projects~1{project_id}~1baselines~1{baseline_id}~1traceability
+  /api/projects/{project_id}/baselines/{baseline_id}/verifications:
+    $ref: ./paths/baselines.yaml#/~1api~1projects~1{project_id}~1baselines~1{baseline_id}~1verifications
+  /api/projects/{project_id}/baselines/diff:
+    $ref: ./paths/baselines.yaml#/~1api~1projects~1{project_id}~1baselines~1diff
+  /api/projects/{project_id}/catalog:
+    $ref: ./paths/projects.yaml#/~1api~1projects~1{project_id}~1catalog
+  /api/categories:
+    $ref: ./paths/catalog.yaml#/~1api~1categories
+  /api/categories/{id}:
+    $ref: ./paths/catalog.yaml#/~1api~1categories~1{id}
+  /api/projects/{project_id}/requirements/{requirement_id}/comments:
+    $ref: >-
+      ./paths/requirement-history.yaml#/~1api~1projects~1{project_id}~1requirements~1{requirement_id}~1comments
+  /api/requirements/{requirement_id}/comments:
+    $ref: ./paths/requirement-history.yaml#/~1api~1requirements~1{requirement_id}~1comments
+  /api/projects/{project_id}/custom_fields:
+    $ref: ./paths/project-settings.yaml#/~1api~1projects~1{project_id}~1custom_fields
+  /api/projects/{project_id}/custom_fields/{field_id}:
+    $ref: ./paths/project-settings.yaml#/~1api~1projects~1{project_id}~1custom_fields~1{field_id}
+  /api/projects/{project_id}/dsm:
+    $ref: ./paths/traceability.yaml#/~1api~1projects~1{project_id}~1dsm
+  /api/projects/{project_id}/exports/requirements.xlsx:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1exports~1requirements.xlsx
+  /api/projects/{project_id}/exports/verifications.xlsx:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1exports~1verifications.xlsx
+  /api/projects/{project_id}/exports/matrix.xlsx:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1exports~1matrix.xlsx
+  /api/projects/{project_id}/exports/dsm.xlsx:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1exports~1dsm.xlsx
+  /api/projects/{project_id}/exports/matrix-links.xlsx:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1exports~1matrix-links.xlsx
+  /api/projects/{project_id}/exports/requirements.pdf:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1exports~1requirements.pdf
+  /api/projects/{project_id}/exports/report.pdf:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1exports~1report.pdf
+  /api/projects/{project_id}/exports/requirements.reqif:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1exports~1requirements.reqif
+  /api/projects/{project_id}/exports/requirements.reqifz:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1exports~1requirements.reqifz
+  /api/projects/{project_id}/exports/baselines/{filename}:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1exports~1baselines~1{filename}
+  /api/projects/{project_id}/exports/bundle.json:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1exports~1bundle.json
+  /api/projects/{project_id}/exports/bundle.zip:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1exports~1bundle.zip
+  /api/groups:
+    $ref: ./paths/users.yaml#/~1api~1groups
+  /api/groups/creatable:
+    $ref: ./paths/users.yaml#/~1api~1groups~1creatable
+  /api/groups/{group_id}:
+    $ref: ./paths/users.yaml#/~1api~1groups~1{group_id}
+  /api/groups/{group_id}/projects:
+    $ref: ./paths/users.yaml#/~1api~1groups~1{group_id}~1projects
+  /api/groups/{group_id}/members:
+    $ref: ./paths/users.yaml#/~1api~1groups~1{group_id}~1members
+  /api/groups/{group_id}/members/{user_id}:
+    $ref: ./paths/users.yaml#/~1api~1groups~1{group_id}~1members~1{user_id}
+  /api/home/attention:
+    $ref: ./paths/projects.yaml#/~1api~1home~1attention
+  /api/search:
+    $ref: ./paths/projects.yaml#/~1api~1search
+  /api/projects/{project_id}/imports/excel/preview:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1imports~1excel~1preview
+  /api/projects/{project_id}/imports/excel:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1imports~1excel
+  /api/projects/{project_id}/imports/reqif:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1{project_id}~1imports~1reqif
+  /api/projects/imports/bundle:
+    $ref: ./paths/transfers.yaml#/~1api~1projects~1imports~1bundle
+  /api/admin/logs:
+    $ref: ./paths/admin.yaml#/~1api~1admin~1logs
+  /api/admin/logs/stats:
+    $ref: ./paths/admin.yaml#/~1api~1admin~1logs~1stats
+  /api/admin/logs/export.json:
+    $ref: ./paths/admin.yaml#/~1api~1admin~1logs~1export.json
+  /api/admin/logs/cleanup:
+    $ref: ./paths/admin.yaml#/~1api~1admin~1logs~1cleanup
+  /api/projects/{project_id}/matrix:
+    $ref: ./paths/traceability.yaml#/~1api~1projects~1{project_id}~1matrix
+  /api/projects/{project_id}/verifications/{verification_id}/matrix:
+    $ref: ./paths/verifications.yaml#/~1api~1projects~1{project_id}~1verifications~1{verification_id}~1matrix
+  /api/mcp/principal:
+    $ref: ./paths/mcp.yaml#/~1api~1mcp~1principal
+  /api/mcp/audit:
+    $ref: ./paths/mcp.yaml#/~1api~1mcp~1audit
+  /api/mcp/internal/audit:
+    $ref: ./paths/mcp.yaml#/~1api~1mcp~1internal~1audit
+  /api/projects/{project_id}/me/permissions:
+    $ref: ./paths/projects.yaml#/~1api~1projects~1{project_id}~1me~1permissions
+  /api/projects/{project_id}/members:
+    $ref: ./paths/projects.yaml#/~1api~1projects~1{project_id}~1members
+  /api/projects/{project_id}/members/{user_id}:
+    $ref: ./paths/projects.yaml#/~1api~1projects~1{project_id}~1members~1{user_id}
+  /api/projects/{project_id}/reviewers:
+    $ref: ./paths/projects.yaml#/~1api~1projects~1{project_id}~1reviewers
+  /api/meta/deployment:
+    $ref: ./paths/projects.yaml#/~1api~1meta~1deployment
+  /api/meta/build:
+    $ref: ./paths/projects.yaml#/~1api~1meta~1build
+  /api/notifications:
+    $ref: ./paths/notifications.yaml#/~1api~1notifications
+  /api/notifications/{id}/read:
+    $ref: ./paths/notifications.yaml#/~1api~1notifications~1{id}~1read
+  /api/notifications/read-all:
+    $ref: ./paths/notifications.yaml#/~1api~1notifications~1read-all
+  /api/notifications/preferences:
+    $ref: ./paths/notifications.yaml#/~1api~1notifications~1preferences
+  /api/notifications/preferences/{project_id}:
+    $ref: ./paths/notifications.yaml#/~1api~1notifications~1preferences~1{project_id}
+  /.well-known/oauth-authorization-server:
+    $ref: ./paths/auth.yaml#/~1.well-known~1oauth-authorization-server
+  /.well-known/oauth-protected-resource/mcp:
+    $ref: ./paths/auth.yaml#/~1.well-known~1oauth-protected-resource~1mcp
+  /oauth/register:
+    $ref: ./paths/auth.yaml#/~1oauth~1register
+  /oauth/authorize:
+    $ref: ./paths/auth.yaml#/~1oauth~1authorize
+  /oauth/token:
+    $ref: ./paths/auth.yaml#/~1oauth~1token
+  /api/projects:
+    $ref: ./paths/projects.yaml#/~1api~1projects
+  /api/projects/{project_id}:
+    $ref: ./paths/projects.yaml#/~1api~1projects~1{project_id}
+  /api/projects/{project_id}/archive:
+    $ref: ./paths/projects.yaml#/~1api~1projects~1{project_id}~1archive
+  /api/projects/{project_id}/unarchive:
+    $ref: ./paths/projects.yaml#/~1api~1projects~1{project_id}~1unarchive
+  /api/project-from-path/{slug}:
+    $ref: ./paths/projects.yaml#/~1api~1project-from-path~1{slug}
+  /api/projects/{project_id}/reports/types:
+    $ref: ./paths/reports.yaml#/~1api~1projects~1{project_id}~1reports~1types
+  /api/projects/{project_id}/report_templates:
+    $ref: ./paths/reports.yaml#/~1api~1projects~1{project_id}~1report_templates
+  /api/projects/{project_id}/report_templates/{template_id}:
+    $ref: ./paths/reports.yaml#/~1api~1projects~1{project_id}~1report_templates~1{template_id}
+  /api/projects/{project_id}/reports/{file}:
+    $ref: ./paths/reports.yaml#/~1api~1projects~1{project_id}~1reports~1{file}
+  /api/projects/{project_id}/requirements/{req_id}/versions/{v1}/diff/{v2}:
+    $ref: >-
+      ./paths/requirement-history.yaml#/~1api~1projects~1{project_id}~1requirements~1{req_id}~1versions~1{v1}~1diff~1{v2}
+  /api/projects/{project_id}/baselines/{baseline_id}/requirements/{req_id}/diff/current:
+    $ref: >-
+      ./paths/baselines.yaml#/~1api~1projects~1{project_id}~1baselines~1{baseline_id}~1requirements~1{req_id}~1diff~1current
+  /api/projects/{project_id}/requirement-version-links:
+    $ref: ./paths/traceability.yaml#/~1api~1projects~1{project_id}~1requirement-version-links
+  /api/projects/{project_id}/requirement-version-links/{link_id}:
+    $ref: ./paths/traceability.yaml#/~1api~1projects~1{project_id}~1requirement-version-links~1{link_id}
+  /api/projects/{project_id}/requirement-version-links/link-types:
+    $ref: ./paths/traceability.yaml#/~1api~1projects~1{project_id}~1requirement-version-links~1link-types
+  /api/projects/{project_id}/requirements:
+    $ref: ./paths/requirements.yaml#/~1api~1projects~1{project_id}~1requirements
+  /api/requirements/{id}:
+    $ref: ./paths/requirements.yaml#/~1api~1requirements~1{id}
+  /api/projects/{project_id}/requirements/{id}:
+    $ref: ./paths/requirements.yaml#/~1api~1projects~1{project_id}~1requirements~1{id}
+  /api/projects/{project_id}/requirements/{id}/versions:
+    $ref: ./paths/requirement-history.yaml#/~1api~1projects~1{project_id}~1requirements~1{id}~1versions
+  /api/projects/{project_id}/requirements/{req_id}/versions/{version_id}:
+    $ref: >-
+      ./paths/requirement-history.yaml#/~1api~1projects~1{project_id}~1requirements~1{req_id}~1versions~1{version_id}
+  /api/projects/{project_id}/requirements/{id}/impacted_tests:
+    $ref: ./paths/requirements.yaml#/~1api~1projects~1{project_id}~1requirements~1{id}~1impacted_tests
+  /api/projects/{project_id}/requirements/{req_id}/versions/{version_id}/approval:
+    $ref: >-
+      ./paths/requirement-history.yaml#/~1api~1projects~1{project_id}~1requirements~1{req_id}~1versions~1{version_id}~1approval
+  /api/projects/{project_id}/saved_views:
+    $ref: ./paths/project-settings.yaml#/~1api~1projects~1{project_id}~1saved_views
+  /api/projects/{project_id}/saved_views/{view_id}:
+    $ref: ./paths/project-settings.yaml#/~1api~1projects~1{project_id}~1saved_views~1{view_id}
+  /api/projects/{project_id}/requirements/semantic_search:
+    $ref: ./paths/requirements.yaml#/~1api~1projects~1{project_id}~1requirements~1semantic_search
+  /api/projects/{project_id}/requirements/ask:
+    $ref: ./paths/requirements.yaml#/~1api~1projects~1{project_id}~1requirements~1ask
+  /api/projects/{project_id}/requirements/index_status:
+    $ref: ./paths/requirements.yaml#/~1api~1projects~1{project_id}~1requirements~1index_status
+  /api/status:
+    $ref: ./paths/catalog.yaml#/~1api~1status
+  /api/status/{id}:
+    $ref: ./paths/catalog.yaml#/~1api~1status~1{id}
+  /api/projects/{project_id}/requirements/{id}/trace_up:
+    $ref: ./paths/requirements.yaml#/~1api~1projects~1{project_id}~1requirements~1{id}~1trace_up
+  /api/projects/{project_id}/requirements/{id}/trace_down:
+    $ref: ./paths/requirements.yaml#/~1api~1projects~1{project_id}~1requirements~1{id}~1trace_down
+  /api/projects/{project_id}/coverage_report:
+    $ref: ./paths/traceability.yaml#/~1api~1projects~1{project_id}~1coverage_report
+  /api/traceability/clear_suspect:
+    $ref: ./paths/traceability.yaml#/~1api~1traceability~1clear_suspect
+  /api/projects/{project_id}/traceability/clear_suspect:
+    $ref: ./paths/traceability.yaml#/~1api~1projects~1{project_id}~1traceability~1clear_suspect
+  /api/projects/{project_id}/use-cases:
+    $ref: ./paths/use-cases.yaml#/~1api~1projects~1{project_id}~1use-cases
+  /api/projects/{project_id}/use-cases/next-code:
+    $ref: ./paths/use-cases.yaml#/~1api~1projects~1{project_id}~1use-cases~1next-code
+  /api/projects/{project_id}/use-cases/{id}:
+    $ref: ./paths/use-cases.yaml#/~1api~1projects~1{project_id}~1use-cases~1{id}
+  /api/projects/{project_id}/use-cases/{id}/draft:
+    $ref: ./paths/use-cases.yaml#/~1api~1projects~1{project_id}~1use-cases~1{id}~1draft
+  /api/projects/{project_id}/use-cases/{id}/draft/operations:
+    $ref: ./paths/use-cases.yaml#/~1api~1projects~1{project_id}~1use-cases~1{id}~1draft~1operations
+  /api/projects/{project_id}/use-cases/{id}/draft/publish:
+    $ref: ./paths/use-cases.yaml#/~1api~1projects~1{project_id}~1use-cases~1{id}~1draft~1publish
+  /api/projects/{project_id}/use-cases/{id}/versions:
+    $ref: ./paths/use-cases.yaml#/~1api~1projects~1{project_id}~1use-cases~1{id}~1versions
+  /api/projects/{project_id}/use-cases/{id}/versions/{version_id}/approval:
+    $ref: ./paths/use-cases.yaml#/~1api~1projects~1{project_id}~1use-cases~1{id}~1versions~1{version_id}~1approval
+  /api/projects/{project_id}/use-cases/{id}/links:
+    $ref: ./paths/use-case-links.yaml#/~1api~1projects~1{project_id}~1use-cases~1{id}~1links
+  /api/projects/{project_id}/use-cases/{id}/links/{link_id}:
+    $ref: ./paths/use-case-links.yaml#/~1api~1projects~1{project_id}~1use-cases~1{id}~1links~1{link_id}
+  /api/projects/{project_id}/use-cases/{id}/links/{link_id}/clear_suspect:
+    $ref: >-
+      ./paths/use-case-links.yaml#/~1api~1projects~1{project_id}~1use-cases~1{id}~1links~1{link_id}~1clear_suspect
+  /api/projects/{project_id}/requirements/{requirement_id}/use-cases:
+    $ref: ./paths/use-case-links.yaml#/~1api~1projects~1{project_id}~1requirements~1{requirement_id}~1use-cases
+  /api/projects/{project_id}/verifications/{verification_id}/use-cases:
+    $ref: ./paths/use-case-links.yaml#/~1api~1projects~1{project_id}~1verifications~1{verification_id}~1use-cases
+  /api/projects/{project_id}/use-cases/{id}/draft/diff:
+    $ref: ./paths/use-cases.yaml#/~1api~1projects~1{project_id}~1use-cases~1{id}~1draft~1diff
+  /api/projects/{project_id}/use-cases/{id}/versions/{a}/diff/{b}:
+    $ref: ./paths/use-cases.yaml#/~1api~1projects~1{project_id}~1use-cases~1{id}~1versions~1{a}~1diff~1{b}
+  /api/projects/{project_id}/use-cases/{id}/comments:
+    $ref: ./paths/use-case-links.yaml#/~1api~1projects~1{project_id}~1use-cases~1{id}~1comments
+  /api/projects/{project_id}/baselines/{baseline_id}/use-cases:
+    $ref: ./paths/use-cases.yaml#/~1api~1projects~1{project_id}~1baselines~1{baseline_id}~1use-cases
+  /api/users/{id}:
+    $ref: ./paths/users.yaml#/~1api~1users~1{id}
+  /api/users/{id}/password:
+    $ref: ./paths/users.yaml#/~1api~1users~1{id}~1password
+  /api/projects/{project_id}/verifications/{verification_id}/control:
+    $ref: ./paths/verifications.yaml#/~1api~1projects~1{project_id}~1verifications~1{verification_id}~1control
+  /api/projects/{project_id}/requirements/{requirement_id}/close_out:
+    $ref: ./paths/requirements.yaml#/~1api~1projects~1{project_id}~1requirements~1{requirement_id}~1close_out
+  /api/projects/{project_id}/close_out:
+    $ref: ./paths/projects.yaml#/~1api~1projects~1{project_id}~1close_out
+  /api/projects/{project_id}/requirements/{requirement_id}/compliance:
+    $ref: ./paths/requirements.yaml#/~1api~1projects~1{project_id}~1requirements~1{requirement_id}~1compliance
+  /api/projects/{project_id}/verifications/{id}/snapshots:
+    $ref: ./paths/verifications.yaml#/~1api~1projects~1{project_id}~1verifications~1{id}~1snapshots
+  /api/projects/{project_id}/verifications/{id}/snapshots/{v1}/diff/{v2}:
+    $ref: >-
+      ./paths/verifications.yaml#/~1api~1projects~1{project_id}~1verifications~1{id}~1snapshots~1{v1}~1diff~1{v2}
+  /api/projects/{project_id}/baselines/{baseline_id}/verifications/{id}/diff/current:
+    $ref: >-
+      ./paths/baselines.yaml#/~1api~1projects~1{project_id}~1baselines~1{baseline_id}~1verifications~1{id}~1diff~1current
+  /api/projects/{project_id}/verification-methods:
+    $ref: ./paths/verifications.yaml#/~1api~1projects~1{project_id}~1verification-methods
+  /api/projects/{project_id}/verification-methods/{method_id}:
+    $ref: ./paths/verifications.yaml#/~1api~1projects~1{project_id}~1verification-methods~1{method_id}
+  /api/verification-status:
+    $ref: ./paths/catalog.yaml#/~1api~1verification-status
+  /api/verification-status/{id}:
+    $ref: ./paths/catalog.yaml#/~1api~1verification-status~1{id}
+  /api/verifications:
+    $ref: ./paths/verifications.yaml#/~1api~1verifications
+  /api/projects/{project_id}/verifications:
+    $ref: ./paths/verifications.yaml#/~1api~1projects~1{project_id}~1verifications
+  /api/projects/{project_id}/verifications/{id}:
+    $ref: ./paths/verifications.yaml#/~1api~1projects~1{project_id}~1verifications~1{id}
+  /api/verifications/{id}:
+    $ref: ./paths/verifications.yaml#/~1api~1verifications~1{id}
+  /api/projects/{project_id}/verifications/{id}/field:
+    $ref: ./paths/verifications.yaml#/~1api~1projects~1{project_id}~1verifications~1{id}~1field
+  /api/auth/csrf:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1csrf
+  /api/auth/identities/{identity_id}:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1identities~1{identity_id}
+  /api/auth/register:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1register
+  /api/auth/login:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1login
+  /api/users:
+    $ref: ./paths/users.yaml#/~1api~1users
+  /api/projects/{project_id}/attachments/{attachment_id}:
+    $ref: ./paths/attachments.yaml#/~1api~1projects~1{project_id}~1attachments~1{attachment_id}
+  /api/auth/external/{provider}/link:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1external~1{provider}~1link
+  /api/auth/verify-email:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1verify-email
+  /api/auth/logout:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1logout
+  /api/auth/forgot-password:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1forgot-password
+  /api/notifications/unread-count:
+    $ref: ./paths/notifications.yaml#/~1api~1notifications~1unread-count
+  /api/auth/change-password:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1change-password
+  /api/oauth/grants:
+    $ref: ./paths/auth.yaml#/~1api~1oauth~1grants
+  /api/oauth/grants/{id}:
+    $ref: ./paths/auth.yaml#/~1api~1oauth~1grants~1{id}
+  /api/dashboard:
+    $ref: ./paths/projects.yaml#/~1api~1dashboard
+  /api/auth/reset-password:
+    $ref: ./paths/auth.yaml#/~1api~1auth~1reset-password
+components:
+  securitySchemes:
+    cookieAuth:
+      $ref: ./components/securitySchemes.yaml#/cookieAuth
+    bearerAuth:
+      $ref: ./components/securitySchemes.yaml#/bearerAuth
+    mcpServiceAuth:
+      $ref: ./components/securitySchemes.yaml#/mcpServiceAuth
+  schemas:
+    SemanticSearchResult:
+      $ref: ./schemas/requirements.yaml#/SemanticSearchResult
+    RagAnswerResponse:
+      $ref: ./schemas/requirements.yaml#/RagAnswerResponse
+    OAuthTokenRequest:
+      $ref: ./schemas/auth.yaml#/OAuthTokenRequest
+    ReportDefinition:
+      $ref: ./schemas/reports.yaml#/ReportDefinition
+    ReportDefinitionInput:
+      $ref: ./schemas/reports.yaml#/ReportDefinitionInput
+    ReportOptionSpec:
+      $ref: ./schemas/reports.yaml#/ReportOptionSpec
+    ReportSectionSpec:
+      $ref: ./schemas/reports.yaml#/ReportSectionSpec
+    ReportTemplateView:
+      $ref: ./schemas/reports.yaml#/ReportTemplateView
+    ReportTemplateInput:
+      $ref: ./schemas/reports.yaml#/ReportTemplateInput
+    ExcelImportResult:
+      $ref: ./schemas/common.yaml#/ExcelImportResult
+    CustomFieldValueDisplay:
+      $ref: ./schemas/requirements.yaml#/CustomFieldValueDisplay
+    Requirement:
+      $ref: ./schemas/requirements.yaml#/Requirement
+    RequirementVersion:
+      $ref: ./schemas/requirements.yaml#/RequirementVersion
+    RequirementListRow:
+      $ref: ./schemas/requirements.yaml#/RequirementListRow
+    RequirementWithTraceSummary:
+      $ref: ./schemas/requirements.yaml#/RequirementWithTraceSummary
+    RequirementVersionDetail:
+      $ref: ./schemas/requirements.yaml#/RequirementVersionDetail
+    CustomFieldValueInput:
+      $ref: ./schemas/requirements.yaml#/CustomFieldValueInput
+    RequirementCreateRequest:
+      $ref: ./schemas/requirements.yaml#/RequirementCreateRequest
+    RequirementPatch:
+      $ref: ./schemas/requirements.yaml#/RequirementPatch
+    Verification:
+      $ref: ./schemas/verifications.yaml#/Verification
+    NewVerification:
+      $ref: ./schemas/verifications.yaml#/NewVerification
+    Baseline:
+      $ref: ./schemas/baselines.yaml#/Baseline
+    BaselineTraceability:
+      $ref: ./schemas/baselines.yaml#/BaselineTraceability
+    BaselineVerification:
+      $ref: ./schemas/baselines.yaml#/BaselineVerification
+    BaselineDiff:
+      $ref: ./schemas/baselines.yaml#/BaselineDiff
+    TextDiffResult:
+      $ref: ./schemas/baselines.yaml#/TextDiffResult
+    SingleValueDiff:
+      $ref: ./schemas/baselines.yaml#/SingleValueDiff
+    VerificationDiff:
+      $ref: ./schemas/baselines.yaml#/VerificationDiff
+    RequirementDiff:
+      $ref: ./schemas/baselines.yaml#/RequirementDiff
+    VerificationVersionDiff:
+      $ref: ./schemas/baselines.yaml#/VerificationVersionDiff
+    Dsm:
+      $ref: ./schemas/traceability.yaml#/Dsm
+    EntityActivityItem:
+      $ref: ./schemas/common.yaml#/EntityActivityItem
+    MatrixLink:
+      $ref: ./schemas/traceability.yaml#/MatrixLink
+    VerificationControlView:
+      $ref: ./schemas/traceability.yaml#/VerificationControlView
+    RequirementCloseOutView:
+      $ref: ./schemas/traceability.yaml#/RequirementCloseOutView
+    VerificationControlInput:
+      $ref: ./schemas/traceability.yaml#/VerificationControlInput
+    RequirementVersionLink:
+      $ref: ./schemas/traceability.yaml#/RequirementVersionLink
+    CommentResponse:
+      $ref: ./schemas/common.yaml#/CommentResponse
+    McpAuditRequest:
+      $ref: ./schemas/mcp.yaml#/McpAuditRequest
+    ProjectStatus:
+      $ref: ./schemas/catalog.yaml#/ProjectStatus
+    Project:
+      $ref: ./schemas/projects.yaml#/Project
+    GroupResponse:
+      $ref: ./schemas/users.yaml#/GroupResponse
+    GroupMemberResponse:
+      $ref: ./schemas/users.yaml#/GroupMemberResponse
+    Notification:
+      $ref: ./schemas/projects.yaml#/Notification
+    NotificationPreference:
+      $ref: ./schemas/projects.yaml#/NotificationPreference
+    MemberResponse:
+      $ref: ./schemas/projects.yaml#/MemberResponse
+    ProjectReviewersResponse:
+      $ref: ./schemas/projects.yaml#/ProjectReviewersResponse
+    EffectivePermissions:
+      $ref: ./schemas/projects.yaml#/EffectivePermissions
+    CustomFieldDefinition:
+      $ref: ./schemas/projects.yaml#/CustomFieldDefinition
+    CustomFieldDefinitionPayload:
+      $ref: ./schemas/projects.yaml#/CustomFieldDefinitionPayload
+    SavedView:
+      $ref: ./schemas/projects.yaml#/SavedView
+    SavedViewPayload:
+      $ref: ./schemas/projects.yaml#/SavedViewPayload
+    DashboardProject:
+      $ref: ./schemas/projects.yaml#/DashboardProject
+    AttentionItem:
+      $ref: ./schemas/projects.yaml#/AttentionItem
+    Applicability:
+      $ref: ./schemas/catalog.yaml#/Applicability
+    NewApplicability:
+      $ref: ./schemas/catalog.yaml#/NewApplicability
+    Category:
+      $ref: ./schemas/catalog.yaml#/Category
+    NewCategory:
+      $ref: ./schemas/catalog.yaml#/NewCategory
+    VerificationMethod:
+      $ref: ./schemas/verifications.yaml#/VerificationMethod
+    NewVerificationMethod:
+      $ref: ./schemas/verifications.yaml#/NewVerificationMethod
+    RequirementStatus:
+      $ref: ./schemas/catalog.yaml#/RequirementStatus
+    NewRequirementStatus:
+      $ref: ./schemas/catalog.yaml#/NewRequirementStatus
+    VerificationStatus:
+      $ref: ./schemas/catalog.yaml#/VerificationStatus
+    NewVerificationStatus:
+      $ref: ./schemas/catalog.yaml#/NewVerificationStatus
+    UserCreateRequest:
+      $ref: ./schemas/users.yaml#/UserCreateRequest
+    UpdateUser:
+      $ref: ./schemas/users.yaml#/UpdateUser
+    BackupInfo:
+      $ref: ./schemas/admin.yaml#/BackupInfo
+    LogChangeDetail:
+      $ref: ./schemas/admin.yaml#/LogChangeDetail
+    AdminLogItem:
+      $ref: ./schemas/admin.yaml#/AdminLogItem
+    AdminLogList:
+      $ref: ./schemas/admin.yaml#/AdminLogList
+    LogStatsResponse:
+      $ref: ./schemas/admin.yaml#/LogStatsResponse
+    AttachmentView:
+      $ref: ./schemas/attachments.yaml#/AttachmentView
+    AttachmentStorage:
+      $ref: ./schemas/attachments.yaml#/AttachmentStorage
+    AuthProfileUpdate:
+      $ref: ./schemas/auth.yaml#/AuthProfileUpdate
+    AuthIdentities:
+      $ref: ./schemas/auth.yaml#/AuthIdentities
+    AuthChangePassword:
+      $ref: ./schemas/auth.yaml#/AuthChangePassword
+    AuthStatus:
+      $ref: ./schemas/auth.yaml#/AuthStatus
+    CacheStats:
+      $ref: ./schemas/admin.yaml#/CacheStats
+    CacheRecommendations:
+      $ref: ./schemas/admin.yaml#/CacheRecommendations
+    CacheActionResult:
+      $ref: ./schemas/admin.yaml#/CacheActionResult
+    CacheCleanupResult:
+      $ref: ./schemas/admin.yaml#/CacheCleanupResult
+    external_ProviderDiscovery_response:
+      $ref: ./schemas/auth.yaml#/external_ProviderDiscovery_response
+    external_PublicAuthProvider_response:
+      $ref: ./schemas/auth.yaml#/external_PublicAuthProvider_response
+    entities_User_response:
+      $ref: ./schemas/auth.yaml#/entities_User_response
+    use_cases_UseCaseRow_response:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_UseCaseRow_response
+    use_cases_NextCode_response:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_NextCode_response
+    use_cases_UseCaseDetail_response:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_UseCaseDetail_response
+    use_cases_VersionView_response:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_VersionView_response
+    use_cases_VersionSummary_response:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_VersionSummary_response
+    use_cases_DraftSummary_response:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_DraftSummary_response
+    use_cases_DraftView_response:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_DraftView_response
+    use_cases_PutDraftRequest_request:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_PutDraftRequest_request
+    use_cases_DraftChangeView_response:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_DraftChangeView_response
+    use_cases_SetApprovalRequest_request:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_SetApprovalRequest_request
+    use_cases_LinkView_response:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_LinkView_response
+    use_cases_ClearSuspectResponse_response:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_ClearSuspectResponse_response
+    use_cases_UseCaseRef_response:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_UseCaseRef_response
+    use_cases_UseCaseCommentView_response:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_UseCaseCommentView_response
+    use_cases_BaselineUseCaseView_response:
+      $ref: ./schemas/use-case-views.yaml#/use_cases_BaselineUseCaseView_response
+    ApiError:
+      $ref: ./schemas/common.yaml#/ApiError
+    BuildInfo:
+      $ref: ./schemas/common.yaml#/BuildInfo
+    UseCaseElement:
+      $ref: ./schemas/use-cases.yaml#/UseCaseElement
+    UseCaseBranchEnd:
+      $ref: ./schemas/use-cases.yaml#/UseCaseBranchEnd
+    UseCaseDocument:
+      $ref: ./schemas/use-cases.yaml#/UseCaseDocument
+    UseCaseBranch:
+      $ref: ./schemas/use-cases.yaml#/UseCaseBranch
+    UseCaseEffect:
+      $ref: ./schemas/use-cases.yaml#/UseCaseEffect
+    DeploymentInfo:
+      $ref: ./schemas/common.yaml#/DeploymentInfo
+    McpPrincipalResponse:
+      $ref: ./schemas/mcp.yaml#/McpPrincipalResponse
+    UseCaseDocumentResponse:
+      $ref: ./schemas/use-cases.yaml#/UseCaseDocumentResponse
+    UseCaseBranchResponse:
+      $ref: ./schemas/use-cases.yaml#/UseCaseBranchResponse
+    UseCaseListRef:
+      $ref: ./schemas/use-cases.yaml#/UseCaseListRef
+    UseCaseNewElement:
+      $ref: ./schemas/use-cases.yaml#/UseCaseNewElement
+    UseCaseNewBranch:
+      $ref: ./schemas/use-cases.yaml#/UseCaseNewBranch
+    UseCaseDependents:
+      $ref: ./schemas/use-cases.yaml#/UseCaseDependents
+    UseCaseOperation:
+      $ref: ./schemas/use-cases.yaml#/UseCaseOperation
+    UseCaseDiffSide:
+      $ref: ./schemas/use-cases.yaml#/UseCaseDiffSide
+    UseCaseElementDiff:
+      $ref: ./schemas/use-cases.yaml#/UseCaseElementDiff
+    UseCaseDiffEnd:
+      $ref: ./schemas/use-cases.yaml#/UseCaseDiffEnd
+    UseCaseDiff:
+      $ref: ./schemas/use-cases.yaml#/UseCaseDiff
+    UseCasePublishResponse:
+      $ref: ./schemas/use-cases.yaml#/UseCasePublishResponse
+  responses:
+    ApiError:
+      $ref: ./components/responses.yaml#/ApiError
+security:
+  - cookieAuth: []

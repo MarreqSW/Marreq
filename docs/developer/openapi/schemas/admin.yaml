@@ -1,0 +1,229 @@
+BackupInfo:
+  type: object
+  properties:
+    attachments_available:
+      type: boolean
+    attachment_files:
+      type: integer
+      minimum: 0
+    attachment_bytes:
+      type: integer
+      minimum: 0
+  required:
+    - attachments_available
+    - attachment_files
+    - attachment_bytes
+  additionalProperties: true
+LogChangeDetail:
+  type: object
+  properties:
+    field:
+      type: string
+    old_value:
+      type: string
+    new_value:
+      type: string
+  required:
+    - field
+    - old_value
+    - new_value
+  additionalProperties: true
+AdminLogItem:
+  type: object
+  properties:
+    log_id:
+      type: integer
+    user_id:
+      type: integer
+    username:
+      type: string
+    action_type:
+      type: string
+    summary:
+      type: string
+    description:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    created_at:
+      type: string
+    changes:
+      type: array
+      items:
+        $ref: ../schemas/admin.yaml#/LogChangeDetail
+    entity_type:
+      type: string
+    entity_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    project_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+  required:
+    - log_id
+    - user_id
+    - username
+    - action_type
+    - summary
+    - description
+    - created_at
+    - changes
+    - entity_type
+    - entity_id
+    - project_id
+  additionalProperties: true
+AdminLogList:
+  type: object
+  properties:
+    items:
+      type: array
+      items:
+        $ref: ../schemas/admin.yaml#/AdminLogItem
+    total:
+      type: integer
+    limit:
+      type: integer
+    offset:
+      type: integer
+  required:
+    - items
+    - total
+    - limit
+    - offset
+  additionalProperties: true
+LogStatsResponse:
+  type: object
+  properties:
+    since:
+      type: string
+    until:
+      type: string
+    total:
+      type: integer
+    active_users:
+      type: integer
+    by_day:
+      type: array
+      items:
+        type: object
+        properties: {day: {type: string, format: date}, count: {type: integer}}
+        required: [day, count]
+        additionalProperties: true
+    by_action:
+      type: array
+      items:
+        type: object
+        properties: {action_type: {type: string}, count: {type: integer}}
+        required: [action_type, count]
+        additionalProperties: true
+    by_user:
+      type: array
+      items:
+        type: object
+        properties: {user_id: {type: integer}, username: {type: string}, count: {type: integer}}
+        required: [user_id, username, count]
+        additionalProperties: true
+  required:
+    - since
+    - until
+    - total
+    - active_users
+    - by_day
+    - by_action
+    - by_user
+  additionalProperties: true
+CacheStats:
+  type: object
+  properties:
+    total_entries:
+      type: integer
+      minimum: 0
+    active_entries:
+      type: integer
+      minimum: 0
+    expired_entries:
+      type: integer
+      minimum: 0
+    hits:
+      type: integer
+      minimum: 0
+    misses:
+      type: integer
+      minimum: 0
+    total_requests:
+      type: integer
+      minimum: 0
+    average_access_time_ns:
+      type: integer
+      minimum: 0
+    total_access_time_ns:
+      type: integer
+      minimum: 0
+    cache_size_bytes:
+      type: integer
+      minimum: 0
+    hit_rate:
+      type: number
+    miss_rate:
+      type: number
+    last_cleanup:
+      type: string
+      format: date-time
+  required:
+    - total_entries
+    - active_entries
+    - expired_entries
+    - hits
+    - misses
+    - total_requests
+    - average_access_time_ns
+    - total_access_time_ns
+    - cache_size_bytes
+    - hit_rate
+    - miss_rate
+    - last_cleanup
+  additionalProperties: true
+CacheRecommendations:
+  type: object
+  properties:
+    recommendations:
+      type: array
+      items:
+        type: string
+    priority:
+      type: string
+      enum:
+        - high
+        - medium
+        - low
+    analysis_timestamp:
+      type: string
+      format: date-time
+  required:
+    - recommendations
+    - priority
+    - analysis_timestamp
+  additionalProperties: true
+CacheActionResult:
+  type: object
+  properties:
+    message:
+      type: string
+    timestamp:
+      type: string
+      format: date-time
+  required:
+    - message
+    - timestamp
+  additionalProperties: true
+CacheCleanupResult:
+  allOf:
+    - $ref: ../schemas/admin.yaml#/CacheActionResult
+    - type: object
+      properties:
+        cleaned_entries: {type: integer, minimum: 0}
+      required:
+        - cleaned_entries
+      additionalProperties: true

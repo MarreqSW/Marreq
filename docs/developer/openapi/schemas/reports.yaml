@@ -1,0 +1,213 @@
+ReportDefinition:
+  type: object
+  properties:
+    report_type:
+      type: string
+      enum:
+        - vcd
+        - coverage
+    document:
+      type: object
+      properties:
+        doc_id: {type: string}
+        title: {type: string}
+        issue: {type: string}
+        revision: {type: string}
+        classification: {type: string}
+        watermark: {anyOf: [{type: string}, {type: 'null'}]}
+        page_size: {type: string, enum: [a4, letter]}
+        pdf_a: {type: boolean}
+        signatories: {type: array, items: {type: object, properties: {role: {type: string}, name: {type: string}}, required: [role, name], additionalProperties: true}}
+        change_record: {type: array, items: {type: object, properties: {issue: {type: string}, date: {type: string}, changes: {type: string}, author: {type: string}}, required: [issue, date, changes, author], additionalProperties: true}}
+        documents: {type: array, items: {type: object, properties: {ref: {type: string}, id: {type: string}, title: {type: string}, issue: {type: string}}, required: [ref, id, title, issue], additionalProperties: true}}
+      required:
+        - doc_id
+        - title
+        - issue
+        - revision
+        - classification
+        - watermark
+        - page_size
+        - pdf_a
+        - signatories
+        - change_record
+        - documents
+      additionalProperties: true
+    sections:
+      type: array
+      items:
+        type: object
+        properties: {key: {type: string}, enabled: {type: boolean}, options: {type: object, additionalProperties: true}}
+        required: [key, enabled]
+        additionalProperties: true
+  required:
+    - report_type
+    - document
+    - sections
+  additionalProperties: true
+ReportDefinitionInput:
+  type: object
+  properties:
+    report_type:
+      type: string
+      enum:
+        - vcd
+        - coverage
+    document:
+      type: object
+      properties:
+        doc_id: {type: string}
+        title: {type: string}
+        issue: {type: string}
+        revision: {type: string}
+        classification: {type: string}
+        watermark: {anyOf: [{type: string}, {type: 'null'}]}
+        page_size: {type: string, enum: [a4, letter]}
+        pdf_a: {type: boolean}
+        signatories: {type: array, items: {type: object, properties: {role: {type: string}, name: {type: string}}, required: [], additionalProperties: false}}
+        change_record: {type: array, items: {type: object, properties: {issue: {type: string}, date: {type: string}, changes: {type: string}, author: {type: string}}, required: [], additionalProperties: false}}
+        documents: {type: array, items: {type: object, properties: {ref: {type: string}, id: {type: string}, title: {type: string}, issue: {type: string}}, required: [], additionalProperties: false}}
+      required: []
+      additionalProperties: false
+    sections:
+      type: array
+      items:
+        type: object
+        properties: {key: {type: string}, enabled: {type: boolean}, options: {type: object, additionalProperties: {}}}
+        required: [key]
+        additionalProperties: false
+  required:
+    - report_type
+  additionalProperties: false
+ReportOptionSpec:
+  oneOf:
+    - type: object
+      properties:
+        key: {type: string}
+        label: {type: string}
+        default: {}
+        kind: {type: string, const: select}
+        choices: {type: array, items: {type: object, properties: {value: {type: string}, label: {type: string}}, required: [value, label], additionalProperties: true}}
+      required:
+        - key
+        - label
+        - default
+        - kind
+        - choices
+      additionalProperties: true
+    - type: object
+      properties:
+        key: {type: string}
+        label: {type: string}
+        default: {}
+        kind: {type: string, const: multi_select}
+        choices: {type: array, items: {type: object, properties: {value: {type: string}, label: {type: string}}, required: [value, label], additionalProperties: true}}
+      required:
+        - key
+        - label
+        - default
+        - kind
+        - choices
+      additionalProperties: true
+    - type: object
+      properties:
+        key: {type: string}
+        label: {type: string}
+        default: {}
+        kind: {type: string, const: text}
+        multiline: {type: boolean}
+      required:
+        - key
+        - label
+        - default
+        - kind
+        - multiline
+      additionalProperties: true
+ReportSectionSpec:
+  type: object
+  properties:
+    key:
+      type: string
+    title:
+      type: string
+    description:
+      type: string
+    report_types:
+      type: array
+      items:
+        type: string
+        enum: [vcd, coverage]
+    default_enabled:
+      type: boolean
+    options:
+      type: array
+      items:
+        $ref: ../schemas/reports.yaml#/ReportOptionSpec
+  required:
+    - key
+    - title
+    - description
+    - report_types
+    - default_enabled
+    - options
+  additionalProperties: true
+ReportTemplateView:
+  type: object
+  properties:
+    id:
+      type: integer
+    project_id:
+      type: integer
+    owner_id:
+      type: integer
+    name:
+      type: string
+    report_type:
+      type: string
+      enum:
+        - vcd
+        - coverage
+    visibility:
+      type: string
+      enum:
+        - private
+        - shared
+    owner_name:
+      type: string
+    created_at:
+      type: string
+    updated_at:
+      type: string
+    can_edit:
+      type: boolean
+    definition: {}
+  required:
+    - id
+    - project_id
+    - owner_id
+    - name
+    - report_type
+    - visibility
+    - owner_name
+    - created_at
+    - updated_at
+    - can_edit
+    - definition
+  additionalProperties: true
+ReportTemplateInput:
+  type: object
+  properties:
+    name:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    visibility:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    definition:
+      anyOf:
+        - {$ref: ../schemas/reports.yaml#/ReportDefinitionInput}
+        - {type: 'null'}
+  required: []
+  additionalProperties: false

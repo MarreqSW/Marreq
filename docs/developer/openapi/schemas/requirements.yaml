@@ -1,0 +1,376 @@
+SemanticSearchResult:
+  type: object
+  properties:
+    id:
+      type: integer
+    rank:
+      type: integer
+    lexical_rank:
+      type: integer
+    vector_rank:
+      type: integer
+    reference_code:
+      type: string
+    title:
+      type: string
+    description:
+      type: string
+    snippet:
+      type: string
+    status:
+      type: string
+    category:
+      type: string
+    applicability:
+      type: string
+    verification:
+      type: string
+    score:
+      type: number
+  required:
+    - id
+    - rank
+    - reference_code
+    - title
+    - description
+    - snippet
+    - status
+    - category
+    - applicability
+    - verification
+    - score
+  additionalProperties: true
+RagAnswerResponse:
+  type: object
+  properties:
+    answer:
+      type: string
+    citations:
+      type: array
+      items:
+        type: object
+        properties: {requirement_id: {type: integer}, reference_code: {type: string}, title: {type: string}}
+        required: [requirement_id, reference_code, title]
+        additionalProperties: true
+    results:
+      type: array
+      items:
+        $ref: ../schemas/requirements.yaml#/SemanticSearchResult
+  required:
+    - answer
+    - citations
+    - results
+  additionalProperties: true
+CustomFieldValueDisplay:
+  type: object
+  properties:
+    field_id:
+      type: integer
+    label:
+      type: string
+    value:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+  required:
+    - field_id
+    - label
+    - value
+  additionalProperties: true
+Requirement:
+  type: object
+  properties:
+    id:
+      type: integer
+    status_id:
+      type: integer
+    author_id:
+      type: integer
+    reviewer_id:
+      type: integer
+    category_id:
+      type: integer
+    applicability_id:
+      type: integer
+    project_id:
+      type: integer
+    title:
+      type: string
+    description:
+      type: string
+    reference_code:
+      type: string
+    creation_date:
+      type: string
+    update_date:
+      type: string
+    current_version_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    parent_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    approved_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    deadline_date:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    justification:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    approved_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    approval_state:
+      type: string
+      enum:
+        - draft
+        - reviewed
+        - approved
+    same_as_current:
+      type: boolean
+    custom_fields:
+      type: array
+      items:
+        $ref: ../schemas/requirements.yaml#/CustomFieldValueDisplay
+  required:
+    - id
+    - status_id
+    - author_id
+    - reviewer_id
+    - category_id
+    - applicability_id
+    - project_id
+    - title
+    - description
+    - reference_code
+    - creation_date
+    - update_date
+    - current_version_id
+    - parent_id
+    - approved_by
+    - deadline_date
+    - justification
+    - approved_at
+    - approval_state
+  additionalProperties: true
+RequirementVersion:
+  type: object
+  properties:
+    id:
+      type: integer
+    requirement_id:
+      type: integer
+    status_id:
+      type: integer
+    author_id:
+      type: integer
+    reviewer_id:
+      type: integer
+    category_id:
+      type: integer
+    applicability_id:
+      type: integer
+    title:
+      type: string
+    description:
+      type: string
+    created_at:
+      type: string
+    approved_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    reviewed_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    justification:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    deadline_date:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    approved_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    reviewed_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    approval_state:
+      type: string
+      enum:
+        - draft
+        - reviewed
+        - approved
+  required:
+    - id
+    - requirement_id
+    - status_id
+    - author_id
+    - reviewer_id
+    - category_id
+    - applicability_id
+    - title
+    - description
+    - created_at
+    - approved_by
+    - reviewed_by
+    - justification
+    - deadline_date
+    - approved_at
+    - reviewed_at
+    - approval_state
+  additionalProperties: true
+RequirementListRow:
+  allOf:
+    - $ref: ../schemas/requirements.yaml#/Requirement
+    - type: object
+      properties:
+        verification_method_ids: {type: array, items: {type: integer}}
+        parent_requirement_ids: {type: array, items: {type: integer}}
+      required:
+        - verification_method_ids
+        - parent_requirement_ids
+      additionalProperties: true
+RequirementWithTraceSummary:
+  allOf:
+    - $ref: ../schemas/requirements.yaml#/Requirement
+    - type: object
+      properties:
+        trace_summary: {type: object, properties: {parent_links: {type: array, items: {$ref: ../schemas/traceability.yaml#/RequirementVersionLink}}, child_ids: {type: array, items: {type: integer}}, linked_test_ids: {type: array, items: {type: integer}}}, required: [parent_links, child_ids, linked_test_ids], additionalProperties: true}
+      required:
+        - trace_summary
+      additionalProperties: true
+RequirementVersionDetail:
+  allOf:
+    - $ref: ../schemas/requirements.yaml#/RequirementVersion
+    - type: object
+      properties:
+        custom_fields: {type: array, items: {$ref: ../schemas/requirements.yaml#/CustomFieldValueDisplay}}
+        verification_method_ids: {type: array, items: {type: integer}}
+      required:
+        - custom_fields
+        - verification_method_ids
+      additionalProperties: true
+CustomFieldValueInput:
+  type: object
+  properties:
+    field_id:
+      type: integer
+    value:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+  required:
+    - field_id
+  additionalProperties: true
+RequirementCreateRequest:
+  type: object
+  properties:
+    title:
+      type: string
+    description:
+      type: string
+    reference_code:
+      type: string
+    author_id:
+      type: integer
+    category_id:
+      type: integer
+    status_id:
+      type: integer
+    reviewer_id:
+      type: integer
+    applicability_id:
+      type: integer
+    project_id:
+      type: integer
+    justification:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    verification_method_ids:
+      type: array
+      items:
+        type: integer
+      minItems: 1
+    custom_fields:
+      type: array
+      items:
+        $ref: ../schemas/requirements.yaml#/CustomFieldValueInput
+    parent_links:
+      type: array
+      items:
+        type: object
+        properties: {target_version_id: {type: integer}, link_type: {type: string}, rationale: {anyOf: [{type: string}, {type: 'null'}]}}
+        required: [target_version_id, link_type]
+        additionalProperties: true
+  required:
+    - title
+    - description
+    - reference_code
+    - author_id
+    - category_id
+    - status_id
+    - reviewer_id
+    - applicability_id
+    - project_id
+    - verification_method_ids
+  additionalProperties: true
+RequirementPatch:
+  type: object
+  properties:
+    title:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    description:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    justification:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    status_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    author_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    reviewer_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    category_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    applicability_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    verification_method_ids:
+      anyOf:
+        - {type: array, items: {type: integer}}
+        - {type: 'null'}
+    custom_fields:
+      anyOf:
+        - {type: array, items: {$ref: ../schemas/requirements.yaml#/CustomFieldValueInput}}
+        - {type: 'null'}
+  required: []
+  additionalProperties: true

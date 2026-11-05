@@ -1,0 +1,369 @@
+/api/projects/{project_id}/dsm:
+  get:
+    operationId: dsm_get_dsm
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: query
+        name: link_types
+        schema: {type: string}
+        required: false
+      - in: query
+        name: category_id
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: root_id
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: order
+        schema: {type: string, enum: [hierarchy, partition]}
+        required: false
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/traceability.yaml#/Dsm}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/dsm.rs and dsm_service.rs output structs. Comma-separated link types, optional project
+      category/root, hierarchy or partition order; numeric indices and loop paths are preserved. Shared in
+      both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - requirements:read
+      - traceability:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/matrix:
+  get:
+    operationId: matrix_list_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/traceability.yaml#/MatrixLink}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/matrix.rs, MatrixLink and scoped traceability guards. Matrix replacement checks every entity
+      belongs to the project; both variants share the shape.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - traceability:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/requirement-version-links:
+  post:
+    operationId: requirement_version_links_create
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema: {type: string}
+        description: Optional replay identity, trimmed then validated as 1–200 ASCII letters, digits, dot, underscore or hyphen. Reuse with a different payload returns 409.
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/traceability.yaml#/RequirementVersionLink}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirement_version_links.rs, models and RequirementService. Project-bound source/target
+      versions; optional Idempotency-Key is supported on create, reused payload mismatches return 409. Both
+      variants share this contract.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {source_version_id: {type: integer}, target_version_id: {type: integer}, link_type: {type: string}, rationale: {anyOf: [{type: string}, {type: 'null'}]}, metadata: {anyOf: [{}, {type: 'null'}]}}, required: [source_version_id, target_version_id, link_type], additionalProperties: true}}
+    x-marreq-bearer-scopes:
+      - traceability:write
+    x-marreq-authorization: project-membership;EditRequirements;not-archived
+    x-marreq-csrf: session-csrf
+  get:
+    operationId: requirement_version_links_list
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: query
+        name: source_version_id
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: target_version_id
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: link_type
+        schema: {type: string}
+        required: false
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/traceability.yaml#/RequirementVersionLink}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirement_version_links.rs, models and RequirementService. Project-bound source/target
+      versions; optional Idempotency-Key is supported on create, reused payload mismatches return 409. Both
+      variants share this contract.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - traceability:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/requirement-version-links/{link_id}:
+  delete:
+    operationId: requirement_version_links_delete
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: link_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/traceability.yaml#/RequirementVersionLink}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirement_version_links.rs, models and RequirementService. Project-bound source/target
+      versions; optional Idempotency-Key is supported on create, reused payload mismatches return 409. Both
+      variants share this contract.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - traceability:write
+    x-marreq-authorization: project-membership;EditRequirements;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/requirement-version-links/link-types:
+  get:
+    operationId: requirement_version_links_link_types
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {link_types: {type: array, items: {type: string}}}, required: [link_types], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirement_version_links.rs, models and RequirementService. Project-bound source/target
+      versions; optional Idempotency-Key is supported on create, reused payload mismatches return 409. Both
+      variants share this contract.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - traceability:read
+    x-marreq-authorization: project-membership;project-access
+/api/projects/{project_id}/coverage_report:
+  get:
+    operationId: traceability_coverage_report
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {requirements_without_tests: {type: array, items: {type: integer}}, tests_without_requirements: {type: array, items: {type: integer}}, suspect_links: {type: array, items: {type: object, properties: {req_id: {type: integer}, verification_id: {type: integer}}, required: [req_id, verification_id], additionalProperties: true}}}, required: [requirements_without_tests, tests_without_requirements, suspect_links], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/traceability.rs and scoped guards. Cross-project entity pairs are rejected. Responses retain
+      nullable first parent, complete parent arrays and explicit no_change result, identically in both
+      variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - traceability:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/traceability/clear_suspect:
+  post:
+    operationId: traceability_clear_suspect
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, enum: [ok, no_change]}, cleared: {type: boolean}}, required: [status, cleared], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/traceability.rs and scoped guards. Cross-project entity pairs are rejected. Responses retain
+      nullable first parent, complete parent arrays and explicit no_change result, identically in both
+      variants.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {req_id: {type: integer}, verification_id: {type: integer}}, required: [req_id, verification_id], additionalProperties: true}}
+    x-marreq-authorization: EditRequirements;project-membership;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/traceability/clear_suspect:
+  post:
+    operationId: traceability_clear_suspect_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, enum: [ok, no_change]}, cleared: {type: boolean}}, required: [status, cleared], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/traceability.rs and scoped guards. Cross-project entity pairs are rejected. Responses retain
+      nullable first parent, complete parent arrays and explicit no_change result, identically in both
+      variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {req_id: {type: integer}, verification_id: {type: integer}}, required: [req_id, verification_id], additionalProperties: true}}
+    x-marreq-bearer-scopes:
+      - traceability:write
+    x-marreq-authorization: EditRequirements;project-membership;not-archived
+    x-marreq-csrf: session-csrf

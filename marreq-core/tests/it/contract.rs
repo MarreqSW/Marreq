@@ -10,9 +10,9 @@ use std::{io::Cursor, sync::OnceLock};
 fn spec() -> &'static Value {
     static SPEC: OnceLock<Value> = OnceLock::new();
     SPEC.get_or_init(|| {
-        contract::load(
+        marreq_contracts::source::load(
             &std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../docs/developer/openapi.yaml"),
+                .join("../docs/developer/openapi/root.yaml"),
         )
         .unwrap()
     })

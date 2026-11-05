@@ -81,3 +81,9 @@ _bmad-output/
 .cursorignore
 
 AGENTS.md
+
+# Optional self-contained OpenAPI output; edit openapi/root.yaml and domains.
+/docs/developer/openapi.yaml
+# Rust source module, not a generated coverage report.
+!/tools/marreq-contracts/src/coverage/
+!/tools/marreq-contracts/src/coverage/*.rs

@@ -1,0 +1,289 @@
+Baseline:
+  type: object
+  properties:
+    id:
+      type: integer
+    project_id:
+      type: integer
+    created_by:
+      type: integer
+    name:
+      type: string
+    created_at:
+      type: string
+    description:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    source_saved_view_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    source_view_definition:
+      anyOf:
+        - {}
+        - {type: 'null'}
+  required:
+    - id
+    - project_id
+    - created_by
+    - name
+    - created_at
+    - description
+    - source_saved_view_id
+    - source_view_definition
+  additionalProperties: true
+BaselineTraceability:
+  type: object
+  properties:
+    baseline_id:
+      type: integer
+    requirement_id:
+      type: integer
+    verification_id:
+      type: integer
+    suspect:
+      type: boolean
+    suspect_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    suspect_reason:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+  required:
+    - baseline_id
+    - requirement_id
+    - verification_id
+    - suspect
+    - suspect_at
+    - suspect_reason
+  additionalProperties: true
+BaselineVerification:
+  type: object
+  properties:
+    status_id:
+      type: integer
+    project_id:
+      type: integer
+    author_id:
+      type: integer
+    reviewer_id:
+      type: integer
+    name:
+      type: string
+    reference_code:
+      type: string
+    description:
+      type: string
+    source:
+      type: string
+    parent_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    verification_method_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    baseline_id:
+      type: integer
+    verification_id:
+      type: integer
+  required:
+    - status_id
+    - project_id
+    - author_id
+    - reviewer_id
+    - name
+    - reference_code
+    - description
+    - source
+    - parent_id
+    - verification_method_id
+    - baseline_id
+    - verification_id
+  additionalProperties: true
+BaselineDiff:
+  type: object
+  properties:
+    requirements_only_in_a:
+      type: array
+      items:
+        type: integer
+    requirements_only_in_b:
+      type: array
+      items:
+        type: integer
+    trace_only_in_a:
+      type: array
+      items:
+        type: array
+        items: {type: integer}
+        minItems: 2
+        maxItems: 2
+    trace_only_in_b:
+      type: array
+      items:
+        type: array
+        items: {type: integer}
+        minItems: 2
+        maxItems: 2
+    use_cases_only_in_a:
+      type: array
+      items:
+        type: integer
+    use_cases_only_in_b:
+      type: array
+      items:
+        type: integer
+    use_cases_changed:
+      type: array
+      items:
+        type: object
+        properties: {use_case_id: {type: integer}, version_a: {type: integer}, version_b: {type: integer}}
+        required: [use_case_id, version_a, version_b]
+        additionalProperties: true
+  required:
+    - requirements_only_in_a
+    - requirements_only_in_b
+    - trace_only_in_a
+    - trace_only_in_b
+    - use_cases_only_in_a
+    - use_cases_only_in_b
+    - use_cases_changed
+  additionalProperties: true
+TextDiffResult:
+  type: object
+  properties:
+    added:
+      type: array
+      items:
+        type: string
+    removed:
+      type: array
+      items:
+        type: string
+    unchanged:
+      type: array
+      items:
+        type: string
+  required:
+    - added
+    - removed
+    - unchanged
+  additionalProperties: true
+SingleValueDiff:
+  type: object
+  properties:
+    old_id:
+      type: integer
+    new_id:
+      type: integer
+    unchanged:
+      type: integer
+    unchanged_label:
+      type: string
+    old_label:
+      type: string
+    new_label:
+      type: string
+  required: []
+  additionalProperties: true
+VerificationDiff:
+  type: object
+  properties:
+    added_ids:
+      type: array
+      items:
+        type: integer
+    removed_ids:
+      type: array
+      items:
+        type: integer
+    unchanged_ids:
+      type: array
+      items:
+        type: integer
+    added_labels:
+      type: array
+      items:
+        type: string
+    removed_labels:
+      type: array
+      items:
+        type: string
+    unchanged_labels:
+      type: array
+      items:
+        type: string
+  required:
+    - added_ids
+    - removed_ids
+    - unchanged_ids
+  additionalProperties: true
+RequirementDiff:
+  type: object
+  properties:
+    text:
+      type: object
+      properties:
+        title: {$ref: ../schemas/baselines.yaml#/TextDiffResult}
+        description: {$ref: ../schemas/baselines.yaml#/TextDiffResult}
+        justification: {$ref: ../schemas/baselines.yaml#/TextDiffResult}
+      required:
+        - title
+        - description
+        - justification
+      additionalProperties: true
+    metadata:
+      type: object
+      properties:
+        status: {$ref: ../schemas/baselines.yaml#/SingleValueDiff}
+        category: {$ref: ../schemas/baselines.yaml#/SingleValueDiff}
+        applicability: {$ref: ../schemas/baselines.yaml#/SingleValueDiff}
+        verification: {$ref: ../schemas/baselines.yaml#/VerificationDiff}
+        custom_fields: {type: array, items: {type: object, properties: {field_id: {type: integer}, label: {type: string}, old_value: {anyOf: [{type: string}, {type: 'null'}]}, new_value: {anyOf: [{type: string}, {type: 'null'}]}, unchanged: {type: boolean}}, required: [field_id, label, old_value, new_value, unchanged], additionalProperties: true}}
+      required:
+        - status
+        - category
+        - applicability
+        - verification
+        - custom_fields
+      additionalProperties: true
+  required:
+    - text
+    - metadata
+  additionalProperties: true
+VerificationVersionDiff:
+  type: object
+  properties:
+    text:
+      type: object
+      properties:
+        name: {$ref: ../schemas/baselines.yaml#/TextDiffResult}
+        description: {$ref: ../schemas/baselines.yaml#/TextDiffResult}
+        source: {$ref: ../schemas/baselines.yaml#/TextDiffResult}
+        reference_code: {$ref: ../schemas/baselines.yaml#/TextDiffResult}
+      required:
+        - name
+        - description
+        - source
+        - reference_code
+      additionalProperties: true
+    metadata:
+      type: object
+      properties:
+        status: {$ref: ../schemas/baselines.yaml#/SingleValueDiff}
+        verification_method: {$ref: ../schemas/baselines.yaml#/SingleValueDiff}
+        parent: {$ref: ../schemas/baselines.yaml#/SingleValueDiff}
+      required:
+        - status
+        - verification_method
+        - parent
+      additionalProperties: true
+  required:
+    - text
+    - metadata
+  additionalProperties: true

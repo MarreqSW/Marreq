@@ -1,0 +1,239 @@
+/api/projects/{project_id}/reports/types:
+  get:
+    operationId: reports_list_types
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {type: object, properties: {key: {type: string}, title: {type: string}, description: {type: string}, formats: {type: array, items: {type: string, enum: [pdf, odt]}}, sections: {type: array, items: {$ref: ../schemas/reports.yaml#/ReportSectionSpec}}, default_definition: {$ref: ../schemas/reports.yaml#/ReportDefinition}}, required: [key, title, description, formats, sections, default_definition], additionalProperties: true}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/reports.rs, reports/definition.rs and reports/sections.rs. Session/personal token; delegated
+      OAuth denied. Both variants enforce project view permission, private-template visibility, owner/admin
+      mutation rules and archived-project write denial. Definition defaults and optional section options
+      follow Serde.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+/api/projects/{project_id}/report_templates:
+  get:
+    operationId: reports_list_templates
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/reports.yaml#/ReportTemplateView}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/reports.rs, reports/definition.rs and reports/sections.rs. Session/personal token; delegated
+      OAuth denied. Both variants enforce project view permission, private-template visibility, owner/admin
+      mutation rules and archived-project write denial. Definition defaults and optional section options
+      follow Serde.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements;visible-template
+  post:
+    operationId: reports_create_template
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '201':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/reports.yaml#/ReportTemplateView}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/reports.rs, reports/definition.rs and reports/sections.rs. Session/personal token; delegated
+      OAuth denied. Both variants enforce project view permission, private-template visibility, owner/admin
+      mutation rules and archived-project write denial. Definition defaults and optional section options
+      follow Serde.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/reports.yaml#/ReportTemplateInput}}
+    x-marreq-authorization: >-
+      personal-token-or-session;delegated-denied;project-membership;ViewRequirements;not-archived;template-owner-or-admin
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/report_templates/{template_id}:
+  patch:
+    operationId: reports_update_template
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: template_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/reports.yaml#/ReportTemplateView}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/reports.rs, reports/definition.rs and reports/sections.rs. Session/personal token; delegated
+      OAuth denied. Both variants enforce project view permission, private-template visibility, owner/admin
+      mutation rules and archived-project write denial. Definition defaults and optional section options
+      follow Serde.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/reports.yaml#/ReportTemplateInput}}
+    x-marreq-authorization: >-
+      personal-token-or-session;delegated-denied;project-membership;ViewRequirements;not-archived;template-owner-or-admin
+    x-marreq-csrf: session-csrf
+  delete:
+    operationId: reports_delete_template
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: template_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Success; empty body.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/reports.rs, reports/definition.rs and reports/sections.rs. Session/personal token; delegated
+      OAuth denied. Both variants enforce project view permission, private-template visibility, owner/admin
+      mutation rules and archived-project write denial. Definition defaults and optional section options
+      follow Serde.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: >-
+      personal-token-or-session;delegated-denied;project-membership;ViewRequirements;not-archived;template-owner-or-admin
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/reports/{file}:
+  post:
+    operationId: reports_generate
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: file
+        required: true
+        schema: {type: string}
+    responses:
+      '200':
+        description: File download; Content-Disposition supplies the filename.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+        content: {application/pdf: {schema: {type: string, format: binary}}, application/vnd.oasis.opendocument.text: {schema: {type: string, format: binary}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/reports.rs, reports/definition.rs and reports/sections.rs. Session/personal token; delegated
+      OAuth denied. Both variants enforce project view permission, private-template visibility, owner/admin
+      mutation rules and archived-project write denial. Definition defaults and optional section options
+      follow Serde.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: false
+      content:
+        application/json: {schema: {type: object, properties: {template_id: {anyOf: [{type: integer}, {type: 'null'}]}, definition: {anyOf: [{$ref: ../schemas/reports.yaml#/ReportDefinitionInput}, {type: 'null'}]}}, required: [], additionalProperties: true}}
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements;visible-template
+    x-marreq-csrf: session-csrf

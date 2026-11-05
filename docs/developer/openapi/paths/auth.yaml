@@ -1,0 +1,585 @@
+/api/auth/providers:
+  get:
+    operationId: auth_auth_providers
+    security: []
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/auth.yaml#/external_ProviderDiscovery_response}}}
+/api/auth/external/{provider}/start:
+  get:
+    operationId: auth_auth_external_start
+    parameters:
+      - in: path
+        name: provider
+        required: true
+        schema: {type: string}
+      - in: query
+        name: return_to
+        schema: {type: string}
+    responses:
+      '303':
+        description: Redirect to the provider or validated local return path.
+        headers: {Location: {required: true, schema: {type: string}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/auth.rs and models/forms.rs. Session-scoped authentication; identical routes in Server and
+      Cloud.
+    security: []
+/api/auth/external/{provider}/callback:
+  get:
+    operationId: auth_auth_external_callback
+    parameters:
+      - in: path
+        name: provider
+        required: true
+        schema: {type: string}
+      - in: query
+        name: code
+        schema: {type: string}
+      - in: query
+        name: state
+        schema: {type: string}
+      - in: query
+        name: error
+        schema: {type: string}
+    responses:
+      '303':
+        description: Redirect to the provider or validated local return path.
+        headers: {Location: {required: true, schema: {type: string}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        $ref: ../components/responses.yaml#/ApiError
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/auth.rs and models/forms.rs. Session-scoped authentication; identical routes in Server and
+      Cloud.
+    security: []
+    x-marreq-authorization: single-use-oauth-transaction;link-requires-original-session
+/api/auth/identities:
+  get:
+    operationId: auth_auth_identities
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/auth.yaml#/AuthIdentities}}}
+      '401':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/auth.rs and models/forms.rs. Session-scoped authentication; identical routes in Server and
+      Cloud.
+    security:
+      - cookieAuth: []
+/api/auth/me:
+  get:
+    operationId: auth_auth_me
+    security:
+      - cookieAuth: []
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/auth.yaml#/entities_User_response}}}
+      '401':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '500':
+        description: API error
+        content: {application/json: {schema: {$ref: ../schemas/common.yaml#/ApiError}}}
+  put:
+    operationId: auth_auth_update_me
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/auth.yaml#/entities_User_response}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        $ref: ../components/responses.yaml#/ApiError
+      '403':
+        description: Authentication or CSRF failure; body may be framework-generated or empty.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication or CSRF failure; body may be framework-generated or empty.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/auth.rs and services/user_service.rs. Own profile only. Email changes require the current
+      password when configured; Cloud rejects email changes. Other profile changes work in both variants.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/auth.yaml#/AuthProfileUpdate}}
+    x-marreq-csrf: session-csrf
+/.well-known/oauth-authorization-server:
+  get:
+    operationId: oauth_authorization_server_metadata
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {issuer: {type: string}, authorization_endpoint: {type: string}, token_endpoint: {type: string}, registration_endpoint: {type: string}, response_types_supported: {type: array, items: {type: string}}, grant_types_supported: {type: array, items: {type: string}}, code_challenge_methods_supported: {type: array, items: {type: string}}, scopes_supported: {type: array, items: {type: string}}, token_endpoint_auth_methods_supported: {type: array, items: {type: string}}, authorization_response_iss_parameter_supported: {type: boolean}}, required: [issuer, authorization_endpoint, token_endpoint, registration_endpoint, response_types_supported, grant_types_supported, code_challenge_methods_supported, scopes_supported, token_endpoint_auth_methods_supported, authorization_response_iss_parameter_supported], additionalProperties: true}}}
+    description: See implementation and http-api-contract.md for validation rules.
+    security: []
+/.well-known/oauth-protected-resource/mcp:
+  get:
+    operationId: oauth_protected_resource_metadata_mcp
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {resource: {type: string}, authorization_servers: {type: array, items: {type: string}}, scopes_supported: {type: array, items: {type: string}}, bearer_methods_supported: {type: array, items: {type: string}}}, required: [resource, authorization_servers, scopes_supported, bearer_methods_supported], additionalProperties: true}}}
+    description: See implementation and http-api-contract.md for validation rules.
+    security: []
+/oauth/register:
+  post:
+    operationId: oauth_register
+    parameters: []
+    responses:
+      '201':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {client_id: {type: string}, client_name: {type: string}, redirect_uris: {type: array, items: {type: string}}, token_endpoint_auth_method: {type: string, const: none}}, required: [client_id, client_name, redirect_uris, token_endpoint_auth_method], additionalProperties: true}}}
+      '400':
+        description: OAuth protocol error.
+        content: {application/json: {schema: {type: object, properties: {error: {type: string}}, required: [error], additionalProperties: true}}}
+      '401':
+        description: OAuth protocol error.
+        content: {application/json: {schema: {type: object, properties: {error: {type: string}}, required: [error], additionalProperties: true}}}
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '503':
+        description: OAuth protocol error.
+        content: {application/json: {schema: {type: object, properties: {error: {type: string}}, required: [error], additionalProperties: true}}}
+    description: >-
+      Audited api/oauth.rs RegistrationRequest/register/OAuthProtocolError and auth/delegated.rs. Public PKCE
+      client registration, shared in Server and Cloud; OAuth errors are not ApiError envelopes.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {client_name: {type: string}, redirect_uris: {type: array, items: {type: string}}}, required: [client_name, redirect_uris], additionalProperties: true}}
+    x-marreq-authorization: public-dynamic-client-registration;redirect-uri-policy;registration-rate-limit
+/oauth/authorize:
+  get:
+    operationId: oauth_authorize_page
+    parameters:
+      - in: query
+        name: response_type
+        schema: {type: string}
+        required: true
+      - in: query
+        name: client_id
+        schema: {type: string}
+        required: true
+      - in: query
+        name: redirect_uri
+        schema: {type: string}
+        required: true
+      - in: query
+        name: scope
+        schema: {type: string}
+        required: true
+      - in: query
+        name: state
+        schema: {type: string}
+        required: true
+      - in: query
+        name: code_challenge
+        schema: {type: string}
+        required: true
+      - in: query
+        name: code_challenge_method
+        schema: {type: string}
+        required: true
+      - in: query
+        name: resource
+        schema: {type: string}
+        required: true
+    responses:
+      '200':
+        description: HTML consent form for an authenticated browser.
+        content: {text/html: {schema: {type: string}}}
+      '303':
+        description: 303 redirect to login or the validated OAuth redirect_uri.
+        headers: {Location: {required: true, schema: {type: string}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/oauth.rs authorize_page/checked_request. Trusted redirect errors and anonymous login return
+      303; consent returns HTML. Unknown clients and invalid untrusted requests return API errors. Same in
+      both variants.
+    security: []
+    x-marreq-authorization: validated-client-redirect-resource-pkce-scopes;optional-session-consent
+  post:
+    operationId: oauth_authorize_decision
+    parameters: []
+    responses:
+      '303':
+        description: 303 redirect to login or the validated OAuth redirect_uri.
+        headers: {Location: {required: true, schema: {type: string}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/oauth.rs ConsentForm and authorize_decision. Form submissions use the session and
+      origin/CSRF fairing policy; both allow and deny redirect with OAuth state/issuer. Shared in both
+      variants.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/x-www-form-urlencoded: {schema: {type: object, properties: {client_id: {type: string}, redirect_uri: {type: string}, scope: {type: string}, state: {type: string}, code_challenge: {type: string}, resource: {type: string}, decision: {type: string}}, required: [client_id, redirect_uri, scope, state, code_challenge, resource, decision], additionalProperties: true}}
+    x-marreq-authorization: session;validated-client-redirect-resource-pkce-scopes;consent-decision
+    x-marreq-csrf: auth-origin-fallback
+/oauth/token:
+  post:
+    operationId: oauth_token
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {access_token: {type: string}, token_type: {type: string, const: Bearer}, expires_in: {type: integer}, refresh_token: {type: string}, scope: {type: string}}, required: [access_token, token_type, expires_in, refresh_token, scope], additionalProperties: true}}}
+      '400':
+        description: OAuth protocol error.
+        content: {application/json: {schema: {type: object, properties: {error: {type: string}}, required: [error], additionalProperties: true}}}
+      '401':
+        description: OAuth protocol error.
+        content: {application/json: {schema: {type: object, properties: {error: {type: string}}, required: [error], additionalProperties: true}}}
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '503':
+        description: OAuth protocol error.
+        content: {application/json: {schema: {type: object, properties: {error: {type: string}}, required: [error], additionalProperties: true}}}
+    description: >-
+      Audited api/oauth.rs TokenForm/token and auth/delegated.rs TokenResponse. Public form endpoint with
+      client/resource/code/refresh checks; protocol errors use an error string. Shared in both variants.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/x-www-form-urlencoded: {schema: {$ref: ../schemas/auth.yaml#/OAuthTokenRequest}}
+    x-marreq-authorization: public-pkce-code-or-refresh-token;client-resource-binding;single-use-rotation
+/api/auth/csrf:
+  get:
+    operationId: auth_auth_csrf
+    security: []
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {csrf_token: {type: string}}, required: [csrf_token], additionalProperties: true}}}
+/api/auth/identities/{identity_id}:
+  delete:
+    operationId: auth_auth_identity_delete
+    parameters:
+      - in: path
+        name: identity_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Owned identity removed; no body.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        $ref: ../components/responses.yaml#/ApiError
+      '403':
+        description: Authentication or CSRF failure; body may be framework-generated or empty.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/auth.rs and models/forms.rs. Session-scoped authentication; identical routes in Server and
+      Cloud.
+    security:
+      - cookieAuth: []
+    x-marreq-csrf: session-csrf
+/api/auth/register:
+  post:
+    operationId: auth_public_auth_register
+    x-marreq-variants:
+      - cloud
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}}, required: [status], additionalProperties: true}}}
+      '201':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}}, required: [status], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Cloud-only public account flow. Registration returns 201 for creation or 200 for an existing email,
+      preventing enumeration. Forgot-password always reports success. CSRF fairing rules still apply.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {username: {type: string}, name: {type: string}, email: {type: string}, password: {type: string}}, required: [username, name, email, password], additionalProperties: true}}
+/api/auth/login:
+  post:
+    operationId: auth_auth_login
+    parameters: []
+    responses:
+      '200':
+        description: Authenticated session established
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}, user: {$ref: ../schemas/auth.yaml#/entities_User_response}}, required: [status, user]}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '403':
+        description: CSRF failure; body may be framework generated
+      '410':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Rocket JSON validation failure
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Route inventory only. Request/response serialization, status codes and authorization require audit
+      before compatibility can be established.
+    security: []
+    x-marreq-csrf: auth-origin-fallback
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, required: [username, password], properties: {username: {type: string}, password: {type: string}}}}
+/api/auth/external/{provider}/link:
+  post:
+    operationId: auth_auth_external_link_start
+    parameters:
+      - in: path
+        name: provider
+        required: true
+        schema: {type: string}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {authorization_url: {type: string}}, required: [authorization_url], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        $ref: ../components/responses.yaml#/ApiError
+      '403':
+        description: Authentication or CSRF failure; body may be framework-generated or empty.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication or CSRF failure; body may be framework-generated or empty.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/auth.rs and models/forms.rs. Session-scoped authentication; identical routes in Server and
+      Cloud.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {description: Any JSON value is accepted; an object return_to string overrides the default /settings/account., properties: {return_to: {type: string}}}}
+    x-marreq-csrf: session-csrf
+/api/auth/verify-email:
+  get:
+    operationId: auth_public_auth_verify_email
+    x-marreq-variants:
+      - cloud
+    parameters:
+      - in: query
+        name: token
+        required: true
+        schema: {type: string}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}}, required: [status], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Cloud-only public account flow. Registration returns 201 for creation or 200 for an existing email,
+      preventing enumeration. Forgot-password always reports success. CSRF fairing rules still apply.
+    security: []
+/api/auth/logout:
+  post:
+    operationId: auth_auth_logout
+    parameters: []
+    responses:
+      '200':
+        description: Session and CSRF cookies cleared
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}}, required: [status]}}}
+      '403':
+        description: CSRF failure; body may be framework generated
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Route inventory only. Request/response serialization, status codes and authorization require audit
+      before compatibility can be established.
+    security: []
+    x-marreq-csrf: auth-origin-fallback
+    requestBody:
+      required: false
+      description: Optional ignored body; the SPA sends an empty JSON object.
+      content:
+        application/json: {schema: {}}
+/api/auth/forgot-password:
+  post:
+    operationId: auth_public_auth_forgot_password
+    x-marreq-variants:
+      - cloud
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}}, required: [status], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Cloud-only public account flow. Registration returns 201 for creation or 200 for an existing email,
+      preventing enumeration. Forgot-password always reports success. CSRF fairing rules still apply.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {email: {type: string}}, required: [email], additionalProperties: true}}
+/api/auth/change-password:
+  post:
+    operationId: auth_auth_change_password
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/auth.yaml#/AuthStatus}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        $ref: ../components/responses.yaml#/ApiError
+      '403':
+        description: Authentication or CSRF failure; body may be framework-generated or empty.
+      '422':
+        description: Authentication or CSRF failure; body may be framework-generated or empty.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/auth.rs and models/forms.rs. Session-scoped authentication; identical routes in Server and
+      Cloud.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/auth.yaml#/AuthChangePassword}}
+    x-marreq-csrf: session-csrf
+/api/oauth/grants:
+  get:
+    operationId: oauth_grants
+    parameters: []
+    responses:
+      '200':
+        description: Connected applications
+        content: {application/json: {schema: {type: object, required: [grants], properties: {grants: {type: array, items: {type: object, required: [id, application_name, scopes, created_at, last_used_at], properties: {id: {type: integer}, application_name: {type: string}, scopes: {type: array, items: {type: string}}, created_at: {type: string}, last_used_at: {type: [string, 'null']}}, additionalProperties: true}}}, additionalProperties: true}}}
+      '401':
+        description: Missing or expired session; guard response may be empty.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/oauth.rs grants/revoke_grant and models/entities.rs OAuthGrant. Owned session grants only,
+      identical in Server and Cloud; no Bearer authentication.
+    security:
+      - cookieAuth: []
+/api/oauth/grants/{id}:
+  delete:
+    operationId: oauth_revoke_grant
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Owned grant revoked; empty body.
+      '401':
+        description: Missing or expired session; guard response may be empty.
+      '403':
+        description: CSRF failure; body may be framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/oauth.rs grants/revoke_grant and models/entities.rs OAuthGrant. Owned session grants only,
+      identical in Server and Cloud; no Bearer authentication.
+    security:
+      - cookieAuth: []
+    x-marreq-csrf: session-csrf
+/api/auth/reset-password:
+  post:
+    operationId: auth_public_auth_reset_password
+    x-marreq-variants:
+      - cloud
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}}, required: [status], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Cloud-only public account flow. Registration returns 201 for creation or 200 for an existing email,
+      preventing enumeration. Forgot-password always reports success. CSRF fairing rules still apply.
+    security: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {token: {type: string}, new_password: {type: string}}, required: [token, new_password], additionalProperties: true}}

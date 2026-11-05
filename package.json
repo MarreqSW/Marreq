@@ -35,6 +35,7 @@
   },
   "homepage": "https://github.com/mariusmm/Marreq#readme",
   "devDependencies": {
+    "@redocly/openapi-core": "1.34.22",
     "@testing-library/jest-dom": "^6.9.1",
     "@vitest/coverage-v8": "^5.0.5",
     "@vitest/ui": "^5.0.2",

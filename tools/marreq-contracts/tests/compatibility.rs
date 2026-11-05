@@ -595,13 +595,14 @@ fn browser_calls_and_assignments_cannot_hide_dependencies() {
 fn consumer_bundle_requires_committed_build_configuration() {
     let dir = tempfile::tempdir().unwrap();
     let root = dir.path();
-    std::fs::create_dir_all(root.join("docs/developer")).unwrap();
+    std::fs::create_dir_all(root.join("docs/developer/openapi")).unwrap();
     std::fs::create_dir_all(root.join("frontend/src")).unwrap();
-    std::fs::copy(
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/developer/openapi.yaml"),
-        root.join("docs/developer/openapi.yaml"),
-    )
-    .unwrap();
+    contract::write(
+        &root.join(marreq_contracts::source::DEFAULT_SPEC),
+        &marreq_contracts::source::load(
+            &Path::new(env!("CARGO_MANIFEST_DIR")).join("../../docs/developer/openapi/root.yaml"),
+        ).unwrap(),
+    ).unwrap();
     std::fs::write(
         root.join("frontend/src/client.ts"),
         "fetch('/api/meta/build');",

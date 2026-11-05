@@ -1,5 +1,5 @@
 //! Marreq artifact identity/policy. Contract hashes pin files, NOT Docker images.
-use crate::{contract, coverage};
+use crate::{contract, coverage, source};
 use anyhow::{Context, Result, ensure};
 use semver::Version;
 use serde::{Deserialize, Serialize};
@@ -141,7 +141,7 @@ fn identity(bundle: &Bundle) -> Result<()> {
 }
 pub fn export(root: &Path, who: &str, version: Version, mode: Option<String>) -> Result<Bundle> {
     component(who)?;
-    let spec = contract::load(&root.join("docs/developer/openapi.yaml"))?;
+    let spec = source::load(&root.join(source::DEFAULT_SPEC))?;
     let required: BTreeSet<_> = if who == "backend" {
         variant(mode.as_deref().context("backend --variant required")?)?;
         contract::operations(&spec, mode.as_deref())?
@@ -163,7 +163,10 @@ pub fn export(root: &Path, who: &str, version: Version, mode: Option<String>) ->
     }
     let directory = if who == "mcp" { "mcp-server" } else { who };
     let mut inputs: Vec<String> = [
-        "docs/developer/openapi.yaml",
+        "docs/developer/openapi",
+        "scripts/bundle-openapi.mjs",
+        "package.json",
+        "package-lock.json",
         "tools/marreq-contracts",
         "Cargo.toml",
         "Cargo.lock",

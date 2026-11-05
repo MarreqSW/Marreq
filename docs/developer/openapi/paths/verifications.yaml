@@ -1,0 +1,791 @@
+/api/projects/{project_id}/verifications/{id}/activity:
+  get:
+    operationId: activity_verification_activity_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/common.yaml#/EntityActivityItem}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/activity.rs EntityActivityItem and scoped project guards. Same serialization, permission and
+      project-boundary rules in Server and Cloud.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - verifications:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/verifications/{verification_id}/matrix:
+  get:
+    operationId: matrix_get_verification_matrix
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: verification_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {verification_id: {type: integer}, requirement_ids: {type: array, items: {type: integer}}}, required: [verification_id, requirement_ids], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/matrix.rs, MatrixLink and scoped traceability guards. Matrix replacement checks every entity
+      belongs to the project; both variants share the shape.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - traceability:read
+    x-marreq-authorization: project-membership;ViewRequirements
+  put:
+    operationId: matrix_put_verification_matrix
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: verification_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string}, verification_id: {type: integer}, requirement_ids: {type: array, items: {type: integer}}}, required: [status, verification_id, requirement_ids], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/matrix.rs, MatrixLink and scoped traceability guards. Matrix replacement checks every entity
+      belongs to the project; both variants share the shape.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {requirement_ids: {type: array, items: {type: integer}}}, required: [requirement_ids], additionalProperties: true}}
+    x-marreq-bearer-scopes:
+      - traceability:write
+    x-marreq-authorization: project-membership;EditRequirements;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/verifications/{verification_id}/control:
+  get:
+    operationId: verification_control_get_verification_control
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: verification_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/traceability.yaml#/VerificationControlView}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/verification_control.rs and verification_control_service.rs. Optional nullable inputs are
+      cleared when absent; unknown fields rejected. Both variants enforce scoped guards, permissions,
+      trimming/length validation and reviewer rules.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - verifications:read
+    x-marreq-authorization: project-membership;ViewRequirements
+  put:
+    operationId: verification_control_put_verification_control
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: verification_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/traceability.yaml#/VerificationControlView}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/verification_control.rs and verification_control_service.rs. Optional nullable inputs are
+      cleared when absent; unknown fields rejected. Both variants enforce scoped guards, permissions,
+      trimming/length validation and reviewer rules.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/traceability.yaml#/VerificationControlInput}}
+    x-marreq-bearer-scopes:
+      - verifications:write
+    x-marreq-authorization: project-membership;EditRequirements;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/verifications/{id}/snapshots:
+  get:
+    operationId: verification_diff_list_snapshots_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {type: object, properties: {id: {type: integer}, created_at: {type: string}, name: {type: string}, reference_code: {type: string}, status_id: {type: integer}}, required: [id, created_at, name, reference_code, status_id], additionalProperties: true}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api requirement/verification diff routes, diff/mod.rs and diff services. Both versions/snapshots
+      must belong to the requested entity and project. Optional SingleValueDiff/label fields are omitted, not
+      null. Shared wire representation in both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - verifications:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/verifications/{id}/snapshots/{v1}/diff/{v2}:
+  get:
+    operationId: verification_diff_diff_snapshots_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: v1
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: v2
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/baselines.yaml#/VerificationVersionDiff}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api requirement/verification diff routes, diff/mod.rs and diff services. Both versions/snapshots
+      must belong to the requested entity and project. Optional SingleValueDiff/label fields are omitted, not
+      null. Shared wire representation in both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - verifications:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/verification-methods:
+  get:
+    operationId: verification_methods_list_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/verifications.yaml#/VerificationMethod}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/verification_methods.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire
+      shape; reads filter by ViewRequirements, mutations require ManageProjectConfiguration. System status
+      mutations are rejected.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: ViewRequirements
+  post:
+    operationId: verification_methods_create_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}, id: {type: integer}}, required: [status, id], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/verification_methods.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire
+      shape; reads filter by ViewRequirements, mutations require ManageProjectConfiguration. System status
+      mutations are rejected.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/verifications.yaml#/NewVerificationMethod}}
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/verification-methods/{method_id}:
+  put:
+    operationId: verification_methods_update_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: method_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/auth.yaml#/AuthStatus}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/verification_methods.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire
+      shape; reads filter by ViewRequirements, mutations require ManageProjectConfiguration. System status
+      mutations are rejected.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/verifications.yaml#/NewVerificationMethod}}
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf
+  delete:
+    operationId: verification_methods_delete_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: method_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Success; empty body.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/verification_methods.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire
+      shape; reads filter by ViewRequirements, mutations require ManageProjectConfiguration. System status
+      mutations are rejected.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf
+/api/verifications:
+  get:
+    operationId: verifications_list
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/verifications.yaml#/Verification}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirements.rs, api/verifications.rs and models/entities.rs/forms.rs. Both variants use the
+      same serializers. Scoped routes check project boundaries and scopes; mutations require EditRequirements
+      and unarchived projects, with project-reviewer checks for status/approval transitions. Idempotent
+      creates reject conflicting payloads with 409.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session;ViewRequirements
+  post:
+    operationId: verifications_create
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}, id: {type: integer}}, required: [status, id], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirements.rs, api/verifications.rs and models/entities.rs/forms.rs. Both variants use the
+      same serializers. Scoped routes check project boundaries and scopes; mutations require EditRequirements
+      and unarchived projects, with project-reviewer checks for status/approval transitions. Idempotent
+      creates reject conflicting payloads with 409.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/verifications.yaml#/NewVerification}}
+    x-marreq-authorization: session;EditRequirements;conditional-project-reviewer;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/verifications:
+  get:
+    operationId: verifications_list_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/verifications.yaml#/Verification}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirements.rs, api/verifications.rs and models/entities.rs/forms.rs. Both variants use the
+      same serializers. Scoped routes check project boundaries and scopes; mutations require EditRequirements
+      and unarchived projects, with project-reviewer checks for status/approval transitions. Idempotent
+      creates reject conflicting payloads with 409.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - verifications:read
+    x-marreq-authorization: project-membership;ViewRequirements
+  post:
+    operationId: verifications_create_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema: {type: string}
+        description: Optional replay identity, trimmed then validated as 1–200 ASCII letters, digits, dot, underscore or hyphen. Reuse with a different payload returns 409.
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}, id: {type: integer}}, required: [status, id], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirements.rs, api/verifications.rs and models/entities.rs/forms.rs. Both variants use the
+      same serializers. Scoped routes check project boundaries and scopes; mutations require EditRequirements
+      and unarchived projects, with project-reviewer checks for status/approval transitions. Idempotent
+      creates reject conflicting payloads with 409.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/verifications.yaml#/NewVerification}}
+    x-marreq-bearer-scopes:
+      - verifications:write
+    x-marreq-authorization: project-membership;EditRequirements;conditional-project-reviewer;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/verifications/{id}:
+  get:
+    operationId: verifications_get_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/verifications.yaml#/Verification}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirements.rs, api/verifications.rs and models/entities.rs/forms.rs. Both variants use the
+      same serializers. Scoped routes check project boundaries and scopes; mutations require EditRequirements
+      and unarchived projects, with project-reviewer checks for status/approval transitions. Idempotent
+      creates reject conflicting payloads with 409.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - verifications:read
+    x-marreq-authorization: project-membership;ViewRequirements
+  put:
+    operationId: verifications_update_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/verifications.yaml#/Verification}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirements.rs, api/verifications.rs and models/entities.rs/forms.rs. Both variants use the
+      same serializers. Scoped routes check project boundaries and scopes; mutations require EditRequirements
+      and unarchived projects, with project-reviewer checks for status/approval transitions. Idempotent
+      creates reject conflicting payloads with 409.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/verifications.yaml#/NewVerification}}
+    x-marreq-bearer-scopes:
+      - verifications:write
+    x-marreq-authorization: project-membership;EditRequirements;conditional-project-reviewer;not-archived
+    x-marreq-csrf: session-csrf
+/api/verifications/{id}:
+  get:
+    operationId: verifications_get
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/verifications.yaml#/Verification}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirements.rs, api/verifications.rs and models/entities.rs/forms.rs. Both variants use the
+      same serializers. Scoped routes check project boundaries and scopes; mutations require EditRequirements
+      and unarchived projects, with project-reviewer checks for status/approval transitions. Idempotent
+      creates reject conflicting payloads with 409.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session;ViewRequirements
+  delete:
+    operationId: verifications_delete
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Success; empty body.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirements.rs, api/verifications.rs and models/entities.rs/forms.rs. Both variants use the
+      same serializers. Scoped routes check project boundaries and scopes; mutations require EditRequirements
+      and unarchived projects, with project-reviewer checks for status/approval transitions. Idempotent
+      creates reject conflicting payloads with 409.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session;EditRequirements;conditional-project-reviewer;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/verifications/{id}/field:
+  post:
+    operationId: verifications_update_field_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {success: {type: boolean}, message: {type: string}}, required: [success, message], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirements.rs, api/verifications.rs and models/entities.rs/forms.rs. Both variants use the
+      same serializers. Scoped routes check project boundaries and scopes; mutations require EditRequirements
+      and unarchived projects, with project-reviewer checks for status/approval transitions. Idempotent
+      creates reject conflicting payloads with 409.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {field: {type: string}, value: {type: string}}, required: [field, value], additionalProperties: true}}
+    x-marreq-bearer-scopes:
+      - verifications:write
+    x-marreq-authorization: project-membership;EditRequirements;conditional-project-reviewer;not-archived
+    x-marreq-csrf: session-csrf

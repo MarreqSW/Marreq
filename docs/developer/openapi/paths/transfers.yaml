@@ -1,0 +1,602 @@
+/api/projects/{project_id}/exports/requirements.xlsx:
+  get:
+    operationId: exports_export_requirements_xlsx
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: File download; Content-Disposition supplies the filename.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+        content: {application/vnd.openxmlformats-officedocument.spreadsheetml.sheet: {schema: {type: string, format: binary}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/exports.rs FileDownload/ArchiveDownload and export handlers. Both variants use the same
+      media and mandatory download filename header. Consumers treat file contents as opaque downloads; the
+      JSON bundle is a JSON object. Baseline filename selects .reqif or .reqifz and is validated server-side.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+/api/projects/{project_id}/exports/verifications.xlsx:
+  get:
+    operationId: exports_export_verifications_xlsx
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: File download; Content-Disposition supplies the filename.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+        content: {application/vnd.openxmlformats-officedocument.spreadsheetml.sheet: {schema: {type: string, format: binary}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/exports.rs FileDownload/ArchiveDownload and export handlers. Both variants use the same
+      media and mandatory download filename header. Consumers treat file contents as opaque downloads; the
+      JSON bundle is a JSON object. Baseline filename selects .reqif or .reqifz and is validated server-side.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+/api/projects/{project_id}/exports/matrix.xlsx:
+  get:
+    operationId: exports_export_matrix_xlsx
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: File download; Content-Disposition supplies the filename.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+        content: {application/vnd.openxmlformats-officedocument.spreadsheetml.sheet: {schema: {type: string, format: binary}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/exports.rs FileDownload/ArchiveDownload and export handlers. Both variants use the same
+      media and mandatory download filename header. Consumers treat file contents as opaque downloads; the
+      JSON bundle is a JSON object. Baseline filename selects .reqif or .reqifz and is validated server-side.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+/api/projects/{project_id}/exports/dsm.xlsx:
+  get:
+    operationId: exports_export_dsm_xlsx
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: query
+        name: link_types
+        schema: {type: string}
+        required: false
+      - in: query
+        name: category_id
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: root_id
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: order
+        schema: {type: string, enum: [hierarchy, partition]}
+        required: false
+    responses:
+      '200':
+        description: File download; Content-Disposition supplies the filename.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+        content: {application/vnd.openxmlformats-officedocument.spreadsheetml.sheet: {schema: {type: string, format: binary}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/exports.rs FileDownload/ArchiveDownload and export handlers. Both variants use the same
+      media and mandatory download filename header. Consumers treat file contents as opaque downloads; the
+      JSON bundle is a JSON object. Baseline filename selects .reqif or .reqifz and is validated server-side.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+/api/projects/{project_id}/exports/matrix-links.xlsx:
+  get:
+    operationId: exports_export_matrix_links_xlsx
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: File download; Content-Disposition supplies the filename.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+        content: {application/vnd.openxmlformats-officedocument.spreadsheetml.sheet: {schema: {type: string, format: binary}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/exports.rs FileDownload/ArchiveDownload and export handlers. Both variants use the same
+      media and mandatory download filename header. Consumers treat file contents as opaque downloads; the
+      JSON bundle is a JSON object. Baseline filename selects .reqif or .reqifz and is validated server-side.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+/api/projects/{project_id}/exports/requirements.pdf:
+  get:
+    operationId: exports_export_requirements_pdf
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: File download; Content-Disposition supplies the filename.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+        content: {application/pdf: {schema: {type: string, format: binary}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/exports.rs FileDownload/ArchiveDownload and export handlers. Both variants use the same
+      media and mandatory download filename header. Consumers treat file contents as opaque downloads; the
+      JSON bundle is a JSON object. Baseline filename selects .reqif or .reqifz and is validated server-side.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+/api/projects/{project_id}/exports/report.pdf:
+  get:
+    operationId: exports_export_report_pdf
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: File download; Content-Disposition supplies the filename.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+        content: {application/pdf: {schema: {type: string, format: binary}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/exports.rs FileDownload/ArchiveDownload and export handlers. Both variants use the same
+      media and mandatory download filename header. Consumers treat file contents as opaque downloads; the
+      JSON bundle is a JSON object. Baseline filename selects .reqif or .reqifz and is validated server-side.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+/api/projects/{project_id}/exports/requirements.reqif:
+  get:
+    operationId: exports_export_requirements_reqif
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: File download; Content-Disposition supplies the filename.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+        content: {application/xml: {schema: {type: string, format: binary}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/exports.rs FileDownload/ArchiveDownload and export handlers. Both variants use the same
+      media and mandatory download filename header. Consumers treat file contents as opaque downloads; the
+      JSON bundle is a JSON object. Baseline filename selects .reqif or .reqifz and is validated server-side.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+/api/projects/{project_id}/exports/requirements.reqifz:
+  get:
+    operationId: exports_export_requirements_reqifz
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: File download; Content-Disposition supplies the filename.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+        content: {application/zip: {schema: {type: string, format: binary}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/exports.rs FileDownload/ArchiveDownload and export handlers. Both variants use the same
+      media and mandatory download filename header. Consumers treat file contents as opaque downloads; the
+      JSON bundle is a JSON object. Baseline filename selects .reqif or .reqifz and is validated server-side.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+/api/projects/{project_id}/exports/baselines/{filename}:
+  get:
+    operationId: exports_export_baseline_reqif
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: filename
+        required: true
+        schema: {type: string}
+    responses:
+      '200':
+        description: File download; Content-Disposition supplies the filename.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+        content: {application/xml: {schema: {type: string, format: binary}}, application/zip: {schema: {type: string, format: binary}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/exports.rs FileDownload/ArchiveDownload and export handlers. Both variants use the same
+      media and mandatory download filename header. Consumers treat file contents as opaque downloads; the
+      JSON bundle is a JSON object. Baseline filename selects .reqif or .reqifz and is validated server-side.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+/api/projects/{project_id}/exports/bundle.json:
+  get:
+    operationId: exports_export_project_bundle
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: File download; Content-Disposition supplies the filename.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+        content: {application/json: {schema: {type: object}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/exports.rs FileDownload/ArchiveDownload and export handlers. Both variants use the same
+      media and mandatory download filename header. Consumers treat file contents as opaque downloads; the
+      JSON bundle is a JSON object. Baseline filename selects .reqif or .reqifz and is validated server-side.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+/api/projects/{project_id}/exports/bundle.zip:
+  get:
+    operationId: exports_export_project_bundle_zip
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: File download; Content-Disposition supplies the filename.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+        content: {application/zip: {schema: {type: string, format: binary}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/exports.rs FileDownload/ArchiveDownload and export handlers. Both variants use the same
+      media and mandatory download filename header. Consumers treat file contents as opaque downloads; the
+      JSON bundle is a JSON object. Baseline filename selects .reqif or .reqifz and is validated server-side.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+/api/projects/{project_id}/imports/excel/preview:
+  post:
+    operationId: imports_preview_excel
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {import_type: {type: string}, columns: {type: array, items: {type: object, properties: {index: {type: integer}, name: {type: string}, sample_value: {type: string}}, required: [index, name, sample_value], additionalProperties: true}}, sample_rows: {type: array, items: {type: array, items: {type: string}}}, row_count: {type: integer}, available_fields: {type: object, properties: {requirements: {type: array, items: {type: string}}, tests: {type: array, items: {type: string}}, matrix: {type: array, items: {type: string}}}, required: [requirements, tests, matrix], additionalProperties: true}, unique_values: {type: object, additionalProperties: {type: array, items: {type: string}}}}, required: [import_type, columns, sample_rows, row_count, available_fields, unique_values], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '413':
+        $ref: ../components/responses.yaml#/ApiError
+      '415':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/imports.rs, importers/excel.rs and project_bundle.rs, plus ReqIF ImportResult.
+      Session/personal token; delegated OAuth denied. Both variants validate uploads and project permissions.
+      Size/content validation and Rocket multipart failures can return framework bodies.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data: {schema: {type: object, properties: {file: {type: string, format: binary}}, required: [file], additionalProperties: true}}
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;EditRequirements;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/imports/excel:
+  post:
+    operationId: imports_commit_excel
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/common.yaml#/ExcelImportResult}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '413':
+        $ref: ../components/responses.yaml#/ApiError
+      '415':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/imports.rs, importers/excel.rs and project_bundle.rs, plus ReqIF ImportResult.
+      Session/personal token; delegated OAuth denied. Both variants validate uploads and project permissions.
+      Size/content validation and Rocket multipart failures can return framework bodies.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data: {schema: {type: object, properties: {file: {type: string, format: binary}, import_type: {type: string}, column_mappings: {type: string}, value_mappings: {type: string}}, required: [file, import_type, column_mappings], additionalProperties: true}}
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;EditRequirements;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/imports/reqif:
+  post:
+    operationId: imports_commit_reqif
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {success: {type: boolean}, message: {type: string}, imported_count: {type: integer}, created_link_count: {type: integer}, imported_attachment_count: {type: integer}, documents: {type: array, items: {type: string}}, errors: {type: array, items: {type: string}}, warnings: {type: array, items: {type: string}}, imported_requirement_ids: {type: array, items: {type: integer}}}, required: [success, message, imported_count, created_link_count, imported_attachment_count, documents, errors, warnings, imported_requirement_ids], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '413':
+        $ref: ../components/responses.yaml#/ApiError
+      '415':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/imports.rs, importers/excel.rs and project_bundle.rs, plus ReqIF ImportResult.
+      Session/personal token; delegated OAuth denied. Both variants validate uploads and project permissions.
+      Size/content validation and Rocket multipart failures can return framework bodies.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data: {schema: {type: object, properties: {file: {type: string, format: binary}}, required: [file], additionalProperties: true}}
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;EditRequirements;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/imports/bundle:
+  post:
+    operationId: imports_import_project_bundle
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {project_id: {type: integer}, slug: {type: string}, project_base_path: {type: string}, imported_counts: {type: object, properties: {categories: {type: integer}, applicability: {type: integer}, requirement_statuses: {type: integer}, verification_statuses: {type: integer}, verification_methods: {type: integer}, custom_fields: {type: integer}, requirements: {type: integer}, verifications: {type: integer}, matrix_links: {type: integer}, comments: {type: integer}, members: {type: integer}, reviewers: {type: integer}, attachments: {type: integer}, use_cases: {type: integer}, use_case_links: {type: integer}}, required: [categories, applicability, requirement_statuses, verification_statuses, verification_methods, custom_fields, requirements, verifications, matrix_links, comments, members, reviewers, attachments, use_cases, use_case_links], additionalProperties: true}, warnings: {type: array, items: {type: string}}, errors: {type: array, items: {type: string}}}, required: [project_id, slug, project_base_path, imported_counts, warnings, errors], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '413':
+        $ref: ../components/responses.yaml#/ApiError
+      '415':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/imports.rs, importers/excel.rs and project_bundle.rs, plus ReqIF ImportResult.
+      Session/personal token; delegated OAuth denied. Both variants validate uploads and project permissions.
+      Size/content validation and Rocket multipart failures can return framework bodies.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        multipart/form-data: {schema: {type: object, properties: {file: {type: string, format: binary}, group_id: {type: integer}}, required: [file], additionalProperties: true}}
+    x-marreq-authorization: personal-token-or-session;delegated-denied;group-ManageProjects
+    x-marreq-csrf: session-csrf

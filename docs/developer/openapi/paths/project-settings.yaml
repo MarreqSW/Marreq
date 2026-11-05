@@ -1,0 +1,344 @@
+/api/projects/{project_id}/custom_fields:
+  get:
+    operationId: custom_fields_list_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/projects.yaml#/CustomFieldDefinition}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/custom_fields.rs, models and CustomFieldService. Project boundaries and field validation
+      apply in both variants; enum_values is arbitrary stored JSON or null.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ViewRequirements
+  post:
+    operationId: custom_fields_create
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}, id: {type: integer}}, required: [status, id], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/custom_fields.rs, models and CustomFieldService. Project boundaries and field validation
+      apply in both variants; enum_values is arbitrary stored JSON or null.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/projects.yaml#/CustomFieldDefinitionPayload}}
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ManageCustomFields;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/custom_fields/{field_id}:
+  put:
+    operationId: custom_fields_update
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: field_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string}, message: {type: string}}, required: [status, message], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/custom_fields.rs, models and CustomFieldService. Project boundaries and field validation
+      apply in both variants; enum_values is arbitrary stored JSON or null.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/projects.yaml#/CustomFieldDefinitionPayload}}
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ManageCustomFields;not-archived
+    x-marreq-csrf: session-csrf
+  delete:
+    operationId: custom_fields_delete
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: field_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string}, message: {type: string}}, required: [status, message], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/custom_fields.rs, models and CustomFieldService. Project boundaries and field validation
+      apply in both variants; enum_values is arbitrary stored JSON or null.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;project-membership;ManageCustomFields;not-archived
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/saved_views:
+  get:
+    operationId: saved_views_list
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/projects.yaml#/SavedView}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/saved_views.rs and SavedViewService/models. JSON definition is stored as serde_json::Value
+      after service validation. Private visibility, ownership, baseline locking and archived-project rules are
+      enforced in both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - requirements:read
+    x-marreq-authorization: project-membership;ViewRequirements;scoped-requirements-read
+  post:
+    operationId: saved_views_create
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/projects.yaml#/SavedView}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/saved_views.rs and SavedViewService/models. JSON definition is stored as serde_json::Value
+      after service validation. Private visibility, ownership, baseline locking and archived-project rules are
+      enforced in both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/projects.yaml#/SavedViewPayload}}
+    x-marreq-authorization: >-
+      project-membership;ViewRequirements;personal-token-or-session;delegated-denied;not-archived;owner-or-project-admin;unlocked
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/saved_views/{view_id}:
+  get:
+    operationId: saved_views_get
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: view_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/projects.yaml#/SavedView}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/saved_views.rs and SavedViewService/models. JSON definition is stored as serde_json::Value
+      after service validation. Private visibility, ownership, baseline locking and archived-project rules are
+      enforced in both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: project-membership;ViewRequirements;personal-token-or-session;delegated-denied;visible-owner-or-shared
+  patch:
+    operationId: saved_views_update
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: view_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/projects.yaml#/SavedView}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/saved_views.rs and SavedViewService/models. JSON definition is stored as serde_json::Value
+      after service validation. Private visibility, ownership, baseline locking and archived-project rules are
+      enforced in both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/projects.yaml#/SavedViewPayload}}
+    x-marreq-authorization: >-
+      project-membership;ViewRequirements;personal-token-or-session;delegated-denied;not-archived;owner-or-project-admin;unlocked
+    x-marreq-csrf: session-csrf
+  delete:
+    operationId: saved_views_delete
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: view_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/auth.yaml#/AuthStatus}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/saved_views.rs and SavedViewService/models. JSON definition is stored as serde_json::Value
+      after service validation. Private visibility, ownership, baseline locking and archived-project rules are
+      enforced in both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: >-
+      project-membership;ViewRequirements;personal-token-or-session;delegated-denied;not-archived;owner-or-project-admin;unlocked
+    x-marreq-csrf: session-csrf

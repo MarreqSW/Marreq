@@ -1,0 +1,134 @@
+Verification:
+  type: object
+  properties:
+    id:
+      type: integer
+    status_id:
+      type: integer
+    project_id:
+      type: integer
+    author_id:
+      type: integer
+    reviewer_id:
+      type: integer
+    name:
+      type: string
+    reference_code:
+      type: string
+    description:
+      type: string
+    source:
+      type: string
+    parent_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    verification_method_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    status_set_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    status_set_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+  required:
+    - id
+    - status_id
+    - project_id
+    - author_id
+    - reviewer_id
+    - name
+    - reference_code
+    - description
+    - source
+    - parent_id
+    - verification_method_id
+    - status_set_by
+    - status_set_at
+  additionalProperties: true
+NewVerification:
+  type: object
+  properties:
+    id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    status_id:
+      type: integer
+    project_id:
+      type: integer
+    author_id:
+      type: integer
+    reviewer_id:
+      type: integer
+    name:
+      type: string
+    reference_code:
+      type: string
+    description:
+      type: string
+    source:
+      type: string
+    parent_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    verification_method_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+  required:
+    - status_id
+    - project_id
+    - author_id
+    - reviewer_id
+    - name
+    - reference_code
+    - description
+    - source
+  additionalProperties: true
+VerificationMethod:
+  type: object
+  properties:
+    id:
+      type: integer
+    project_id:
+      type: integer
+    title:
+      type: string
+    description:
+      type: string
+    tag:
+      type: string
+  required:
+    - id
+    - project_id
+    - title
+    - description
+    - tag
+  additionalProperties: true
+NewVerificationMethod:
+  type: object
+  properties:
+    id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    project_id:
+      type: integer
+    title:
+      type: string
+    description:
+      type: string
+    tag:
+      type: string
+  required:
+    - title
+    - description
+    - tag
+    - project_id
+  additionalProperties: true

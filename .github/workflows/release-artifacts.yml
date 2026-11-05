@@ -20,13 +20,21 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned OpenAPI bundler
+        run: npm ci
       - name: Install pinned OpenAPI standards engine
         run: scripts/install-oasdiff.sh
       - name: Test contract semantics and validate producer document
         run: |
           cargo test --locked -p marreq-contracts
           cargo run --locked -p marreq-contracts -- validate --document-only
-          cargo test --locked -p marreq-cloud --test api_contract_inventory
+      - name: Verify candidate backend routes and serializers
+        if: startsWith(github.ref_name, 'marreq-server-v')
+        run: cargo test --locked -p marreq-cloud --test api_contract_inventory
       - name: Require immutable deployment-plan revision
         id: plan
         env:

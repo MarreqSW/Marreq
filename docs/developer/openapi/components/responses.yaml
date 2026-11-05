@@ -1,0 +1,6 @@
+ApiError:
+  description: API error; use cases may include code and structured details. Guard/fairing errors can have an empty body.
+  content:
+    application/json:
+      schema:
+        $ref: ../schemas/common.yaml#/ApiError

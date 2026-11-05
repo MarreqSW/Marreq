@@ -28,13 +28,13 @@ jobs:
           cache: npm
       - name: Install pinned standards tooling
         run: scripts/install-oasdiff.sh
-      - name: Test native compatibility semantics and CLI failures
-        run: cargo test --locked -p marreq-contracts
       - name: Install TypeScript tooling and consumers
         run: |
           npm ci
           npm ci --prefix frontend
           npm ci --prefix mcp-server
+      - name: Test native compatibility semantics and CLI failures
+        run: cargo test --locked -p marreq-contracts
       - name: Check generated consumer schemas
         run: node scripts/generate-api-types.mjs --check
       - name: Verify compiled routes and handler wire contracts
@@ -322,6 +322,12 @@ jobs:
       MARREQ_TEST_DATABASE_URL: postgres://rust:rust@127.0.0.1:5433/marreq
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install pinned OpenAPI bundler
+        run: npm ci
 
       - name: Free runner disk space
         run: |

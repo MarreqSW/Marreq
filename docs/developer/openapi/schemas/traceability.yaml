@@ -1,0 +1,252 @@
+Dsm:
+  type: object
+  properties:
+    order:
+      type: string
+    link_types:
+      type: array
+      items:
+        type: string
+    requirements:
+      type: array
+      items:
+        type: object
+        properties: {id: {type: integer}, index: {type: integer}, category_id: {type: integer}, depth: {type: integer}, reference_code: {type: string}, title: {type: string}, approval_state: {type: string}, category: {type: string}, parent_id: {anyOf: [{type: integer}, {type: 'null'}]}}
+        required: [id, index, category_id, depth, reference_code, title, approval_state, category, parent_id]
+        additionalProperties: true
+    cells:
+      type: array
+      items:
+        type: object
+        properties: {row: {type: integer}, col: {type: integer}, link_types: {type: array, items: {type: string}}, link_ids: {type: array, items: {type: integer}}, upstream_changed: {type: boolean}, in_loop: {type: boolean}}
+        required: [row, col, link_types, link_ids, upstream_changed, in_loop]
+        additionalProperties: true
+    groups:
+      type: array
+      items:
+        type: object
+        properties: {label: {type: string}, start: {type: integer}, end: {type: integer}}
+        required: [label, start, end]
+        additionalProperties: true
+    loops:
+      type: array
+      items:
+        type: object
+        properties: {requirement_ids: {type: array, items: {type: integer}}, path: {type: array, items: {type: integer}}}
+        required: [requirement_ids, path]
+        additionalProperties: true
+    stats:
+      type: object
+      properties:
+        requirements: {type: integer}
+        links: {type: integer}
+        cells: {type: integer}
+        loops: {type: integer}
+        upstream_changed: {type: integer}
+        external_links: {type: integer}
+      required:
+        - requirements
+        - links
+        - cells
+        - loops
+        - upstream_changed
+        - external_links
+      additionalProperties: true
+  required:
+    - order
+    - link_types
+    - requirements
+    - cells
+    - groups
+    - loops
+    - stats
+  additionalProperties: true
+MatrixLink:
+  type: object
+  properties:
+    req_id:
+      type: integer
+    verification_id:
+      type: integer
+    project_id:
+      type: integer
+    creation_date:
+      type: string
+    suspect:
+      type: boolean
+    suspect_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    suspect_reason:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    cleared_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    cleared_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    triggering_version_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    triggering_user_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+  required:
+    - req_id
+    - verification_id
+    - project_id
+    - creation_date
+    - suspect
+    - suspect_at
+    - suspect_reason
+    - cleared_at
+    - cleared_by
+    - triggering_version_id
+    - triggering_user_id
+  additionalProperties: true
+VerificationControlView:
+  type: object
+  properties:
+    verification_id:
+      type: integer
+    verification_level:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    verification_stage:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    evidence_reference:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    updated_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    updated_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    suggestions:
+      type: object
+      properties:
+        levels: {type: array, items: {type: string}}
+        stages: {type: array, items: {type: string}}
+      required:
+        - levels
+        - stages
+      additionalProperties: true
+  required:
+    - verification_id
+    - verification_level
+    - verification_stage
+    - evidence_reference
+    - updated_by
+    - updated_at
+    - suggestions
+  additionalProperties: true
+RequirementCloseOutView:
+  type: object
+  properties:
+    requirement_id:
+      type: integer
+    compliance:
+      anyOf:
+        - {type: string, enum: [C, PC, NC]}
+        - {type: 'null'}
+    note:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    set_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    set_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    close_out:
+      type: object
+      properties:
+        status: {type: string, enum: [open, closed]}
+        reason: {type: string}
+      required:
+        - status
+        - reason
+      additionalProperties: true
+    verifications:
+      type: array
+      items:
+        type: object
+        properties: {id: {type: integer}, reference_code: {type: string}, name: {type: string}, status_id: {type: integer}, status_title: {type: string}, outcome: {type: string, enum: [passed, failed, in_progress, not_run]}}
+        required: [id, reference_code, name, status_id, status_title, outcome]
+        additionalProperties: true
+  required:
+    - requirement_id
+    - compliance
+    - note
+    - set_by
+    - set_at
+    - close_out
+    - verifications
+  additionalProperties: true
+VerificationControlInput:
+  type: object
+  properties:
+    verification_level:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    verification_stage:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    evidence_reference:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+  required: []
+  additionalProperties: false
+RequirementVersionLink:
+  type: object
+  properties:
+    id:
+      type: integer
+    source_version_id:
+      type: integer
+    target_version_id:
+      type: integer
+    project_id:
+      type: integer
+    link_type:
+      type: string
+    created_at:
+      type: string
+    rationale:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    metadata:
+      anyOf:
+        - {}
+        - {type: 'null'}
+  required:
+    - id
+    - source_version_id
+    - target_version_id
+    - project_id
+    - link_type
+    - created_at
+    - rationale
+    - metadata
+  additionalProperties: true

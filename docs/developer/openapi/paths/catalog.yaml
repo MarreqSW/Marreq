@@ -1,0 +1,528 @@
+/api/applicability:
+  get:
+    operationId: applicability_list
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/catalog.yaml#/Applicability}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/applicability.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire shape;
+      reads filter by ViewRequirements, mutations require ManageProjectConfiguration. System status mutations
+      are rejected.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: ViewRequirements
+  post:
+    operationId: applicability_create
+    parameters: []
+    responses:
+      '201':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}, id: {type: integer}}, required: [status, id], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/applicability.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire shape;
+      reads filter by ViewRequirements, mutations require ManageProjectConfiguration. System status mutations
+      are rejected.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/catalog.yaml#/NewApplicability}}
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf
+/api/applicability/{id}:
+  put:
+    operationId: applicability_update
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string}, message: {type: string}}, required: [status, message], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/applicability.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire shape;
+      reads filter by ViewRequirements, mutations require ManageProjectConfiguration. System status mutations
+      are rejected.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/catalog.yaml#/NewApplicability}}
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf
+  delete:
+    operationId: applicability_delete
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Success; empty body.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/applicability.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire shape;
+      reads filter by ViewRequirements, mutations require ManageProjectConfiguration. System status mutations
+      are rejected.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf
+/api/categories:
+  get:
+    operationId: categories_list
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/catalog.yaml#/Category}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/categories.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire shape; reads
+      filter by ViewRequirements, mutations require ManageProjectConfiguration. System status mutations are
+      rejected.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: ViewRequirements
+  post:
+    operationId: categories_create
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}, id: {type: integer}}, required: [status, id], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/categories.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire shape; reads
+      filter by ViewRequirements, mutations require ManageProjectConfiguration. System status mutations are
+      rejected.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/catalog.yaml#/NewCategory}}
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf
+/api/categories/{id}:
+  put:
+    operationId: categories_update
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string}, message: {type: string}}, required: [status, message], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/categories.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire shape; reads
+      filter by ViewRequirements, mutations require ManageProjectConfiguration. System status mutations are
+      rejected.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/catalog.yaml#/NewCategory}}
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf
+  delete:
+    operationId: categories_delete
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Success; empty body.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/categories.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire shape; reads
+      filter by ViewRequirements, mutations require ManageProjectConfiguration. System status mutations are
+      rejected.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf
+/api/status:
+  get:
+    operationId: status_list_requirement_statuses
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/catalog.yaml#/RequirementStatus}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/status.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire shape; reads
+      filter by ViewRequirements, mutations require ManageProjectConfiguration. System status mutations are
+      rejected.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: ViewRequirements
+  post:
+    operationId: status_create_requirement_status
+    parameters: []
+    responses:
+      '201':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}, id: {type: integer}}, required: [status, id], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/status.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire shape; reads
+      filter by ViewRequirements, mutations require ManageProjectConfiguration. System status mutations are
+      rejected.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/catalog.yaml#/NewRequirementStatus}}
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf
+/api/status/{id}:
+  put:
+    operationId: status_update_requirement_status
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/auth.yaml#/AuthStatus}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/status.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire shape; reads
+      filter by ViewRequirements, mutations require ManageProjectConfiguration. System status mutations are
+      rejected.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/catalog.yaml#/NewRequirementStatus}}
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf
+  delete:
+    operationId: status_delete_requirement_status
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Success; empty body.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/status.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire shape; reads
+      filter by ViewRequirements, mutations require ManageProjectConfiguration. System status mutations are
+      rejected.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf
+/api/verification-status:
+  get:
+    operationId: verification_status_list_verification_statuses
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/catalog.yaml#/VerificationStatus}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/verification_status.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire
+      shape; reads filter by ViewRequirements, mutations require ManageProjectConfiguration. System status
+      mutations are rejected.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: ViewRequirements
+  post:
+    operationId: verification_status_create_verification_status
+    parameters: []
+    responses:
+      '201':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}, id: {type: integer}}, required: [status, id], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/verification_status.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire
+      shape; reads filter by ViewRequirements, mutations require ManageProjectConfiguration. System status
+      mutations are rejected.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/catalog.yaml#/NewVerificationStatus}}
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf
+/api/verification-status/{id}:
+  put:
+    operationId: verification_status_update_verification_status
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/auth.yaml#/AuthStatus}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/verification_status.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire
+      shape; reads filter by ViewRequirements, mutations require ManageProjectConfiguration. System status
+      mutations are rejected.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/catalog.yaml#/NewVerificationStatus}}
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf
+  delete:
+    operationId: verification_status_delete_verification_status
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Success; empty body.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/verification_status.rs, models/entities.rs and models/forms.rs. Shared Server/Cloud wire
+      shape; reads filter by ViewRequirements, mutations require ManageProjectConfiguration. System status
+      mutations are rejected.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: ManageProjectConfiguration;not-archived
+    x-marreq-csrf: session-csrf

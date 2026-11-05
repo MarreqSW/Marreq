@@ -1,0 +1,87 @@
+/api/mcp/principal:
+  get:
+    operationId: mcp_principal
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/mcp.yaml#/McpPrincipalResponse}}}
+      '401':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+/api/mcp/audit:
+  post:
+    operationId: mcp_audit
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/auth.yaml#/AuthStatus}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/mcp.rs and McpAuditAuth. Internal audit requires both service secret and user credential;
+      stdio rejects delegated OAuth and sessions. Allowed tool names and summary limits are enforced. Shared
+      in Server and Cloud.
+    security:
+      - bearerAuth: []
+    x-marreq-authentication-note: Personal API tokens only; delegated OAuth and sessions rejected.
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/mcp.yaml#/McpAuditRequest}}
+    x-marreq-authorization: personal-api-token-only;project-membership
+    x-marreq-csrf: session-csrf
+/api/mcp/internal/audit:
+  post:
+    operationId: mcp_internal_audit
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/auth.yaml#/AuthStatus}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/mcp.rs and McpAuditAuth. Internal audit requires both service secret and user credential;
+      stdio rejects delegated OAuth and sessions. Allowed tool names and summary limits are enforced. Shared
+      in Server and Cloud.
+    security:
+      - bearerAuth: []
+        mcpServiceAuth: []
+      - cookieAuth: []
+        mcpServiceAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/mcp.yaml#/McpAuditRequest}}
+    x-marreq-authorization: internal-mcp-service-secret;authenticated-user;project-membership
+    x-marreq-csrf: session-csrf

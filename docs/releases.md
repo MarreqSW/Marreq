@@ -1,5 +1,7 @@
 # Releases and dual artifact versioning
 
+The database safety prerequisite of #423 uses [controlled migration jobs and coherent recovery bundles](developer/database-migrations.md). Both backend images share the same serialized Diesel runner; startup only validates history. Future release automation must stop progression on backup, restore rehearsal, migration, schema or real application smoke failure. Retained binaries need an explicitly tested expansion compatibility pin; database rollback is never automatic.
+
 Marreq ships independently versioned artifacts:
 
 | Artifact | Version source of truth | Compatibility declaration |

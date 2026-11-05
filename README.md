@@ -382,7 +382,7 @@ cd marreq-core
 diesel migration generate migration_name
 
 # Run migrations
-diesel migration run
+cargo run --locked -p marreq-migrations -- dev-init
 
 # Revert migrations
 diesel migration redo

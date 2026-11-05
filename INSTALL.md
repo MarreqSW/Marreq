@@ -1,5 +1,7 @@
 # Installation guide (DevOps)
 
+Prepare the database before starting either backend. Follow [controlled migrations and backup/restore](docs/developer/database-migrations.md); production startup no longer runs Diesel or seeds sample content.
+
 This document describes how to provision hosts and CI runners so you can build, test, and run **Marreq** (Rust backend, PostgreSQL with pgvector, React/Vite frontend, optional Ollama and MCP). For day-to-day developer workflows and deployment modes, see [docs/developer/setup.md](docs/developer/setup.md), [docs/developer/database-setup.md](docs/developer/database-setup.md), and [docker/README.md](docker/README.md).
 
 ## 1. What you are installing

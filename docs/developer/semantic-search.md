@@ -31,7 +31,7 @@ Manual equivalent:
 
 ```bash
 docker exec -i $(docker compose -f docker/docker-compose.yml ps -q db) psql -U rust -d postgres -c "CREATE DATABASE marreq;"
-DATABASE_URL='postgres://rust:rust@localhost:5432/Marreq' diesel migration run
+DATABASE_URL='postgres://rust:rust@localhost:5432/Marreq' cargo run --locked -p marreq-migrations -- dev-init
 docker exec -i $(docker compose -f docker/docker-compose.yml ps -q db) psql -U rust -d marreq < marreq-core/scripts/init_complete.sql
 ```
 

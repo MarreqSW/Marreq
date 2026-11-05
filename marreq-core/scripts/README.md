@@ -1,5 +1,7 @@
 # Marreq Database Scripts
 
+For migration commands, use `db_migrate.sh dev-init` in development, `db_migrate.sh up` for recovery-gated production execution, and `check` for read-only validation. Revert/redo are intentionally not supported by the wrapper. See [the current migration runbook](../../docs/developer/database-migrations.md); production requires the recovery gate and never runs database reverts.
+
 This directory contains all scripts needed to set up, migrate, seed, and
 maintain the Marreq database.  **Diesel is the single authority for schema
 management.**  No script in this directory applies DDL directly, all schema
@@ -26,7 +28,7 @@ changes go through `marreq-core/migrations/` (run `diesel` from `marreq-core/`).
 |---|---|
 | `db_setup.sh` | **Fresh install**, create DB + apply all migrations |
 | `db_seed.sh` | Load demo/test data (dev/testing only) |
-| `db_migrate.sh` | Apply or revert migrations after a version update |
+| `db_migrate.sh` | Validate schema or explicitly apply serialized migrations |
 | `db_backup.sh` | Dump the database to a compressed archive |
 | `db_reset.sh` | Drop the database entirely (dev resets only) |
 | `lazy_setup.sh` | One-click developer bootstrap (full install) |
@@ -57,7 +59,7 @@ cargo run -p marreq-server
 - Start the `db` Docker service if it is not running
 - Wait for PostgreSQL to be ready
 - Create the `marreq` database if it does not exist
-- Run `diesel migration run` (applies every migration in `migrations/` in order)
+- Run `cargo run --locked -p marreq-migrations -- dev-init` (applies every migration in `migrations/` in order)
 
 For the full application setup matrix (`marreq-server` / `marreq-cloud`, Docker / local), see [`docs/developer/setup.md`](../../docs/developer/setup.md).
 
@@ -71,18 +73,16 @@ For the full application setup matrix (`marreq-server` / `marreq-cloud`, Docker 
 
 ```bash
 git pull
-./marreq-core/scripts/db_migrate.sh up
+./marreq-core/scripts/db_migrate.sh dev-init
 cargo build --release
 ```
 
 ### 4. Rolling back a migration (development)
 
 ```bash
-# Revert the most recent migration
-./marreq-core/scripts/db_migrate.sh down
-
-# Revert 2 migrations
-./marreq-core/scripts/db_migrate.sh down 2
+# Only on a disposable development database, with no concurrent runner:
+cd marreq-core
+diesel migration revert --number 1
 ```
 
 ### 5. Check migration status
@@ -143,14 +143,14 @@ Schema is managed exclusively through Diesel migrations in `migrations/`.
 | `2026-01-31-000001_baseline_schema` | Full initial schema (all tables, indexes, triggers) |
 
 Diesel tracks applied migrations in the `__diesel_schema_migrations` table.
-Running `diesel migration run` (or `db_migrate.sh up`) is idempotent, already
+Running `cargo run --locked -p marreq-migrations -- dev-init` (or `db_migrate.sh dev-init`) is idempotent, already
 applied migrations are skipped.
 
 To add a new migration:
 ```bash
 diesel migration generate <migration_name>
 # Edit migrations/<timestamp>_<name>/up.sql and down.sql
-./marreq-core/scripts/db_migrate.sh up
+./marreq-core/scripts/db_migrate.sh dev-init
 ```
 
 ---

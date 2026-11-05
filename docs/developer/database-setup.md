@@ -1,5 +1,7 @@
 # Marreq Database Setup Guide
 
+Controlled schema releases and coherent database/attachment recovery are documented in [the migration runbook](database-migrations.md). Backend startup requires an explicitly prepared schema; production uses `apply`, while `dev-init` is development-only. The older manual restore examples below are operational building blocks, not verified release recovery evidence.
+
 For the full binary-level setup flows (**`marreq-server`** / **`marreq-cloud`**, Docker / local), start with the [setup guide](setup.md). This page stays focused on database initialization, seeding, migration, reset, and verification details.
 
 ## Overview
@@ -82,7 +84,7 @@ cp .env.example .env
    ```
 2. Apply migrations (schema):
    ```bash
-   diesel migration run
+   cargo run --locked -p marreq-migrations -- dev-init
    ```
 3. Seed sample data:
    ```bash
@@ -168,7 +170,7 @@ Seed data only:
 Fresh install script that:
 - Starts the Docker `db` service if not running
 - Creates the `marreq` database if absent
-- Runs `diesel migration run` (schema source of truth)
+- Runs `cargo run --locked -p marreq-migrations -- dev-init` (schema source of truth)
 
 Use `--seed` flag to also load demo data in one step.
 
@@ -176,10 +178,10 @@ Use `--seed` flag to also load demo data in one step.
 Loads demo/test data from `init_complete.sql`. **Not for production.**
 
 ### `marreq-core/scripts/db_migrate.sh`
-Wrapper for `diesel migration run / revert / list`.  Use after pulling updates:
+Wrapper for the shared serialized runner. Use `dev-init` after pulling development updates; production `up` requires the recovery gate:
 ```bash
-./marreq-core/scripts/db_migrate.sh up     # apply pending migrations
-./marreq-core/scripts/db_migrate.sh list   # check status
+./marreq-core/scripts/db_migrate.sh dev-init # development only, apply pending migrations
+./marreq-core/scripts/db_migrate.sh check    # read-only required-schema check
 ```
 
 ### `marreq-core/scripts/db_backup.sh`

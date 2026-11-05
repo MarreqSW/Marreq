@@ -14,6 +14,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  database-migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6
+      - name: Enforce released history and expand review policy
+        run: |
+          python3 scripts/check-migration-policy.py
+          python3 scripts/test-migration-policy.py
+      - name: Test real PostgreSQL orchestration and isolated recovery
+        run: scripts/test-migrations.sh
+
   api-contracts:
     runs-on: ubuntu-latest
     steps:
@@ -207,6 +222,8 @@ jobs:
           build-args: MARREQ_BIN=${{ matrix.binary }}
           cache-from: type=gha,scope=${{ matrix.binary }}
           cache-to: type=gha,mode=max,scope=${{ matrix.binary }}
+      - name: Verify explicit migrations and schema startup gate
+        run: scripts/test-migration-image.sh ${{ matrix.binary }}:ci
       - name: Verify runtime excludes contract tooling
         run: |
           docker run --rm --entrypoint sh ${{ matrix.binary }}:ci -ec '

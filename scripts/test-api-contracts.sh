@@ -19,13 +19,11 @@ for attempt in {1..60}; do
   sleep 1
 done
 if [[ "$ready" != true ]]; then echo "isolated contract DB did not become ready" >&2; exit 1; fi
-for migration in marreq-core/migrations/*/up.sql; do
-  docker exec -i "$container" psql -v ON_ERROR_STOP=1 -U contract_test -d marreq_contract_test < "$migration" > "$work/migration.log" 2>&1 || { cat "$work/migration.log"; exit 1; }
-done
 port=$(docker port "$container" 5432/tcp)
 port=${port##*:}
 export MARREQ_TEST_DATABASE_URL="postgres://contract_test:disposable-contract-test@127.0.0.1:$port/marreq_contract_test"
 export DATABASE_URL="$MARREQ_TEST_DATABASE_URL"
+cargo run --locked -p marreq-migrations -- dev-init
 export MARREQ_CONTRACT_TRANSCRIPT="$work/exchanges.jsonl"
 cargo test --locked -p marreq-core --no-default-features --test delegated_oauth_mcp_tools_postgres_integration --no-run --message-format=json > "$work/test-build.jsonl"
 test_executable=$(node -e 'const fs=require("node:fs"); console.log(fs.readFileSync(process.argv[1],"utf8").trim().split("\n").map(JSON.parse).find(r=>r.executable&&r.target.name==="delegated_oauth_mcp_tools_postgres_integration").executable)' "$work/test-build.jsonl")

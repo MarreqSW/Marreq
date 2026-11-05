@@ -190,9 +190,8 @@ pub fn export(root: &Path, who: &str, version: Version, mode: Option<String>) ->
         coverage::scan(root, who, &spec)?.operations
     };
     let selected = contract::select(&spec, &required, mode.as_deref())?;
-    if who == "backend" {
-        contract::validate(&selected)?;
-    } else {
+    contract::validate(&selected)?;
+    if who != "backend" {
         contract::validate_wire_contract(&selected)?;
     }
     let directory = if who == "mcp" { "mcp-server" } else { who };

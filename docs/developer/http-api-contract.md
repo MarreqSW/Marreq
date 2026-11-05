@@ -337,7 +337,9 @@ scripts/test-api-contracts.sh
 `validate` checks document/policy validity and requires a verified schema for
 **every discovered consumer dependency**. `--document-only` checks the document
 without certifying consumer coverage; it cannot create a consumer release bundle.
-`select` and type generation require verified consumer contracts too; there is
+`select` validates the bundled document with the pinned standards engine before
+selection/type generation; consumer export validates its selected document too.
+Both require verified consumer contracts; there is
 no development bypass for an unverified consumer operation.
 
 When adding/changing an HTTP call, update the actual Rocket implementation and

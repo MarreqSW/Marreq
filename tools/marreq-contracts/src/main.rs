@@ -133,6 +133,7 @@ fn run() -> anyhow::Result<serde_json::Value> {
             output,
         } => {
             let spec = source::load(&spec)?;
+            contract::validate(&spec)?;
             let coverage = coverage::scan(&root, &component, &spec)?;
             contract::write(
                 &output,

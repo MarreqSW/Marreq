@@ -212,9 +212,9 @@ jobs:
           docker run --rm --entrypoint sh ${{ matrix.binary }}:ci -ec '
             test ! -e /app/tools
             test ! -e /app/docs
-            ! command -v marreq-contracts
-            ! command -v oasdiff
-            ! command -v node
+            for tool in marreq-contracts oasdiff node; do
+              if command -v "$tool"; then exit 1; fi
+            done
           '
 
   mcp-tests:

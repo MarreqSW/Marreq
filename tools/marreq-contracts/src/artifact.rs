@@ -212,6 +212,7 @@ pub fn export(root: &Path, who: &str, version: Version, mode: Option<String>) ->
         inputs.extend(
             [
                 "marreq-core",
+                "tools/marreq-migrations",
                 "marreq-cloud",
                 "marreq-server",
                 "docker/Dockerfile",

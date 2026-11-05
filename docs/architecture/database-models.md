@@ -334,12 +334,12 @@ The project uses Diesel CLI to manage migrations.
 
 ```bash
 diesel migration generate migration_name  # Create
-diesel migration run                      # Apply
-diesel migration revert                   # Revert
+cargo run --locked -p marreq-migrations -- dev-init                      # Apply
+# Revert/redo: disposable development only; see database-migrations.md
 diesel print-schema > src/schema.rs      # Regenerate schema
 ```
 
-See [`migrations/`](../../migrations/) folder for all migrations.
+See [`migrations/`](../../marreq-core/migrations/) folder for all migrations.
 
 ---
 

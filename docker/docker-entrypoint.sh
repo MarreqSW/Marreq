@@ -1,33 +1,9 @@
 #!/bin/sh
-set -e
-
-# Entrypoint shared by the marreq-server and marreq-cloud images
-# (docker-compose `marreq-server` / `marreq-cloud` services): JSON API only;
-# the SPA is served by the frontend container.
-
-if [ -n "${DATABASE_URL}" ]; then
-  echo "Waiting for database..."
-  until psql "${DATABASE_URL}" -c "SELECT 1" >/dev/null 2>&1; do
-    echo "Database is unavailable - sleeping"
-    sleep 2
-  done
-  echo "Database is up."
-
-  echo "Running migrations..."
-  diesel migration run
-  echo "Migrations complete."
-
-  AUTO_SEED="${MARREQ_AUTO_SEED:-true}"
-  if [ "$AUTO_SEED" = "true" ]; then
-    HAS_PROJECTS_DATA=$(psql "${DATABASE_URL}" -t -A -c "SELECT EXISTS (SELECT 1 FROM projects LIMIT 1);" 2>/dev/null | tr -d '[:space:]' || echo "f")
-    if [ "$HAS_PROJECTS_DATA" != "t" ]; then
-      echo "No projects found. Running sample data seed (init_complete.sql)..."
-      psql "${DATABASE_URL}" -f /app/scripts/init_complete.sql
-      echo "Sample data seed complete."
-    else
-      echo "Projects already exist; skipping sample data seed."
-    fi
-  fi
+set -eu
+# Schema validation happens in both backend binaries before binding a socket.
+# Initialization and demo seeding are explicit development operations.
+if [ "${MARREQ_AUTO_SEED:-false}" != "false" ]; then
+  echo 'Automatic seeding is disabled; use marreq-core/scripts/db_seed.sh explicitly in development.' >&2
+  exit 1
 fi
-
 exec "$@"

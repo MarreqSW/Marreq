@@ -1,0 +1,22 @@
+# Use with the selected base stack. No published ports, restart policy or Docker socket.
+# Choose the SAME immutable backend image used for the release candidate.
+services:
+  migrate:
+    image: ${MARREQ_MIGRATION_IMAGE:?Set the candidate Server or Cloud image digest}
+    profiles: [operations]
+    entrypoint: [/usr/local/bin/marreq-migrations]
+    command: [apply]
+    restart: 'no'
+    environment:
+      DATABASE_URL: ${MARREQ_MIGRATION_DATABASE_URL:?Set the migration owner connection}
+      MARREQ_WRITES_QUIESCED: ${MARREQ_WRITES_QUIESCED:-false}
+      MARREQ_RECOVERY_BUNDLE: /recovery/bundle
+      MARREQ_MIGRATION_LOCK_SECONDS: ${MARREQ_MIGRATION_LOCK_SECONDS:-60}
+    volumes:
+      - ${MARREQ_RECOVERY_ROOT:?Set recovery root directory}:/recovery:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]

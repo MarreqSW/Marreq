@@ -11,6 +11,7 @@ mod routes;
 #[allow(clippy::result_large_err)]
 async fn main() -> Result<(), rocket::Error> {
     marreq_core::config::AppConfig::install_from_env_or_exit();
+    marreq_core::schema_preflight();
     let mode: &'static dyn marreq_core::deployment::DeploymentMode = &deployment::INSTANCE;
     let auth = marreq_core::auth::AuthConfig::server_from_env().unwrap_or_else(|error| {
         eprintln!("Invalid authentication configuration: {error}");

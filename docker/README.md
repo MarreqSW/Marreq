@@ -1,5 +1,18 @@
 # Docker Layout and Usage
 
+Backend startup now checks schema history without applying migrations or seeds. Run the explicit one-shot migration job before starting a new schema release; see [the migration and recovery runbook](../docs/developer/database-migrations.md). Development initialization uses `marreq-migrations dev-init`. Production auto seeding is disabled.
+
+For a fresh **development** light stack (production uses the recovery-gated runbook):
+
+```sh
+docker compose -f docker/docker-compose.light.yml up -d db
+docker compose -f docker/docker-compose.light.yml build marreq-server
+docker compose -f docker/docker-compose.light.yml run --rm \
+  --entrypoint /usr/local/bin/marreq-migrations marreq-server dev-init
+docker compose -f docker/docker-compose.light.yml up -d --build
+```
+
+
 All container-related files live in this directory.
 
 Copy the project env template before first use:
@@ -22,7 +35,7 @@ For the end-to-end setup flows for **`marreq-server`** and **`marreq-cloud`** (D
 - `frontend/nginx.conf.template`: nginx template used by both frontend containers; serves the SPA and proxies `/api/`, `/oauth/`, and `/.well-known/` to Rocket and `/mcp` to Node
 - `../mcp-server/Dockerfile`: production MCP image (TypeScript build stage; non-root Node runtime). Tagged releases push `ghcr.io/<owner>/marreq-mcp-server`.
 - `Dockerfile.dockerignore`: Build context exclusions for `Dockerfile`
-- `docker-entrypoint.sh`: Backend container startup (wait for DB + migrations + start app)
+- `docker-entrypoint.sh`: Backend container startup (read-only schema preflight + start app)
 
 ## Split stack (default compose)
 
@@ -237,7 +250,7 @@ The `MARREQ_BIN` build-arg selects which workspace crate to compile. Valid value
 | `marreq-server` (default) | `target/release/marreq-server` | `marreq-server/Rocket.toml` |
 | `marreq-cloud` | `target/release/marreq-cloud` | `marreq-cloud/Rocket.toml` |
 
-Diesel migrations are always sourced from `marreq-core/migrations/` and placed at `/app/migrations` in the container.
+Diesel migrations are embedded from `marreq-core/migrations/` when the runner is compiled; a copy remains at `/app/migrations` for inspection. Editing that runtime copy does not change the compiled migration plan.
 
 Frontend (from repo root):
 
@@ -314,7 +327,7 @@ Compose maps the DB to host **5433**, not 5432, so it should not collide with sy
 
 This section applies only to the full `docker-compose.yml` stack. Compose maps Ollama to host **11435**, not 11434, so it should not collide with a host-installed Ollama. To call the **container** Ollama from your machine (e.g. `curl`), use `http://localhost:11435`. If **11435** is taken, change the loopback mapping (e.g. `127.0.0.1:11436:11434`).
 
-### `InsecureSecretKey` / Rocket exits after migrations
+### `InsecureSecretKey` / Rocket exits during startup
 
 The container runs a **release** binary; Rocket needs **`ROCKET_SECRET_KEY`** (256-bit, `openssl rand -base64 32`). Both base Compose files inject a **development default** when the variable is unset. The production override rejects a missing key, so set `ROCKET_SECRET_KEY` in `.env` before using `docker-compose.prod.yml`.
 
@@ -366,4 +379,4 @@ Ensure you open the app on the **frontend** port (**8080**), not only the API po
 
 ### nginx `502` / `connect() failed (111: Connection refused)` to upstream
 
-Usually means a frontend container started before its backend was listening (migrations/seed) or nginx had a **stale IP** for `marreq-server` / `marreq-cloud` after a recreate. Both base stacks use backend `healthcheck`s and `depends_on: condition: service_healthy` so nginx starts only after `GET /api/auth/csrf` succeeds on the target backend; nginx is configured with **Docker DNS resolver** + variable `proxy_pass` so upstream names are re-resolved. Rebuild the image and recreate the affected backend/frontend pair using the same base Compose file selected for the deployment.
+Usually means a frontend container started before its backend was listening (schema preflight/startup) or nginx had a **stale IP** for `marreq-server` / `marreq-cloud` after a recreate. Both base stacks use backend `healthcheck`s and `depends_on: condition: service_healthy` so nginx starts only after `GET /api/auth/csrf` succeeds on the target backend; nginx is configured with **Docker DNS resolver** + variable `proxy_pass` so upstream names are re-resolved. Rebuild the image and recreate the affected backend/frontend pair using the same base Compose file selected for the deployment.

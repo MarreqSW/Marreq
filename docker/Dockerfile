@@ -15,14 +15,17 @@ COPY marreq-core/Cargo.toml marreq-core/diesel.toml ./marreq-core/
 COPY marreq-server/Cargo.toml ./marreq-server/
 COPY marreq-cloud/Cargo.toml ./marreq-cloud/
 COPY tools/marreq-contracts/Cargo.toml ./tools/marreq-contracts/
+COPY tools/marreq-migrations/Cargo.toml ./tools/marreq-migrations/
 
 # Dummy sources so cargo can resolve and cache dependencies
-RUN mkdir -p marreq-core/src marreq-server/src marreq-cloud/src tools/marreq-contracts/src && \
+RUN mkdir -p marreq-core/src marreq-server/src marreq-cloud/src tools/marreq-contracts/src tools/marreq-migrations/src && \
     echo "fn main() {}" > marreq-server/src/main.rs && \
     echo "fn main() {}" > marreq-cloud/src/main.rs && \
     echo "" > marreq-core/src/lib.rs && \
     echo "" > tools/marreq-contracts/src/lib.rs && \
-    echo "fn main() {}" > tools/marreq-contracts/src/main.rs
+    echo "fn main() {}" > tools/marreq-contracts/src/main.rs && \
+    echo "" > tools/marreq-migrations/src/lib.rs && \
+    echo "fn main() {}" > tools/marreq-migrations/src/main.rs
 
 # Cache dependencies only (ignore build errors from empty stubs)
 RUN cargo build --locked --release -p marreq-server -p marreq-cloud 2>/dev/null || true
@@ -31,7 +34,7 @@ RUN cargo build --locked --release -p marreq-server -p marreq-cloud 2>/dev/null 
 RUN cargo install diesel_cli --no-default-features --features postgres
 
 # Copy real sources
-RUN rm -rf marreq-core/src marreq-server/src marreq-cloud/src tools/marreq-contracts/src
+RUN rm -rf marreq-core/src marreq-server/src marreq-cloud/src tools/marreq-contracts/src tools/marreq-migrations/src
 COPY marreq-core/src ./marreq-core/src
 COPY marreq-core/frontend_compatibility.json ./marreq-core/frontend_compatibility.json
 COPY marreq-core/migrations ./marreq-core/migrations
@@ -39,6 +42,8 @@ COPY marreq-core/scripts ./marreq-core/scripts
 COPY marreq-server/src ./marreq-server/src
 COPY marreq-cloud/src ./marreq-cloud/src
 COPY tools/marreq-contracts/src ./tools/marreq-contracts/src
+COPY tools/marreq-migrations/src ./tools/marreq-migrations/src
+COPY tools/marreq-migrations/build.rs ./tools/marreq-migrations/build.rs
 
 # Build the selected binary (MARREQ_VERSION / MARREQ_GIT_SHA baked via option_env!)
 ARG MARREQ_BIN=marreq-server
@@ -47,7 +52,7 @@ ARG MARREQ_GIT_SHA=unknown
 ENV MARREQ_GIT_SHA=${MARREQ_GIT_SHA}
 ENV MARREQ_VERSION=${MARREQ_VERSION}
 RUN touch marreq-core/src/lib.rs marreq-server/src/main.rs marreq-cloud/src/main.rs && \
-    cargo build --locked --release -p ${MARREQ_BIN}
+    cargo build --locked --release -p ${MARREQ_BIN} -p marreq-migrations -p marreq-core --bin ${MARREQ_BIN} --bin marreq-migrations --bin marreq-backup
 
 # Runtime stage
 FROM debian:trixie-slim
@@ -67,10 +72,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Run the application as an unprivileged user.  The migration step in
-# docker-entrypoint.sh only needs DB access, so dropping privileges before
-# Rocket binds is safe.  UID/GID are stable so bind-mounted volumes from
-# docker-compose stay readable.
+# Application and one-shot operational commands share an unprivileged UID/GID.
 RUN groupadd --system --gid 10001 marreq \
     && useradd  --system --uid 10001 --gid marreq --home-dir /app --shell /usr/sbin/nologin marreq
 
@@ -81,7 +83,8 @@ COPY --from=builder /app/target/release/${MARREQ_BIN} /usr/local/bin/marreq
 COPY --from=builder /app/marreq-core/migrations /app/migrations
 COPY --from=builder /app/marreq-core/scripts /app/scripts
 COPY --from=builder /app/marreq-core/src/schema.patch /app/src/schema.patch
-COPY --from=builder /usr/local/cargo/bin/diesel /usr/local/bin/diesel
+COPY --from=builder /app/target/release/marreq-migrations /usr/local/bin/marreq-migrations
+COPY --from=builder /app/target/release/marreq-backup /usr/local/bin/marreq-backup
 
 # Rocket.toml is crate-specific; pull from the selected binary's crate
 COPY ${MARREQ_BIN}/Rocket.toml ./Rocket.toml
@@ -97,7 +100,7 @@ ENV MARREQ_ATTACHMENTS_DIR=/var/lib/marreq/attachments
 
 EXPOSE 8000
 
-# Wait for DB, run migrations, then start the app
+# Start the app; the binary performs a read-only schema preflight
 COPY docker/docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 

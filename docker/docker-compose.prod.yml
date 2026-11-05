@@ -21,6 +21,7 @@ services:
   marreq-server:
     environment:
       # Production must never use the development fallback key.
+      MARREQ_AUTO_SEED: 'false'
       ROCKET_SECRET_KEY: ${ROCKET_SECRET_KEY:?Set ROCKET_SECRET_KEY in .env for production}
       MARREQ_SECURE_SESSION_COOKIE: '1'
       MARREQ_PUBLIC_BASE_URL: ${MARREQ_PUBLIC_BASE_URL:?Set MARREQ_PUBLIC_BASE_URL to the public HTTPS origin}
@@ -40,6 +41,7 @@ services:
 
   marreq-cloud:
     environment:
+      MARREQ_AUTO_SEED: 'false'
       ROCKET_SECRET_KEY: ${ROCKET_SECRET_KEY:?Set ROCKET_SECRET_KEY in .env for production}
       MARREQ_SECURE_SESSION_COOKIE: '1'
       MARREQ_PUBLIC_BASE_URL: ${MARREQ_CLOUD_PUBLIC_BASE_URL:?Set MARREQ_CLOUD_PUBLIC_BASE_URL to the cloud public HTTPS origin}

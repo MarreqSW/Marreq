@@ -149,28 +149,12 @@ fn run() -> anyhow::Result<serde_json::Value> {
         } => {
             let spec = source::load(&spec)?;
             contract::validate(&spec)?;
-            for dir in ["frontend", "mcp-server"] {
-                let p: artifact::Policy = serde_json::from_value(contract::load(
-                    &root.join(dir).join("compatibility.json"),
-                )?)?;
-                p.validate()?;
-            }
-            let range: artifact::FrontendRange = serde_json::from_value(contract::load(
-                &root.join("marreq-core/frontend_compatibility.json"),
-            )?)?;
-            anyhow::ensure!(
-                range.min_version.cmp_precedence(&range.max_version).is_le(),
-                "invalid backend frontend compatibility range"
-            );
-            let mut counts = serde_json::Map::new();
-            if !document_only {
-                for who in ["frontend", "mcp"] {
-                    let c = coverage::scan(&root, who, &spec)?;
-                    let selected = contract::select(&spec, &c.operations, None)?;
-                    contract::validate_wire_contract(&selected)?;
-                    counts.insert(who.into(), serde_json::json!(c.operations.len()));
-                }
-            }
+            artifact::validate_source_policies(&root)?;
+            let counts = if document_only {
+                serde_json::Map::new()
+            } else {
+                coverage::validate(&root, &spec)?
+            };
             Ok(serde_json::json!({"valid":true,"consumer_operations":counts}))
         }
         Action::Compare {

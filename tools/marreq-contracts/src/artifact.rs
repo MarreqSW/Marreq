@@ -46,6 +46,39 @@ pub struct FrontendRange {
     pub min_version: Version,
     pub max_version: Version,
 }
+impl FrontendRange {
+    pub fn validate(&self) -> Result<()> {
+        ensure!(
+            self.min_version.cmp_precedence(&self.max_version).is_le(),
+            "invalid backend frontend range"
+        );
+        Ok(())
+    }
+    pub fn accepts(&self, version: &Version) -> Result<()> {
+        self.validate()?;
+        ensure!(
+            version.cmp_precedence(&self.min_version).is_ge()
+                && version.cmp_precedence(&self.max_version).is_le(),
+            "frontend version outside backend policy"
+        );
+        Ok(())
+    }
+}
+
+/// Validate editable component policies; retained bundles carry their own policy.
+pub fn validate_source_policies(root: &Path) -> Result<()> {
+    for directory in ["frontend", "mcp-server"] {
+        let policy: Policy = serde_json::from_value(contract::load(
+            &root.join(directory).join("compatibility.json"),
+        )?)?;
+        policy.validate()?;
+    }
+    let range: FrontendRange = serde_json::from_value(contract::load(
+        &root.join("marreq-core/frontend_compatibility.json"),
+    )?)?;
+    range.validate()
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Bundle {
@@ -118,10 +151,11 @@ fn identity(bundle: &Bundle) -> Result<()> {
                 .as_deref()
                 .context("backend variant required")?,
         )?;
-        ensure!(
-            bundle.frontend_compatibility.is_some(),
-            "backend frontend policy missing"
-        );
+        bundle
+            .frontend_compatibility
+            .as_ref()
+            .context("backend frontend policy missing")?
+            .validate()?;
     } else {
         ensure!(
             bundle.variant.is_none(),
@@ -296,16 +330,11 @@ pub fn verify(path: &Path, candidate: Option<(&str, &Version, &str, &Path)>) -> 
             "plan does not reference the source-exported tagged candidate"
         );
     }
-    let range = backend.frontend_compatibility.as_ref().unwrap();
-    ensure!(
-        range.min_version.cmp_precedence(&range.max_version).is_le(),
-        "invalid backend frontend range"
-    );
-    ensure!(
-        frontend.version.cmp_precedence(&range.min_version).is_ge()
-            && frontend.version.cmp_precedence(&range.max_version).is_le(),
-        "frontend version outside backend policy"
-    );
+    backend
+        .frontend_compatibility
+        .as_ref()
+        .unwrap()
+        .accepts(&frontend.version)?;
     for consumer in [&frontend, &mcp] {
         consumer
             .compatibility

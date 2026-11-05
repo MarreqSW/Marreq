@@ -126,20 +126,30 @@ fn split_password(database_url: &str) -> Result<(String, Option<String>), Backup
     // libpq also accepts a query password, which overrides the authority password.
     // Keep it out of pg_dump argv and redact it from diagnostic summaries too.
     let mut parameters = Vec::new();
-    for (key, value) in url.query_pairs() {
-        if key == "password" {
-            password = Some(value.into_owned());
-        } else if key == "sslpassword" {
-            // This additional key cannot be protected by PGPASSWORD.
-            return Err(BackupError::InvalidDatabaseUrl);
-        } else {
-            parameters.push((key.into_owned(), value.into_owned()));
+    if let Some(query) = url.query().filter(|query| !query.is_empty()) {
+        // libpq percent-decodes URI parameters without treating '+' as a space.
+        // Preserve unrelated parameters verbatim; form serialization would change them.
+        for parameter in query.split('&') {
+            let (key, value) = parameter
+                .split_once('=')
+                .ok_or(BackupError::InvalidDatabaseUrl)?;
+            let key = urlencoding::decode(key).map_err(|_| BackupError::InvalidDatabaseUrl)?;
+            match key.as_ref() {
+                "password" => {
+                    password = Some(
+                        urlencoding::decode(value)
+                            .map_err(|_| BackupError::InvalidDatabaseUrl)?
+                            .into_owned(),
+                    );
+                }
+                // This additional key cannot be protected by PGPASSWORD.
+                "sslpassword" => return Err(BackupError::InvalidDatabaseUrl),
+                _ => parameters.push(parameter),
+            }
         }
     }
-    url.set_query(None);
-    if !parameters.is_empty() {
-        url.query_pairs_mut().extend_pairs(parameters);
-    }
+    let query = parameters.join("&");
+    url.set_query(if query.is_empty() { None } else { Some(&query) });
 
     Ok((url.to_string(), password))
 }
@@ -433,6 +443,77 @@ pub(crate) mod tests {
 
         assert!(split_password("mysql://u:p@db/x").is_err());
         assert!(split_password("not a url").is_err());
+    }
+
+    #[test]
+    fn split_password_preserves_libpq_uri_encoding() {
+        let parameters = "options=-c%20statement_timeout%3D1000&application_name=backup+%2B%20%3D&sslmode=require";
+        for (encoded, decoded) in [
+            ("space%20secret", "space secret"),
+            ("encoded%2Bsecret", "encoded+secret"),
+            ("literal+secret", "literal+secret"),
+            ("equals%3Dsecret", "equals=secret"),
+            ("s%20e%2Bc+ret%3Dend", "s e+c+ret=end"),
+        ] {
+            for input in [
+                format!("postgres://user:{encoded}@db/marreq?{parameters}"),
+                // Percent-encoded keys must not allow credentials to remain in argv.
+                format!(
+                    "postgres://user:overridden@db/marreq?options=-c%20statement_timeout%3D1000&%70assword={encoded}&application_name=backup+%2B%20%3D&sslmode=require"
+                ),
+            ] {
+                let (url, password) = split_password(&input).unwrap();
+                assert_eq!(url, format!("postgres://user@db/marreq?{parameters}"));
+                assert_eq!(password.as_deref(), Some(decoded));
+            }
+        }
+        let input = format!("postgres://user@db/marreq?{parameters}");
+        assert_eq!(split_password(&input).unwrap(), (input, None));
+        let (url, password) =
+            split_password("postgres://user:old@db/marreq?password=first&password=last+value")
+                .unwrap();
+        assert_eq!(url, "postgres://user@db/marreq");
+        assert_eq!(password.as_deref(), Some("last+value"));
+        assert!(split_password("postgres://db/marreq?%73slpassword=secret").is_err());
+    }
+
+    #[tokio::test]
+    async fn uri_passwords_stay_out_of_dump_arguments_and_diagnostics() {
+        let encoded = "s%20e%2Bc+ret%3Dend";
+        let decoded = "s e+c+ret=end";
+        for input in [
+            format!("postgres://user:{encoded}@db/marreq?options=-c%20statement_timeout%3D1000"),
+            format!(
+                "postgres://user@db/marreq?password={encoded}&options=-c%20statement_timeout%3D1000"
+            ),
+        ] {
+            let dir = scratch_dir("uri-password");
+            let script = recording_pg_dump(&dir);
+            let dump = dump_database(&input, script.to_str().unwrap())
+                .await
+                .unwrap();
+            let args = std::fs::read_to_string(dir.join("args")).unwrap();
+            assert!(args.contains(
+                "--dbname=postgres://user@db/marreq?options=-c%20statement_timeout%3D1000"
+            ));
+            assert!(!args.contains(encoded));
+            assert!(!args.contains(decoded));
+            assert_eq!(std::fs::read_to_string(dir.join("pw")).unwrap(), decoded);
+            remove_quietly(&dump);
+
+            let script = fake_pg_dump(
+                &dir,
+                "printf 'connection rejected password %s' \"$PGPASSWORD\" >&2; exit 1",
+            );
+            let error = dump_database(&input, script.to_str().unwrap())
+                .await
+                .unwrap_err()
+                .to_string();
+            assert!(error.contains("connection rejected password ***"));
+            assert!(!error.contains(encoded));
+            assert!(!error.contains(decoded));
+            std::fs::remove_dir_all(dir).unwrap();
+        }
     }
 
     #[test]

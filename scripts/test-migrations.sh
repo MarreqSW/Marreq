@@ -57,6 +57,19 @@ if "$backup"; then echo 'backup accepted missing quiescence' >&2; exit 1; fi
 export MARREQ_WRITES_QUIESCED=true
 "$backup"
 "$runner" verify-backup
+# libpq URI encoding must survive credential removal in a real pg_dump connection.
+# This role and all credentials exist only in the disposable test container.
+docker exec "$container" psql -U postgres -v ON_ERROR_STOP=1 -c "CREATE ROLE backup_uri LOGIN SUPERUSER PASSWORD 's e+c+ret=end'" > /dev/null
+for credential_location in authority query; do
+  if [[ "$credential_location" == authority ]]; then
+    encoded_url="postgres://backup_uri:s%20e%2Bc+ret%3Dend@127.0.0.1:$port/postgres?options=-c%20statement_timeout%3D10000&application_name=backup%2Buri+literal"
+  else
+    encoded_url="postgres://backup_uri@127.0.0.1:$port/postgres?options=-c%20statement_timeout%3D10000&password=s%20e%2Bc+ret%3Dend&application_name=backup%2Buri+literal"
+  fi
+  DATABASE_URL="$encoded_url" MARREQ_RECOVERY_BUNDLE="$work/uri-$credential_location" "$backup"
+  DATABASE_URL="$encoded_url" MARREQ_RECOVERY_BUNDLE="$work/uri-$credential_location" "$runner" verify-backup
+done
+docker exec "$container" psql -U postgres -v ON_ERROR_STOP=1 -c 'DROP ROLE backup_uri' > /dev/null
 # Corruption and missing-artifact checks.
 cp "$work/bundle/backup.tar.gz" "$work/original.tar.gz"
 printf corrupt >> "$work/bundle/backup.tar.gz"

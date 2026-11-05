@@ -41,3 +41,13 @@ pub mod status_enums;
 pub mod storage;
 pub mod use_case_document;
 pub mod validation;
+
+/// Fail closed before either production backend binds a socket.
+pub fn schema_preflight() {
+    let pool_url = rocket::Config::figment().extract_inner::<String>("databases.my_db.url");
+    if pool_url.ok().as_deref() != std::env::var("DATABASE_URL").ok().as_deref() {
+        eprintln!("DATABASE_URL and Rocket databases.my_db.url must match for schema preflight");
+        std::process::exit(2);
+    }
+    marreq_migrations::startup_or_exit();
+}

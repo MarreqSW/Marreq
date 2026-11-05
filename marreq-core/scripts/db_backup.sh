@@ -1,5 +1,6 @@
 #!/bin/bash
 set -euo pipefail
+umask 077
 
 # db_backup.sh — PostgreSQL backup utility for Marreq
 #
@@ -64,6 +65,11 @@ elif docker-compose version >/dev/null 2>&1; then
   DC="docker-compose -f ${COMPOSE_FILE}"; USE_DOCKER=true
 fi
 
+# Write privately and publish only after the entire pipeline and gzip validation succeed.
+[[ ! -e "${OUTPUT}" ]] || error "Output already exists; choose a new backup path"
+TEMP_OUTPUT=$(mktemp "$(dirname "${OUTPUT}")/.marreq-backup.XXXXXX")
+trap 'rm -f "$TEMP_OUTPUT"' EXIT
+
 # ── Run pg_dump ───────────────────────────────────────────────────────────────
 info "Backing up '${DB_NAME}' → ${OUTPUT}"
 echo ""
@@ -71,11 +77,14 @@ echo ""
 if [[ "${USE_DOCKER}" == "true" ]]; then
   DB_CID=$(cd "${REPO_ROOT}" && ${DC} ps -q db || true)
   [[ -z "${DB_CID}" ]] && error "The 'db' Docker service is not running. Start it with: ${DC} up -d db"
-  docker exec "${DB_CID}" pg_dump -U "${DB_USER}" -d "${DB_NAME}" --no-password | gzip > "${OUTPUT}"
+  docker exec "${DB_CID}" pg_dump -U "${DB_USER}" -d "${DB_NAME}" --no-password | gzip > "${TEMP_OUTPUT}"
 else
   command -v pg_dump &>/dev/null || error "pg_dump not found. Install PostgreSQL client tools."
-  pg_dump "${DATABASE_URL}" | gzip > "${OUTPUT}"
+  PGDATABASE="${DATABASE_URL}" pg_dump --no-owner --no-privileges | gzip > "${TEMP_OUTPUT}"
 fi
+
+gzip -t "${TEMP_OUTPUT}"
+ln "${TEMP_OUTPUT}" "${OUTPUT}"
 
 BYTES=$(du -sh "${OUTPUT}" | cut -f1)
 echo ""
@@ -85,5 +94,5 @@ echo "Restore with:"
 if [[ "${USE_DOCKER}" == "true" ]]; then
   echo "  gunzip -c ${OUTPUT} | docker exec -i <container> psql -U ${DB_USER} -d ${DB_NAME}"
 else
-  echo "  gunzip -c ${OUTPUT} | psql \"${DATABASE_URL}\""
+  echo "  Restore explicitly into an empty isolated database; see docs/developer/database-migrations.md"
 fi

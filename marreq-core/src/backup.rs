@@ -116,13 +116,31 @@ fn split_password(database_url: &str) -> Result<(String, Option<String>), Backup
     if !matches!(url.scheme(), "postgres" | "postgresql") {
         return Err(BackupError::InvalidDatabaseUrl);
     }
-    let password = url
+    let mut password = url
         .password()
         .map(|p| urlencoding::decode(p).map(|d| d.into_owned()))
         .transpose()
         .map_err(|_| BackupError::InvalidDatabaseUrl)?;
     url.set_password(None)
         .map_err(|_| BackupError::InvalidDatabaseUrl)?;
+    // libpq also accepts a query password, which overrides the authority password.
+    // Keep it out of pg_dump argv and redact it from diagnostic summaries too.
+    let mut parameters = Vec::new();
+    for (key, value) in url.query_pairs() {
+        if key == "password" {
+            password = Some(value.into_owned());
+        } else if key == "sslpassword" {
+            // This additional key cannot be protected by PGPASSWORD.
+            return Err(BackupError::InvalidDatabaseUrl);
+        } else {
+            parameters.push((key.into_owned(), value.into_owned()));
+        }
+    }
+    url.set_query(None);
+    if !parameters.is_empty() {
+        url.query_pairs_mut().extend_pairs(parameters);
+    }
+
     Ok((url.to_string(), password))
 }
 
@@ -406,6 +424,12 @@ pub(crate) mod tests {
         let (url, pw) = split_password("postgresql://db/marreq").unwrap();
         assert_eq!(url, "postgresql://db/marreq");
         assert!(pw.is_none());
+
+        let (url, pw) =
+            split_password("postgres://u:old@db/x?password=q%40secret&sslmode=require").unwrap();
+        assert_eq!(url, "postgres://u@db/x?sslmode=require");
+        assert_eq!(pw.as_deref(), Some("q@secret"));
+        assert!(split_password("postgres://db/x?sslpassword=secret").is_err());
 
         assert!(split_password("mysql://u:p@db/x").is_err());
         assert!(split_password("not a url").is_err());

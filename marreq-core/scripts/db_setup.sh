@@ -14,8 +14,7 @@ set -euo pipefail
 # Prerequisites:
 #   • Docker running with Compose (for the managed PostgreSQL container), OR
 #     a PostgreSQL server already accessible at DATABASE_URL.
-#   • diesel CLI installed:
-#       cargo install diesel_cli --no-default-features --features postgres
+#   • Rust/Cargo installed (the shared Diesel runner is built by Cargo)
 #   • DATABASE_URL in .env or environment
 #       default: postgres://rust:rust@127.0.0.1:5433/marreq (host port from docker-compose.yml)
 #
@@ -66,13 +65,6 @@ DB_USER="${DB_USER%%:*}"              # keep only the user portion
 # Parse db name (last path component, before any query string)
 DB_NAME="${DATABASE_URL##*/}"
 DB_NAME="${DB_NAME%%\?*}"
-
-# ── Require diesel CLI ───────────────────────────────────────────────────────
-if ! command -v diesel &>/dev/null; then
-  error "diesel CLI not found.
-  Install it with:
-    cargo install diesel_cli --no-default-features --features postgres"
-fi
 
 # ── Detect Docker Compose ────────────────────────────────────────────────────
 # In GitHub Actions, use the same override as .github/workflows so the db service
@@ -152,9 +144,10 @@ fi
 
 # ── Apply migrations via Diesel ───────────────────────────────────────────────
 echo ""
-info "Applying migrations (diesel migration run)..."
+info "Initializing development schema via the serialized Diesel runner..."
 cd "${BACKEND_ROOT}"
-diesel migration run --database-url "${DATABASE_URL}"
+export DATABASE_URL
+cargo run --locked --manifest-path "${REPO_ROOT}/Cargo.toml" -p marreq-migrations -- dev-init
 echo ""
 success "All migrations applied"
 
@@ -168,7 +161,7 @@ fi
 echo ""
 echo -e "${BLUE}───────────────────────────────────────────────${NC}"
 success "Database setup complete"
-echo "  Connection : ${DATABASE_URL}"
+echo "  Connection configured (credentials omitted)"
 echo ""
 echo "Next steps:"
 if [[ "${SEED}" == "false" ]]; then

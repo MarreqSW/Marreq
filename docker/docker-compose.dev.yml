@@ -15,7 +15,7 @@ services:
     working_dir: /workspace
     command: >
       bash -c
-      "diesel migration run --migration-dir /workspace/marreq-core/migrations &&
+      "cargo run --locked -p marreq-migrations -- dev-init &&
       cd /workspace && cargo run -p marreq-server"
     environment:
       DATABASE_URL: 'postgres://rust:rust@db:5432/marreq'

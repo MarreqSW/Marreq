@@ -7,6 +7,7 @@
 #[allow(clippy::result_large_err)]
 async fn main() -> Result<(), rocket::Error> {
     marreq_core::config::AppConfig::install_from_env_or_exit();
+    marreq_core::schema_preflight();
     let mode: &'static dyn marreq_core::deployment::DeploymentMode =
         &marreq_cloud::deployment::INSTANCE;
     let auth = marreq_core::auth::AuthConfig::cloud_from_env().unwrap_or_else(|error| {

@@ -1,0 +1,390 @@
+/api/projects/{project_id}/requirements/{id}/activity:
+  get:
+    operationId: activity_requirement_activity_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/common.yaml#/EntityActivityItem}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/activity.rs EntityActivityItem and scoped project guards. Same serialization, permission and
+      project-boundary rules in Server and Cloud.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - requirements:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/requirements/{requirement_id}/comments:
+  get:
+    operationId: comments_list_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: requirement_id
+        required: true
+        schema: {type: integer}
+      - in: query
+        name: version_id
+        schema: {type: integer}
+        required: false
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/common.yaml#/CommentResponse}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/comments.rs and CommentService. Immutable comments, nullable version binding, author
+      display-name fallback. Scoped create supports idempotency; legacy route uses session only. Shared in
+      both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - requirements:read
+    x-marreq-authorization: project-membership;ViewRequirements
+  post:
+    operationId: comments_create_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: requirement_id
+        required: true
+        schema: {type: integer}
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema: {type: string}
+        description: Optional replay identity, trimmed then validated as 1–200 ASCII letters, digits, dot, underscore or hyphen. Reuse with a different payload returns 409.
+    responses:
+      '201':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/common.yaml#/CommentResponse}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/comments.rs and CommentService. Immutable comments, nullable version binding, author
+      display-name fallback. Scoped create supports idempotency; legacy route uses session only. Shared in
+      both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {body: {type: string}, requirement_version_id: {anyOf: [{type: integer}, {type: 'null'}]}}, required: [body], additionalProperties: true}}
+    x-marreq-bearer-scopes:
+      - requirements:write
+    x-marreq-authorization: project-membership;EditRequirements;not-archived;approved-version-comment-lock-policy
+    x-marreq-csrf: session-csrf
+/api/requirements/{requirement_id}/comments:
+  get:
+    operationId: comments_list
+    parameters:
+      - in: path
+        name: requirement_id
+        required: true
+        schema: {type: integer}
+      - in: query
+        name: version_id
+        schema: {type: integer}
+        required: false
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/common.yaml#/CommentResponse}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/comments.rs and CommentService. Immutable comments, nullable version binding, author
+      display-name fallback. Scoped create supports idempotency; legacy route uses session only. Shared in
+      both variants.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session;ViewRequirements
+  post:
+    operationId: comments_create
+    parameters:
+      - in: path
+        name: requirement_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '201':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/common.yaml#/CommentResponse}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/comments.rs and CommentService. Immutable comments, nullable version binding, author
+      display-name fallback. Scoped create supports idempotency; legacy route uses session only. Shared in
+      both variants.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {body: {type: string}, requirement_version_id: {anyOf: [{type: integer}, {type: 'null'}]}}, required: [body], additionalProperties: true}}
+    x-marreq-authorization: session;EditRequirements;not-archived;approved-version-comment-lock-policy
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/requirements/{req_id}/versions/{v1}/diff/{v2}:
+  get:
+    operationId: requirement_diff_diff_versions_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: req_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: v1
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: v2
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/baselines.yaml#/RequirementDiff}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api requirement/verification diff routes, diff/mod.rs and diff services. Both versions/snapshots
+      must belong to the requested entity and project. Optional SingleValueDiff/label fields are omitted, not
+      null. Shared wire representation in both variants.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - requirements:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/requirements/{id}/versions:
+  get:
+    operationId: requirements_list_versions_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/requirements.yaml#/RequirementVersion}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirements.rs, api/verifications.rs and models/entities.rs/forms.rs. Both variants use the
+      same serializers. Scoped routes check project boundaries and scopes; mutations require EditRequirements
+      and unarchived projects, with project-reviewer checks for status/approval transitions. Idempotent
+      creates reject conflicting payloads with 409.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - requirements:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/requirements/{req_id}/versions/{version_id}:
+  get:
+    operationId: requirements_get_version_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: req_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: version_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/requirements.yaml#/RequirementVersionDetail}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirements.rs, api/verifications.rs and models/entities.rs/forms.rs. Both variants use the
+      same serializers. Scoped routes check project boundaries and scopes; mutations require EditRequirements
+      and unarchived projects, with project-reviewer checks for status/approval transitions. Idempotent
+      creates reject conflicting payloads with 409.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - requirements:read
+    x-marreq-authorization: project-membership;ViewRequirements
+/api/projects/{project_id}/requirements/{req_id}/versions/{version_id}/approval:
+  put:
+    operationId: requirements_set_version_approval_by_project
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: req_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: version_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/requirements.yaml#/RequirementVersion}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/requirements.rs, api/verifications.rs and models/entities.rs/forms.rs. Both variants use the
+      same serializers. Scoped routes check project boundaries and scopes; mutations require EditRequirements
+      and unarchived projects, with project-reviewer checks for status/approval transitions. Idempotent
+      creates reject conflicting payloads with 409.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {state: {type: string}}, required: [state], additionalProperties: true}}
+    x-marreq-bearer-scopes:
+      - requirements:approve
+    x-marreq-authorization: project-membership;project-reviewer;not-archived
+    x-marreq-csrf: session-csrf

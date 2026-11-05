@@ -63,9 +63,11 @@ backups/
 # nodejs
 node_modules
 frontend/dist
+mcp-server/dist/
 
-# MCP server: do not ship compiled Vitest sources
-mcp-server/dist/*.test.js
+# Python bytecode
+__pycache__/
+*.py[cod]
 
 # Export files
 exports/
@@ -79,3 +81,9 @@ _bmad-output/
 .cursorignore
 
 AGENTS.md
+
+# Optional self-contained OpenAPI output; edit openapi/root.yaml and domains.
+/docs/developer/openapi.yaml
+# Rust source module, not a generated coverage report.
+!/tools/marreq-contracts/src/coverage/
+!/tools/marreq-contracts/src/coverage/*.rs

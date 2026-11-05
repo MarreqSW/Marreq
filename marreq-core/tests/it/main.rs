@@ -5,6 +5,8 @@
 #[macro_use]
 extern crate rocket;
 
+mod contract;
+
 mod api_applicability_integration_test;
 mod api_attachments_test;
 mod api_authentication_test;

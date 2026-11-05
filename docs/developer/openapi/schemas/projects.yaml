@@ -1,0 +1,458 @@
+Project:
+  type: object
+  properties:
+    id:
+      type: integer
+    name:
+      type: string
+    slug:
+      type: string
+    description:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    creation_date:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    update_date:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    archived_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    owner_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    group_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    archived_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    status:
+      $ref: ../schemas/catalog.yaml#/ProjectStatus
+  required:
+    - id
+    - name
+    - slug
+    - description
+    - creation_date
+    - update_date
+    - archived_at
+    - owner_id
+    - group_id
+    - archived_by
+    - status
+  additionalProperties: true
+Notification:
+  type: object
+  properties:
+    id:
+      type: integer
+    user_id:
+      type: integer
+    project_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    entity_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    actor_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    notification_type:
+      type: string
+    title:
+      type: string
+    created_at:
+      type: string
+    body:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    entity_type:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    read:
+      type: boolean
+    emailed:
+      type: boolean
+  required:
+    - id
+    - user_id
+    - project_id
+    - entity_id
+    - actor_id
+    - notification_type
+    - title
+    - created_at
+    - body
+    - entity_type
+    - read
+    - emailed
+  additionalProperties: true
+NotificationPreference:
+  type: object
+  properties:
+    id:
+      type: integer
+    user_id:
+      type: integer
+    project_id:
+      type: integer
+    notify_in_app:
+      type: boolean
+    notify_email:
+      type: boolean
+  required:
+    - id
+    - user_id
+    - project_id
+    - notify_in_app
+    - notify_email
+  additionalProperties: true
+MemberResponse:
+  type: object
+  properties:
+    user_id:
+      type: integer
+    role:
+      type: integer
+    role_label:
+      type: string
+    username:
+      type: string
+    name:
+      type: string
+  required:
+    - user_id
+    - role
+    - role_label
+    - username
+    - name
+  additionalProperties: true
+ProjectReviewersResponse:
+  type: object
+  properties:
+    user_ids:
+      type: array
+      items:
+        type: integer
+  required:
+    - user_ids
+  additionalProperties: true
+EffectivePermissions:
+  type: object
+  properties:
+    view_requirements:
+      type: boolean
+    edit_requirements:
+      type: boolean
+    approve_versions:
+      type: boolean
+    is_project_reviewer:
+      type: boolean
+    manage_custom_fields:
+      type: boolean
+    manage_project_configuration:
+      type: boolean
+    manage_project_members:
+      type: boolean
+    archived:
+      type: boolean
+  required:
+    - view_requirements
+    - edit_requirements
+    - approve_versions
+    - is_project_reviewer
+    - manage_custom_fields
+    - manage_project_configuration
+    - manage_project_members
+    - archived
+  additionalProperties: true
+CustomFieldDefinition:
+  type: object
+  properties:
+    id:
+      type: integer
+    project_id:
+      type: integer
+    label:
+      type: string
+    field_type:
+      type: string
+      enum:
+        - text
+        - enum
+        - boolean
+        - number
+    enum_values:
+      anyOf:
+        - {}
+        - {type: 'null'}
+    sort_order:
+      type: integer
+    created_at:
+      type: string
+  required:
+    - id
+    - project_id
+    - label
+    - field_type
+    - enum_values
+    - sort_order
+    - created_at
+  additionalProperties: true
+CustomFieldDefinitionPayload:
+  type: object
+  properties:
+    label:
+      type: string
+    field_type:
+      type: string
+      enum:
+        - text
+        - enum
+        - boolean
+        - number
+    enum_values:
+      anyOf:
+        - {type: array, items: {type: string}}
+        - {type: 'null'}
+    sort_order:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+  required:
+    - label
+    - field_type
+  additionalProperties: true
+SavedView:
+  type: object
+  properties:
+    id:
+      type: integer
+    project_id:
+      type: integer
+    owner_id:
+      type: integer
+    name:
+      type: string
+    visibility:
+      type: string
+      enum:
+        - private
+        - shared
+    created_at:
+      type: string
+    updated_at:
+      type: string
+    description:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    locked_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    locked:
+      type: boolean
+    definition: {}
+  required:
+    - id
+    - project_id
+    - owner_id
+    - name
+    - visibility
+    - created_at
+    - updated_at
+    - description
+    - locked_at
+    - locked
+    - definition
+  additionalProperties: true
+SavedViewPayload:
+  type: object
+  properties:
+    name:
+      type: string
+    description:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    visibility:
+      type: string
+      enum:
+        - private
+        - shared
+    definition: {}
+  required:
+    - name
+    - visibility
+    - definition
+  additionalProperties: true
+DashboardProject:
+  type: object
+  properties:
+    project_id:
+      type: integer
+    requirements_count:
+      type: integer
+    tests_count:
+      type: integer
+    project_slug:
+      type: string
+    project_base_path:
+      type: string
+    name:
+      type: string
+    status_id:
+      type: string
+    project_status_normalized:
+      type: string
+    project_status_badge:
+      type: string
+    project_initial:
+      type: string
+    description:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    creation_date:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    update_date:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    archived_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    project_owner_name:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    group_name:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    group_slug:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    group_path:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    role_label:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    owner_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    group_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    role_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    archived:
+      type: boolean
+    can_view_group:
+      type: boolean
+  required:
+    - project_id
+    - requirements_count
+    - tests_count
+    - project_slug
+    - project_base_path
+    - name
+    - status_id
+    - project_status_normalized
+    - project_status_badge
+    - project_initial
+    - description
+    - creation_date
+    - update_date
+    - archived_at
+    - project_owner_name
+    - group_name
+    - group_slug
+    - group_path
+    - role_label
+    - owner_id
+    - group_id
+    - role_id
+    - archived
+    - can_view_group
+  additionalProperties: true
+AttentionItem:
+  type: object
+  properties:
+    project_id:
+      type: integer
+    title:
+      type: string
+    requirement_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    use_case_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    count:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    notification_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    reference_code:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    notification_type:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    kind:
+      type: string
+      enum:
+        - approval
+        - review
+        - suspect
+        - notification
+  required:
+    - project_id
+    - title
+    - requirement_id
+    - use_case_id
+    - count
+    - notification_id
+    - reference_code
+    - notification_type
+    - at
+    - kind
+  additionalProperties: true

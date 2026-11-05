@@ -1,0 +1,511 @@
+/api/groups:
+  get:
+    operationId: groups_list
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/users.yaml#/GroupResponse}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/groups.rs, GroupService and models/forms.rs. Same Server/Cloud serialization; session or
+      personal API token, delegated OAuth denied. Group membership and the operation-specific group permission
+      are enforced.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;ViewGroup
+  post:
+    operationId: groups_create
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/users.yaml#/GroupResponse}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/groups.rs, GroupService and models/forms.rs. Same Server/Cloud serialization; session or
+      personal API token, delegated OAuth denied. Group membership and the operation-specific group permission
+      are enforced.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {name: {type: string}, description: {anyOf: [{type: string}, {type: 'null'}]}, owner_id: {anyOf: [{type: integer}, {type: 'null'}]}}, required: [name], additionalProperties: true}}
+    x-marreq-authorization: personal-token-or-session;delegated-denied;authenticated
+    x-marreq-csrf: session-csrf
+/api/groups/creatable:
+  get:
+    operationId: groups_list_creatable
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/users.yaml#/GroupResponse}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/groups.rs, GroupService and models/forms.rs. Same Server/Cloud serialization; session or
+      personal API token, delegated OAuth denied. Group membership and the operation-specific group permission
+      are enforced.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;ManageProjects
+/api/groups/{group_id}:
+  get:
+    operationId: groups_get
+    parameters:
+      - in: path
+        name: group_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/users.yaml#/GroupResponse}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/groups.rs, GroupService and models/forms.rs. Same Server/Cloud serialization; session or
+      personal API token, delegated OAuth denied. Group membership and the operation-specific group permission
+      are enforced.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;ViewGroup
+  patch:
+    operationId: groups_update
+    parameters:
+      - in: path
+        name: group_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/users.yaml#/GroupResponse}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/groups.rs, GroupService and models/forms.rs. Same Server/Cloud serialization; session or
+      personal API token, delegated OAuth denied. Group membership and the operation-specific group permission
+      are enforced.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {name: {type: string}, description: {anyOf: [{type: string}, {type: 'null'}]}}, required: [name], additionalProperties: true}}
+    x-marreq-authorization: personal-token-or-session;delegated-denied;ManageGroupMembers
+    x-marreq-csrf: session-csrf
+  delete:
+    operationId: groups_delete
+    parameters:
+      - in: path
+        name: group_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Success; empty body.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/groups.rs, GroupService and models/forms.rs. Same Server/Cloud serialization; session or
+      personal API token, delegated OAuth denied. Group membership and the operation-specific group permission
+      are enforced.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;ManageGroupMembers
+    x-marreq-csrf: session-csrf
+/api/groups/{group_id}/projects:
+  get:
+    operationId: groups_list_projects
+    parameters:
+      - in: path
+        name: group_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/projects.yaml#/Project}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/groups.rs, GroupService and models/forms.rs. Same Server/Cloud serialization; session or
+      personal API token, delegated OAuth denied. Group membership and the operation-specific group permission
+      are enforced.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;ViewGroup
+/api/groups/{group_id}/members:
+  get:
+    operationId: groups_list_members
+    parameters:
+      - in: path
+        name: group_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/users.yaml#/GroupMemberResponse}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/groups.rs, GroupService and models/forms.rs. Same Server/Cloud serialization; session or
+      personal API token, delegated OAuth denied. Group membership and the operation-specific group permission
+      are enforced.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;ViewGroup
+/api/groups/{group_id}/members/{user_id}:
+  put:
+    operationId: groups_set_member_role
+    parameters:
+      - in: path
+        name: group_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: user_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/users.yaml#/GroupMemberResponse}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/groups.rs, GroupService and models/forms.rs. Same Server/Cloud serialization; session or
+      personal API token, delegated OAuth denied. Group membership and the operation-specific group permission
+      are enforced.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {role: {type: integer}}, required: [role], additionalProperties: true}}
+    x-marreq-authorization: personal-token-or-session;delegated-denied;ManageGroupMembers
+    x-marreq-csrf: session-csrf
+  delete:
+    operationId: groups_remove_member
+    parameters:
+      - in: path
+        name: group_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: user_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Success; empty body.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/groups.rs, GroupService and models/forms.rs. Same Server/Cloud serialization; session or
+      personal API token, delegated OAuth denied. Group membership and the operation-specific group permission
+      are enforced.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-authorization: personal-token-or-session;delegated-denied;ManageGroupMembers
+    x-marreq-csrf: session-csrf
+/api/users/{id}:
+  put:
+    operationId: users_update
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/auth.yaml#/entities_User_response}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/users.rs and services/user_service.rs. Session instance administrator only. Cloud returns
+      410 for user creation and restricts promotion/deletion of the designated site administrator.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/users.yaml#/UpdateUser}}
+    x-marreq-authorization: instance-admin;deployment-admin-promotion-policy
+    x-marreq-csrf: session-csrf
+  delete:
+    operationId: users_delete
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Success; empty body.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/users.rs and services/user_service.rs. Session instance administrator only. Cloud returns
+      410 for user creation and restricts promotion/deletion of the designated site administrator.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: instance-admin;deployment-admin-deletion-policy
+    x-marreq-csrf: session-csrf
+/api/users/{id}/password:
+  put:
+    operationId: users_set_password
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '204':
+        description: Success; empty body.
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/users.rs and services/user_service.rs. Session instance administrator only. Cloud returns
+      410 for user creation and restricts promotion/deletion of the designated site administrator.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {new_password: {type: string}, confirm_password: {type: string}}, required: [new_password, confirm_password], additionalProperties: true}}
+    x-marreq-authorization: instance-admin
+    x-marreq-csrf: session-csrf
+/api/users:
+  post:
+    operationId: users_create
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {status: {type: string, const: ok}, id: {type: integer}}, required: [status, id], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '410':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/users.rs and services/user_service.rs. Session instance administrator only. Cloud returns
+      410 for user creation and restricts promotion/deletion of the designated site administrator.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/users.yaml#/UserCreateRequest}}
+    x-marreq-authorization: instance-admin;allows_self_administered_user_creation
+    x-marreq-csrf: session-csrf
+  get:
+    operationId: users_list
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/auth.yaml#/entities_User_response}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/users.rs and services/user_service.rs. Session instance administrator only. Cloud returns
+      410 for user creation and restricts promotion/deletion of the designated site administrator.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: instance-admin

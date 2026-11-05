@@ -1,0 +1,82 @@
+McpAuditRequest:
+  type: object
+  properties:
+    project_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    session_id:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    tool_name:
+      type: string
+      enum:
+        - list_projects
+        - get_requirement
+        - list_requirements
+        - get_versions
+        - semantic_search_requirements
+        - compare_versions
+        - trace_up
+        - trace_down
+        - coverage_report
+        - dependency_matrix
+        - get_baseline
+        - diff_baselines
+        - list_verifications
+        - get_verification
+        - list_baselines
+        - get_requirement_activity
+        - get_verification_activity
+        - list_requirement_comments
+        - get_verification_matrix
+        - list_project_catalog
+        - diff_baseline_vs_current
+        - create_requirement
+        - patch_requirement
+        - set_approval
+        - create_baseline
+        - create_requirement_comment
+        - create_verification
+        - update_verification
+        - put_verification_matrix
+        - clear_suspect
+    params_summary:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    result_summary:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    is_write:
+      type: boolean
+  required:
+    - tool_name
+    - is_write
+  additionalProperties: true
+McpPrincipalResponse:
+  type: object
+  properties:
+    user_id:
+      type: integer
+    authentication_type:
+      type: string
+    principal_id:
+      type: string
+    client_id:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    grant_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+  additionalProperties: true
+  required:
+    - user_id
+    - authentication_type
+    - principal_id
+    - client_id
+    - grant_id

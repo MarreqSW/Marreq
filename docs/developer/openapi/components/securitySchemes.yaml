@@ -1,0 +1,16 @@
+cookieAuth:
+  type: apiKey
+  in: cookie
+  name: session
+  description: Rocket private session; __Host-session on secure deployments. Mutations require X-CSRF-Token.
+bearerAuth:
+  type: http
+  scheme: bearer
+  description: >-
+    Personal API token or delegated OAuth access token; project membership, domain scopes and project
+    permissions apply.
+mcpServiceAuth:
+  type: apiKey
+  in: header
+  name: X-Marreq-Mcp-Audit-Secret
+  description: Private service-to-service audit secret; never browser or delegated caller configuration.

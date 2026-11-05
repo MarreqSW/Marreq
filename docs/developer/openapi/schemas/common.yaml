@@ -1,0 +1,155 @@
+ExcelImportResult:
+  type: object
+  properties:
+    success:
+      type: boolean
+    message:
+      type: string
+    imported_count:
+      type: integer
+    errors:
+      type: array
+      items:
+        type: string
+    imported_requirement_ids:
+      type: array
+      items:
+        type: integer
+  required:
+    - success
+    - message
+    - imported_count
+    - errors
+    - imported_requirement_ids
+  additionalProperties: true
+EntityActivityItem:
+  type: object
+  properties:
+    log_id:
+      type: integer
+    user_id:
+      type: integer
+    username:
+      type: string
+    action_type:
+      type: string
+    summary:
+      type: string
+    created_at:
+      type: string
+    description:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    changes:
+      type: array
+      items:
+        $ref: ../schemas/admin.yaml#/LogChangeDetail
+  required:
+    - log_id
+    - user_id
+    - username
+    - action_type
+    - summary
+    - created_at
+    - description
+    - changes
+  additionalProperties: true
+CommentResponse:
+  type: object
+  properties:
+    id:
+      type: integer
+    requirement_id:
+      type: integer
+    author_id:
+      type: integer
+    requirement_version_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    author_name:
+      type: string
+    body:
+      type: string
+    created_at:
+      type: string
+  required:
+    - id
+    - requirement_id
+    - author_id
+    - requirement_version_id
+    - author_name
+    - body
+    - created_at
+  additionalProperties: true
+ApiError:
+  type: object
+  required:
+    - status
+    - error
+    - message
+  properties:
+    status:
+      type: integer
+    error:
+      type: string
+    message:
+      type: string
+  additionalProperties: true
+BuildInfo:
+  type: object
+  properties:
+    backend_version:
+      type: string
+    backend_git_sha:
+      type: string
+    deployment_mode:
+      type: string
+      enum:
+        - server
+        - cloud
+    frontend_compatibility:
+      type: object
+      properties:
+        min_version: {type: string}
+        max_version: {type: string}
+      required:
+        - min_version
+        - max_version
+      additionalProperties: true
+  required:
+    - backend_version
+    - backend_git_sha
+    - deployment_mode
+    - frontend_compatibility
+  additionalProperties: true
+DeploymentInfo:
+  type: object
+  properties:
+    mode:
+      type: string
+      enum:
+        - server
+        - cloud
+    allows_self_registration:
+      type: boolean
+    requires_email_verification:
+      type: boolean
+    allows_admin_promotion:
+      type: boolean
+    assigns_personal_workspace:
+      type: boolean
+    allows_self_administered_user_creation:
+      type: boolean
+    allows_database_backup:
+      type: boolean
+  required:
+    - mode
+    - allows_self_registration
+    - requires_email_verification
+    - allows_admin_promotion
+    - assigns_personal_workspace
+    - allows_self_administered_user_creation
+    - allows_database_backup
+  additionalProperties: true

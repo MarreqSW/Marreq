@@ -61,7 +61,7 @@ and `/oauth/token`. See [authentication.md](authentication.md#delegated-applicat
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/api/dashboard` | Authenticated dashboard payload: `user`, decorated `projects` (same shape as the legacy HTML index), `projects_count`, `selected_project_id`, `selected_project_slug`, `csrf_token`. **401** if not logged in. |
-| `GET` | `/api/home/attention` | What needs the user's attention across the projects listed for them (the start screen, issue #387), newest first, at most 50 `items`. Each item has `kind`, `project_id`, `title`, `at`, and, depending on the kind, `requirement_id`, `reference_code`, `count`, `notification_id`, `notification_type`. Kinds: **`approval`** (one per requirement whose current version is *reviewed*, in projects where the user may change review gates); **`review`** (one per such project, `count` = draft requirements); **`suspect`** (one per project where the user has `EditRequirements`, `count` = suspect matrix links); **`notification`** (unread `review_assigned`, `comment_added` and `mentioned` notifications; `mentioned` is created when a new requirement comment mentions a project member as `@username`, issue #389). Archived projects are skipped, except for notifications. Also returns the totals `approvals`, `reviews`, `suspect_links`, `notifications`. Session only (no Bearer tokens). **401** if not logged in. |
+| `GET` | `/api/home/attention` | What needs the user's attention across the projects listed for them (the start screen, issue #387), newest first, at most 50 `items`. Each item has `kind`, `project_id`, `title`, `at`, and, depending on the kind, `requirement_id`, `reference_code`, `count`, `notification_id`, `notification_type`. Kinds: **`approval`** (one per requirement whose current version is *reviewed*, in projects where the user may change review gates); **`review`** (one per such project, `count` = draft requirements); **`suspect`** (one per project where the user has `EditRequirements`, `count` = suspect matrix links); **`notification`** (unread `review_assigned`, `comment_added` and `mentioned` notifications; `mentioned` is created when a new requirement comment mentions a project member as `@username`, issue #389). Archived projects are skipped, except for notifications. Also returns the totals `approvals`, `reviews`, `suspect_links`, `notifications`. Session or Bearer; delegated OAuth requires `projects:read`, and a token project scope narrows the result. **401** if not logged in. |
 | `GET` | `/api/search?q=&limit=` | Requirements whose reference code or title contains `q` (case-insensitive, at least 2 characters; shorter returns `[]`), across the projects the user can view. Ordered exact reference code, code prefix, code substring, then title match; `limit` defaults to 20, at most 50. Returns `[{project_id, requirement_id, reference_code, title}]`. Session only (no Bearer tokens). **401** if not logged in. |
 
 Successful login response (200): `{ "status": "ok", "user": { ... } }` (serialized `User` model).
@@ -209,7 +209,7 @@ Instance-wide. All routes require a **global administrator** (`users.is_admin`);
 
 Rocket mounts all JSON routes under `/api` in `marreq-core/src/api/mod.rs` (shared routes) and the deployment crate's `src/routes.rs` (deployment-specific routes). The project [README](../../README.md) includes a human-maintained endpoint summary (requirements, tests, matrix, baselines, MCP audit, etc.).
 
-A minimal **OpenAPI 3** sketch for auth and session project listing lives in [`openapi.yaml`](openapi.yaml) (extend or replace with generated spec later).
+The consumer-facing OpenAPI contract starts at [`openapi/root.yaml`](openapi/root.yaml); domain modules document its requests, responses and security requirements.
 
 ## Server flags (backend)
 
@@ -226,3 +226,161 @@ A minimal **OpenAPI 3** sketch for auth and session project listing lives in [`o
 - **Adminer:** host port **8081** (to avoid clashing with the frontend).
 
 See [`../../docker/README.md`](../../docker/README.md).
+
+## Consumer-aware contract verification (#423 / #424)
+
+`docs/developer/openapi/root.yaml` and its domain files are the authoritative wire contract. Only operations used by
+frontend or MCP belong in release compatibility checks. A route inventory is not
+serialization evidence: `x-marreq-unverified` means the operation still needs an
+audit and cannot be used in a releasable consumer bundle. Unconsumed backend
+endpoints are outside this contract; adding/changing them does not itself block
+an existing consumer.
+
+The current source selects **195 frontend operations and 79 MCP operations: 217
+distinct HTTP dependencies, all wire-audited** against the Rust routes, serializers
+and guards. This includes JSON, multipart uploads, downloads, browser navigation,
+sessions, OAuth and Server/Cloud differences. The unconsumed index-status inventory
+entry remains outside mandatory consumer compatibility. Newly consumed unverified
+or undocumented operations still fail closed.
+
+### Architecture and rationale
+
+The root indexes standard `$ref` path items and components. Edit `paths/<domain>.yaml`
+and `schemas/<domain>.yaml`; shared security and error responses live in `components/`.
+Requirements history, project settings, notifications and use-case links have their
+own modules, matching the backend responsibilities. No bundled snapshot is committed.
+
+`source::load` invokes **Redocly openapi-core 1.34.22**, already used by the type
+pipeline and now an exact direct npm dependency with lockfile integrity. The short
+`scripts/bundle-openapi.mjs` adapter forbids network/URI references and files outside
+the root directory (including symlinks). Redocly resolves the references; errors or
+remaining external references fail. Comparison and retained-bundle verification
+read self-contained JSON and do not need Node or editable source files.
+
+For a tool that needs one document, generate an ignored, disposable copy:
+
+```sh
+node scripts/bundle-openapi.mjs > docs/developer/openapi.yaml
+```
+
+Bundling tests check byte determinism, schemas and security metadata, missing
+references, circular reference chains, network references and directory escapes.
+The modularization was checked against the previous parsed document for exact
+semantic equality, including all Marreq extensions. Type declarations are unchanged.
+
+- `tools/marreq-contracts` is a workspace Rust CLI/library. `source` handles
+  editable-document loading; `contract` owns selection, standards validation and
+  comparison; `artifact` owns identity/policies; `traffic` checks live evidence.
+  `coverage` separates the repository scan, AST/expression handling, transport
+  recognition, route matching and call analysis. Path patterns are prepared once
+  per file and shared by HTTP/navigation checks; the CLI delegates domain work.
+  Focused test modules share a single small wire fixture.
+  Serde/serde_yaml_ng parse
+  data, `semver` validates versions, `sha2` pins bundle content, and `jsonschema`
+  validates actual request/response bodies offline.
+- OpenAPI validation and breaking-change analysis use checksum-pinned **oasdiff
+  1.34.0**, not a custom JSON Schema subset algorithm. See the upstream
+  [breaking-change semantics](https://github.com/oasdiff/oasdiff/blob/main/docs/BREAKING-CHANGES.md).
+  Request acceptance and response guarantees are compared in their respective
+  directions. Unknown advanced schema semantics fail for the affected selected
+  schema; they never silently certify a combination.
+- Consumer calls are parsed with the established TypeScript/TSX **tree-sitter**
+  grammar. The analyzer follows finite URL helpers, local constants, templates,
+  branch alternatives and explicit HTTP methods. It includes awaited generic
+  calls, direct fetches, shared transports, multipart/download wrappers, and API
+  browser navigation, including location calls and assignments. Unsupported raw
+  network transports require an adapter; unknown paths/methods fail; there is no source regex parser,
+  source-review checksum or separately maintained full route list.
+- The small protocol dependency list covers browser/OAuth callbacks and discovery
+  which are not ordinary `fetch` expressions. Its IDs must exist in OpenAPI. All
+  other dependencies are discovered from consumer source. The only dynamic href
+  link exclusion is `StatementText`'s sanitized user-content link. Login return
+  navigation is user-selected, and identity linking follows the URL from its
+  audited API response; both existing flows have explicit source associations. It does not exclude
+  fetches or fixed API links in that component.
+- Compiled Rocket mount tests check every declared consumer operation against
+  Server/Cloud registration. Extra backend routes are permitted. Four public
+  account routes are Cloud-only; shared deployment capabilities remain runtime
+  behavior rather than invented Server/Cloud route differences.
+- Standard `openapi-typescript` and the TypeScript compiler emit only schemas
+  imported by each consumer and their type dependencies, in sorted order.
+  Committed declarations keep Rust/global OpenAPI out of frontend/MCP Docker
+  builds. Each consumer owns its minimal build input; the duplicate global type
+  snapshots were replaced by independently selected declarations.
+
+The old Python comparator, regex inventory parser, source-review hashes,
+generated route JSON and separate reusable workflow were removed. The unrelated
+existing requirements-compliance Python script is retained.
+
+### Developer commands
+
+Workspace tests, including coverage, require Node 22+, root `npm ci`, and the pinned upstream engine. Install
+it once and expose its destination on PATH (or set `OASDIFF` to that binary).
+Both contract CI and workspace coverage CI use the same installer.
+The installer currently handles Linux x86_64; other platforms may install the same
+upstream version themselves. No contract command downloads refs or schemas.
+
+```sh
+scripts/install-oasdiff.sh
+export PATH="$HOME/.cache/marreq-contracts:$PATH"
+npm ci # pinned offline bundler, type generator and TypeScript compiler
+cargo test --locked -p marreq-contracts
+cargo run --locked -p marreq-contracts -- validate
+cargo run --locked -p marreq-contracts -- coverage --component frontend
+cargo run --locked -p marreq-contracts -- coverage --component mcp
+node scripts/generate-api-types.mjs
+node scripts/generate-api-types.mjs --check
+cargo test --locked -p marreq-cloud --test api_contract_inventory
+scripts/test-api-contracts.sh
+```
+
+`validate` checks document/policy validity and requires a verified schema for
+**every discovered consumer dependency**. `--document-only` checks the document
+without certifying consumer coverage; it cannot create a consumer release bundle.
+`select` validates the bundled document with the pinned standards engine before
+selection/type generation; consumer export validates its selected document too.
+Both require verified consumer contracts; there is
+no development bypass for an unverified consumer operation.
+
+When adding/changing an HTTP call, update the actual Rocket implementation and
+the relevant OpenAPI domain module (and its root index for a new path/schema), then regenerate declarations and extend existing consumer/producer tests.
+A new unknown call, unresolved dynamic call, or newly used unverified operation
+fails validation. Remove `x-marreq-unverified` only after auditing request defaults,
+response nullability/required fields, errors/statuses, media, guards and scopes.
+Do not infer a schema from one response or from a TypeScript assertion.
+
+The isolated smoke test runs migrated tmpfs PostgreSQL plus real Server and Cloud
+binaries, exercising the actual frontend transport/session flow and MCP HTTP
+client. Test processes use a clean directory/environment, loopback addresses and
+synthetic credentials; existing `.env`/database/SMTP configuration is excluded.
+Transcripts omit headers/cookies and redact login credentials. Default workspace
+unit tests can unify `test-helpers`; the separate production-path run is essential.
+It validates 87 exchanges with no unverified exchanges, requiring critical
+evidence from **both** deployment variants. The existing Rocket integration tests
+also assert actual response status, media, required headers and JSON bodies against
+OpenAPI. Request mutation tests compare schema acceptance with the real handler
+deserializers; report defaults and catalogs use their actual Rust serializers.
+
+### Scope limits
+
+The CLI reports operation and call-site counts; no generated inventory is kept.
+Schemas remain reviewed declarations: update them alongside Rust changes and run
+the handler/DTO contract checks. Extra backend routes are not completeness blockers.
+Exact consumer bundle export also requires committed build configuration, including
+Vite settings, rather than just committed source files. Release plans require real
+historical evidence as described in the release guide; missing evidence is never
+replaced by current main.
+The advisory policy is inherited unchanged from `main`, including its
+`crypto-bigint` exception tracked in [#425](https://github.com/MarreqSW/Marreq/issues/425).
+The newly reported `calamine` advisory RUSTSEC-2026-0436 is fixed with the targeted
+0.38.0 update; no additional ignores are introduced. MCP production audit still
+reports a moderate advisory below the existing high-severity failure threshold.
+
+Production image regression checks build both `MARREQ_BIN=marreq-server` and
+`MARREQ_BIN=marreq-cloud` through `docker/Dockerfile`. The cache layer copies only
+workspace manifests plus stubs, including `tools/marreq-contracts`; real sources
+arrive later. Variant/version/SHA arguments apply after dependency caching. The
+runtime copies only the selected backend, migrations and existing operational
+scripts/tools; contract analysis is a dev dependency and its source, Node and
+standards binaries do not enter either backend image. Frontend and MCP images
+build from their own inputs and committed declarations.

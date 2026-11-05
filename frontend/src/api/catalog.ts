@@ -248,8 +248,8 @@ export async function deleteCustomField(
   });
 }
 
-export async function listVerificationMethods(): Promise<VerificationMethod[]> {
-  return fetchJson<VerificationMethod[]>('/api/verification-methods');
+export async function listVerificationMethods(projectId: number): Promise<VerificationMethod[]> {
+  return fetchJson<VerificationMethod[]>(`/api/projects/${projectId}/verification-methods`);
 }
 
 export async function createVerificationMethod(

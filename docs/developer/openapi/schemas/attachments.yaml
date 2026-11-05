@@ -1,0 +1,70 @@
+AttachmentView:
+  type: object
+  properties:
+    id:
+      type: integer
+    entity_type:
+      type: string
+      enum:
+        - requirement
+        - verification
+    entity_id:
+      type: integer
+    filename:
+      type: string
+    content_type:
+      type: string
+    size_bytes:
+      type: integer
+    uploaded_by:
+      type:
+        - integer
+        - 'null'
+    uploaded_by_name:
+      type:
+        - string
+        - 'null'
+    created_at:
+      type: string
+    deleted:
+      type: boolean
+  required:
+    - id
+    - entity_type
+    - entity_id
+    - filename
+    - content_type
+    - size_bytes
+    - uploaded_by
+    - uploaded_by_name
+    - created_at
+    - deleted
+  additionalProperties: true
+AttachmentStorage:
+  type: object
+  properties:
+    used_bytes:
+      type: integer
+    quota_bytes:
+      type: integer
+    quota_is_default:
+      type: boolean
+    default_quota_bytes:
+      type: integer
+    retained_by_baselines_bytes:
+      type: integer
+    max_file_bytes:
+      type: integer
+    allowed_extensions:
+      type: array
+      items:
+        type: string
+  required:
+    - used_bytes
+    - quota_bytes
+    - quota_is_default
+    - default_quota_bytes
+    - retained_by_baselines_bytes
+    - max_file_bytes
+    - allowed_extensions
+  additionalProperties: true

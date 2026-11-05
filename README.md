@@ -187,7 +187,7 @@ Use the SPA (**Docker** `http://localhost:8080` or **`npm run dev`** in `fronten
 
 ## 🔌 API Reference
 
-**Interchangeable clients:** session auth, CSRF, and Docker/nginx notes are documented in [docs/developer/http-api-contract.md](docs/developer/http-api-contract.md). A partial [OpenAPI spec](docs/developer/openapi.yaml) covers auth and session-scoped project listing.
+**Interchangeable clients:** session auth, CSRF, and Docker/nginx notes are documented in [docs/developer/http-api-contract.md](docs/developer/http-api-contract.md). The modular [OpenAPI contract](docs/developer/openapi/root.yaml) covers all frontend/MCP HTTP dependencies.
 
 ### Base URL
 ```

@@ -1,0 +1,85 @@
+GroupResponse:
+  type: object
+  properties:
+    id:
+      type: integer
+    name:
+      type: string
+    slug:
+      type: string
+    description:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    owner_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    created_at:
+      type: string
+    updated_at:
+      type: string
+  required:
+    - id
+    - name
+    - slug
+    - description
+    - owner_id
+    - created_at
+    - updated_at
+  additionalProperties: true
+GroupMemberResponse:
+  type: object
+  properties:
+    user_id:
+      type: integer
+    role:
+      type: integer
+    role_label:
+      type: string
+  required:
+    - user_id
+    - role
+    - role_label
+  additionalProperties: true
+UserCreateRequest:
+  type: object
+  properties:
+    username:
+      type: string
+    name:
+      type: string
+    email:
+      type: string
+    password:
+      type: string
+    is_admin:
+      type: boolean
+  required:
+    - username
+    - name
+    - email
+    - password
+    - is_admin
+  additionalProperties: true
+UpdateUser:
+  type: object
+  properties:
+    id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    username:
+      type: string
+    name:
+      type: string
+    email:
+      type: string
+    is_admin:
+      type: boolean
+  required:
+    - username
+    - name
+    - email
+    - is_admin
+  additionalProperties: true

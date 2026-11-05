@@ -1,0 +1,675 @@
+/api/projects/{project_id}/use-cases:
+  get:
+    operationId: use_cases_list
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: query
+        name: q
+        required: false
+        schema: {anyOf: [{type: string}, {type: 'null'}]}
+      - in: query
+        name: approval_state
+        required: false
+        schema: {anyOf: [{type: string}, {type: 'null'}]}
+      - in: query
+        name: actor
+        required: false
+        schema: {anyOf: [{type: string}, {type: 'null'}]}
+      - in: query
+        name: has_suspect
+        required: false
+        schema: {anyOf: [{type: boolean}, {type: 'null'}]}
+      - in: query
+        name: requirement_id
+        required: false
+        schema: {anyOf: [{type: integer}, {type: 'null'}]}
+      - in: query
+        name: verification_id
+        required: false
+        schema: {anyOf: [{type: integer}, {type: 'null'}]}
+      - in: query
+        name: sort_column
+        required: false
+        schema: {anyOf: [{type: string}, {type: 'null'}]}
+      - in: query
+        name: sort_dir
+        required: false
+        schema: {anyOf: [{type: string}, {type: 'null'}]}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/use-case-views.yaml#/use_cases_UseCaseRow_response}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    x-marreq-bearer-scopes:
+      - use_cases:read
+    description: >-
+      Session or scoped Bearer authentication; project membership and ViewRequirements/EditRequirements/review
+      permissions apply. Archived projects reject mutations. See use-cases-api.md for validation and
+      revision-conflict semantics.
+  post:
+    operationId: use_cases_create
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema: {type: string}
+        description: Safe replay for the same principal, target, operation and payload; changed payload returns 409.
+    responses:
+      '201':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/use-case-views.yaml#/use_cases_UseCaseDetail_response}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Create the shared draft; optional reference_code, title, primary_actor and document. A missing code is
+      generated. Supports Idempotency-Key.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - use_cases:write
+    x-marreq-csrf: session-csrf
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {reference_code: {type: [string, 'null']}, title: {type: [string, 'null']}, primary_actor: {type: [string, 'null']}, document: {anyOf: [{$ref: ../schemas/use-cases.yaml#/UseCaseDocument}, {type: 'null'}]}}, additionalProperties: true}}
+/api/projects/{project_id}/use-cases/next-code:
+  get:
+    operationId: use_cases_next_code
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/use-case-views.yaml#/use_cases_NextCode_response}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    x-marreq-bearer-scopes:
+      - use_cases:read
+    description: >-
+      Session or scoped Bearer authentication; project membership and ViewRequirements/EditRequirements/review
+      permissions apply. Archived projects reject mutations. See use-cases-api.md for validation and
+      revision-conflict semantics.
+/api/projects/{project_id}/use-cases/{id}:
+  get:
+    operationId: use_cases_get
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+      - in: query
+        name: version_id
+        required: false
+        schema: {anyOf: [{type: integer}, {type: 'null'}]}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/use-case-views.yaml#/use_cases_UseCaseDetail_response}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    x-marreq-bearer-scopes:
+      - use_cases:read
+    description: >-
+      Session or scoped Bearer authentication; project membership and ViewRequirements/EditRequirements/review
+      permissions apply. Archived projects reject mutations. See use-cases-api.md for validation and
+      revision-conflict semantics.
+  delete:
+    operationId: use_cases_delete
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+      - in: header
+        name: X-CSRF-Token
+        required: false
+        schema: {type: string}
+        description: Required for session mutations; Bearer requests use scoped authentication instead.
+    responses:
+      '204':
+        description: Deleted
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    x-marreq-csrf: session-csrf
+    x-marreq-bearer-scopes:
+      - use_cases:write
+    description: >-
+      Session or scoped Bearer authentication; project membership and ViewRequirements/EditRequirements/review
+      permissions apply. Archived projects reject mutations. See use-cases-api.md for validation and
+      revision-conflict semantics.
+/api/projects/{project_id}/use-cases/{id}/draft:
+  put:
+    operationId: use_cases_put_draft
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+      - in: header
+        name: X-CSRF-Token
+        required: false
+        schema: {type: string}
+        description: Required for session mutations; Bearer requests use scoped authentication instead.
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/use-case-views.yaml#/use_cases_DraftChangeView_response}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    x-marreq-csrf: session-csrf
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/use-case-views.yaml#/use_cases_PutDraftRequest_request}}
+    x-marreq-bearer-scopes:
+      - use_cases:write
+    description: >-
+      Session or scoped Bearer authentication; project membership and ViewRequirements/EditRequirements/review
+      permissions apply. Archived projects reject mutations. See use-cases-api.md for validation and
+      revision-conflict semantics.
+  delete:
+    operationId: use_cases_discard_draft
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+      - in: header
+        name: X-CSRF-Token
+        required: false
+        schema: {type: string}
+        description: Required for session mutations; Bearer requests use scoped authentication instead.
+    responses:
+      '204':
+        description: Deleted
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    x-marreq-csrf: session-csrf
+    x-marreq-bearer-scopes:
+      - use_cases:write
+    description: >-
+      Session or scoped Bearer authentication; project membership and ViewRequirements/EditRequirements/review
+      permissions apply. Archived projects reject mutations. See use-cases-api.md for validation and
+      revision-conflict semantics.
+  get:
+    operationId: use_cases_get_draft
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/use-case-views.yaml#/use_cases_DraftView_response}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    x-marreq-bearer-scopes:
+      - use_cases:read
+    description: >-
+      Session or scoped Bearer authentication; project membership and ViewRequirements/EditRequirements/review
+      permissions apply. Archived projects reject mutations. See use-cases-api.md for validation and
+      revision-conflict semantics.
+/api/projects/{project_id}/use-cases/{id}/draft/operations:
+  post:
+    operationId: use_cases_draft_operations
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/use-case-views.yaml#/use_cases_DraftChangeView_response}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Guard/fairing/validation failure; body may be empty or framework generated
+      '403':
+        description: Guard/fairing/validation failure; body may be empty or framework generated
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Guard/fairing/validation failure; body may be empty or framework generated
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Use-case service contract; see use-cases-api.md for revision conflicts, document validation,
+      idempotency, publishing, links and review permissions.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - use_cases:write
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {base_revision: {anyOf: [{type: integer}, {type: 'null'}]}, operations: {type: array, items: {$ref: ../schemas/use-cases.yaml#/UseCaseOperation}}}, additionalProperties: true, required: [operations]}}
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/use-cases/{id}/draft/publish:
+  post:
+    operationId: use_cases_publish
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+      - in: header
+        name: Idempotency-Key
+        required: false
+        schema: {type: string}
+        description: Safe replay for the same principal, target, operation and payload; changed payload returns 409.
+    responses:
+      '201':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/use-cases.yaml#/UseCasePublishResponse}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Guard/fairing/validation failure; body may be empty or framework generated
+      '403':
+        description: Guard/fairing/validation failure; body may be empty or framework generated
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Guard/fairing/validation failure; body may be empty or framework generated
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Use-case service contract; see use-cases-api.md for revision conflicts, document validation,
+      idempotency, publishing, links and review permissions.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - use_cases:write
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {base_revision: {type: integer}, change_note: {anyOf: [{type: string}, {type: 'null'}]}}, additionalProperties: true, required: [base_revision]}}
+    x-marreq-csrf: session-csrf
+/api/projects/{project_id}/use-cases/{id}/versions:
+  get:
+    operationId: use_cases_list_versions
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/use-case-views.yaml#/use_cases_VersionSummary_response}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    x-marreq-bearer-scopes:
+      - use_cases:read
+    description: >-
+      Session or scoped Bearer authentication; project membership and ViewRequirements/EditRequirements/review
+      permissions apply. Archived projects reject mutations. See use-cases-api.md for validation and
+      revision-conflict semantics.
+/api/projects/{project_id}/use-cases/{id}/versions/{version_id}/approval:
+  put:
+    operationId: use_cases_set_version_approval
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: version_id
+        required: true
+        schema: {type: integer}
+      - in: header
+        name: X-CSRF-Token
+        required: false
+        schema: {type: string}
+        description: Required for session mutations; Bearer requests use scoped authentication instead.
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/use-case-views.yaml#/use_cases_VersionView_response}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    x-marreq-csrf: session-csrf
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {$ref: ../schemas/use-case-views.yaml#/use_cases_SetApprovalRequest_request}}
+    x-marreq-bearer-scopes:
+      - use_cases:approve
+    description: >-
+      Session or scoped Bearer authentication; project membership and ViewRequirements/EditRequirements/review
+      permissions apply. Archived projects reject mutations. See use-cases-api.md for validation and
+      revision-conflict semantics.
+/api/projects/{project_id}/use-cases/{id}/draft/diff:
+  get:
+    operationId: use_cases_draft_diff
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+      - in: query
+        name: include_unchanged
+        required: false
+        schema: {type: boolean}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/use-cases.yaml#/UseCaseDiff}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Guard/fairing/validation failure; body may be empty or framework generated
+      '403':
+        description: Guard/fairing/validation failure; body may be empty or framework generated
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Guard/fairing/validation failure; body may be empty or framework generated
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Use-case service contract; see use-cases-api.md for revision conflicts, document validation,
+      idempotency, publishing, links and review permissions.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - use_cases:read
+/api/projects/{project_id}/use-cases/{id}/versions/{a}/diff/{b}:
+  get:
+    operationId: use_cases_version_diff
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: a
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: b
+        required: true
+        schema: {type: integer}
+      - in: query
+        name: include_unchanged
+        required: false
+        schema: {type: boolean}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/use-cases.yaml#/UseCaseDiff}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Guard/fairing/validation failure; body may be empty or framework generated
+      '403':
+        description: Guard/fairing/validation failure; body may be empty or framework generated
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Guard/fairing/validation failure; body may be empty or framework generated
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Use-case service contract; see use-cases-api.md for revision conflicts, document validation,
+      idempotency, publishing, links and review permissions.
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    x-marreq-bearer-scopes:
+      - use_cases:read
+/api/projects/{project_id}/baselines/{baseline_id}/use-cases:
+  get:
+    operationId: use_cases_baseline_use_cases
+    security:
+      - cookieAuth: []
+      - bearerAuth: []
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+      - in: path
+        name: baseline_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/use-case-views.yaml#/use_cases_BaselineUseCaseView_response}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket validation failure. Body may be empty or framework generated; do not require an ApiError body.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    x-marreq-bearer-scopes:
+      - use_cases:read
+    description: >-
+      Session or scoped Bearer authentication; project membership and ViewRequirements/EditRequirements/review
+      permissions apply. Archived projects reject mutations. See use-cases-api.md for validation and
+      revision-conflict semantics.

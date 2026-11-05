@@ -1,0 +1,368 @@
+/api/cache/stats:
+  get:
+    operationId: cache_stats
+    description: >-
+      Audited against api/cache.rs, repository/cache/stats.rs and auth/guards/admin.rs. Session administrator
+      only; identical in Server and Cloud.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: instance-admin
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/admin.yaml#/CacheStats}}}
+      '401':
+        description: Missing or expired session; guard response may be empty.
+      '403':
+        description: Not an administrator, or CSRF check failed; body may be framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+/api/cache/recommendations:
+  get:
+    operationId: cache_recommendations
+    description: >-
+      Audited against api/cache.rs, repository/cache/stats.rs and auth/guards/admin.rs. Session administrator
+      only; identical in Server and Cloud.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: instance-admin
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/admin.yaml#/CacheRecommendations}}}
+      '401':
+        description: Missing or expired session; guard response may be empty.
+      '403':
+        description: Not an administrator, or CSRF check failed; body may be framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+/api/cache/clear:
+  post:
+    operationId: cache_clear
+    description: >-
+      Audited against api/cache.rs, repository/cache/stats.rs and auth/guards/admin.rs. Session administrator
+      only; identical in Server and Cloud.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: instance-admin
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/admin.yaml#/CacheActionResult}}}
+      '401':
+        description: Missing or expired session; guard response may be empty.
+      '403':
+        description: Not an administrator, or CSRF check failed; body may be framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    x-marreq-csrf: session-csrf
+/api/cache/cleanup:
+  post:
+    operationId: cache_cleanup
+    description: >-
+      Audited against api/cache.rs, repository/cache/stats.rs and auth/guards/admin.rs. Session administrator
+      only; identical in Server and Cloud.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: instance-admin
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/admin.yaml#/CacheCleanupResult}}}
+      '401':
+        description: Missing or expired session; guard response may be empty.
+      '403':
+        description: Not an administrator, or CSRF check failed; body may be framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    x-marreq-csrf: session-csrf
+/api/cache/reset-counters:
+  post:
+    operationId: cache_reset_counters
+    description: >-
+      Audited against api/cache.rs, repository/cache/stats.rs and auth/guards/admin.rs. Session administrator
+      only; identical in Server and Cloud.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: instance-admin
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/admin.yaml#/CacheActionResult}}}
+      '401':
+        description: Missing or expired session; guard response may be empty.
+      '403':
+        description: Not an administrator, or CSRF check failed; body may be framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    x-marreq-csrf: session-csrf
+/api/admin/backup/info:
+  get:
+    operationId: backup_info
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/admin.yaml#/BackupInfo}}}
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '410':
+        $ref: ../components/responses.yaml#/ApiError
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/backup.rs. Session instance administrator; success is available in Server mode, Cloud
+      returns 410 because allows_database_backup is false.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: instance-admin;allows_database_backup
+/api/admin/backup:
+  post:
+    operationId: backup_create
+    parameters:
+      - in: query
+        name: attachments
+        schema: {type: boolean}
+        required: false
+    responses:
+      '200':
+        description: Server backup archive; Cloud returns 410.
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+        content: {application/gzip: {schema: {type: string, format: binary}}}
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '410':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/backup.rs. Session instance administrator; success is available in Server mode, Cloud
+      returns 410 because allows_database_backup is false.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: instance-admin;allows_database_backup
+    x-marreq-csrf: session-csrf
+/api/admin/logs:
+  get:
+    operationId: logs_list
+    parameters:
+      - in: query
+        name: entity_type
+        schema: {type: string}
+        required: false
+      - in: query
+        name: action_type
+        schema: {type: string}
+        required: false
+      - in: query
+        name: since
+        schema: {type: string}
+        required: false
+      - in: query
+        name: until
+        schema: {type: string}
+        required: false
+      - in: query
+        name: entity_id
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: user_id
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: project_id
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: limit
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: offset
+        schema: {type: integer}
+        required: false
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/admin.yaml#/AdminLogList}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/logs.rs and services/log_service.rs. Session instance administrator only in both variants.
+      Datetime filters are parsed server-side; pagination and top are clamped.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: instance-admin
+/api/admin/logs/stats:
+  get:
+    operationId: logs_stats
+    parameters:
+      - in: query
+        name: entity_type
+        schema: {type: string}
+        required: false
+      - in: query
+        name: action_type
+        schema: {type: string}
+        required: false
+      - in: query
+        name: since
+        schema: {type: string}
+        required: false
+      - in: query
+        name: until
+        schema: {type: string}
+        required: false
+      - in: query
+        name: user_id
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: project_id
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: top
+        schema: {type: integer}
+        required: false
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/admin.yaml#/LogStatsResponse}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/logs.rs and services/log_service.rs. Session instance administrator only in both variants.
+      Datetime filters are parsed server-side; pagination and top are clamped.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: instance-admin
+/api/admin/logs/export.json:
+  get:
+    operationId: logs_export_json
+    parameters:
+      - in: query
+        name: entity_type
+        schema: {type: string}
+        required: false
+      - in: query
+        name: action_type
+        schema: {type: string}
+        required: false
+      - in: query
+        name: since
+        schema: {type: string}
+        required: false
+      - in: query
+        name: until
+        schema: {type: string}
+        required: false
+      - in: query
+        name: entity_id
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: user_id
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: project_id
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: limit
+        schema: {type: integer}
+        required: false
+      - in: query
+        name: offset
+        schema: {type: integer}
+        required: false
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/admin.yaml#/AdminLogList}}}
+        headers: {Content-Disposition: {required: true, schema: {type: string}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/logs.rs and services/log_service.rs. Session instance administrator only in both variants.
+      Datetime filters are parsed server-side; pagination and top are clamped.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: instance-admin
+/api/admin/logs/cleanup:
+  post:
+    operationId: logs_cleanup
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {deleted: {type: integer}}, required: [deleted], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/logs.rs and services/log_service.rs. Session instance administrator only in both variants.
+      Datetime filters are parsed server-side; pagination and top are clamped.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {days: {type: integer, minimum: 1}}, required: [days], additionalProperties: true}}
+    x-marreq-authorization: instance-admin
+    x-marreq-csrf: session-csrf

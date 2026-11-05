@@ -39,7 +39,9 @@ async fn make_client(allowed_origins: &[&str], allow_credentials: bool) -> Clien
     let rocket = rocket::build()
         .attach(CorsFairing(policy))
         .mount("/", rocket::routes![ping]);
-    Client::tracked(rocket).await.expect("rocket instance")
+    crate::contract::tracked(rocket)
+        .await
+        .expect("rocket instance")
 }
 
 const ALLOWED: &str = "https://app.example.com";

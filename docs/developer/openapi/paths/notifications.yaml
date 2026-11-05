@@ -1,0 +1,223 @@
+/api/notifications:
+  get:
+    operationId: notifications_list
+    parameters:
+      - in: query
+        name: unread_only
+        schema: {type: boolean}
+        required: false
+      - in: query
+        name: limit
+        schema: {type: integer}
+        required: false
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/projects.yaml#/Notification}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/notifications.rs, NotificationService and notification models. Session-only, scoped to the
+      current user in both variants.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session-user-owned
+/api/notifications/{id}/read:
+  patch:
+    operationId: notifications_mark_read
+    parameters:
+      - in: path
+        name: id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {success: {type: boolean}}, required: [success], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/notifications.rs, NotificationService and notification models. Session-only, scoped to the
+      current user in both variants.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session-user-owned
+    x-marreq-csrf: session-csrf
+/api/notifications/read-all:
+  post:
+    operationId: notifications_mark_all_read
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {count: {type: integer}}, required: [count], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/notifications.rs, NotificationService and notification models. Session-only, scoped to the
+      current user in both variants.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session-user-owned
+    x-marreq-csrf: session-csrf
+/api/notifications/preferences:
+  get:
+    operationId: notifications_get_preferences
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: array, items: {$ref: ../schemas/projects.yaml#/NotificationPreference}}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/notifications.rs, NotificationService and notification models. Session-only, scoped to the
+      current user in both variants.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session-user-owned
+/api/notifications/preferences/{project_id}:
+  put:
+    operationId: notifications_set_preference
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/auth.yaml#/AuthStatus}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/notifications.rs, NotificationService and notification models. Session-only, scoped to the
+      current user in both variants.
+    security:
+      - cookieAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json: {schema: {type: object, properties: {notify_in_app: {anyOf: [{type: boolean}, {type: 'null'}]}, notify_email: {anyOf: [{type: boolean}, {type: 'null'}]}}, required: [], additionalProperties: true}}
+    x-marreq-authorization: session-user-owned
+    x-marreq-csrf: session-csrf
+  delete:
+    operationId: notifications_delete_preference
+    parameters:
+      - in: path
+        name: project_id
+        required: true
+        schema: {type: integer}
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {$ref: ../schemas/auth.yaml#/AuthStatus}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/notifications.rs, NotificationService and notification models. Session-only, scoped to the
+      current user in both variants.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session-user-owned
+    x-marreq-csrf: session-csrf
+/api/notifications/unread-count:
+  get:
+    operationId: notifications_unread_count
+    parameters: []
+    responses:
+      '200':
+        description: Success
+        content: {application/json: {schema: {type: object, properties: {count: {type: integer}}, required: [count], additionalProperties: true}}}
+      '400':
+        $ref: ../components/responses.yaml#/ApiError
+      '401':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '403':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '404':
+        $ref: ../components/responses.yaml#/ApiError
+      '409':
+        $ref: ../components/responses.yaml#/ApiError
+      '422':
+        description: Authentication, authorization, CSRF or Rocket input failure; body may be empty or framework-generated.
+      '500':
+        $ref: ../components/responses.yaml#/ApiError
+    description: >-
+      Audited api/notifications.rs, NotificationService and notification models. Session-only, scoped to the
+      current user in both variants.
+    security:
+      - cookieAuth: []
+    x-marreq-authorization: session-user-owned

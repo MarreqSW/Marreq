@@ -1,0 +1,545 @@
+use_cases_UseCaseRow_response:
+  type: object
+  properties:
+    id:
+      type: integer
+    reference_code:
+      type: string
+    title:
+      type: string
+    primary_actor:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    step_count:
+      type: integer
+    alternative_count:
+      type: integer
+    exception_count:
+      type: integer
+    approval_state:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    current_version_number:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    has_draft:
+      type: boolean
+    link_count:
+      type: integer
+    suspect_count:
+      type: integer
+    updated_at:
+      type: string
+  additionalProperties: true
+  required:
+    - id
+    - reference_code
+    - title
+    - primary_actor
+    - step_count
+    - alternative_count
+    - exception_count
+    - approval_state
+    - current_version_number
+    - has_draft
+    - link_count
+    - suspect_count
+    - updated_at
+use_cases_NextCode_response:
+  type: object
+  properties:
+    reference_code:
+      type: string
+  additionalProperties: true
+  required:
+    - reference_code
+use_cases_UseCaseDetail_response:
+  type: object
+  properties:
+    id:
+      type: integer
+    project_id:
+      type: integer
+    reference_code:
+      type: string
+    title:
+      type: string
+    created_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    created_at:
+      type: string
+    updated_at:
+      type: string
+    current_version:
+      anyOf:
+        - {$ref: ../schemas/use-case-views.yaml#/use_cases_VersionView_response}
+        - {type: 'null'}
+    draft:
+      anyOf:
+        - {$ref: ../schemas/use-case-views.yaml#/use_cases_DraftSummary_response}
+        - {type: 'null'}
+  additionalProperties: true
+  required:
+    - id
+    - project_id
+    - reference_code
+    - title
+    - created_by
+    - created_at
+    - updated_at
+    - current_version
+    - draft
+use_cases_VersionView_response:
+  type: object
+  properties:
+    id:
+      type: integer
+    version_number:
+      type: integer
+    approval_state:
+      type: string
+    title:
+      type: string
+    primary_actor:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    change_note:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    created_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    created_by_name:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    created_at:
+      type: string
+    reviewed_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    reviewed_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    approved_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    approved_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    document:
+      $ref: ../schemas/use-cases.yaml#/UseCaseDocumentResponse
+    labels:
+      type: object
+      additionalProperties:
+        type: string
+  additionalProperties: true
+  required:
+    - id
+    - version_number
+    - approval_state
+    - title
+    - primary_actor
+    - change_note
+    - created_by
+    - created_by_name
+    - created_at
+    - reviewed_by
+    - reviewed_at
+    - approved_by
+    - approved_at
+    - document
+    - labels
+use_cases_VersionSummary_response:
+  type: object
+  properties:
+    id:
+      type: integer
+    version_number:
+      type: integer
+    approval_state:
+      type: string
+    title:
+      type: string
+    primary_actor:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    change_note:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    created_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    created_by_name:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    created_at:
+      type: string
+    reviewed_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    reviewed_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    approved_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    approved_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+  additionalProperties: true
+  required:
+    - id
+    - version_number
+    - approval_state
+    - title
+    - primary_actor
+    - change_note
+    - created_by
+    - created_by_name
+    - created_at
+    - reviewed_by
+    - reviewed_at
+    - approved_by
+    - approved_at
+use_cases_DraftSummary_response:
+  type: object
+  properties:
+    revision:
+      type: integer
+    base_version_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    updated_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    updated_by_name:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    updated_at:
+      type: string
+  additionalProperties: true
+  required:
+    - revision
+    - base_version_id
+    - updated_by
+    - updated_by_name
+    - updated_at
+use_cases_DraftView_response:
+  type: object
+  properties:
+    use_case_id:
+      type: integer
+    revision:
+      type: integer
+    base_version_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    updated_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    updated_by_name:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    updated_at:
+      type: string
+    document:
+      $ref: ../schemas/use-cases.yaml#/UseCaseDocumentResponse
+    labels:
+      type: object
+      additionalProperties:
+        type: string
+  additionalProperties: true
+  required:
+    - use_case_id
+    - revision
+    - base_version_id
+    - updated_by
+    - updated_by_name
+    - updated_at
+    - document
+    - labels
+use_cases_PutDraftRequest_request:
+  type: object
+  properties:
+    base_revision:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    document:
+      $ref: ../schemas/use-cases.yaml#/UseCaseDocument
+  additionalProperties: true
+  required:
+    - document
+use_cases_DraftChangeView_response:
+  type: object
+  properties:
+    use_case_id:
+      type: integer
+    revision:
+      type: integer
+    base_version_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    updated_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    updated_by_name:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    updated_at:
+      type: string
+    document:
+      $ref: ../schemas/use-cases.yaml#/UseCaseDocumentResponse
+    labels:
+      type: object
+      additionalProperties:
+        type: string
+    effects:
+      type: array
+      items:
+        $ref: ../schemas/use-cases.yaml#/UseCaseEffect
+  additionalProperties: true
+  required:
+    - use_case_id
+    - revision
+    - base_version_id
+    - updated_by
+    - updated_by_name
+    - updated_at
+    - document
+    - labels
+    - effects
+use_cases_SetApprovalRequest_request:
+  type: object
+  properties:
+    state:
+      type: string
+  additionalProperties: true
+  required:
+    - state
+use_cases_LinkView_response:
+  type: object
+  properties:
+    id:
+      type: integer
+    element_id:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    element_label:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    target_type:
+      type: string
+      enum:
+        - requirement
+        - verification
+    requirement_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    verification_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    target_reference_code:
+      type: string
+    target_title:
+      type: string
+    rationale:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    suspect:
+      type: boolean
+    suspect_at:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    suspect_reason:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    linked_requirement_version_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    current_requirement_version_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    created_by:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    created_at:
+      type: string
+  additionalProperties: true
+  required:
+    - id
+    - element_id
+    - element_label
+    - target_type
+    - requirement_id
+    - verification_id
+    - target_reference_code
+    - target_title
+    - rationale
+    - suspect
+    - suspect_at
+    - suspect_reason
+    - linked_requirement_version_id
+    - current_requirement_version_id
+    - created_by
+    - created_at
+use_cases_ClearSuspectResponse_response:
+  type: object
+  properties:
+    status:
+      type: string
+    cleared:
+      type: boolean
+  additionalProperties: true
+  required:
+    - status
+    - cleared
+use_cases_UseCaseRef_response:
+  type: object
+  properties:
+    use_case_id:
+      type: integer
+    reference_code:
+      type: string
+    title:
+      type: string
+    link_id:
+      type: integer
+    element_id:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    element_label:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    suspect:
+      type: boolean
+  additionalProperties: true
+  required:
+    - use_case_id
+    - reference_code
+    - title
+    - link_id
+    - element_id
+    - element_label
+    - suspect
+use_cases_UseCaseCommentView_response:
+  type: object
+  properties:
+    id:
+      type: integer
+    use_case_id:
+      type: integer
+    use_case_version_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    element_id:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    element_label:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    author_id:
+      type: integer
+    author_name:
+      type: string
+    body:
+      type: string
+    created_at:
+      type: string
+  additionalProperties: true
+  required:
+    - id
+    - use_case_id
+    - use_case_version_id
+    - element_id
+    - element_label
+    - author_id
+    - author_name
+    - body
+    - created_at
+use_cases_BaselineUseCaseView_response:
+  type: object
+  properties:
+    use_case_id:
+      type: integer
+    reference_code:
+      type: string
+    title:
+      type: string
+    primary_actor:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    version_id:
+      type: integer
+    version_number:
+      type: integer
+    approval_state:
+      type: string
+    current_version_id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    current_version_number:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    link_count:
+      type: integer
+  additionalProperties: true
+  required:
+    - use_case_id
+    - reference_code
+    - title
+    - primary_actor
+    - version_id
+    - version_number
+    - approval_state
+    - current_version_id
+    - current_version_number
+    - link_count

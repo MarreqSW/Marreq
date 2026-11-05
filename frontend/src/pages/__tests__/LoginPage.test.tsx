@@ -26,6 +26,7 @@ const serverDeployment = {
   allows_admin_promotion: true,
   assigns_personal_workspace: false,
   allows_self_administered_user_creation: true,
+  allows_database_backup: true,
 };
 
 const cloudDeployment = {
@@ -35,6 +36,7 @@ const cloudDeployment = {
   allows_admin_promotion: false,
   assigns_personal_workspace: true,
   allows_self_administered_user_creation: false,
+  allows_database_backup: false,
 };
 
 describe('LoginPage', () => {

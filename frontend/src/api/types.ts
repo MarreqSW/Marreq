@@ -1,3 +1,4 @@
+import type { components as ApiComponents } from './generated-contract';
 /** API shapes aligned with marreq-core JSON (snake_case). */
 
 export interface RequirementStatus {
@@ -187,33 +188,13 @@ export interface DashboardPayload {
   csrf_token: string;
 }
 
-export interface DeploymentInfo {
-  mode: 'server' | 'cloud' | string;
-  allows_self_registration: boolean;
-  requires_email_verification: boolean;
-  allows_admin_promotion: boolean;
-  assigns_personal_workspace: boolean;
-  allows_self_administered_user_creation: boolean;
-  /** False in cloud mode, where a whole-database dump would contain every tenant. */
-  allows_database_backup?: boolean;
-}
+export type DeploymentInfo = ApiComponents['schemas']['DeploymentInfo'];
 
-export interface AuthProviderDiscovery {
-  password_enabled: boolean;
-  external: Array<{ id: string; display_name: string }>;
-}
+export type AuthProviderDiscovery = ApiComponents['schemas']['external_ProviderDiscovery_response'];
 
-export interface ConnectedIdentity {
-  id: number;
-  provider: string;
-  created_at: string;
-  last_login_at: string | null;
-}
+export type ConnectedIdentity = ConnectedIdentities['identities'][number];
 
-export interface ConnectedIdentities {
-  password_configured: boolean;
-  identities: ConnectedIdentity[];
-}
+export type ConnectedIdentities = ApiComponents['schemas']['AuthIdentities'];
 
 export interface ConnectedApplication {
   id: number;
@@ -229,12 +210,7 @@ export interface FrontendCompatibility {
 }
 
 /** Response from `GET /api/meta/build` (issue #213). */
-export interface BuildInfo {
-  backend_version: string;
-  backend_git_sha: string;
-  deployment_mode: string;
-  frontend_compatibility: FrontendCompatibility;
-}
+export type BuildInfo = ApiComponents['schemas']['BuildInfo'];
 
 export type RegistrationBody = {
   username: string;
@@ -252,11 +228,7 @@ export type ResetPasswordBody = {
   new_password: string;
 };
 
-export type ChangePasswordBody = {
-  current_password: string;
-  new_password: string;
-  confirm_password: string;
-};
+export type ChangePasswordBody = ApiComponents['schemas']['AuthChangePassword'];
 
 /** `GET /api/projects/:pid/requirements/:id` — requirement fields flattened + trace_summary. */
 export interface RequirementVersionLink {
@@ -624,12 +596,7 @@ export interface User {
 }
 
 /** Body for `PUT /api/auth/me`: the signed-in user's own name and email. */
-export interface ProfileUpdateRequest {
-  name: string;
-  email: string;
-  /** Required when the email changes and the account has a password. */
-  current_password?: string;
-}
+export type ProfileUpdateRequest = ApiComponents['schemas']['AuthProfileUpdate'];
 
 /** Body for `PUT /api/users/:id` (admin only). */
 export interface UserUpdateRequest {
@@ -843,31 +810,10 @@ export interface ProjectUpdateBody {
 export type AttachmentEntityType = 'requirement' | 'verification';
 
 /** A file attached to a requirement or verification (`GET /projects/{id}/attachments`). */
-export interface Attachment {
-  id: number;
-  entity_type: AttachmentEntityType;
-  entity_id: number;
-  filename: string;
-  content_type: string;
-  size_bytes: number;
-  uploaded_by: number | null;
-  uploaded_by_name: string | null;
-  created_at: string;
-  /** Only true in baseline listings, for files deleted after the baseline. */
-  deleted: boolean;
-}
+export type Attachment = ApiComponents['schemas']['AttachmentView'];
 
 /** `GET /projects/{id}/storage`: attachment storage used by a project and the limits. */
-export interface ProjectStorage {
-  used_bytes: number;
-  quota_bytes: number;
-  quota_is_default: boolean;
-  default_quota_bytes: number;
-  /** Part of `used_bytes` taken by deleted files that baselines still keep. */
-  retained_by_baselines_bytes: number;
-  max_file_bytes: number;
-  allowed_extensions: string[];
-}
+export type ProjectStorage = ApiComponents['schemas']['AttachmentStorage'];
 
 /** `GET|PUT /api/projects/:pid/verifications/:vid/control` (issue #353). */
 export interface VerificationControl {
@@ -989,52 +935,16 @@ export interface UseCaseDocument {
 /** Display labels by element id: `3`, `A3`, `A3.1`, `E4`, `P1`, `Q1`. */
 export type UseCaseLabels = Record<string, string>;
 
-export interface UseCaseRow {
-  id: number;
-  reference_code: string;
-  title: string;
-  primary_actor: string | null;
-  step_count: number;
-  alternative_count: number;
-  exception_count: number;
-  /** Of the current version; `null` before the first publish. */
-  approval_state: string | null;
-  current_version_number: number | null;
-  has_draft: boolean;
-  /** Links to requirements and verifications, and how many are suspect (issue #400). */
-  link_count: number;
-  suspect_count: number;
-  updated_at: string;
-}
+export type UseCaseRow = ApiComponents['schemas']['use_cases_UseCaseRow_response'];
 
-export interface UseCaseVersionSummary {
-  id: number;
-  version_number: number;
-  approval_state: string;
-  title: string;
-  primary_actor: string | null;
-  change_note: string | null;
-  created_by: number | null;
-  created_by_name: string | null;
-  created_at: string;
-  reviewed_by: number | null;
-  reviewed_at: string | null;
-  approved_by: number | null;
-  approved_at: string | null;
-}
+export type UseCaseVersionSummary = ApiComponents['schemas']['use_cases_VersionSummary_response'];
 
 export interface UseCaseVersion extends UseCaseVersionSummary {
   document: UseCaseDocument;
   labels: UseCaseLabels;
 }
 
-export interface UseCaseDraftSummary {
-  revision: number;
-  base_version_id: number | null;
-  updated_by: number | null;
-  updated_by_name: string | null;
-  updated_at: string;
-}
+export type UseCaseDraftSummary = ApiComponents['schemas']['use_cases_DraftSummary_response'];
 
 export interface UseCaseDraft extends UseCaseDraftSummary {
   use_case_id: number;
@@ -1096,36 +1006,10 @@ export type UseCaseOperation =
   | { op: 'remove_branch'; id: string };
 
 /** A link from a use case, or one of its elements, to a requirement or verification (issue #400). */
-export interface UseCaseLink {
-  id: number;
-  /** `null` for the whole use case. */
-  element_id: string | null;
-  element_label: string | null;
-  target_type: 'requirement' | 'verification';
-  requirement_id: number | null;
-  verification_id: number | null;
-  target_reference_code: string;
-  target_title: string;
-  rationale: string | null;
-  suspect: boolean;
-  suspect_at: string | null;
-  suspect_reason: string | null;
-  linked_requirement_version_id: number | null;
-  current_requirement_version_id: number | null;
-  created_by: number | null;
-  created_at: string;
-}
+export type UseCaseLink = ApiComponents['schemas']['use_cases_LinkView_response'];
 
 /** A use case that links to a requirement or verification. */
-export interface UseCaseRef {
-  use_case_id: number;
-  reference_code: string;
-  title: string;
-  link_id: number;
-  element_id: string | null;
-  element_label: string | null;
-  suspect: boolean;
-}
+export type UseCaseRef = ApiComponents['schemas']['use_cases_UseCaseRef_response'];
 
 /** Structural diff of two use case documents (issue #401). */
 export type UseCaseChange = 'added' | 'removed' | 'edited' | 'moved' | 'rebranched';
@@ -1163,28 +1047,7 @@ export interface UseCaseDiff {
   elements: UseCaseElementDiff[];
 }
 
-export interface UseCaseComment {
-  id: number;
-  use_case_id: number;
-  use_case_version_id: number | null;
-  element_id: string | null;
-  element_label: string | null;
-  author_id: number;
-  author_name: string;
-  body: string;
-  created_at: string;
-}
+export type UseCaseComment = ApiComponents['schemas']['use_cases_UseCaseCommentView_response'];
 
 /** A use case version a baseline recorded (issue #402). */
-export interface BaselineUseCase {
-  use_case_id: number;
-  reference_code: string;
-  title: string;
-  primary_actor: string | null;
-  version_id: number;
-  version_number: number;
-  approval_state: string;
-  current_version_id: number | null;
-  current_version_number: number | null;
-  link_count: number;
-}
+export type BaselineUseCase = ApiComponents['schemas']['use_cases_BaselineUseCaseView_response'];

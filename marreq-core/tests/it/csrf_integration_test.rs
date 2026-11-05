@@ -69,7 +69,9 @@ async fn test_client() -> Client {
             ],
         )
         .attach(CsrfFairing::new().with_origin(TEST_ALLOWED_ORIGIN));
-    Client::tracked(rocket).await.expect("valid rocket")
+    crate::contract::tracked(rocket)
+        .await
+        .expect("valid rocket")
 }
 
 // ---------------------------------------------------------------------------

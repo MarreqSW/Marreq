@@ -175,7 +175,9 @@ async fn client() -> Client {
         .manage(marreq_core::auth::AuthConfig::default())
         .manage(marreq_core::auth::rate_limiter::LoginRateLimiter::new())
         .mount("/api", marreq_core::api::routes());
-    Client::tracked(rocket).await.expect("rocket instance")
+    crate::contract::tracked(rocket)
+        .await
+        .expect("rocket instance")
 }
 
 fn session(client: &Client, user_id: i32) -> Cookie<'static> {

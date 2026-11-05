@@ -17,7 +17,7 @@ This repo’s documentation is organized by audience:
 - [Setup guide (`marreq-server` / `marreq-cloud`, Docker / local)](developer/setup.md)
 - [Releases & dual artifact versioning](releases.md)
 - [Workspace layout & deployment modes](developer/workspace-layout.md)
-- [HTTP API contract (SPA / interchangeable clients)](developer/http-api-contract.md) — auth, CSRF, cookies; partial [OpenAPI](developer/openapi.yaml)
+- [HTTP API contract (SPA / interchangeable clients)](developer/http-api-contract.md) — auth, CSRF, cookies; modular [OpenAPI](developer/openapi/root.yaml)
 - [Database setup](developer/database-setup.md)
 - [MCP setup](developer/mcp-setup.md)
 - [Semantic search](developer/semantic-search.md)

@@ -157,9 +157,9 @@ describe('catalog API', () => {
 
     {
       name: 'listVerificationMethods',
-      call: () => listVerificationMethods(),
+      call: () => listVerificationMethods(5),
       method: 'GET',
-      url: '/api/verification-methods',
+      url: '/api/projects/5/verification-methods',
     },
     {
       name: 'createVerificationMethod scopes the body to the project',

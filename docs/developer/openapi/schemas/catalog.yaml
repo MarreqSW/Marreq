@@ -1,0 +1,211 @@
+ProjectStatus:
+  type: string
+  enum:
+    - Active
+    - Completed
+    - OnHold
+    - Cancelled
+Applicability:
+  type: object
+  properties:
+    id:
+      type: integer
+    project_id:
+      type: integer
+    title:
+      type: string
+    description:
+      type: string
+    tag:
+      type: string
+  required:
+    - id
+    - project_id
+    - title
+    - description
+    - tag
+  additionalProperties: true
+NewApplicability:
+  type: object
+  properties:
+    id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    project_id:
+      type: integer
+    title:
+      type: string
+    description:
+      type: string
+    tag:
+      type: string
+  required:
+    - title
+    - description
+    - tag
+    - project_id
+  additionalProperties: true
+Category:
+  type: object
+  properties:
+    id:
+      type: integer
+    project_id:
+      type: integer
+    title:
+      type: string
+    description:
+      type: string
+    tag:
+      type: string
+  required:
+    - id
+    - project_id
+    - title
+    - description
+    - tag
+  additionalProperties: true
+NewCategory:
+  type: object
+  properties:
+    id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    project_id:
+      type: integer
+    title:
+      type: string
+    description:
+      type: string
+    tag:
+      type: string
+  required:
+    - title
+    - description
+    - tag
+    - project_id
+  additionalProperties: true
+RequirementStatus:
+  type: object
+  properties:
+    id:
+      type: integer
+    project_id:
+      type: integer
+    title:
+      type: string
+    description:
+      type: string
+    tag:
+      type: string
+    is_system:
+      type: boolean
+    tag_color:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+  required:
+    - id
+    - project_id
+    - title
+    - description
+    - tag
+    - is_system
+    - tag_color
+  additionalProperties: true
+NewRequirementStatus:
+  type: object
+  properties:
+    id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    project_id:
+      type: integer
+    title:
+      type: string
+    description:
+      type: string
+    tag:
+      type: string
+    is_system:
+      type: boolean
+    tag_color:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+  required:
+    - title
+    - description
+    - tag
+    - project_id
+  additionalProperties: true
+VerificationStatus:
+  type: object
+  properties:
+    id:
+      type: integer
+    project_id:
+      type: integer
+    title:
+      type: string
+    description:
+      type: string
+    tag:
+      type: string
+    is_system:
+      type: boolean
+    tag_color:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    outcome:
+      type: string
+      enum:
+        - passed
+        - failed
+        - in_progress
+        - not_run
+  required:
+    - id
+    - project_id
+    - title
+    - description
+    - tag
+    - is_system
+    - tag_color
+    - outcome
+  additionalProperties: true
+NewVerificationStatus:
+  type: object
+  properties:
+    id:
+      anyOf:
+        - {type: integer}
+        - {type: 'null'}
+    project_id:
+      type: integer
+    title:
+      type: string
+    description:
+      type: string
+    tag:
+      type: string
+    is_system:
+      type: boolean
+    tag_color:
+      anyOf:
+        - {type: string}
+        - {type: 'null'}
+    outcome:
+      anyOf:
+        - {type: string, enum: [passed, failed, in_progress, not_run]}
+        - {type: 'null'}
+  required:
+    - title
+    - description
+    - tag
+    - project_id
+  additionalProperties: true

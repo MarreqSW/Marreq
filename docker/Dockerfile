@@ -1,12 +1,6 @@
 # Build stage
 FROM rust:1-trixie AS builder
 
-ARG MARREQ_BIN=marreq-server
-ARG MARREQ_VERSION=
-ARG MARREQ_GIT_SHA=unknown
-ENV MARREQ_GIT_SHA=${MARREQ_GIT_SHA}
-ENV MARREQ_VERSION=${MARREQ_VERSION}
-
 # C toolchain for native crates (aws-lc-sys via rustls, openssl-sys, pq-sys)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -20,31 +14,40 @@ COPY Cargo.toml Cargo.lock ./
 COPY marreq-core/Cargo.toml marreq-core/diesel.toml ./marreq-core/
 COPY marreq-server/Cargo.toml ./marreq-server/
 COPY marreq-cloud/Cargo.toml ./marreq-cloud/
+COPY tools/marreq-contracts/Cargo.toml ./tools/marreq-contracts/
 
 # Dummy sources so cargo can resolve and cache dependencies
-RUN mkdir -p marreq-core/src marreq-server/src marreq-cloud/src && \
+RUN mkdir -p marreq-core/src marreq-server/src marreq-cloud/src tools/marreq-contracts/src && \
     echo "fn main() {}" > marreq-server/src/main.rs && \
     echo "fn main() {}" > marreq-cloud/src/main.rs && \
-    echo "" > marreq-core/src/lib.rs
+    echo "" > marreq-core/src/lib.rs && \
+    echo "" > tools/marreq-contracts/src/lib.rs && \
+    echo "fn main() {}" > tools/marreq-contracts/src/main.rs
 
 # Cache dependencies only (ignore build errors from empty stubs)
-RUN cargo build --release -p ${MARREQ_BIN} 2>/dev/null || true
+RUN cargo build --locked --release -p marreq-server -p marreq-cloud 2>/dev/null || true
 
 # Install diesel_cli for migrations (postgres only)
 RUN cargo install diesel_cli --no-default-features --features postgres
 
 # Copy real sources
-RUN rm -rf marreq-core/src marreq-server/src marreq-cloud/src
+RUN rm -rf marreq-core/src marreq-server/src marreq-cloud/src tools/marreq-contracts/src
 COPY marreq-core/src ./marreq-core/src
 COPY marreq-core/frontend_compatibility.json ./marreq-core/frontend_compatibility.json
 COPY marreq-core/migrations ./marreq-core/migrations
 COPY marreq-core/scripts ./marreq-core/scripts
 COPY marreq-server/src ./marreq-server/src
 COPY marreq-cloud/src ./marreq-cloud/src
+COPY tools/marreq-contracts/src ./tools/marreq-contracts/src
 
 # Build the selected binary (MARREQ_VERSION / MARREQ_GIT_SHA baked via option_env!)
+ARG MARREQ_BIN=marreq-server
+ARG MARREQ_VERSION=
+ARG MARREQ_GIT_SHA=unknown
+ENV MARREQ_GIT_SHA=${MARREQ_GIT_SHA}
+ENV MARREQ_VERSION=${MARREQ_VERSION}
 RUN touch marreq-core/src/lib.rs marreq-server/src/main.rs marreq-cloud/src/main.rs && \
-    cargo build --release -p ${MARREQ_BIN}
+    cargo build --locked --release -p ${MARREQ_BIN}
 
 # Runtime stage
 FROM debian:trixie-slim

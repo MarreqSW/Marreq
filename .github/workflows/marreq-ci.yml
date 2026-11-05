@@ -166,6 +166,9 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: Build independent frontend image
+        run: docker build -f docker/frontend/Dockerfile -t marreq-frontend:ci .
+
   backend-build:
     runs-on: ubuntu-latest
     steps:
@@ -184,6 +187,35 @@ jobs:
 
       - name: Build workspace (release)
         run: cargo build --workspace --release
+
+  backend-images:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        binary: [marreq-server, marreq-cloud]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build production backend image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: docker/Dockerfile
+          load: true
+          tags: ${{ matrix.binary }}:ci
+          build-args: MARREQ_BIN=${{ matrix.binary }}
+          cache-from: type=gha,scope=${{ matrix.binary }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.binary }}
+      - name: Verify runtime excludes contract tooling
+        run: |
+          docker run --rm --entrypoint sh ${{ matrix.binary }}:ci -ec '
+            test ! -e /app/tools
+            test ! -e /app/docs
+            ! command -v marreq-contracts
+            ! command -v oasdiff
+            ! command -v node
+          '
 
   mcp-tests:
     runs-on: ubuntu-latest

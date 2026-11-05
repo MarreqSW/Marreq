@@ -3021,6 +3021,8 @@ dependencies = [
  "lettre",
  "oauth2",
  "openidconnect",
+ "p256",
+ "p384",
  "pgvector",
  "printpdf",
  "quick-xml 0.42.0",

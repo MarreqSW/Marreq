@@ -204,20 +204,30 @@ pub fn export(root: &Path, who: &str, version: Version, mode: Option<String>) ->
         "tools/marreq-contracts",
         "Cargo.toml",
         "Cargo.lock",
+        ".dockerignore",
     ]
     .into_iter()
     .map(String::from)
     .collect();
     if who == "backend" {
         inputs.extend(
-            ["marreq-core", "marreq-cloud", "marreq-server"]
-                .into_iter()
-                .map(String::from),
+            [
+                "marreq-core",
+                "marreq-cloud",
+                "marreq-server",
+                "docker/Dockerfile",
+                "docker/docker-entrypoint.sh",
+            ]
+            .into_iter()
+            .map(String::from),
         );
     } else {
         // Build configuration (for example Vite's API routing) belongs to the
         // exact consumer source evidence too, not just src/ and package files.
         inputs.push(directory.into());
+        if who == "frontend" {
+            inputs.push("docker/frontend".into());
+        }
     }
     let status = Command::new("git")
         .args(["status", "--porcelain", "--untracked-files=all", "--"])

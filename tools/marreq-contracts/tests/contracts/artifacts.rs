@@ -254,6 +254,8 @@ fn consumer_bundle_requires_committed_build_configuration() {
         "scripts/bundle-openapi.mjs",
         "package.json",
         "package-lock.json",
+        ".dockerignore",
+        "docker/frontend/nginx.conf.template",
     ] {
         let path = root.join(relative);
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();

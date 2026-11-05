@@ -1,0 +1,11 @@
+# Each image installs/builds its own lockfile-pinned dependencies.
+.git
+**/node_modules
+**/target
+**/dist
+/coverage
+/frontend/coverage
+/mcp-server/coverage
+coverage_html
+.env
+.env.*

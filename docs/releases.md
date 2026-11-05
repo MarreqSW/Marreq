@@ -167,7 +167,7 @@ genuine historical bundles. Missing release evidence must continue to fail close
 
 Editable contract export requires root `npm ci` for the lockfile-pinned offline
 Redocly bundler. All `docs/developer/openapi/**` modules, the bundler script and
-root npm manifests/lockfile must be committed alongside the Rust tool and component
+root npm manifests/lockfile and Docker build/proxy inputs must be committed alongside the Rust tool and component
 inputs before export. The disposable `openapi.yaml` output is ignored and never
 substitutes for these inputs. Retained bundle verification uses self-contained
 JSON with the pinned standards engine; it never resolves editable source refs.

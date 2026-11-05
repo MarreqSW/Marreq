@@ -164,3 +164,12 @@ or production deployment is performed here.
 A document-only check is not a release-readiness assertion. Publication also
 requires passing consumer/handler tests and a provisioned immutable plan with
 genuine historical bundles. Missing release evidence must continue to fail closed.
+
+Editable contract export requires root `npm ci` for the lockfile-pinned offline
+Redocly bundler. All `docs/developer/openapi/**` modules, the bundler script and
+root npm manifests/lockfile must be committed alongside the Rust tool and component
+inputs before export. The disposable `openapi.yaml` output is ignored and never
+substitutes for these inputs. Retained bundle verification uses self-contained
+JSON with the pinned standards engine; it never resolves editable source refs.
+Frontend/MCP tags do not compile backend route tests in the release gate; backend
+tags verify producer routes/serializers, and PR CI checks all production images.

@@ -169,7 +169,7 @@ Comments are immutable. `@username` mentions of project members send a `mentione
 
 ## Executable contract checks
 
-Use-case request/response definitions are in `openapi.yaml`; consumer declarations
+Use-case request/response definitions are in `openapi/root.yaml`; consumer declarations
 are generated with standard `openapi-typescript` through
 `node scripts/generate-api-types.mjs`. Native Rust tests and
 `scripts/test-api-contracts.sh` check representative real read/write, session,

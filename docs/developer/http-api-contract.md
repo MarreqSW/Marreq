@@ -209,7 +209,7 @@ Instance-wide. All routes require a **global administrator** (`users.is_admin`);
 
 Rocket mounts all JSON routes under `/api` in `marreq-core/src/api/mod.rs` (shared routes) and the deployment crate's `src/routes.rs` (deployment-specific routes). The project [README](../../README.md) includes a human-maintained endpoint summary (requirements, tests, matrix, baselines, MCP audit, etc.).
 
-A minimal **OpenAPI 3** sketch for auth and session project listing lives in [`openapi.yaml`](openapi.yaml) (extend or replace with generated spec later).
+The consumer-facing OpenAPI contract starts at [`openapi/root.yaml`](openapi/root.yaml); domain modules document its requests, responses and security requirements.
 
 ## Server flags (backend)
 
@@ -229,7 +229,7 @@ See [`../../docker/README.md`](../../docker/README.md).
 
 ## Consumer-aware contract verification (#423 / #424)
 
-`docs/developer/openapi.yaml` is the single wire contract. Only operations used by
+`docs/developer/openapi/root.yaml` and its domain files are the authoritative wire contract. Only operations used by
 frontend or MCP belong in release compatibility checks. A route inventory is not
 serialization evidence: `x-marreq-unverified` means the operation still needs an
 audit and cannot be used in a releasable consumer bundle. Unconsumed backend
@@ -245,7 +245,37 @@ or undocumented operations still fail closed.
 
 ### Architecture and rationale
 
-- `tools/marreq-contracts` is a workspace Rust CLI/library. Serde/serde_yaml_ng parse
+The root indexes standard `$ref` path items and components. Edit `paths/<domain>.yaml`
+and `schemas/<domain>.yaml`; shared security and error responses live in `components/`.
+Requirements history, project settings, notifications and use-case links have their
+own modules, matching the backend responsibilities. No bundled snapshot is committed.
+
+`source::load` invokes **Redocly openapi-core 1.34.22**, already used by the type
+pipeline and now an exact direct npm dependency with lockfile integrity. The short
+`scripts/bundle-openapi.mjs` adapter forbids network/URI references and files outside
+the root directory (including symlinks). Redocly resolves the references; errors or
+remaining external references fail. Comparison and retained-bundle verification
+read self-contained JSON and do not need Node or editable source files.
+
+For a tool that needs one document, generate an ignored, disposable copy:
+
+```sh
+node scripts/bundle-openapi.mjs > docs/developer/openapi.yaml
+```
+
+Bundling tests check byte determinism, schemas and security metadata, missing
+references, circular reference chains, network references and directory escapes.
+The modularization was checked against the previous parsed document for exact
+semantic equality, including all Marreq extensions. Type declarations are unchanged.
+
+- `tools/marreq-contracts` is a workspace Rust CLI/library. `source` handles
+  editable-document loading; `contract` owns selection, standards validation and
+  comparison; `artifact` owns identity/policies; `traffic` checks live evidence.
+  `coverage` separates the repository scan, AST/expression handling, transport
+  recognition, route matching and call analysis. Path patterns are prepared once
+  per file and shared by HTTP/navigation checks; the CLI delegates domain work.
+  Focused test modules share a single small wire fixture.
+  Serde/serde_yaml_ng parse
   data, `semver` validates versions, `sha2` pins bundle content, and `jsonschema`
   validates actual request/response bodies offline.
 - OpenAPI validation and breaking-change analysis use checksum-pinned **oasdiff
@@ -284,7 +314,7 @@ existing requirements-compliance Python script is retained.
 
 ### Developer commands
 
-Workspace tests, including coverage, require the pinned upstream engine. Install
+Workspace tests, including coverage, require Node 22+, root `npm ci`, and the pinned upstream engine. Install
 it once and expose its destination on PATH (or set `OASDIFF` to that binary).
 Both contract CI and workspace coverage CI use the same installer.
 The installer currently handles Linux x86_64; other platforms may install the same
@@ -293,7 +323,7 @@ upstream version themselves. No contract command downloads refs or schemas.
 ```sh
 scripts/install-oasdiff.sh
 export PATH="$HOME/.cache/marreq-contracts:$PATH"
-npm ci # pinned generator and TypeScript compiler
+npm ci # pinned offline bundler, type generator and TypeScript compiler
 cargo test --locked -p marreq-contracts
 cargo run --locked -p marreq-contracts -- validate
 cargo run --locked -p marreq-contracts -- coverage --component frontend
@@ -311,7 +341,7 @@ without certifying consumer coverage; it cannot create a consumer release bundle
 no development bypass for an unverified consumer operation.
 
 When adding/changing an HTTP call, update the actual Rocket implementation and
-OpenAPI, then regenerate declarations and extend existing consumer/producer tests.
+the relevant OpenAPI domain module (and its root index for a new path/schema), then regenerate declarations and extend existing consumer/producer tests.
 A new unknown call, unresolved dynamic call, or newly used unverified operation
 fails validation. Remove `x-marreq-unverified` only after auditing request defaults,
 response nullability/required fields, errors/statuses, media, guards and scopes.
@@ -343,3 +373,12 @@ The advisory policy is inherited unchanged from `main`, including its
 The newly reported `calamine` advisory RUSTSEC-2026-0436 is fixed with the targeted
 0.38.0 update; no additional ignores are introduced. MCP production audit still
 reports a moderate advisory below the existing high-severity failure threshold.
+
+Production image regression checks build both `MARREQ_BIN=marreq-server` and
+`MARREQ_BIN=marreq-cloud` through `docker/Dockerfile`. The cache layer copies only
+workspace manifests plus stubs, including `tools/marreq-contracts`; real sources
+arrive later. Variant/version/SHA arguments apply after dependency caching. The
+runtime copies only the selected backend, migrations and existing operational
+scripts/tools; contract analysis is a dev dependency and its source, Node and
+standards binaries do not enter either backend image. Frontend and MCP images
+build from their own inputs and committed declarations.

@@ -54,28 +54,37 @@ def compose(project, base, overlay=None, profile=False, root=ROOT):
 
 
 def validate_configs():
-    for base in ('docker-compose.yml', 'docker-compose.light.yml'):
-        for overlay in (None, 'docker-compose.dev.yml', 'docker-compose.ci.yml',
-                        'docker-compose.prod.yml', 'docker-compose.migrate.yml'):
-            for cloud in (False, True):
-                cmd = compose('marreq-compose-check', base,
-                              ROOT / 'docker' / overlay if overlay else None, cloud)
-                # Do not read or print developer env_file contents.
-                model = json.loads(run(*cmd, 'config', '--no-env-resolution', '--format', 'json'))
-                services = model['services']
-                for frontend, backend, mcp in (
-                    ('frontend', 'marreq-server', 'mcp-server'),
-                    ('frontend-cloud', 'marreq-cloud', 'mcp-cloud'),
-                ):
-                    if frontend not in services:
-                        continue
-                    deps = services[frontend].get('depends_on', {})
-                    assert set(deps) == {backend}, (base, overlay, frontend, deps)
-                    assert deps[backend]['condition'] == 'service_healthy'
-                    assert not deps[backend].get('restart', False)
-                    assert services[mcp]['depends_on'][backend]['condition'] == 'service_healthy'
-                    assert not services[mcp].get('ports'), 'MCP must remain internal-only'
-                print(f'CONFIG OK {base} + {overlay or "base"} cloud={cloud}', flush=True)
+    with tempfile.TemporaryDirectory(prefix='marreq-compose-config-') as temp:
+        env_override = Path(temp) / 'env.yml'
+        for base in ('docker-compose.yml', 'docker-compose.light.yml'):
+            for overlay in (None, 'docker-compose.dev.yml', 'docker-compose.ci.yml',
+                            'docker-compose.prod.yml', 'docker-compose.migrate.yml'):
+                backends = ['marreq-server', 'marreq-cloud']
+                if overlay == 'docker-compose.dev.yml':
+                    backends.append('marreq-dev')
+                env_override.write_text('services:\n' + ''.join(
+                    f'  {backend}:\n    env_file: !reset []\n' for backend in backends))
+                for cloud in (False, True):
+                    cmd = compose('marreq-compose-check', base,
+                                  ROOT / 'docker' / overlay if overlay else None, cloud)
+                    # Compose 2.35.1 checks env_file paths even with --no-env-resolution.
+                    # Discard those inputs explicitly; this check validates the graph.
+                    cmd += ['-f', str(env_override)]
+                    model = json.loads(run(*cmd, 'config', '--no-env-resolution', '--format', 'json'))
+                    services = model['services']
+                    for frontend, backend, mcp in (
+                        ('frontend', 'marreq-server', 'mcp-server'),
+                        ('frontend-cloud', 'marreq-cloud', 'mcp-cloud'),
+                    ):
+                        if frontend not in services:
+                            continue
+                        deps = services[frontend].get('depends_on', {})
+                        assert set(deps) == {backend}, (base, overlay, frontend, deps)
+                        assert deps[backend]['condition'] == 'service_healthy'
+                        assert not deps[backend].get('restart', False)
+                        assert services[mcp]['depends_on'][backend]['condition'] == 'service_healthy'
+                        assert not services[mcp].get('ports'), 'MCP must remain internal-only'
+                    print(f'CONFIG OK {base} + {overlay or "base"} cloud={cloud}', flush=True)
 
 
 def poll(label, check, timeout=45):

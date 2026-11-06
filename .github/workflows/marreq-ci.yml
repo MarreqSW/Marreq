@@ -159,6 +159,7 @@ jobs:
 
   frontend-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -183,6 +184,11 @@ jobs:
 
       - name: Build independent frontend image
         run: docker build -f docker/frontend/Dockerfile -t marreq-frontend:ci .
+
+      - name: Test nginx and independent MCP lifecycles (Server/Cloud, full/light, production)
+        run: |
+          docker pull node:22-alpine
+          python3 scripts/test-frontend-mcp.py
 
   backend-build:
     runs-on: ubuntu-latest
@@ -272,6 +278,9 @@ jobs:
 
       - name: Ensure CI .env placeholder exists
         run: test -f .env || touch .env
+
+      - name: Check frontend dependency graph across all Compose variants
+        run: python3 scripts/test-frontend-mcp.py --config-only
 
       - name: Validate CI Compose (no MCP secret required)
         run: |

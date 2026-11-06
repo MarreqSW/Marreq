@@ -58,6 +58,13 @@ Connect OAuth-capable clients to `http://localhost:8080/mcp`. On that same
 - `/oauth/*` to Marreq Core for registration, authorization, and token exchange;
 - `/api/*` to Marreq Core for the REST API.
 
+MCP is optional for SPA startup. A targeted `up -d frontend` does not start it;
+start `mcp-server` explicitly (Cloud: `--profile cloud up -d mcp-cloud`). nginx
+can start with MCP absent and discovers it through Docker DNS when it becomes
+available. An outage affects `/mcp`, while API and OAuth discovery keep routing
+to the backend. See [independent service lifecycles](../../docker/README.md#optional-mcp-and-independent-service-lifecycles)
+for selective updates and the DNS recovery window.
+
 Send `Authorization: Bearer <Marreq API token or delegated OAuth access token>`.
 `MARREQ_API_TOKEN` and `MARREQ_PROJECT_ID` are not used in HTTP mode because
 identity and project are request/tool scoped. Remote mode registers the complete

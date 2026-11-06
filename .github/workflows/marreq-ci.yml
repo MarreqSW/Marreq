@@ -159,6 +159,7 @@ jobs:
 
   frontend-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -183,6 +184,25 @@ jobs:
 
       - name: Build independent frontend image
         run: docker build -f docker/frontend/Dockerfile -t marreq-frontend:ci .
+
+      - name: Test nginx and independent MCP lifecycles (Server/Cloud, full/light, production)
+        run: |
+          docker pull node:22-alpine
+          python3 scripts/test-frontend-mcp.py
+
+      - name: Test clean-checkout lifecycles with Docker Compose 2.35.1
+        env:
+          DOCKER_CONFIG: ${{ runner.temp }}/compose-2.35.1
+        run: |
+          mkdir -p "$DOCKER_CONFIG/cli-plugins"
+          curl --fail --silent --show-error --location \
+            https://github.com/docker/compose/releases/download/v2.35.1/docker-compose-linux-x86_64 \
+            -o "$DOCKER_CONFIG/cli-plugins/docker-compose"
+          echo "7bdb2ce2916e5dd0354e5d129892bf96fdcdb1a9ab8eed69b9173e131db4c230  $DOCKER_CONFIG/cli-plugins/docker-compose" | sha256sum --check
+          chmod +x "$DOCKER_CONFIG/cli-plugins/docker-compose"
+          docker compose version
+          test "$(docker compose version --short)" = 2.35.1
+          python3 scripts/test-frontend-mcp.py
 
   backend-build:
     runs-on: ubuntu-latest
@@ -272,6 +292,9 @@ jobs:
 
       - name: Ensure CI .env placeholder exists
         run: test -f .env || touch .env
+
+      - name: Check frontend dependency graph across all Compose variants
+        run: python3 scripts/test-frontend-mcp.py --config-only
 
       - name: Validate CI Compose (no MCP secret required)
         run: |

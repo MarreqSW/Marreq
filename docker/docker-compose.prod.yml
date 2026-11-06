@@ -9,13 +9,13 @@
 #   docker compose \
 #     -f docker/docker-compose.yml \
 #     -f docker/docker-compose.prod.yml \
-#     up -d --build db ollama marreq-server frontend
+#     up -d --build db ollama marreq-server mcp-server frontend
 #
 # Light-stack example:
 #   docker compose \
 #     -f docker/docker-compose.light.yml \
 #     -f docker/docker-compose.prod.yml \
-#     up -d --build db marreq-server frontend
+#     up -d --build db marreq-server mcp-server frontend
 
 services:
   marreq-server:

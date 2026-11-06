@@ -121,7 +121,7 @@ Use this when you want the hosted/SaaS deployment binary in containers.
    ```
 4. Start the cloud binary:
    ```bash
-   docker compose -f docker/docker-compose.yml --profile cloud up -d marreq-cloud frontend-cloud
+   docker compose -f docker/docker-compose.yml --profile cloud up -d marreq-cloud mcp-cloud frontend-cloud
    ```
 5. Open the SPA at **`http://localhost:8082`**.
 

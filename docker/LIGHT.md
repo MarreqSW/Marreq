@@ -16,12 +16,12 @@ docker compose -f docker/docker-compose.light.yml up -d --build
 
 The self-hosted SPA is available on `http://127.0.0.1:8080` by default.
 
-To start only the runtime services needed by the self-hosted application:
+To start the self-hosted runtime services, including optional MCP:
 
 ```bash
 docker compose \
   -f docker/docker-compose.light.yml \
-  up -d --build db marreq-server frontend
+  up -d --build db marreq-server mcp-server frontend
 ```
 
 ## Production / HTTPS usage
@@ -37,7 +37,7 @@ docker compose \
 docker compose \
   -f docker/docker-compose.light.yml \
   -f docker/docker-compose.prod.yml \
-  up -d --build db marreq-server frontend
+  up -d --build db marreq-server mcp-server frontend
 ```
 
 Set the production variables described in `.env.example`, including a real `ROCKET_SECRET_KEY`, `MARREQ_PUBLIC_BASE_URL`, and `CSRF_ALLOWED_ORIGINS`. The production override enables secure session cookies and is intended to run behind the external TLS reverse proxy described in `docker/README.md`.
@@ -50,10 +50,12 @@ The light configuration also contains the `cloud` profile without Ollama:
 docker compose \
   -f docker/docker-compose.light.yml \
   --profile cloud \
-  up -d --build db marreq-cloud frontend-cloud
+  up -d --build db marreq-cloud mcp-cloud frontend-cloud
 ```
 
 For production, add `-f docker/docker-compose.prod.yml` after the light file.
+Omit `mcp-server` / `mcp-cloud` from a targeted startup when MCP is not needed;
+the SPA remains available. See [independent service lifecycles](README.md#optional-mcp-and-independent-service-lifecycles).
 
 ## Full stack vs light stack
 

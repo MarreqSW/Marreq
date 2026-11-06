@@ -108,10 +108,10 @@ docker compose -f docker/docker-compose.yml up -d
 Cloud profile (`marreq-cloud` on **8001**, SPA on **8082**):
 
 ```bash
-docker compose -f docker/docker-compose.yml --profile cloud up -d marreq-cloud frontend-cloud
+docker compose -f docker/docker-compose.yml --profile cloud up -d marreq-cloud mcp-cloud frontend-cloud
 ```
 
-Service ports and env expectations are documented in [docker/README.md](docker/README.md). Backend images run migrations at startup via `docker/docker-entrypoint.sh`.
+Service ports and env expectations are documented in [docker/README.md](docker/README.md). Backend startup validates schema history without applying migrations or seeds. Run migrations explicitly before starting a new schema release; follow the [migration and recovery runbook](docs/developer/database-migrations.md).
 
 Manual image builds:
 

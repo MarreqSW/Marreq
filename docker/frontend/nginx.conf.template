@@ -1,5 +1,9 @@
 # Docker embedded DNS — required when proxy_pass uses a variable so the upstream is re-resolved
 # after container recreate (avoids stale upstream IP → connection refused).
+# Keep MCP proxy_pass variable-based: literal hostnames resolve at config load
+# and would prevent nginx from starting when the optional MCP service is absent.
+# Missing MCP returns an upstream error only for /mcp; Docker DNS is consulted
+# again on later requests, including after the 10s cached address expires.
 resolver 127.0.0.11 valid=10s ipv6=off;
 
 # Preserve the original scheme supplied by a trusted outer reverse proxy. When

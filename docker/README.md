@@ -54,6 +54,76 @@ The default `docker-compose.yml` uses a **split SPA stack**: nginx serves the Vi
 
 Use the UI at **http://localhost:8080** for self-hosted mode, or **http://localhost:8082** for cloud mode, so session cookies stay on the same origin as `/api`.
 
+## Optional MCP and independent service lifecycles
+
+`frontend` waits only for a healthy `marreq-server`; `frontend-cloud` waits only
+for a healthy `marreq-cloud`. MCP still waits for its backend. Backend database
+readiness (and Ollama startup in the full stack) is unchanged. Neither Compose
+file configures dependency restart propagation.
+
+Starting only `frontend` (or `frontend-cloud` with `--profile cloud`) brings up
+its required backend dependencies, **without starting MCP**. `up -d` without a
+service list still starts all enabled services, including MCP. Examples that
+need MCP must name `mcp-server` or `mcp-cloud` explicitly.
+
+nginx already uses a variable in `proxy_pass $mcp_upstream`, with Docker's
+embedded DNS resolver `127.0.0.11` and `valid=10s`. Keep both: a literal MCP
+hostname in `proxy_pass` would resolve during configuration loading and fail
+startup if MCP has no DNS record. The variable defers lookup until a request;
+subsequent lookups discover new container addresses without an nginx reload.
+See the nginx [proxy_pass](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_pass)
+and [resolver](https://nginx.org/en/docs/http/ngx_http_core_module.html#resolver) documentation.
+
+When MCP is missing or unreachable, `/mcp` returns an upstream error (typically
+502); the SPA, `/api/`, `/oauth/`, and `/.well-known/` remain available. Recovery
+is request-driven and may take a DNS cache/lookup cycle after startup or
+replacement. Existing MCP streams/sessions can disconnect on replacement;
+clients must reconnect. No frontend rebuild or restart is required.
+
+After the backend is ready, these commands operate on MCP independently (use
+the same base/production files and project name as the running deployment):
+
+```sh
+docker compose -f docker/docker-compose.light.yml up -d mcp-server
+docker compose -f docker/docker-compose.light.yml stop mcp-server
+docker compose -f docker/docker-compose.light.yml restart mcp-server
+# Replace only MCP after selecting/pulling the desired image; no dependent recreation:
+docker compose -f docker/docker-compose.light.yml up -d --no-deps mcp-server
+```
+
+For Cloud, add `--profile cloud` and select `mcp-cloud`. `--no-deps` assumes the
+backend is already ready; omit it for first startup. A full-stack `down` still
+stops the whole project. Production continues to require MCP/OAuth environment
+values when parsing the complete Compose model even if MCP is not selected.
+No public ports or authentication/proxy settings change.
+
+### Regression checks
+
+```sh
+# Fast graph validation: 20 full/light + base/dev/CI/prod/migration/profile combinations.
+python3 scripts/test-frontend-mcp.py --config-only
+# Focused runtime tests (Docker Compose >= 2.35, Python 3, no npm on the host):
+docker build -f docker/frontend/Dockerfile -t marreq-frontend:ci .
+docker pull node:22-alpine
+python3 scripts/test-frontend-mcp.py
+```
+
+The runtime matrix uses the actual full/light Compose definitions, with and
+without production overrides, for Server and Cloud (eight cases). It runs the
+built SPA/nginx image; disposable HTTP fixtures replace only the backend/MCP
+processes to isolate routing/lifecycle behavior from database setup and OAuth
+application logic. It does not prove application-level MCP authentication.
+The fixtures do not expose host ports. Tests use unique project networks,
+ephemeral loopback frontend ports, and no database volumes. All eight cases run
+from temporary copies of the Compose files and HTTP fixture with no `.env`;
+both backend `env_file` lists are cleared before any Compose command.
+They poll observable readiness with deadlines and clean up on exit. Container
+IDs, start times, and restart counts verify independence; reserving the removed
+MCP container's address forces a different replacement IP and prevents a false
+DNS recovery pass from address reuse. CI runs graph checks in
+`compose-validation` and runtime checks in `frontend-build`, using both the
+runner's Compose version and pinned Compose 2.35.1.
+
 ## Common Commands (from repo root)
 
 Start only the database:
@@ -79,7 +149,7 @@ docker compose -f docker/docker-compose.light.yml up -d --build
 Start the cloud variant with its own frontend:
 
 ```bash
-docker compose -f docker/docker-compose.yml --profile cloud up -d marreq-cloud frontend-cloud
+docker compose -f docker/docker-compose.yml --profile cloud up -d marreq-cloud mcp-cloud frontend-cloud
 ```
 
 For the light cloud variant, replace `docker-compose.yml` with `docker-compose.light.yml` in that command.
@@ -379,4 +449,4 @@ Ensure you open the app on the **frontend** port (**8080**), not only the API po
 
 ### nginx `502` / `connect() failed (111: Connection refused)` to upstream
 
-Usually means a frontend container started before its backend was listening (schema preflight/startup) or nginx had a **stale IP** for `marreq-server` / `marreq-cloud` after a recreate. Both base stacks use backend `healthcheck`s and `depends_on: condition: service_healthy` so nginx starts only after `GET /api/auth/csrf` succeeds on the target backend; nginx is configured with **Docker DNS resolver** + variable `proxy_pass` so upstream names are re-resolved. Rebuild the image and recreate the affected backend/frontend pair using the same base Compose file selected for the deployment.
+Usually means a frontend container started before its backend was listening (schema preflight/startup) or nginx had a **stale IP** for `marreq-server` / `marreq-cloud` after a recreate. Both base stacks use backend `healthcheck`s and `depends_on: condition: service_healthy` so nginx starts only after `GET /api/auth/csrf` succeeds on the target backend; nginx is configured with **Docker DNS resolver** + variable `proxy_pass` so upstream names are re-resolved. Check backend health and nginx logs first; allow a DNS cache/lookup cycle after backend replacement. A current frontend re-resolves upstream names without recreation.

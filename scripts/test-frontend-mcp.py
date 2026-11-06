@@ -8,6 +8,7 @@ Python 3, and the built SPA image.
 import argparse
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -42,9 +43,9 @@ def run(*args):
     return subprocess.check_output(args, cwd=ROOT, env=ENV, text=True).strip()
 
 
-def compose(project, base, overlay=None, profile=False):
+def compose(project, base, overlay=None, profile=False, root=ROOT):
     cmd = ['docker', 'compose', '--env-file', '/dev/null', '-p', project,
-           '-f', str(ROOT / 'docker' / base)]
+           '-f', str(root / 'docker' / base)]
     if overlay:
         cmd += ['-f', str(overlay)]
     if profile:
@@ -115,12 +116,18 @@ def exercise(base, production, cloud, args, work):
     frontend, backend, mcp, port = (
         ('frontend-cloud', 'marreq-cloud', 'mcp-cloud', 8001) if cloud else
         ('frontend', 'marreq-server', 'mcp-server', 8000))
-    cmd = compose(project, base, ROOT / 'docker/docker-compose.prod.yml' if production else None, cloud)
+    other_backend = 'marreq-server' if cloud else 'marreq-cloud'
+    cmd = compose(project, base, work / 'docker/docker-compose.prod.yml' if production else None,
+                  cloud, root=work)
     override = work / f'{project}.yml'
-    fixture = ROOT / 'tests/docker/proxy-upstream.cjs'
+    fixture = work / 'tests/docker/proxy-upstream.cjs'
     # Replace only expensive application processes; retain frontend config,
     # environment, dependency graph and Docker DNS from the real Compose files.
+    # Compose 2.35.1 loads env_file even for unselected enabled services in ps.
+    # Clear both backends so no command can read a developer .env.
     override.write_text(f'''services:
+  {other_backend}:
+    env_file: !reset []
   {frontend}:
     build: !reset null
     image: {json.dumps(args.frontend_image)}
@@ -169,6 +176,10 @@ def exercise(base, production, cloud, args, work):
         assert snapshot(cid(service)) == before, f'{service} recreated or restarted'
 
     try:
+        assert not (work / '.env').exists(), 'Runtime tests require a clean checkout'
+        # Resolve env files for BOTH profiles, rather than hiding them with
+        # --no-env-resolution. A missing reset must fail before any startup.
+        dc('--profile', 'cloud', 'config', '--format', 'json')
         # Deliberately do not use --no-deps here: prove frontend startup doesn't
         # transitively create MCP, and the required backend still becomes healthy.
         dc('up', '-d', '--no-build', frontend)
@@ -298,10 +309,19 @@ def main():
     validate_configs()
     if not args.config_only:
         with tempfile.TemporaryDirectory(prefix='marreq-proxy-') as temp:
+            work = Path(temp)
+            # Copy only test inputs: never inherit (or move) the user's .env.
+            # Every runtime case must work without it, including compose ps.
+            (work / 'docker').mkdir()
+            for source in (ROOT / 'docker').glob('docker-compose*.yml'):
+                shutil.copyfile(source, work / 'docker' / source.name)
+            (work / 'tests/docker').mkdir(parents=True)
+            shutil.copyfile(ROOT / 'tests/docker/proxy-upstream.cjs',
+                            work / 'tests/docker/proxy-upstream.cjs')
             for base in ('docker-compose.yml', 'docker-compose.light.yml'):
                 for production in (False, True):
                     for cloud in (False, True):
-                        exercise(base, production, cloud, args, Path(temp))
+                        exercise(base, production, cloud, args, work)
 
 
 if __name__ == '__main__':

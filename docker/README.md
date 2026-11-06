@@ -114,12 +114,15 @@ built SPA/nginx image; disposable HTTP fixtures replace only the backend/MCP
 processes to isolate routing/lifecycle behavior from database setup and OAuth
 application logic. It does not prove application-level MCP authentication.
 The fixtures do not expose host ports. Tests use unique project networks,
-ephemeral loopback frontend ports, no developer `.env`, and no database volumes.
+ephemeral loopback frontend ports, and no database volumes. All eight cases run
+from temporary copies of the Compose files and HTTP fixture with no `.env`;
+both backend `env_file` lists are cleared before any Compose command.
 They poll observable readiness with deadlines and clean up on exit. Container
 IDs, start times, and restart counts verify independence; reserving the removed
 MCP container's address forces a different replacement IP and prevents a false
 DNS recovery pass from address reuse. CI runs graph checks in
-`compose-validation` and runtime checks in `frontend-build`.
+`compose-validation` and runtime checks in `frontend-build`, using both the
+runner's Compose version and pinned Compose 2.35.1.
 
 ## Common Commands (from repo root)
 

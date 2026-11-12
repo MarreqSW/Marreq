@@ -6,15 +6,15 @@
       "checks": ["rust", "api_contracts"]
     },
     {
-      "paths": ["marreq-(core|server|cloud)/tests/.+", "marreq-core/src/((generators|importers|models|repository|services|validation)/tests|reqif/vendor_import_tests|services/config_authorization_tests|deployment/test_support)\\.rs", "tests/reqif/.+", "\\.cargo/config\\.toml", "deny\\.toml"],
+      "paths": ["marreq-(core|server|cloud)/tests/.+", "tests/reqif/.+", "\\.cargo/config\\.toml", "deny\\.toml"],
       "checks": ["rust"]
     },
     {
-      "paths": ["frontend/src/(.*/)?__tests__/.+", "frontend/src/test/.+", "frontend/src/.+\\.test\\.tsx?", "frontend/vitest\\.config\\.ts", "\\.stylelintrc\\.json", "\\.github/workflows/purgecss(-ci\\.mjs|\\.config\\.cjs)", "scripts/frontend-coverage-summary\\.mjs"],
+      "paths": ["\\.stylelintrc\\.json", "\\.github/workflows/purgecss(-ci\\.mjs|\\.config\\.cjs)", "scripts/frontend-coverage-summary\\.mjs"],
       "checks": ["frontend"]
     },
     {
-      "paths": ["mcp-server/src/.+\\.test\\.ts", "mcp-server/vitest\\.config\\.ts"],
+      "paths": ["mcp-server/vitest\\.config\\.ts"],
       "checks": ["mcp"]
     },
     {
@@ -26,7 +26,7 @@
       "checks": ["api_contracts", "frontend"]
     },
     {
-      "paths": ["tools/marreq-migrations/src/tests\\.rs", "tools/marreq-migrations/released-migrations\\.json", "scripts/(check-migration-policy\\.py|test-migration-policy\\.py|test-migration-image\\.sh|test-migrations\\.sh|smoke-restored-backend\\.py)"],
+      "paths": ["tools/marreq-migrations/released-migrations\\.json", "scripts/(check-migration-policy\\.py|test-migration-policy\\.py|test-migration-image\\.sh|test-migrations\\.sh|smoke-restored-backend\\.py)"],
       "checks": ["database_migrations"]
     },
     {
@@ -65,7 +65,7 @@
       "checks": ["database_migrations"]
     },
     {
-      "paths": ["frontend/(src/.+|compatibility\\.json)"],
+      "paths": ["frontend/(src/.+|compatibility\\.json|vitest\\.config\\.ts|README\\.md)"],
       "artifacts": ["frontend"],
       "checks": ["frontend", "api_contracts"]
     },
@@ -105,7 +105,7 @@
       "infrastructure": ["build_and_ci"]
     },
     {
-      "paths": ["(marreq-(core|server|cloud)|frontend|docker)/README\\.md", "docker/LIGHT\\.md", "\\.github/workflows/README\\.md", "(README|INSTALL|AGENTS)\\.md", "CHANGELOG", "LICENSE", "docs/.+\\.md", "docs/ReqIF/[^/]+\\.(cmof|xsd|pdf)", "docs/assets/[^/]+\\.(png|csv)", "docs/architecture/diagrams/[^/]+\\.mmd", "docs/user-manual/(index\\.html|styles\\.css|build\\.sh|build-links\\.lua|capture_screenshots\\.mjs|generated/[^/]+\\.html|screenshots/[^/]+\\.png)", "\\.github/ISSUE_TEMPLATE/[^/]+\\.yml", "\\.github/dependabot\\.yml", "\\.(gitignore|czrc|eslintrc\\.json)", "vitest\\.config\\.js", "mcp-server/dist/[^/]+\\.js"]
+      "paths": ["(marreq-(core|server|cloud)|docker)/README\\.md", "docker/LIGHT\\.md", "\\.github/workflows/README\\.md", "(README|INSTALL|AGENTS)\\.md", "CHANGELOG", "LICENSE", "docs/.+\\.md", "docs/ReqIF/[^/]+\\.(cmof|xsd|pdf)", "docs/assets/[^/]+\\.(png|csv)", "docs/architecture/diagrams/[^/]+\\.mmd", "docs/user-manual/(index\\.html|styles\\.css|build\\.sh|build-links\\.lua|capture_screenshots\\.mjs|generated/[^/]+\\.html|screenshots/[^/]+\\.png)", "\\.github/ISSUE_TEMPLATE/[^/]+\\.yml", "\\.github/dependabot\\.yml", "\\.(gitignore|czrc|eslintrc\\.json)", "vitest\\.config\\.js", "mcp-server/dist/[^/]+\\.js"]
     }
   ]
 }

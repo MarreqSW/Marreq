@@ -109,7 +109,8 @@ startup and HTTP smoke checks then exercise those same images.
 | Root Docker ignore file | Frontend and MCP | Consumer build checks |
 | OpenAPI, contract analysis and code generation tooling, root npm files | None | API compatibility, plus frontend tooling for root npm files |
 | Committed consumer generated types | Owning consumer | Consumer and API compatibility |
-| Rust/TS test inputs and the released migration ledger | None | Relevant validation |
+| Test files within copied source trees, and Frontend files copied alongside them | Owning image(s) | Relevant validation |
+| Rust integration tests, MCP Vitest config and the released migration ledger | None | Relevant validation |
 | Compose and environment example | None | Deployment validation |
 | Release publishing workflow | All four conservatively | Release infrastructure and API compatibility |
 | Standalone documentation | None | None |
@@ -118,8 +119,13 @@ The producer OpenAPI is bundled and consumer types are checked for drift in CI.
 The image builds consume committed consumer types and their local npm lockfiles.
 Changes to generator inputs call for contract validation. The generator's
 checked-in output is tracked independently. MCP's checked-in `dist/` is
-superseded by TypeScript output in the image. Frontend tests are type-checked
-during its build and are excluded from the Vite entrypoint graph.
+superseded by TypeScript output in the image. Test modules in copied Rust,
+migration, Frontend and MCP source trees count as artifact inputs. Rust can
+embed any copied file, and a production import can bring a TypeScript test
+module into a build even when the TypeScript config excludes it from the
+initial file set. Frontend's Dockerfile copies the entire project, so its
+Vitest config and README also count. Rust integration tests and MCP's Vitest
+config stay validation-only because their production images exclude them.
 
 ### Comparing source revisions
 
@@ -134,7 +140,7 @@ Schema version 1 reports `base_sha`, `head_sha`, `artifacts`, `checks`,
 identifiers to sorted repository-relative paths. Absent identifiers have no
 impact in that comparison. `api_contracts` includes producer/consumer
 compatibility across Frontend and MCP. Exit code 2 signals unresolved revisions,
-an invalid map, or unclassified paths. A report with unknown paths is diagnostic
+an invalid map, an unsupported file mode, or unclassified paths. A report with unknown paths is diagnostic
 only. Default text output is for manual review.
 
 For independent releases, resolve each component's last **published** source tag
@@ -150,14 +156,14 @@ files produce no impact. Deletions and both paths of renames are classified.
 
 Update [the impact map](../scripts/release-impact-map.json) in the same change
 that introduces or moves build inputs. Rules are ordered and use Python regex
-full matches against Git paths. Place specific test and validation exceptions
-before their containing source rules. A rule with only `paths` documents inputs
+full matches against Git paths. Give validation-only rules to inputs outside
+the corresponding production build boundary. A rule with only `paths` documents inputs
 with no impact. Keep rules narrow for shared directories and review every
 new build dependency, generator, embedded asset and workflow. A map change
 needs review against the actual Docker `COPY` inputs, package graphs and CI
 commands. CI checks classification coverage of the complete candidate tree,
-rejects unsupported file types, and classifies changed paths removed from the
-candidate. Historic paths can need explicit rules, as with the old single-file
+checks file modes across the candidate tree and on changed baseline paths,
+and classifies deleted paths. Only regular and executable files are supported. Historic paths can need explicit rules, as with the old single-file
 OpenAPI document.
 
 Run `python3 scripts/test-release-impact.py -v` to reproduce the acceptance

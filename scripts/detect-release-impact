@@ -10,6 +10,7 @@ import sys
 
 
 MAP = "scripts/release-impact-map.json"
+REGULAR_FILE_MODES = {b"100644", b"100755"}
 DIMENSIONS = {
     "artifacts": {"server", "cloud", "frontend", "mcp"},
     "checks": {
@@ -87,8 +88,8 @@ def classify(path, rules):
     return None
 
 
-def tree_paths(head):
-    for entry in git("ls-tree", "-rz", "--full-tree", head).split(b"\0"):
+def tree_paths(revision):
+    for entry in git("ls-tree", "-rz", "--full-tree", revision).split(b"\0"):
         if entry:
             metadata, path = entry.split(b"\t", 1)
             mode = metadata.split(b" ", 1)[0]
@@ -104,14 +105,19 @@ def detect(base_ref, head_ref):
         "diff", "--name-only", "-z", "--no-renames", "--no-relative",
         "--no-ext-diff", "--ignore-submodules=none", base, head, "--",
     )
-    changed = sorted(os.fsdecode(path) for path in paths.split(b"\0") if path)
+    changed = {os.fsdecode(path) for path in paths.split(b"\0") if path}
     unknown = {
         path for path, mode in tree_paths(head)
-        if mode not in (b"100644", b"100755") or classify(path, rules) is None
+        if mode not in REGULAR_FILE_MODES or classify(path, rules) is None
     }
+    # Deleted and replaced entries can hide an unsupported baseline mode.
+    unknown.update(
+        path for path, mode in tree_paths(base)
+        if path in changed and mode not in REGULAR_FILE_MODES
+    )
     report = {"schema_version": 1, "base_sha": base, "head_sha": head}
     report.update({dimension: {} for dimension in DIMENSIONS})
-    for path in changed:
+    for path in sorted(changed):
         rule = classify(path, rules)
         if rule is None:
             unknown.add(path)

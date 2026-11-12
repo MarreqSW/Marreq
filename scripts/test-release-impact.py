@@ -110,11 +110,10 @@ class ReleaseImpactTest(unittest.TestCase):
             ("mcp-server/compatibility.json", ("mcp",), ("mcp", "api_contracts")),
             ("docs/developer/setup.md", (), ()),
             ("marreq-core/tests/it/main.rs", (), ("rust",)),
-            ("marreq-core/src/validation/tests.rs", (), ("rust",)),
             ("marreq-cloud/tests/api_contract_inventory.rs", (), ("rust", "api_contracts")),
-            ("frontend/src/api/__tests__/auth.test.ts", (), ("frontend",)),
-            ("mcp-server/src/client.test.ts", (), ("mcp",)),
-            ("tools/marreq-migrations/src/tests.rs", (), ("database_migrations",)),
+            ("frontend/vitest.config.ts", ("frontend",), ("frontend", "api_contracts")),
+            ("frontend/README.md", ("frontend",), ("frontend", "api_contracts")),
+            ("mcp-server/vitest.config.ts", (), ("mcp",)),
             ("tools/marreq-migrations/released-migrations.json", (), ("database_migrations",)),
         ):
             with self.subTest(path=path):
@@ -198,14 +197,112 @@ class ReleaseImpactTest(unittest.TestCase):
             self.assertEqual(json.loads(result.stdout)["unknown_inputs"], sorted(paths))
             self.assertIn("Unclassified or unsupported release inputs", result.stderr)
 
-    def test_symlink_cannot_hide_in_classified_directory(self):
+    def assert_unsupported_modes(self, base, head, paths):
+        result = self.run_detector(base, head, status=2)
+        report = json.loads(result.stdout)
+        self.assertEqual(report["unknown_inputs"], sorted(paths))
+        self.assertEqual(report["artifacts"], {})
+        self.assertIn("Unclassified or unsupported release inputs", result.stderr)
+        for path in paths:
+            self.assertIn(repr(path), result.stderr)
+        repeated = self.run_detector(base, head, status=2)
+        self.assertEqual((repeated.stdout, repeated.stderr), (result.stdout, result.stderr))
+
+    def test_symlink_add_delete_and_replace(self):
         path = "frontend/src/cross-component.ts"
         self.write(path)
+        regular = self.commit("Add regular source")
         (self.repo / path).unlink()
         (self.repo / path).symlink_to("../../mcp-server/src/client.ts")
-        head = self.commit("Add symlink")
-        result = self.run_detector(self.base, head, status=2)
-        self.assertEqual(json.loads(result.stdout)["unknown_inputs"], [path])
+        linked = self.commit("Replace regular source with a symlink")
+        self.git("rm", path)
+        absent = self.commit("Delete the symlink")
+        for base, head in (
+            (absent, linked), (linked, absent), (linked, regular), (regular, linked),
+            (linked, linked),
+        ):
+            with self.subTest(base=base, head=head):
+                self.assert_unsupported_modes(base, head, [path])
+
+        for base, head in ((self.base, regular), (regular, absent)):
+            report = json.loads(self.run_detector(base, head).stdout)
+            self.assertEqual(report["unknown_inputs"], [])
+            self.assertEqual(report["artifacts"], {"frontend": [path]})
+
+    def test_rename_unsupported_source(self):
+        old = "marreq-server/src/linked.rs"
+        new = "marreq-cloud/src/linked.rs"
+        for path in (old, new):
+            (self.repo / path).parent.mkdir(parents=True)
+        (self.repo / old).symlink_to("missing")
+        base = self.commit("Add the Server symlink")
+        self.git("mv", old, new)
+        head = self.commit("Move the symlink to Cloud")
+        self.assert_unsupported_modes(base, head, [old, new])
+
+    def test_gitlink_removal_and_addition(self):
+        path = "frontend/src/vendor"
+        self.git("update-index", "--add", "--cacheinfo", f"160000,{self.base},{path}")
+        self.git("commit", "-qm", "Add a gitlink")
+        head = self.git("rev-parse", "HEAD")
+        self.assert_unsupported_modes(self.base, head, [path])
+        self.assert_unsupported_modes(head, self.base, [path])
+
+    def test_executable_mode_changes_are_supported(self):
+        path = "marreq-core/scripts/db_setup.sh"
+        self.write(path)
+        base = self.commit("Add non-executable script")
+        (self.repo / path).chmod(0o755)
+        self.git("update-index", "--chmod=+x", path)
+        head = self.commit("Mark script executable")
+        for first, second in ((base, head), (head, base)):
+            report = json.loads(self.run_detector(first, second).stdout)
+            self.assertEqual(report["unknown_inputs"], [])
+            self.assertEqual(report["artifacts"], {"cloud": [path], "server": [path]})
+
+    def test_unsupported_entry_only_in_ancestor(self):
+        path = self.repo / "frontend/src/old-link.ts"
+        path.parent.mkdir(parents=True)
+        path.symlink_to("missing")
+        self.commit("Historic symlink")
+        path.unlink()
+        base = self.commit("Remove historic symlink before baseline")
+        self.write("mcp-server/src/client.ts")
+        head = self.commit("Update MCP")
+        report = json.loads(self.run_detector(base, head).stdout)
+        self.assertEqual(report["unknown_inputs"], [])
+        self.assertEqual(report["artifacts"], {"mcp": ["mcp-server/src/client.ts"]})
+
+    def test_production_can_consume_files_named_like_tests(self):
+        # The production consumers are identical at both endpoints. Only the
+        # imported/embedded inputs change between releases.
+        for path, content in {
+            "marreq-core/src/lib.rs": 'pub const VALUE: &str = include_str!("validation/tests.rs");',
+            "tools/marreq-migrations/build.rs": 'fn main() { print!("{}", include_str!("src/tests.rs")); }',
+            "frontend/src/main.tsx": 'import { value } from "./test/fixture"; document.title = value;',
+            "mcp-server/src/index.ts": 'export { value } from "./fixture.test.js";',
+        }.items():
+            self.write(path, content)
+        inputs = {
+            "marreq-core/src/validation/tests.rs": 'const VALUE: &str = "before";',
+            "tools/marreq-migrations/src/tests.rs": 'const VALUE: &str = "before";',
+            "frontend/src/test/fixture.ts": 'export const value = "before";',
+            "mcp-server/src/fixture.test.ts": 'export const value = "before";',
+        }
+        for path, content in inputs.items():
+            self.write(path, content)
+        base = self.commit("Production consumers and their inputs")
+        for path, content in inputs.items():
+            self.write(path, content.replace("before", "after"))
+        head = self.commit("Change only the inputs")
+        report = json.loads(self.run_detector(base, head).stdout)
+        core, migrations, frontend, mcp = inputs
+        self.assertEqual(report["unknown_inputs"], [])
+        self.assertEqual(report["artifacts"], {
+            "cloud": [core, migrations], "server": [core, migrations],
+            "frontend": [frontend], "mcp": [mcp],
+        })
+        self.assertEqual(report["checks"]["database_migrations"], [migrations])
 
     def test_invalid_ref(self):
         for base, head in (("no-such-tag", self.base), (self.base, "missing-head")):

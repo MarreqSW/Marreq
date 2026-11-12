@@ -67,6 +67,8 @@ class ReleaseImpactTest(unittest.TestCase):
             ("marreq-server/src/routes.rs", ("server",), ("rust", "api_contracts")),
             ("marreq-cloud/src/deployment.rs", ("cloud",), ("rust", "api_contracts")),
             ("marreq-core/src/app.rs", ("server", "cloud"), ("rust", "api_contracts")),
+            ("marreq-core/src/services/decorated_test_service.rs",
+             ("server", "cloud"), ("rust", "api_contracts")),
             ("frontend/src/api/client.ts", ("frontend",), ("frontend", "api_contracts")),
             ("mcp-server/src/client.ts", ("mcp",), ("mcp", "api_contracts")),
         ):
@@ -108,6 +110,7 @@ class ReleaseImpactTest(unittest.TestCase):
             ("mcp-server/compatibility.json", ("mcp",), ("mcp", "api_contracts")),
             ("docs/developer/setup.md", (), ()),
             ("marreq-core/tests/it/main.rs", (), ("rust",)),
+            ("marreq-core/src/validation/tests.rs", (), ("rust",)),
             ("marreq-cloud/tests/api_contract_inventory.rs", (), ("rust", "api_contracts")),
             ("frontend/src/api/__tests__/auth.test.ts", (), ("frontend",)),
             ("mcp-server/src/client.test.ts", (), ("mcp",)),

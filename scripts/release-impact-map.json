@@ -6,7 +6,7 @@
       "checks": ["rust", "api_contracts"]
     },
     {
-      "paths": ["marreq-(core|server|cloud)/tests/.+", "tests/reqif/.+", "\\.cargo/config\\.toml", "deny\\.toml"],
+      "paths": ["marreq-(core|server|cloud)/tests/.+", "marreq-core/src/((generators|importers|models|repository|services|validation)/tests|reqif/vendor_import_tests|services/config_authorization_tests|deployment/test_support)\\.rs", "tests/reqif/.+", "\\.cargo/config\\.toml", "deny\\.toml"],
       "checks": ["rust"]
     },
     {

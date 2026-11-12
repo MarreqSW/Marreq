@@ -14,6 +14,27 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  release-impact:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Compare the PR merge candidate to its first parent (the target).
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Test release impact detection
+        run: python3 scripts/test-release-impact.py
+      - name: Validate the map and classify the PR
+        run: scripts/detect-release-impact --base HEAD^1 --head HEAD --format json > "$RUNNER_TEMP/release-impact.json"
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: release-impact
+          path: ${{ runner.temp }}/release-impact.json
+          if-no-files-found: ignore
+
   database-migrations:
     runs-on: ubuntu-latest
     steps:
@@ -232,6 +253,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
+      - name: Remove inactive implementation sources from the build context
+        env:
+          MARREQ_BIN: ${{ matrix.binary }}
+        run: |
+          case "$MARREQ_BIN" in
+            marreq-server) inactive=marreq-cloud ;;
+            marreq-cloud) inactive=marreq-server ;;
+            *) exit 1 ;;
+          esac
+          rm -rf -- "$inactive/src" "$inactive/Rocket.toml" tools/marreq-contracts/src
       - name: Build production backend image
         uses: docker/build-push-action@v7
         with:

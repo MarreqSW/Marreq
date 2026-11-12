@@ -17,42 +17,35 @@ COPY marreq-cloud/Cargo.toml ./marreq-cloud/
 COPY tools/marreq-contracts/Cargo.toml ./tools/marreq-contracts/
 COPY tools/marreq-migrations/Cargo.toml ./tools/marreq-migrations/
 
-# Dummy sources so cargo can resolve and cache dependencies
+# Cargo resolves the full locked workspace. These targets satisfy discovery
+# and fail compilation if an inactive package becomes a build dependency.
 RUN mkdir -p marreq-core/src marreq-server/src marreq-cloud/src tools/marreq-contracts/src tools/marreq-migrations/src && \
-    echo "fn main() {}" > marreq-server/src/main.rs && \
-    echo "fn main() {}" > marreq-cloud/src/main.rs && \
-    echo "" > marreq-core/src/lib.rs && \
-    echo "" > tools/marreq-contracts/src/lib.rs && \
-    echo "fn main() {}" > tools/marreq-contracts/src/main.rs && \
-    echo "" > tools/marreq-migrations/src/lib.rs && \
-    echo "fn main() {}" > tools/marreq-migrations/src/main.rs
+    for target in marreq-server/src/main.rs marreq-cloud/src/main.rs marreq-cloud/src/lib.rs \
+        marreq-core/src/lib.rs tools/marreq-contracts/src/lib.rs tools/marreq-contracts/src/main.rs \
+        tools/marreq-migrations/src/lib.rs tools/marreq-migrations/src/main.rs; do \
+        echo 'compile_error!("workspace placeholder must not be compiled");' > "$target"; \
+    done && \
+    cargo fetch --locked
 
-# Cache dependencies only (ignore build errors from empty stubs)
-RUN cargo build --locked --release -p marreq-server -p marreq-cloud 2>/dev/null || true
+ARG MARREQ_BIN=marreq-server
+RUN case "$MARREQ_BIN" in marreq-server|marreq-cloud) ;; *) exit 1 ;; esac && \
+    rm -rf marreq-core/src "${MARREQ_BIN}/src" tools/marreq-migrations/src
 
-# Install diesel_cli for migrations (postgres only)
-RUN cargo install diesel_cli --no-default-features --features postgres
-
-# Copy real sources
-RUN rm -rf marreq-core/src marreq-server/src marreq-cloud/src tools/marreq-contracts/src tools/marreq-migrations/src
 COPY marreq-core/src ./marreq-core/src
 COPY marreq-core/frontend_compatibility.json ./marreq-core/frontend_compatibility.json
 COPY marreq-core/migrations ./marreq-core/migrations
 COPY marreq-core/scripts ./marreq-core/scripts
-COPY marreq-server/src ./marreq-server/src
-COPY marreq-cloud/src ./marreq-cloud/src
-COPY tools/marreq-contracts/src ./tools/marreq-contracts/src
+COPY ${MARREQ_BIN}/src ./${MARREQ_BIN}/src
 COPY tools/marreq-migrations/src ./tools/marreq-migrations/src
 COPY tools/marreq-migrations/build.rs ./tools/marreq-migrations/build.rs
 
 # Build the selected binary (MARREQ_VERSION / MARREQ_GIT_SHA baked via option_env!)
-ARG MARREQ_BIN=marreq-server
 ARG MARREQ_VERSION=
 ARG MARREQ_GIT_SHA=unknown
 ENV MARREQ_GIT_SHA=${MARREQ_GIT_SHA}
 ENV MARREQ_VERSION=${MARREQ_VERSION}
-RUN touch marreq-core/src/lib.rs marreq-server/src/main.rs marreq-cloud/src/main.rs && \
-    cargo build --locked --release -p ${MARREQ_BIN} -p marreq-migrations -p marreq-core --bin ${MARREQ_BIN} --bin marreq-migrations --bin marreq-backup
+RUN cargo build --locked --release -p "${MARREQ_BIN}" -p marreq-migrations -p marreq-core \
+    --bin "${MARREQ_BIN}" --bin marreq-migrations --bin marreq-backup
 
 # Runtime stage
 FROM debian:trixie-slim
@@ -78,7 +71,7 @@ RUN groupadd --system --gid 10001 marreq \
 
 WORKDIR /app
 
-# Copy binary, migrations, scripts and diesel CLI from builder
+# Copy the backend, migration and backup binaries, plus runtime resources
 COPY --from=builder /app/target/release/${MARREQ_BIN} /usr/local/bin/marreq
 COPY --from=builder /app/marreq-core/migrations /app/migrations
 COPY --from=builder /app/marreq-core/scripts /app/scripts
@@ -89,7 +82,7 @@ COPY --from=builder /app/target/release/marreq-backup /usr/local/bin/marreq-back
 # Rocket.toml is crate-specific; pull from the selected binary's crate
 COPY ${MARREQ_BIN}/Rocket.toml ./Rocket.toml
 
-# diesel CLI uses /app/diesel.toml + /app/migrations (see docker-entrypoint.sh)
+# Preserve the Diesel configuration alongside the migration files
 COPY marreq-core/diesel.toml ./diesel.toml
 
 # Attachment storage (MARREQ_ATTACHMENTS_DIR). Created here so a new named

@@ -84,6 +84,91 @@ Images carry OCI label `org.opencontainers.image.version`.
 
 When `MARREQ_VERSION` is unset or empty, each artifact falls back to its manifest version. A leading `v` is stripped so the value stays plain `X.Y.Z` for the compatibility check. Local images: `make docker-server MARREQ_VERSION=0.1.3`.
 
+## Component build inputs and release impact (#423)
+
+The backend images share one Dockerfile, one Cargo workspace and one lockfile.
+Both builds resolve all workspace manifests. Cargo discovers placeholder
+targets for the inactive backend and the contract tool. Those placeholders
+fail compilation if a production dependency starts using either package.
+After locked dependency fetching, the builder copies the selected backend's
+`src/`, shared core, and migration tool. The runtime stage uses the selected
+backend's Rocket configuration. The existing image CI matrix removes the
+inactive backend's implementation and configuration and the contract tool's
+sources from the build context before building each variant. The migration
+startup and HTTP smoke checks then exercise those same images.
+
+| Inputs | Image impact | Other impact |
+| --- | --- | --- |
+| Server or Cloud source and Rocket config | Corresponding backend | Rust and API compatibility |
+| Core source and backend compatibility metadata | Server and Cloud | Rust and API compatibility |
+| Workspace member manifests, root Cargo manifest and lockfile | Server and Cloud | Rust, API compatibility and database migrations |
+| Backend Dockerfile, its ignore file and runtime entrypoint | Server and Cloud | Database migration and startup checks |
+| Core migration SQL, schema, operational scripts and migration CLI | Server and Cloud | Database migrations, plus Rust and applicable API checks |
+| Frontend source, local npm files, Vite inputs, nginx and startup configuration | Frontend | Frontend and API compatibility |
+| MCP source, local npm files, Dockerfile, compatibility metadata and `MARREQ_SKILL.md` | MCP | MCP and API compatibility |
+| Root Docker ignore file | Frontend and MCP | Consumer build checks |
+| OpenAPI, contract analysis and code generation tooling, root npm files | None | API compatibility, plus frontend tooling for root npm files |
+| Committed consumer generated types | Owning consumer | Consumer and API compatibility |
+| Rust/TS test inputs and the released migration ledger | None | Relevant validation |
+| Compose and environment example | None | Deployment validation |
+| Release publishing workflow | All four conservatively | Release infrastructure and API compatibility |
+| Standalone documentation | None | None |
+
+The producer OpenAPI is bundled and consumer types are checked for drift in CI.
+The image builds consume committed consumer types and their local npm lockfiles.
+Changes to generator inputs call for contract validation. The generator's
+checked-in output is tracked independently. MCP's checked-in `dist/` is
+superseded by TypeScript output in the image. Frontend tests are type-checked
+during its build and are excluded from the Vite entrypoint graph.
+
+### Comparing source revisions
+
+Run the detector from a checkout of the candidate tooling with Git and Python 3.
+
+```sh
+scripts/detect-release-impact --base "$published_source_sha" --head "$candidate_sha" --format json
+```
+
+Schema version 1 reports `base_sha`, `head_sha`, `artifacts`, `checks`,
+`infrastructure` and `unknown_inputs`. The three impact objects map affected
+identifiers to sorted repository-relative paths. Absent identifiers have no
+impact in that comparison. `api_contracts` includes producer/consumer
+compatibility across Frontend and MCP. Exit code 2 signals unresolved revisions,
+an invalid map, or unclassified paths. A report with unknown paths is diagnostic
+only. Default text output is for manual review.
+
+For independent releases, resolve each component's last **published** source tag
+to its immutable commit. Run the same command once per component against the same
+candidate SHA. Read only that component's key in `artifacts` from its comparison.
+Union the reported checks and infrastructure reasons across successful
+comparisons. Treat any failed comparison as a release blocker. The caller
+supplies release baselines and must establish which artifacts were published.
+Git history is compared by endpoint trees, so reversions that leave identical
+files produce no impact. Deletions and both paths of renames are classified.
+
+### Maintaining the map
+
+Update [the impact map](../scripts/release-impact-map.json) in the same change
+that introduces or moves build inputs. Rules are ordered and use Python regex
+full matches against Git paths. Place specific test and validation exceptions
+before their containing source rules. A rule with only `paths` documents inputs
+with no impact. Keep rules narrow for shared directories and review every
+new build dependency, generator, embedded asset and workflow. A map change
+needs review against the actual Docker `COPY` inputs, package graphs and CI
+commands. CI checks classification coverage of the complete candidate tree,
+rejects unsupported file types, and classifies changed paths removed from the
+candidate. Historic paths can need explicit rules, as with the old single-file
+OpenAPI document.
+
+Run `python3 scripts/test-release-impact.py -v` to reproduce the acceptance
+scenarios in temporary repositories. The suite covers MCP-only, Server-only,
+shared core, validation-only contracts, unknown input failures, and
+different release baselines. The PR job compares the merge candidate with
+its first parent and attaches `release-impact.json` for inspection. Existing
+CI gates continue to run independently. Build arguments such as release
+version and source SHA, mutable base images, and other external inputs must
+be handled by the caller. This map describes committed source changes.
+
 ## Exact artifact API compatibility (#423)
 
 The Rust CLI checks each consumer's own retained contract, never current-main

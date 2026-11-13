@@ -1,3 +1,4 @@
+import { buildInfo } from "./build-info.js";
 import type { components } from "./generated-contract.js";
 import { randomUUID } from "node:crypto";
 import type { Server } from "node:http";
@@ -124,6 +125,7 @@ export async function startRemoteServer(
   });
   const sessions = new Map<string, RemoteSession>();
   app.get("/healthz", (_req, res) => res.status(200).json({ status: "ok" }));
+  app.get("/build-info", (_req, res) => res.json(buildInfo));
   const idleMs = config.sessionIdleMs ?? 30 * 60_000;
   const absoluteMs = config.sessionAbsoluteMs ?? 8 * 60 * 60_000;
   const maxSessions = config.maxSessions ?? 1_000;

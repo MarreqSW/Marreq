@@ -6,11 +6,12 @@ Marreq ships independently versioned artifacts:
 
 | Artifact | Version source of truth | Compatibility declaration |
 | --- | --- | --- |
-| Backend (`marreq-server` / `marreq-cloud`) | `marreq-core/Cargo.toml` `version` | `marreq-core/frontend_compatibility.json` |
+| Server | `marreq-server/Cargo.toml` | `marreq-core/frontend_compatibility.json` |
+| Cloud | `marreq-cloud/Cargo.toml` | `marreq-core/frontend_compatibility.json` |
 | Frontend (SPA) | `frontend/package.json` `version` | `frontend/compatibility.json` |
-| MCP server | `mcp-server/package.json` `version` | — |
+| MCP server | `mcp-server/package.json` `version` | `mcp-server/compatibility.json` |
 
-Both start at **`0.1.0`**. Release builds override the manifest version with the tag version (see [Runtime version](#runtime-version)), so the manifest value is only what local/dev builds report. Server and cloud share one API surface and therefore **one** frontend compatibility matrix.
+These manifests supply development defaults. Release builds use an explicit component version and source commit. Server and Cloud share the frontend compatibility range.
 
 ## Runtime check
 
@@ -79,10 +80,85 @@ Images carry OCI label `org.opencontainers.image.version`.
 
 `MARREQ_VERSION` (the tag with its `marreq-*-v` prefix stripped, e.g. `0.1.3`) and `MARREQ_GIT_SHA` are baked in at build time:
 
-- Backend: `option_env!` in `marreq-core/src/build_info.rs`; reported as `backend_version` / `backend_git_sha` by `GET /api/meta/build`.
-- Frontend: Vite `define` (`__FRONTEND_VERSION__`, `__FRONTEND_GIT_SHA__`) in `frontend/vite.config.ts`.
+- Backend: compile-time values in each deployable crate, reported as `backend_version` / `backend_git_sha` by `GET /api/meta/build`. `deployment_mode` identifies Server or Cloud.
+- Frontend: Vite embeds the values in the SPA and serves them at `/build-info.json`.
+- MCP: `npm run build` generates immutable packaged metadata. The SDK advertises its version in STDIO and HTTP handshakes. HTTP exposes `/build-info` separately from `/healthz`.
 
 When `MARREQ_VERSION` is unset or empty, each artifact falls back to its manifest version. A leading `v` is stripped so the value stays plain `X.Y.Z` for the compatibility check. Local images: `make docker-server MARREQ_VERSION=0.1.3`.
+
+## Deployment provenance
+
+Use a trusted, access-controlled release record for desired state. The product
+version identifies the entire artifact set. Each component keeps its own release
+version, source commit, registry digest and contract evidence when reused.
+
+Release inputs are the component's version and exact source checkout SHA. Pass
+both as `MARREQ_VERSION` and `MARREQ_GIT_SHA` to the production Docker build.
+Supply a bare SemVer for label parity. The four final images expose OCI
+`title`, `version`, `revision` and `source` labels under
+`org.opencontainers.image`. Unversioned development builds use manifest
+fallbacks at runtime and may carry `dev` and `unknown` labels. Deployment
+verification requires exact release identity.
+
+### Prepare and retain the evidence
+
+The legacy release jobs capture the digest returned by a successful Buildx
+registry push. The `published-*-provenance` workflow artifact holds the
+published descriptor and the candidate contract from the same successful
+compatibility gate. Retain both outside workflow artifact expiry. The recorder
+validates the digest syntax and contract identity. Its caller must supply the
+digest from the trusted publisher. Workflow records do not provide signed
+attestations. Cloud provenance supports future publication through this same
+interface.
+
+Build a JSON lockfile with `format: "marreq.deployment-provenance.v1"`,
+`variant: "server"` or `"cloud"`, and `components` keyed by the selected
+backend, `frontend` and `mcp`. `product_release` is optional SemVer or null.
+Each component uses these fields:
+
+| Field | Evidence |
+| --- | --- |
+| `service` | Server uses `marreq-server`, `frontend`, `mcp-server`. Cloud uses `marreq-cloud`, `frontend-cloud`, `mcp-cloud`. |
+| `version`, `source_sha` | Artifact SemVer and full lowercase Git SHA |
+| `source_tag` (optional) | Matching component tag, such as `marreq-cloud-v0.2.3`. The caller verifies the Git tag resolves to the given SHA. |
+| `image`, `digest` | Canonical GHCR repository and immutable `sha256:...` registry manifest or index digest |
+| `contract.file`, `contract.sha256` | Relative retained contract JSON filename and lowercase SHA-256 of its exact bytes |
+
+Store distinct retained filenames next to the manifest and adjust each
+`contract.file` accordingly. Use the same retained bundles in the existing
+`marreq.deployment-contract.v2` plan and run its compatibility verifier.
+The provenance checker links the bytes and component, variant, version and
+source identity. The contract verifier checks compatibility.
+
+```sh
+scripts/check-api-compatibility.sh --manifest deployment-contract.json
+scripts/check-deployment-provenance --manifest deployment-provenance.json --mode validate
+scripts/check-deployment-provenance --manifest deployment-provenance.json --mode inspect --compose-project marreq
+```
+
+Use digest-pinned Compose image references. Inspection queries Compose
+project/service labels, container configuration and Docker's repository
+digests for the running image configuration ID. It requires the configured
+digest reference to appear in that image's repository digests. This supports
+an OCI index when the daemon records its association with the selected local
+image. A daemon that only exposes a configuration ID, or a platform digest
+without the expected index association, yields `unverified`. The checker
+also compares the OCI labels and fixed local HTTP diagnostics. It does not
+pull images or modify containers. It trusts the local Docker daemon and
+reports identity at observation time.
+
+Exit 0 means `valid_manifest` in validate mode or `match` in inspect mode.
+Exit 1 reports observed drift. Exit 2 reports invalid input or unavailable
+evidence. A valid manifest alone verifies neither registry presence nor
+runtime state. For older images retain only evidence traceable to a trusted
+publication record and verifiable digest. Treat artifacts with missing
+evidence as unavailable until a new verified build exists.
+
+The future orchestrator supplies component versions from `versions.toml`,
+checks source-tag targets, records successful pushes, and assembles the
+deployment manifest from new and retained descriptors. It can use the
+existing contract verifier before deployment and inspect the deployed
+containers after replacement.
 
 ## Component build inputs and release impact (#423)
 

@@ -25,7 +25,9 @@ jobs:
           fetch-depth: 2
           persist-credentials: false
       - name: Test release impact detection
-        run: python3 scripts/test-release-impact.py
+        run: |
+          python3 scripts/test-release-impact.py
+          python3 scripts/test-deployment-provenance.py
       - name: Validate the map and classify the PR
         run: scripts/detect-release-impact --base HEAD^1 --head HEAD --format json > "$RUNNER_TEMP/release-impact.json"
       - uses: actions/upload-artifact@v7
@@ -204,7 +206,10 @@ jobs:
         run: npm run build
 
       - name: Build independent frontend image
-        run: docker build -f docker/frontend/Dockerfile -t marreq-frontend:ci .
+        run: |
+          docker build -f docker/frontend/Dockerfile -t marreq-frontend:ci \
+            --build-arg MARREQ_VERSION=0.2.2 --build-arg "MARREQ_GIT_SHA=$(git rev-parse HEAD)" .
+          python3 scripts/test-artifact-image.py frontend marreq-frontend:ci 0.2.2 "$GITHUB_SHA" --registry-smoke
 
       - name: Test nginx and independent MCP lifecycles (Server/Cloud, full/light, production)
         run: |
@@ -249,7 +254,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        binary: [marreq-server, marreq-cloud]
+        include:
+          - binary: marreq-server
+            component: server
+            version: 0.2.1
+          - binary: marreq-cloud
+            component: cloud
+            version: 0.2.3
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
@@ -270,11 +281,14 @@ jobs:
           file: docker/Dockerfile
           load: true
           tags: ${{ matrix.binary }}:ci
-          build-args: MARREQ_BIN=${{ matrix.binary }}
+          build-args: |
+            MARREQ_BIN=${{ matrix.binary }}
+            MARREQ_VERSION=${{ matrix.version }}
+            MARREQ_GIT_SHA=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.binary }}
           cache-to: type=gha,mode=max,scope=${{ matrix.binary }}
       - name: Verify explicit migrations and schema startup gate
-        run: scripts/test-migration-image.sh ${{ matrix.binary }}:ci
+        run: scripts/test-migration-image.sh ${{ matrix.binary }}:ci ${{ matrix.component }} ${{ matrix.version }} "$GITHUB_SHA"
       - name: Verify runtime excludes contract tooling
         run: |
           docker run --rm --entrypoint sh ${{ matrix.binary }}:ci -ec '
@@ -314,7 +328,10 @@ jobs:
         run: npm test
 
       - name: Build MCP Docker image
-        run: docker build -f mcp-server/Dockerfile .
+        run: |
+          docker build -f mcp-server/Dockerfile -t marreq-mcp:ci \
+            --build-arg MARREQ_VERSION=0.2.4 --build-arg "MARREQ_GIT_SHA=$(git rev-parse HEAD)" .
+          python3 scripts/test-artifact-image.py mcp marreq-mcp:ci 0.2.4 "$GITHUB_SHA"
 
   compose-validation:
     runs-on: ubuntu-latest

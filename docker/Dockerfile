@@ -53,7 +53,9 @@ FROM debian:trixie-slim
 ARG MARREQ_BIN=marreq-server
 ARG MARREQ_VERSION=
 ARG MARREQ_GIT_SHA=unknown
-LABEL org.opencontainers.image.version="${MARREQ_VERSION:-dev}" \
+LABEL org.opencontainers.image.title="${MARREQ_BIN}" \
+      org.opencontainers.image.source="https://github.com/MarreqSW/Marreq" \
+      org.opencontainers.image.version="${MARREQ_VERSION:-dev}" \
       org.opencontainers.image.revision="${MARREQ_GIT_SHA}"
 
 # trixie's postgresql-client is 17, matching the pg17 database image, so the

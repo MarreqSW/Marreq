@@ -1,0 +1,257 @@
+#!/usr/bin/env python3
+"""Validate a retained provenance manifest or inspect a Compose deployment."""
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import re
+import subprocess
+import sys
+
+FORMAT = "marreq.deployment-provenance.v1"
+SOURCE = "https://github.com/MarreqSW/Marreq"
+IMAGES = {
+    "server": "marreq-server", "cloud": "marreq-cloud",
+    "frontend": "marreq-frontend", "mcp": "marreq-mcp-server",
+}
+SERVICES = {
+    "server": {"server": "marreq-server", "frontend": "frontend", "mcp": "mcp-server"},
+    "cloud": {"cloud": "marreq-cloud", "frontend": "frontend-cloud", "mcp": "mcp-cloud"},
+}
+NUMBER = r"(?:0|[1-9][0-9]*)"
+PRE = rf"(?:{NUMBER}|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)"
+VERSION = rf"{NUMBER}\.{NUMBER}\.{NUMBER}(?:-{PRE}(?:\.{PRE})*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?"
+GIT_SHA = r"(?!0{40}$)[0-9a-f]{40}"
+DIGEST = r"sha256:(?!0{64}$)[0-9a-f]{64}"
+
+
+def require(condition, reason):
+    if not condition:
+        raise ValueError(reason)
+
+
+def matches(pattern, value):
+    return isinstance(value, str) and re.fullmatch(pattern, value) is not None
+
+
+def strict_object(pairs):
+    result = {}
+    for key, value in pairs:
+        require(key not in result, "duplicate JSON key")
+        result[key] = value
+    return result
+
+
+def decode(data):
+    return json.loads(data, object_pairs_hook=strict_object)
+
+
+def fields(value, required, optional=()):
+    require(isinstance(value, dict) and set(required) <= value.keys()
+            and not value.keys() - set(required) - set(optional), "invalid object fields")
+
+
+def validate_contract(root, entry, component):
+    reference = entry["contract"]
+    fields(reference, ("file", "sha256"))
+    name = reference["file"]
+    require(matches(r"[A-Za-z0-9_.-]+(?:/[A-Za-z0-9_.-]+)*\.json", name)
+            and not {"..", "."}.intersection(name.split("/")), "invalid contract path")
+    path = (root / name).resolve()
+    require(path.is_relative_to(root) and path.is_file(), "missing retained contract")
+    contents = path.read_bytes()
+    require(hashlib.sha256(contents).hexdigest() == reference["sha256"], "contract checksum mismatch")
+    bundle = decode(contents)
+    fields(bundle, ("format", "component", "version", "source_sha", "contract"),
+           ("variant", "compatibility", "frontend_compatibility"))
+    backend = component in ("server", "cloud")
+    require(bundle["format"] == "marreq.contract.v2"
+            and bundle["component"] == ("backend" if backend else component)
+            and bundle.get("variant") == (component if backend else None)
+            and bundle["version"] == entry["version"]
+            and bundle["source_sha"] == entry["source_sha"]
+            and isinstance(bundle["contract"], dict), "contract identity mismatch")
+
+
+def validate(path):
+    manifest = decode(path.read_bytes())
+    fields(manifest, ("format", "variant", "components"), ("product_release",))
+    require(manifest["format"] == FORMAT, "unsupported provenance format")
+    variant = manifest["variant"]
+    require(isinstance(variant, str) and variant in SERVICES, "invalid deployment variant")
+    product = manifest.get("product_release")
+    require(product is None or matches(VERSION, product), "invalid product version")
+    fields(manifest["components"], SERVICES[variant])
+    for component, service in SERVICES[variant].items():
+        entry = manifest["components"][component]
+        fields(entry, ("service", "version", "source_sha", "image", "digest", "contract"), ("source_tag",))
+        require(entry["service"] == service, f"{component}: invalid service mapping")
+        validate_artifact(path.resolve().parent, entry, component)
+    return manifest
+
+
+def validate_artifact(root, entry, component):
+    require(matches(VERSION, entry["version"]), f"{component}: invalid version")
+    require(matches(GIT_SHA, entry["source_sha"]), f"{component}: invalid source SHA")
+    require(entry["image"] == f"ghcr.io/marreqsw/{IMAGES[component]}",
+            f"{component}: invalid image repository")
+    require(matches(DIGEST, entry["digest"]), f"{component}: invalid registry digest")
+    tag = entry.get("source_tag")
+    require(tag is None or tag == f"marreq-{component}-v{entry['version']}",
+            f"{component}: invalid source tag")
+    validate_contract(root, entry, component)
+
+
+def docker(*args):
+    result = subprocess.run(["docker", *args], capture_output=True, timeout=20, check=False)
+    if result.returncode:
+        raise OSError("Docker evidence unavailable")
+    return result.stdout
+
+
+def identity_fields(data, component):
+    require(isinstance(data, dict), "invalid runtime identity")
+    if component in ("server", "cloud"):
+        return {
+            "component": data.get("deployment_mode"),
+            "version": data.get("backend_version"),
+            "source_sha": data.get("backend_git_sha"),
+        }
+    return {key: data.get(key) for key in ("component", "version", "source_sha")}
+
+
+def runtime_identity(container, component):
+    if component in ("server", "cloud"):
+        raw = docker("exec", container, "curl", "-fsS", "--noproxy", "*", "--max-time", "5",
+                     "http://127.0.0.1:8000/api/meta/build")
+    elif component == "frontend":
+        raw = docker("exec", container, "wget", "-Y", "off", "-qO-", "-T", "5", "http://127.0.0.1/build-info.json")
+    else:
+        raw = docker("exec", container, "node", "-e",
+                     "fetch('http://127.0.0.1:3000/build-info',{signal:AbortSignal.timeout(5000),redirect:'error'})"
+                     ".then(r=>{if(!r.ok)throw Error(); return r.text()}).then(console.log)"
+                     ".catch(()=>process.exit(1))")
+    return identity_fields(decode(raw), component)
+
+
+def label_mismatches(image, component, entry):
+    prefix = "org.opencontainers.image."
+    labels = image["Config"].get("Labels") or {}
+    return [key for key, value in {
+        "title": IMAGES[component], "version": entry["version"],
+        "revision": entry["source_sha"], "source": SOURCE,
+    }.items() if labels.get(prefix + key) != value]
+
+
+def inspect_component(component, entry, containers):
+    expected_ref = f"{entry['image']}@{entry['digest']}"
+    expected_identity = {"component": component, "version": entry["version"], "source_sha": entry["source_sha"]}
+    report = {"component": component, "service": entry["service"],
+              "expected": {**expected_identity, "image": expected_ref}, "observed": {}}
+
+    def outcome(status, reason):
+        return {**report, "status": status, "reason": reason}
+
+    if len(containers) != 1:
+        return outcome("drift", "missing_container" if not containers else "ambiguous_service")
+    container = containers[0]
+    try:
+        actual = decode(docker("container", "inspect", "--", container))[0]
+        if not actual["State"]["Running"]:
+            return outcome("drift", "container_stopped")
+        image_id = actual["Image"]
+        require(matches(DIGEST, image_id), "invalid Docker image ID")
+        image = decode(docker("image", "inspect", "--", image_id))[0]
+        report["observed"]["configuration_id"] = image_id
+        if image["Id"] != image_id:
+            return outcome("unverified", "image_id_unavailable")
+        refs = sorted({
+            ref for ref in image.get("RepoDigests") or []
+            if matches(re.escape(entry["image"]) + "@" + DIGEST, ref)
+        })
+        report["observed"]["registry_refs"] = refs
+        configured = actual["Config"]["Image"]
+        # An exact pull reference plus the daemon's association with the
+        # running configuration ID identifies the selected registry manifest.
+        if configured != expected_ref:
+            if configured in refs:
+                return outcome("drift", "wrong_image_digest")
+            return outcome("unverified", "container_not_pinned_to_a_known_digest")
+        if expected_ref not in refs:
+            return outcome("unverified", "registry_digest_unavailable")
+        labels = label_mismatches(image, component, entry)
+        if labels:
+            report["observed"]["mismatched_oci_fields"] = labels
+            return outcome("drift", "image_metadata_mismatch")
+        observed = runtime_identity(container, component)
+        mismatches = [key for key, value in expected_identity.items() if observed[key] != value]
+        # Report only identity-shaped values from the runtime.
+        report["observed"]["runtime"] = {
+            key: value for key, value in observed.items()
+            if (key == "component" and isinstance(value, str) and value in IMAGES)
+            or (key == "version" and matches(VERSION, value))
+            or (key == "source_sha" and matches(GIT_SHA, value))
+        }
+        if mismatches:
+            report["observed"]["mismatched_runtime_fields"] = mismatches
+            return outcome("drift", "runtime_metadata_mismatch")
+        # A replacement or restart during inspection makes the evidence stale.
+        final = decode(docker("container", "inspect", "--", container))[0]
+        if (final["Image"] != image_id or not final["State"]["Running"]
+                or final["State"]["StartedAt"] != actual["State"]["StartedAt"]):
+            return outcome("unverified", "container_changed_during_inspection")
+        return outcome("match", "identity_matches")
+    except (OSError, ValueError, KeyError, IndexError, TypeError, subprocess.TimeoutExpired):
+        return outcome("unverified", "container_image_or_runtime_evidence_unavailable")
+
+
+def inspect(manifest, project):
+    rows = docker("ps", "-a", "--no-trunc", "--filter", f"label=com.docker.compose.project={project}",
+                  "--format", '{{.ID}} {{.Label "com.docker.compose.service"}} {{.Label "com.docker.compose.oneoff"}}')
+    services = {}
+    for row in rows.decode().splitlines():
+        values = row.split()
+        if len(values) == 3 and values[2].lower() == "false":
+            container, service, _ = values
+            require(matches(r"[a-f0-9]{64}", container), "invalid container identifier")
+            services.setdefault(service, []).append(container)
+    components = [inspect_component(component, entry, services.get(entry["service"], []))
+                  for component, entry in sorted(manifest["components"].items())]
+    opposite = "cloud" if manifest["variant"] == "server" else "server"
+    unexpected = sorted(set(services).intersection(SERVICES[opposite].values()))
+    statuses = {component["status"] for component in components}
+    status = "drift" if unexpected or "drift" in statuses else "unverified" if "unverified" in statuses else "match"
+    return status, components, unexpected
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--manifest", required=True, type=Path)
+    parser.add_argument("--mode", choices=("validate", "inspect"), default="validate")
+    parser.add_argument("--compose-project")
+    args = parser.parse_args()
+    try:
+        manifest = validate(args.manifest)
+    except (ValueError, OSError, RuntimeError) as error:
+        # Only include diagnostics from our own validation rules.
+        report = {"status": "invalid_manifest"}
+        if type(error) is ValueError:
+            report["reason"] = str(error)
+        print(json.dumps(report, sort_keys=True))
+        return 2
+
+    report = {"format": FORMAT, "variant": manifest["variant"], "status": "valid_manifest"}
+    if args.mode == "inspect":
+        try:
+            require(matches(r"[a-z0-9][a-z0-9_-]*", args.compose_project), "invalid project")
+            status, components, unexpected = inspect(manifest, args.compose_project)
+            report.update(status=status, components=components, unexpected_services=unexpected)
+        except (ValueError, OSError, subprocess.TimeoutExpired):
+            report.update(status="unverified", reason="project_evidence_unavailable")
+    print(json.dumps(report, indent=2, sort_keys=True))
+    return {"valid_manifest": 0, "match": 0, "drift": 1, "unverified": 2}[report["status"]]
+
+
+if __name__ == "__main__":
+    sys.exit(main())

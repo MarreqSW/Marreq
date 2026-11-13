@@ -22,6 +22,15 @@ pub trait DeploymentMode: Send + Sync {
     /// Stable identifier for the deployment mode (e.g. `"server"` / `"cloud"`).
     fn name(&self) -> &'static str;
 
+    /// Build metadata supplied by the deployable crate.
+    fn artifact_version(&self) -> &'static str {
+        "dev"
+    }
+
+    fn source_sha(&self) -> &'static str {
+        "unknown"
+    }
+
     /// True when unauthenticated visitors may create their own account through
     /// the public registration endpoint.
     fn allows_self_registration(&self) -> bool;

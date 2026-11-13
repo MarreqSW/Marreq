@@ -1,0 +1,165 @@
+#!/usr/bin/env python3
+"""Classify committed changes using the impact map from the head commit."""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+
+
+MAP = "scripts/release-impact-map.json"
+REGULAR_FILE_MODES = {b"100644", b"100755"}
+DIMENSIONS = {
+    "artifacts": {"server", "cloud", "frontend", "mcp"},
+    "checks": {
+        "api_contracts", "database_migrations", "deployment", "frontend",
+        "mcp", "release_pipeline", "rust",
+    },
+    "infrastructure": {"build_and_ci", "deployment", "release"},
+}
+
+
+def git(*args):
+    result = subprocess.run(
+        ["git", "--no-replace-objects", *args], capture_output=True, check=False,
+    )
+    if result.returncode:
+        raise ValueError(result.stderr.decode(errors="replace").strip())
+    return result.stdout
+
+
+def resolve(ref):
+    try:
+        return git("rev-parse", "--verify", "--end-of-options", f"{ref}^{{commit}}").decode().strip()
+    except ValueError as error:
+        raise ValueError(f"cannot resolve commit {ref!r}: {error}") from error
+
+
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError(f"duplicate map key {key!r}")
+        result[key] = value
+    return result
+
+
+def load_map(head):
+    try:
+        config = json.loads(git("show", f"{head}:{MAP}"), object_pairs_hook=unique_object)
+        if (not isinstance(config, dict) or set(config) != {"schema_version", "rules"}
+                or type(config["schema_version"]) is not int or config["schema_version"] != 1):
+            raise ValueError("expected map schema version 1")
+        if not isinstance(config["rules"], list) or not config["rules"]:
+            raise ValueError("expected a nonempty rule list")
+
+        rules = []
+        seen = set()
+        for index, rule in enumerate(config["rules"], start=1):
+            if not isinstance(rule, dict) or rule.keys() - {"paths", *DIMENSIONS}:
+                raise ValueError(f"rule {index} has invalid keys")
+            paths = rule.get("paths")
+            if not isinstance(paths, list) or not paths:
+                raise ValueError(f"rule {index} needs path patterns")
+            for pattern in paths:
+                if not isinstance(pattern, str) or not pattern or pattern in seen:
+                    raise ValueError(f"rule {index} has an empty, invalid or duplicate pattern")
+                seen.add(pattern)
+            for dimension, allowed in DIMENSIONS.items():
+                if dimension not in rule:
+                    continue
+                values = rule[dimension]
+                if (not isinstance(values, list) or not values
+                        or any(not isinstance(value, str) or value not in allowed for value in values)
+                        or len(set(values)) != len(values)):
+                    raise ValueError(f"rule {index} has invalid {dimension}")
+            rules.append(([re.compile(pattern) for pattern in paths], rule))
+        return rules
+    except (ValueError, re.error) as error:
+        raise ValueError(f"invalid {MAP} at {head}: {error}") from error
+
+
+def classify(path, rules):
+    for patterns, rule in rules:
+        if any(pattern.fullmatch(path) for pattern in patterns):
+            return rule
+    return None
+
+
+def tree_paths(revision):
+    for entry in git("ls-tree", "-rz", "--full-tree", revision).split(b"\0"):
+        if entry:
+            metadata, path = entry.split(b"\t", 1)
+            mode = metadata.split(b" ", 1)[0]
+            yield os.fsdecode(path), mode
+
+
+def detect(base_ref, head_ref):
+    base, head = resolve(base_ref), resolve(head_ref)
+    rules = load_map(head)
+    # Treat renames as a deletion plus an addition. Both boundaries matter,
+    # independently of Git's similarity heuristics or local rename settings.
+    paths = git(
+        "diff", "--name-only", "-z", "--no-renames", "--no-relative",
+        "--no-ext-diff", "--ignore-submodules=none", base, head, "--",
+    )
+    changed = {os.fsdecode(path) for path in paths.split(b"\0") if path}
+    unknown = {
+        path for path, mode in tree_paths(head)
+        if mode not in REGULAR_FILE_MODES or classify(path, rules) is None
+    }
+    # Deleted and replaced entries can hide an unsupported baseline mode.
+    unknown.update(
+        path for path, mode in tree_paths(base)
+        if path in changed and mode not in REGULAR_FILE_MODES
+    )
+    report = {"schema_version": 1, "base_sha": base, "head_sha": head}
+    report.update({dimension: {} for dimension in DIMENSIONS})
+    for path in sorted(changed):
+        rule = classify(path, rules)
+        if rule is None:
+            unknown.add(path)
+        elif path not in unknown:
+            for dimension in DIMENSIONS:
+                for value in rule.get(dimension, []):
+                    report[dimension].setdefault(value, []).append(path)
+    report["unknown_inputs"] = sorted(unknown)
+    return report
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--base", required=True, help="baseline commit or tag")
+    parser.add_argument("--head", required=True, help="candidate commit or tag")
+    parser.add_argument("--format", choices=("json", "text"), default="text")
+    args = parser.parse_args()
+    try:
+        report = detect(args.base, args.head)
+    except ValueError as error:
+        print(f"Release impact: {error}", file=sys.stderr)
+        return 2
+
+    if args.format == "json":
+        print(json.dumps(report, indent=2, sort_keys=True))
+    else:
+        print(f"{report['base_sha']} -> {report['head_sha']}")
+        for dimension in DIMENSIONS:
+            entries = report[dimension]
+            print(f"{dimension}:")
+            if not entries:
+                print("  none")
+            for name, paths in sorted(entries.items()):
+                print(f"  {name}: " + ", ".join(map(repr, paths)))
+
+    if report["unknown_inputs"]:
+        print("Unclassified or unsupported release inputs:", file=sys.stderr)
+        for path in report["unknown_inputs"]:
+            print(f"  {path!r}", file=sys.stderr)
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

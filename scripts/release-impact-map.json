@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "rules": [
+    {
+      "paths": ["marreq-cloud/tests/api_contract_inventory\\.rs"],
+      "checks": ["rust", "api_contracts"]
+    },
+    {
+      "paths": ["marreq-(core|server|cloud)/tests/.+", "tests/reqif/.+", "\\.cargo/config\\.toml", "deny\\.toml"],
+      "checks": ["rust"]
+    },
+    {
+      "paths": ["\\.stylelintrc\\.json", "\\.github/workflows/purgecss(-ci\\.mjs|\\.config\\.cjs)", "scripts/frontend-coverage-summary\\.mjs"],
+      "checks": ["frontend"]
+    },
+    {
+      "paths": ["mcp-server/vitest\\.config\\.ts"],
+      "checks": ["mcp"]
+    },
+    {
+      "paths": ["docs/developer/openapi(/.+|\\.yaml)", "tools/marreq-contracts/(src|tests)/.+", "scripts/(bundle-openapi\\.mjs|generate-api-types\\.mjs|install-oasdiff\\.sh|check-api-compatibility\\.sh|smoke-api-consumers\\.mjs|test-api-contracts\\.sh)"],
+      "checks": ["api_contracts"]
+    },
+    {
+      "paths": ["package(-lock)?\\.json"],
+      "checks": ["api_contracts", "frontend"]
+    },
+    {
+      "paths": ["tools/marreq-migrations/released-migrations\\.json", "scripts/(check-migration-policy\\.py|test-migration-policy\\.py|test-migration-image\\.sh|test-migrations\\.sh|smoke-restored-backend\\.py)"],
+      "checks": ["database_migrations"]
+    },
+    {
+      "paths": ["marreq-core/(migrations|scripts)/.+", "marreq-core/diesel\\.toml", "tools/marreq-migrations/(src/.+|build\\.rs)"],
+      "artifacts": ["server", "cloud"],
+      "checks": ["rust", "database_migrations"]
+    },
+    {
+      "paths": ["(marreq-(core|server|cloud)|tools/marreq-(contracts|migrations))/Cargo\\.toml", "Cargo\\.(toml|lock)"],
+      "artifacts": ["server", "cloud"],
+      "checks": ["rust", "api_contracts", "database_migrations"]
+    },
+    {
+      "paths": ["marreq-core/src/(schema\\.(rs|patch)|backup\\.rs|bin/marreq-backup\\.rs)"],
+      "artifacts": ["server", "cloud"],
+      "checks": ["rust", "api_contracts", "database_migrations"]
+    },
+    {
+      "paths": ["marreq-core/(src/.+|frontend_compatibility\\.json)"],
+      "artifacts": ["server", "cloud"],
+      "checks": ["rust", "api_contracts"]
+    },
+    {
+      "paths": ["marreq-server/(src/.+|Rocket\\.toml)"],
+      "artifacts": ["server"],
+      "checks": ["rust", "api_contracts"]
+    },
+    {
+      "paths": ["marreq-cloud/(src/.+|Rocket\\.toml)"],
+      "artifacts": ["cloud"],
+      "checks": ["rust", "api_contracts"]
+    },
+    {
+      "paths": ["docker/(Dockerfile(\\.dockerignore)?|docker-entrypoint\\.sh)"],
+      "artifacts": ["server", "cloud"],
+      "checks": ["database_migrations"]
+    },
+    {
+      "paths": ["frontend/(src/.+|compatibility\\.json|vitest\\.config\\.ts|README\\.md)"],
+      "artifacts": ["frontend"],
+      "checks": ["frontend", "api_contracts"]
+    },
+    {
+      "paths": ["frontend/((static|public)/.+|package(-lock)?\\.json|index\\.html|(postcss\\.config\\.js|vite\\.config\\.ts|tsconfig\\.json))", "docker/frontend/(Dockerfile|nginx\\.conf\\.template|40-marreq-umami\\.sh)"],
+      "artifacts": ["frontend"],
+      "checks": ["frontend", "api_contracts"]
+    },
+    {
+      "paths": ["mcp-server/(src/.+|compatibility\\.json|MARREQ_SKILL\\.md|Dockerfile|package(-lock)?\\.json|tsconfig\\.json)"],
+      "artifacts": ["mcp"],
+      "checks": ["mcp", "api_contracts"]
+    },
+    {
+      "paths": ["\\.dockerignore"],
+      "artifacts": ["frontend", "mcp"],
+      "checks": ["frontend", "mcp"]
+    },
+    {
+      "paths": ["\\.github/workflows/release-artifacts\\.yml"],
+      "artifacts": ["server", "cloud", "frontend", "mcp"],
+      "checks": ["release_pipeline", "api_contracts"],
+      "infrastructure": ["release"]
+    },
+    {
+      "paths": ["docker/docker-compose(\\.(ci|dev|light|migrate|prod))?\\.yml", "\\.env\\.example"],
+      "checks": ["deployment"],
+      "infrastructure": ["deployment"]
+    },
+    {
+      "paths": ["scripts/test-frontend-mcp\\.py", "tests/docker/proxy-upstream\\.cjs"],
+      "checks": ["deployment"]
+    },
+    {
+      "paths": ["Makefile", "mcp-server/run\\.sh", "\\.github/workflows/marreq-ci\\.yml", "\\.github/workflows/wait_for_db\\.sh", "scripts/(detect-release-impact|release-impact-map\\.json|test-release-impact\\.py)"],
+      "checks": ["release_pipeline"],
+      "infrastructure": ["build_and_ci"]
+    },
+    {
+      "paths": ["(marreq-(core|server|cloud)|docker)/README\\.md", "docker/LIGHT\\.md", "\\.github/workflows/README\\.md", "(README|INSTALL|AGENTS)\\.md", "CHANGELOG", "LICENSE", "docs/.+\\.md", "docs/ReqIF/[^/]+\\.(cmof|xsd|pdf)", "docs/assets/[^/]+\\.(png|csv)", "docs/architecture/diagrams/[^/]+\\.mmd", "docs/user-manual/(index\\.html|styles\\.css|build\\.sh|build-links\\.lua|capture_screenshots\\.mjs|generated/[^/]+\\.html|screenshots/[^/]+\\.png)", "\\.github/ISSUE_TEMPLATE/[^/]+\\.yml", "\\.github/dependabot\\.yml", "\\.(gitignore|czrc|eslintrc\\.json)", "vitest\\.config\\.js", "mcp-server/dist/[^/]+\\.js"]
+    }
+  ]
+}

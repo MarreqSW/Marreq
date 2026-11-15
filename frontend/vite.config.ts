@@ -58,7 +58,24 @@ export default defineConfig({
   publicDir: 'public',
   // Ensure `/projects`, `/user/...`, etc. serve `index.html` in dev so the SPA shell runs.
   appType: 'spa',
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'marreq-build-info',
+      apply: 'build',
+      generateBundle() {
+        this.emitFile({
+          type: 'asset',
+          fileName: 'build-info.json',
+          source: JSON.stringify({
+            component: 'frontend',
+            version: frontendVersion,
+            source_sha: frontendGitSha,
+          }),
+        });
+      },
+    },
+  ],
   define: {
     __FRONTEND_VERSION__: JSON.stringify(frontendVersion),
     __REQUIRES_BACKEND_MIN__: JSON.stringify(compatibility.requires_backend_min),

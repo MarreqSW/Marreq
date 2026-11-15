@@ -4,9 +4,20 @@ COPY mcp-server/package.json mcp-server/package-lock.json ./
 RUN npm ci
 COPY mcp-server/tsconfig.json ./
 COPY mcp-server/src ./src
+COPY mcp-server/scripts/write-build-info.mjs ./scripts/
+ARG MARREQ_VERSION=
+ARG MARREQ_GIT_SHA=unknown
+ENV MARREQ_VERSION=${MARREQ_VERSION}
+ENV MARREQ_GIT_SHA=${MARREQ_GIT_SHA}
 RUN npm run build && npm prune --omit=dev
 
 FROM node:22-alpine
+ARG MARREQ_VERSION=
+ARG MARREQ_GIT_SHA=unknown
+LABEL org.opencontainers.image.title="marreq-mcp-server" \
+      org.opencontainers.image.source="https://github.com/MarreqSW/Marreq" \
+      org.opencontainers.image.version="${MARREQ_VERSION:-dev}" \
+      org.opencontainers.image.revision="${MARREQ_GIT_SHA}"
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=build --chown=node:node /app/package.json ./

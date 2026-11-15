@@ -100,7 +100,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: actions/download-artifact@v8
+        with:
+          name: candidate-api-contract
+          path: ${{ runner.temp }}/published-artifact
+
       - name: Build and push backend image
+        id: publish
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -113,6 +119,23 @@ jobs:
             MARREQ_BIN=marreq-server
             MARREQ_VERSION=${{ steps.ver.outputs.version }}
             MARREQ_GIT_SHA=${{ github.sha }}
+
+      - name: Retain published digest and contract
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          IMAGE: ${{ steps.ver.outputs.image }}
+          DIGEST: ${{ steps.publish.outputs.digest }}
+        run: |
+          cd "$RUNNER_TEMP/published-artifact"
+          "$GITHUB_WORKSPACE/scripts/record-published-artifact" \
+            --component server --version "$VERSION" --source-sha "$GITHUB_SHA" \
+            --source-tag "$GITHUB_REF_NAME" --image "$IMAGE" --digest "$DIGEST" \
+            --contract candidate-contract.json > published.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: published-server-provenance
+          path: ${{ runner.temp }}/published-artifact/
+          if-no-files-found: error
 
   frontend:
     needs: compatibility
@@ -139,7 +162,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: actions/download-artifact@v8
+        with:
+          name: candidate-api-contract
+          path: ${{ runner.temp }}/published-artifact
+
       - name: Build and push frontend image
+        id: publish
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -151,6 +180,23 @@ jobs:
           build-args: |
             MARREQ_VERSION=${{ steps.ver.outputs.version }}
             MARREQ_GIT_SHA=${{ github.sha }}
+
+      - name: Retain published digest and contract
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          IMAGE: ${{ steps.ver.outputs.image }}
+          DIGEST: ${{ steps.publish.outputs.digest }}
+        run: |
+          cd "$RUNNER_TEMP/published-artifact"
+          "$GITHUB_WORKSPACE/scripts/record-published-artifact" \
+            --component frontend --version "$VERSION" --source-sha "$GITHUB_SHA" \
+            --source-tag "$GITHUB_REF_NAME" --image "$IMAGE" --digest "$DIGEST" \
+            --contract candidate-contract.json > published.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: published-frontend-provenance
+          path: ${{ runner.temp }}/published-artifact/
+          if-no-files-found: error
 
   mcp:
     needs: compatibility
@@ -177,7 +223,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - uses: actions/download-artifact@v8
+        with:
+          name: candidate-api-contract
+          path: ${{ runner.temp }}/published-artifact
+
       - name: Build and push MCP image
+        id: publish
         uses: docker/build-push-action@v7
         with:
           context: .
@@ -186,3 +238,23 @@ jobs:
           tags: |
             ${{ steps.ver.outputs.image }}:${{ steps.ver.outputs.version }}
             ${{ steps.ver.outputs.image }}:latest
+          build-args: |
+            MARREQ_VERSION=${{ steps.ver.outputs.version }}
+            MARREQ_GIT_SHA=${{ github.sha }}
+
+      - name: Retain published digest and contract
+        env:
+          VERSION: ${{ steps.ver.outputs.version }}
+          IMAGE: ${{ steps.ver.outputs.image }}
+          DIGEST: ${{ steps.publish.outputs.digest }}
+        run: |
+          cd "$RUNNER_TEMP/published-artifact"
+          "$GITHUB_WORKSPACE/scripts/record-published-artifact" \
+            --component mcp --version "$VERSION" --source-sha "$GITHUB_SHA" \
+            --source-tag "$GITHUB_REF_NAME" --image "$IMAGE" --digest "$DIGEST" \
+            --contract candidate-contract.json > published.json
+      - uses: actions/upload-artifact@v7
+        with:
+          name: published-mcp-provenance
+          path: ${{ runner.temp }}/published-artifact/
+          if-no-files-found: error

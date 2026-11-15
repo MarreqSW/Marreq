@@ -6,18 +6,20 @@
 use serde::Deserialize;
 use serde_json::json;
 
-/// Release version injected at build time (`MARREQ_VERSION`, from the
-/// `marreq-server-v*` tag), else the package version from `marreq-core/Cargo.toml`.
-pub fn backend_version() -> &'static str {
-    match option_env!("MARREQ_VERSION") {
-        Some(v) if !v.is_empty() => v.trim_start_matches('v'),
-        _ => env!("CARGO_PKG_VERSION"),
-    }
+/// Resolve the build override against the deployable crate's package version.
+pub fn artifact_version(release: Option<&'static str>, package: &'static str) -> &'static str {
+    release
+        .filter(|version| !version.is_empty())
+        .map(|version| version.strip_prefix('v').unwrap_or(version))
+        .unwrap_or(package)
 }
 
-/// Git SHA injected at build time (`MARREQ_GIT_SHA`), or `"unknown"`.
+pub fn backend_version() -> &'static str {
+    crate::deployment::try_current().map_or("dev", |mode| mode.artifact_version())
+}
+
 pub fn backend_git_sha() -> &'static str {
-    option_env!("MARREQ_GIT_SHA").unwrap_or("unknown")
+    crate::deployment::try_current().map_or("unknown", |mode| mode.source_sha())
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
@@ -57,17 +59,14 @@ mod tests {
     }
 
     #[test]
-    fn backend_version_prefers_injected_release_version() {
-        let v = backend_version();
-        assert!(!v.starts_with('v'));
-        match option_env!("MARREQ_VERSION") {
-            Some(tag) if !tag.is_empty() => assert_eq!(v, tag.trim_start_matches('v')),
-            _ => assert_eq!(v, env!("CARGO_PKG_VERSION")),
-        }
+    fn artifact_version_prefers_the_release_override() {
+        assert_eq!(artifact_version(Some("v0.2.3"), "0.2.1"), "0.2.3");
+        assert_eq!(artifact_version(Some(""), "0.2.1"), "0.2.1");
+        assert_eq!(artifact_version(None, "0.2.3"), "0.2.3");
     }
 
     #[test]
-    fn build_info_includes_cargo_version() {
+    fn build_info_preserves_legacy_fields() {
         let v = build_info_json("server");
         assert_eq!(v["backend_version"], backend_version());
         assert_eq!(v["deployment_mode"], "server");

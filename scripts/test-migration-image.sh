@@ -42,4 +42,7 @@ docker exec "$name-app" curl -fsS -b /tmp/migration-cookies http://localhost:800
 python3 -c 'import json,sys; assert json.load(open(sys.argv[1]))["username"] == "alice"' "$work/me.json"
 
 docker exec "$name-app" sh -ec 'test "$(id -u)" != 0; ! command -v diesel; test ! -e /app/tools'
+if [[ $# == 4 ]]; then
+  python3 scripts/test-artifact-image.py "$2" "$image" "$3" "$4" --running-container "$name-app"
+fi
 printf 'Backend image startup, explicit migrations and expanded-schema HTTP smoke passed: %s\n' "$image"

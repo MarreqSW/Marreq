@@ -15,7 +15,9 @@ RUN npm run build
 FROM nginx:alpine
 ARG MARREQ_VERSION=
 ARG MARREQ_GIT_SHA=unknown
-LABEL org.opencontainers.image.version="${MARREQ_VERSION:-dev}" \
+LABEL org.opencontainers.image.title="marreq-frontend" \
+      org.opencontainers.image.source="https://github.com/MarreqSW/Marreq" \
+      org.opencontainers.image.version="${MARREQ_VERSION:-dev}" \
       org.opencontainers.image.revision="${MARREQ_GIT_SHA}"
 # Only substitute MARREQ_* in templates — avoids envsubst touching unrelated nginx `$vars`.
 ENV NGINX_ENVSUBST_FILTER=^MARREQ_

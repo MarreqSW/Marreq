@@ -12,6 +12,17 @@ impl DeploymentMode for Server {
     fn name(&self) -> &'static str {
         "server"
     }
+
+    fn artifact_version(&self) -> &'static str {
+        marreq_core::build_info::artifact_version(
+            option_env!("MARREQ_VERSION"),
+            env!("CARGO_PKG_VERSION"),
+        )
+    }
+
+    fn source_sha(&self) -> &'static str {
+        option_env!("MARREQ_GIT_SHA").unwrap_or("unknown")
+    }
     fn allows_self_registration(&self) -> bool {
         false
     }

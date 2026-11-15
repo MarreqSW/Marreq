@@ -3,6 +3,7 @@ import { createServer, request as httpRequest, type Server } from "node:http";
 import { once } from "node:events";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { buildInfo } from "./build-info.js";
 import { createMarreqServer } from "./index.js";
 import { loadTransportConfig, startRemoteServer } from "./remote.js";
 
@@ -147,6 +148,9 @@ describe("remote Streamable HTTP transport", () => {
     const { url } = await startMcp(apiPort);
     const remote = client(url);
     await remote.client.connect(remote.transport);
+    expect(remote.client.getServerVersion()).toMatchObject({ version: buildInfo.version });
+    const metadata = await fetch(new URL("/build-info", url));
+    expect(await metadata.json()).toEqual(buildInfo);
 
     const tools = await remote.client.listTools();
     expect(tools.tools.map((tool) => tool.name)).toContain("list_projects");

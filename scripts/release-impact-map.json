@@ -75,7 +75,7 @@
       "checks": ["frontend", "api_contracts"]
     },
     {
-      "paths": ["mcp-server/(src/.+|compatibility\\.json|MARREQ_SKILL\\.md|Dockerfile|package(-lock)?\\.json|tsconfig\\.json)"],
+      "paths": ["mcp-server/(src/.+|scripts/write-build-info\\.mjs|compatibility\\.json|MARREQ_SKILL\\.md|Dockerfile|package(-lock)?\\.json|tsconfig\\.json)"],
       "artifacts": ["mcp"],
       "checks": ["mcp", "api_contracts"]
     },
@@ -94,6 +94,11 @@
       "paths": ["docker/docker-compose(\\.(ci|dev|light|migrate|prod))?\\.yml", "\\.env\\.example"],
       "checks": ["deployment"],
       "infrastructure": ["deployment"]
+    },
+    {
+      "paths": ["scripts/(check-deployment-provenance|record-published-artifact|test-deployment-provenance\\.py|test-artifact-image\\.py)"],
+      "checks": ["deployment", "release_pipeline"],
+      "infrastructure": ["release"]
     },
     {
       "paths": ["scripts/test-frontend-mcp\\.py", "tests/docker/proxy-upstream\\.cjs"],

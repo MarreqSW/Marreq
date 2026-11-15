@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Bind a successful registry push digest to the exact retained contract."""
+
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import runpy
+import sys
+
+provenance = runpy.run_path(str(Path(__file__).with_name("check-deployment-provenance")))
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--component", required=True, choices=provenance["IMAGES"])
+    for field in ("version", "source-sha", "source-tag", "image", "digest"):
+        parser.add_argument(f"--{field}", required=True)
+    parser.add_argument("--contract", required=True, type=Path)
+    args = parser.parse_args()
+    entry = {
+        key: getattr(args, key) for key in ("version", "source_sha", "source_tag", "image", "digest")
+    }
+    try:
+        contract = args.contract.resolve(strict=True)
+        entry["contract"] = {"file": contract.name, "sha256": hashlib.sha256(contract.read_bytes()).hexdigest()}
+        provenance["validate_artifact"](contract.parent, entry, args.component)
+    except (ValueError, OSError, RuntimeError):
+        print("Published artifact identity or retained contract is invalid", file=sys.stderr)
+        return 2
+    print(json.dumps({"component": args.component, **entry}, indent=2, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

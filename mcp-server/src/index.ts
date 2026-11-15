@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { buildInfo } from "./build-info.js";
 import { pathToFileURL } from "node:url";
 import { randomUUID } from "node:crypto";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -80,7 +81,7 @@ export function createMarreqServer(ctx: SessionContext) {
 
   const server = new McpServer({
     name: "marreq-mcp-server",
-    version: "0.1.0",
+    version: buildInfo.version,
   });
 
   // MCP SDK 1.x does not yet model ChatGPT's top-level `securitySchemes`

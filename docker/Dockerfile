@@ -16,6 +16,11 @@ COPY marreq-server/Cargo.toml ./marreq-server/
 COPY marreq-cloud/Cargo.toml ./marreq-cloud/
 COPY tools/marreq-contracts/Cargo.toml ./tools/marreq-contracts/
 COPY tools/marreq-migrations/Cargo.toml ./tools/marreq-migrations/
+COPY tools/marreq-release/Cargo.toml ./tools/marreq-release/
+RUN mkdir -p tools/marreq-release/src && \
+    for target in lib.rs main.rs; do \
+        echo 'compile_error!("workspace placeholder must not be compiled");' > "tools/marreq-release/src/$target"; \
+    done
 
 # Cargo resolves the full locked workspace. These targets satisfy discovery
 # and fail compilation if an inactive package becomes a build dependency.

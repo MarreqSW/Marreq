@@ -26,11 +26,11 @@ dotenvy = "0.15.7"
 # Magic-byte file type detection for attachment uploads (no CFB/legacy Office).
 infer = { version = "0.22", default-features = false }
 lazy_static = "1.5"
-openidconnect = { version = "4.0.1", features = ["reqwest"] }
+openidconnect = { version = "4.1", features = ["reqwest"] }
 oauth2 = { version = "5.0.0", features = ["reqwest"] }
 lettre = { version = "0.11.20", features = ["builder", "smtp-transport", "tokio1-native-tls"] }
 pgvector = { version = "0.4.1", features = ["diesel"] }
-printpdf = "0.12.8"
+printpdf = "0.12"
 quick-xml = { version = "0.42", features = ["serialize"] }
 rand = "0.10"
 regex = "1.12"
@@ -52,7 +52,7 @@ typst = "0.15.1"
 typst-layout = "0.15.1"
 typst-pdf = "0.15.1"
 # ReqIFZ archives. Same version and features calamine/rust_xlsxwriter already pull in.
-zip = { version = "9.0", default-features = false, features = ["deflate"] }
+zip = { version = "9.5", default-features = false, features = ["deflate"] }
 # Admin backup archive: SQL dump plus attachment files (issue #341).
 flate2 = "1"
 tar = "0.4"

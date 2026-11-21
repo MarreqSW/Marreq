@@ -315,6 +315,7 @@ mod tests {
     use crate::auth::OAuthOperation;
     use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
     use rsa::pkcs1v15::SigningKey;
+    use rsa::rand_core::OsRng;
     use rsa::signature::{SignatureEncoding, Signer};
     use rsa::traits::PublicKeyParts;
     use rsa::{RsaPrivateKey, RsaPublicKey};
@@ -472,6 +473,53 @@ mod tests {
         assert_eq!(result.unwrap_err(), "ID token validation failed");
     }
 
+    async fn exchange_signed_by(alg: &str, forgery: Forgery) -> Result<ExternalIdentity, String> {
+        let mut transaction = transaction();
+        transaction.provider_key = "oidc".into();
+        let (issuer, server) = mock_oidc_token_server_with(alg, &transaction.nonce, forgery);
+        let result = exchange_code(
+            &oidc_provider(&issuer),
+            "authorization-code",
+            &transaction,
+            "https://marreq.example.test",
+        )
+        .await;
+        server.join().unwrap();
+        result
+    }
+
+    #[rocket::async_test]
+    async fn oidc_exchange_accepts_validly_signed_token_for_each_algorithm() {
+        for alg in ["RS256", "ES256", "ES384"] {
+            let identity = exchange_signed_by(alg, Forgery::None)
+                .await
+                .unwrap_or_else(|error| panic!("{alg} token was rejected: {error}"));
+            assert_eq!(identity.subject, "test-subject", "{alg}");
+            assert_eq!(
+                identity.email.as_deref(),
+                Some("alice@example.test"),
+                "{alg}"
+            );
+            assert!(identity.email_verified, "{alg}");
+        }
+    }
+
+    #[rocket::async_test]
+    async fn oidc_exchange_rejects_token_signed_by_unpublished_key_for_each_algorithm() {
+        for alg in ["RS256", "ES256", "ES384"] {
+            let result = exchange_signed_by(alg, Forgery::WrongKey).await;
+            assert_eq!(result.unwrap_err(), "ID token validation failed", "{alg}");
+        }
+    }
+
+    #[rocket::async_test]
+    async fn oidc_exchange_rejects_tampered_claims_for_each_algorithm() {
+        for alg in ["RS256", "ES256", "ES384"] {
+            let result = exchange_signed_by(alg, Forgery::TamperedClaims).await;
+            assert_eq!(result.unwrap_err(), "ID token validation failed", "{alg}");
+        }
+    }
+
     #[rocket::async_test]
     async fn oidc_discovery_rejects_trailing_slash_issuer_mismatch() {
         let (issuer, server) = mock_oidc_issuer_mismatch_server();
@@ -595,16 +643,108 @@ mod tests {
         (issuer, server)
     }
 
+    enum TestSigner {
+        Rs256(RsaPrivateKey),
+        Es256(p256::ecdsa::SigningKey),
+        Es384(p384::ecdsa::SigningKey),
+    }
+
+    #[derive(Clone, Copy, PartialEq)]
+    enum Forgery {
+        None,
+        /// Signed by a different key of the same algorithm than the JWKS publishes.
+        WrongKey,
+        /// Valid signature over different claims than the ones delivered.
+        TamperedClaims,
+    }
+
+    impl TestSigner {
+        fn generate(alg: &str) -> Self {
+            match alg {
+                "RS256" => Self::Rs256(RsaPrivateKey::new(&mut OsRng, 2048).unwrap()),
+                "ES256" => Self::Es256(p256::ecdsa::SigningKey::random(&mut OsRng)),
+                "ES384" => Self::Es384(p384::ecdsa::SigningKey::random(&mut OsRng)),
+                other => panic!("unsupported test algorithm {other}"),
+            }
+        }
+
+        fn alg(&self) -> &'static str {
+            match self {
+                Self::Rs256(_) => "RS256",
+                Self::Es256(_) => "ES256",
+                Self::Es384(_) => "ES384",
+            }
+        }
+
+        fn jwk(&self) -> serde_json::Value {
+            let b64 = |bytes: &[u8]| URL_SAFE_NO_PAD.encode(bytes);
+            match self {
+                Self::Rs256(key) => {
+                    let public_key = RsaPublicKey::from(key);
+                    serde_json::json!({
+                        "kty": "RSA", "use": "sig", "kid": "test-key", "alg": "RS256",
+                        "n": b64(&public_key.n().to_bytes_be()),
+                        "e": b64(&public_key.e().to_bytes_be())
+                    })
+                }
+                Self::Es256(key) => {
+                    let point = key.verifying_key().to_encoded_point(false);
+                    serde_json::json!({
+                        "kty": "EC", "use": "sig", "kid": "test-key", "alg": "ES256",
+                        "crv": "P-256",
+                        "x": b64(point.x().unwrap()),
+                        "y": b64(point.y().unwrap())
+                    })
+                }
+                Self::Es384(key) => {
+                    let point = key.verifying_key().to_encoded_point(false);
+                    serde_json::json!({
+                        "kty": "EC", "use": "sig", "kid": "test-key", "alg": "ES384",
+                        "crv": "P-384",
+                        "x": b64(point.x().unwrap()),
+                        "y": b64(point.y().unwrap())
+                    })
+                }
+            }
+        }
+
+        /// JWS signature bytes: PKCS#1 v1.5 for RS256, fixed-size `r || s` for ES*.
+        fn sign(&self, input: &[u8]) -> Vec<u8> {
+            match self {
+                Self::Rs256(key) => SigningKey::<rsa::sha2::Sha256>::new(key.clone())
+                    .sign(input)
+                    .to_bytes()
+                    .to_vec(),
+                Self::Es256(key) => {
+                    let signature: p256::ecdsa::Signature = key.sign(input);
+                    signature.to_bytes().to_vec()
+                }
+                Self::Es384(key) => {
+                    let signature: p384::ecdsa::Signature = key.sign(input);
+                    signature.to_bytes().to_vec()
+                }
+            }
+        }
+    }
+
     fn mock_oidc_token_server(token_nonce: &str) -> (String, std::thread::JoinHandle<()>) {
+        mock_oidc_token_server_with("RS256", token_nonce, Forgery::None)
+    }
+
+    fn mock_oidc_token_server_with(
+        alg: &str,
+        token_nonce: &str,
+        forgery: Forgery,
+    ) -> (String, std::thread::JoinHandle<()>) {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         let issuer = format!("http://{address}");
         let server_issuer = issuer.clone();
         let token_nonce = token_nonce.to_owned();
-        let private_key = RsaPrivateKey::new(&mut rsa::rand_core::OsRng, 2048).unwrap();
-        let public_key = RsaPublicKey::from(&private_key);
-        let modulus = URL_SAFE_NO_PAD.encode(public_key.n().to_bytes_be());
-        let exponent = URL_SAFE_NO_PAD.encode(public_key.e().to_bytes_be());
+        let published = TestSigner::generate(alg);
+        let rogue = (forgery == Forgery::WrongKey).then(|| TestSigner::generate(alg));
+        let jwks = serde_json::json!({ "keys": [published.jwk()] }).to_string();
+        let alg = published.alg();
         let server = std::thread::spawn(move || {
             let (stream, request) = read_request(&listener);
             assert!(request.starts_with("GET /.well-known/openid-configuration "));
@@ -615,29 +755,19 @@ mod tests {
                 "jwks_uri": format!("{server_issuer}/jwks"),
                 "response_types_supported": ["code"],
                 "subject_types_supported": ["public"],
-                "id_token_signing_alg_values_supported": ["RS256"]
+                "id_token_signing_alg_values_supported": [alg]
             })
             .to_string();
             respond(stream, "200 OK", &metadata);
 
             let (stream, request) = read_request(&listener);
             assert!(request.starts_with("GET /jwks "));
-            let jwks = serde_json::json!({
-                "keys": [{
-                    "kty": "RSA",
-                    "use": "sig",
-                    "kid": "test-key",
-                    "alg": "RS256",
-                    "n": modulus,
-                    "e": exponent
-                }]
-            })
-            .to_string();
             respond(stream, "200 OK", &jwks);
 
             let (stream, request) = read_request(&listener);
             assert!(request.starts_with("POST /token "));
-            let id_token = signed_id_token(&private_key, &server_issuer, &token_nonce);
+            let signer = rogue.as_ref().unwrap_or(&published);
+            let id_token = signed_id_token(signer, &server_issuer, &token_nonce, forgery);
             let token_response = serde_json::json!({
                 "access_token": "temporary-access-token",
                 "token_type": "Bearer",
@@ -650,32 +780,33 @@ mod tests {
         (issuer, server)
     }
 
-    fn signed_id_token(private_key: &RsaPrivateKey, issuer: &str, nonce: &str) -> String {
+    fn signed_id_token(signer: &TestSigner, issuer: &str, nonce: &str, forgery: Forgery) -> String {
         let header = URL_SAFE_NO_PAD.encode(
-            serde_json::json!({ "alg": "RS256", "kid": "test-key", "typ": "JWT" }).to_string(),
+            serde_json::json!({ "alg": signer.alg(), "kid": "test-key", "typ": "JWT" }).to_string(),
         );
         let now = chrono::Utc::now().timestamp();
-        let claims = URL_SAFE_NO_PAD.encode(
-            serde_json::json!({
-                "iss": issuer,
-                "sub": "test-subject",
-                "aud": "client-id",
-                "exp": now + 300,
-                "iat": now,
-                "nonce": nonce,
-                "email": "alice@example.test",
-                "email_verified": true
-            })
-            .to_string(),
-        );
-        let signing_input = format!("{header}.{claims}");
-        let signature = SigningKey::<rsa::sha2::Sha256>::new(private_key.clone())
-            .sign(signing_input.as_bytes())
-            .to_bytes();
-        format!(
-            "{signing_input}.{}",
-            URL_SAFE_NO_PAD.encode(signature.as_ref())
-        )
+        let claims = |subject: &str| {
+            URL_SAFE_NO_PAD.encode(
+                serde_json::json!({
+                    "iss": issuer,
+                    "sub": subject,
+                    "aud": "client-id",
+                    "exp": now + 300,
+                    "iat": now,
+                    "nonce": nonce,
+                    "email": "alice@example.test",
+                    "email_verified": true
+                })
+                .to_string(),
+            )
+        };
+        let signing_input = format!("{header}.{}", claims("test-subject"));
+        let signature = URL_SAFE_NO_PAD.encode(signer.sign(signing_input.as_bytes()));
+        let delivered_claims = match forgery {
+            Forgery::TamperedClaims => claims("attacker-subject"),
+            _ => claims("test-subject"),
+        };
+        format!("{header}.{delivered_claims}.{signature}")
     }
 
     fn read_request(listener: &TcpListener) -> (TcpStream, String) {

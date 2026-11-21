@@ -9,13 +9,15 @@ without rebuilding any images, for example to consolidate documentation changes.
 This registry accepts stable SemVer (`X.Y.Z`, without leading zeroes, prerelease
 suffixes or build metadata) within npm's safe integer range.
 
-| Registry key | Development package version | Compatibility declaration |
-| --- | --- | --- |
-| `server` | `marreq-server/Cargo.toml` | `marreq-core/frontend_compatibility.json` |
-| `cloud` | `marreq-cloud/Cargo.toml` | `marreq-core/frontend_compatibility.json` |
-| `frontend` | `frontend/package.json` | `frontend/compatibility.json` |
-| `mcp` | `mcp-server/package.json` | `mcp-server/compatibility.json` |
+| Registry key | Development package version | Changelog | Compatibility declaration |
+| --- | --- | --- | --- |
+| `server` | `marreq-server/Cargo.toml` | [`marreq-server/CHANGELOG.md`](../marreq-server/CHANGELOG.md) | `marreq-core/frontend_compatibility.json` |
+| `cloud` | `marreq-cloud/Cargo.toml` | [`marreq-cloud/CHANGELOG.md`](../marreq-cloud/CHANGELOG.md) | `marreq-core/frontend_compatibility.json` |
+| `frontend` | `frontend/package.json` | [`frontend/CHANGELOG.md`](../frontend/CHANGELOG.md) | `frontend/compatibility.json` |
+| `mcp` | `mcp-server/package.json` | [`mcp-server/CHANGELOG.md`](../mcp-server/CHANGELOG.md) | `mcp-server/compatibility.json` |
 
+The [root changelog](../CHANGELOG.md) records coordinated product changes.
+Each component owns its independent release notes in the changelog above.
 The package fields mirror the registry for development builds. Release builds
 take explicit component versions and the exact source SHA. Shared `marreq-core`,
 the Rust contract and migration tools, and the root npm build tooling keep their
@@ -31,37 +33,44 @@ inherits that image's deployment identity.
    leaving all four images eligible for reuse.
 2. Advance the product version for a coordinated release. Bump the versions
    of affected components and keep the version of each reused image.
-3. In [changelogs](../changelogs), keep `## [Unreleased]` first and record
-   pending work there. When preparing a version, add a descending
-   `## [X.Y.Z] - YYYY-MM-DD` entry with notes scoped to that product or
-   component version. Use the intended release date in the candidate and
-   treat the publisher's record as evidence of the actual publication date.
-   The `Bootstrap` headings establish version floors. The existing root
-   [CHANGELOG](../CHANGELOG) preserves the earlier product notes.
+3. Keep `## [Unreleased]` first in each changelog and record pending work
+   there. When preparing a version, add a descending `## [X.Y.Z] - YYYY-MM-DD`
+   entry with notes scoped to that product or component version. Use the
+   intended release date in the candidate and the publisher's record for
+   evidence of the actual publication date. `Bootstrap` headings establish
+   version floors. Published and bootstrap entries keep their dates and notes.
 4. Synchronize the Cargo package entries and npm manifest and lockfile version
    fields. Commit the registry, affected changelogs and generated metadata
    together.
 
 ```sh
-scripts/validate-release-versions sync
-scripts/validate-release-versions check
-scripts/validate-release-versions sync --check
+cargo run --locked -p marreq-release -- sync
+cargo run --locked -p marreq-release -- check
+cargo run --locked -p marreq-release -- sync --check
+cargo run --locked -p marreq-release -- --format json check --base HEAD^1 --head HEAD
 ```
 
-The commands require Python 3.11+ and use its standard library. Synchronization
-only edits supported package version fields and is safe to rerun after an
-interruption. Validation is read-only. PR CI compares committed metadata at the
-merge candidate with its first parent to enforce monotonic versions and preserve
-changelog headings. PRs can accumulate source changes under Unreleased. The
-release gate requires the appropriate bump and dated entry for all changes
-accumulated since each publication.
+Run the Rust CLI from a Git worktree using Cargo or build it with
+`cargo build --locked -p marreq-release` and invoke `target/debug/marreq-release`
+with the same arguments. `scripts/validate-release-versions` is a shell wrapper
+for existing callers. The validator and impact detector use Rust and Git.
+The separate Python deployment provenance checker and publisher recorder still
+support existing deployment and component publication workflows.
 
-The impact map classifies the registry, changelogs and validator as release
-pipeline inputs. The detector retains its conservative file-level classification
-for manifests and locks. The release validator discounts diffs limited to
-mirrored version fields after the detector checks both trees. This avoids
-selecting Cloud when a Server version update changes the shared Cargo lockfile.
-Dependency, build configuration and file mode changes retain their impact.
+Synchronization validates all inputs before staging atomic file replacements.
+It changes only mirrored version values and preserves formatting, dependency
+pins and unrelated lockfile entries. Rerunning sync completes an interrupted
+update. `check` and `sync --check` are read-only. PR CI compares the committed
+merge candidate with its first parent to enforce monotonic versions and
+preserve historical changelog entries. PRs can accumulate source changes under
+Unreleased. Release candidates require the appropriate bump and dated entry for
+changes accumulated since each component's publication.
+
+The impact detector classifies the registry, changelogs and validator as release
+pipeline inputs. After checking both trees it excludes mirrored version-only
+edits from artifact inputs. This avoids selecting Cloud when a Server version
+update changes the shared Cargo lockfile. Dependency, build configuration and
+file mode changes retain their impact.
 
 ## Historical bootstrap
 
@@ -69,8 +78,12 @@ The audit used `main` at `291c6a5b4c594dc6d754565b1c7d2a9e9dc3ec54`.
 All four deployable package manifests used `0.1.0`. The registry reserves
 `1.0.0` as the product floor based on the existing lightweight `v1.0.0` tag
 at `14348c644b302229f680ce2f23093f715c029e6b`. The release list has no
-coordinated product release at that tag. The old changelog's `0.1.0` entry
-is preserved as written.
+coordinated product release at that tag. The canonical root changelog keeps
+the original Unreleased notes and archives the `0.1.0` entry verbatim,
+including its original `05/03/2026` heading. The validator recognizes that
+specific archive section after registry-tracked releases. It can read the
+former changelog layout from trusted historical Git baselines so the move
+preserves dates, notes and the bootstrap commit's identity.
 
 | Component | Registry floor | Highest observed tag and source commit | GHCR manifest index digest |
 | --- | --- | --- | --- |
@@ -114,8 +127,8 @@ for OCI labels. Audit digests were taken from explicit version tags.
 ## Release candidate validation
 
 ```sh
-scripts/validate-release-versions tag "$product_tag" --head "$candidate_sha"
-scripts/validate-release-versions --format json release \
+cargo run --locked -p marreq-release -- tag "$product_tag" --head "$candidate_sha"
+cargo run --locked -p marreq-release -- --format json release \
   --head "$candidate_sha" --tag "$product_tag" --previous "$prior_sha" \
   --server-provenance "$server_evidence" --cloud-provenance "$cloud_evidence"
 ```
@@ -303,7 +316,8 @@ startup and HTTP smoke checks then exercise those same images.
 | --- | --- | --- |
 | Server or Cloud source and Rocket config | Corresponding backend | Rust and API compatibility |
 | Core source and backend compatibility metadata | Server and Cloud | Rust and API compatibility |
-| Workspace member manifests, root Cargo manifest and lockfile | Server and Cloud | Rust, API compatibility and database migrations |
+| Workspace member manifests, root Cargo manifest and lockfile | Server and Cloud for shared build inputs | Rust, API compatibility and database migrations |
+| Version registry, product and component changelogs, and release CLI | None | Release pipeline |
 | Backend Dockerfile, its ignore file and runtime entrypoint | Server and Cloud | Database migration and startup checks |
 | Core migration SQL, schema, operational scripts and migration CLI | Server and Cloud | Database migrations, plus Rust and applicable API checks |
 | Frontend source, local npm files, Vite inputs, nginx and startup configuration | Frontend | Frontend and API compatibility |
@@ -331,11 +345,17 @@ config stay validation-only because their production images exclude them.
 
 ### Comparing source revisions
 
-Run the detector from a checkout of the candidate tooling with Git and Python 3.
+Run the Rust detector from a checkout of the candidate tooling with Git.
 
 ```sh
-scripts/detect-release-impact --base "$published_source_sha" --head "$candidate_sha" --format json
+cargo run --locked -p marreq-release -- impact --base "$published_source_sha" --head "$candidate_sha" --format json
 ```
+
+`scripts/detect-release-impact` delegates to the same command. The backend
+Docker build supplies a placeholder for the release tool so Cargo can resolve
+the locked workspace. Adding just that workspace member, its isolated lock
+entry and the exact Docker placeholder wiring has no artifact impact. Other
+manifest, lockfile and Docker changes are classified normally.
 
 Schema version 1 reports `base_sha`, `head_sha`, `artifacts`, `checks`,
 `infrastructure` and `unknown_inputs`. The three impact objects map affected
@@ -357,7 +377,7 @@ files produce no impact. Deletions and both paths of renames are classified.
 ### Maintaining the map
 
 Update [the impact map](../scripts/release-impact-map.json) in the same change
-that introduces or moves build inputs. Rules are ordered and use Python regex
+that introduces or moves build inputs. Rules are ordered and use Rust regex
 full matches against Git paths. Give validation-only rules to inputs outside
 the corresponding production build boundary. A rule with only `paths` documents inputs
 with no impact. Keep rules narrow for shared directories and review every
@@ -368,8 +388,9 @@ checks file modes across the candidate tree and on changed baseline paths,
 and classifies deleted paths. Only regular and executable files are supported. Historic paths can need explicit rules, as with the old single-file
 OpenAPI document.
 
-Run `python3 scripts/test-release-impact.py -v` to reproduce the acceptance
-scenarios in temporary repositories. The suite covers MCP-only, Server-only,
+Run `cargo test --locked -p marreq-release` for the release CLI integration
+tests. Run `python3 scripts/test-release-impact.py -v` for the existing
+impact CLI and shell wrapper regression tests in temporary repositories. The suite covers MCP-only, Server-only,
 shared core, validation-only contracts, unknown input failures, and
 different release baselines. The PR job compares the merge candidate with
 its first parent and attaches `release-impact.json` for inspection. Existing

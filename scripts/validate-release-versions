@@ -1,0 +1,283 @@
+#!/usr/bin/env python3
+"""Check registry consistency, synchronize package versions or validate a release candidate."""
+
+import argparse
+import json
+from pathlib import Path
+import re
+import runpy
+import subprocess
+import sys
+from tempfile import NamedTemporaryFile
+
+sys.dont_write_bytecode = True
+
+from release_versions import (
+    BACKENDS, COMPONENTS, METADATA, VERSION, changelog, metadata_changes,
+    registry, require, update_metadata, version, worktree_reader,
+)
+
+
+ROOT = Path(__file__).resolve().parent.parent
+SCRIPTS = ROOT / "scripts"
+PROVENANCE = runpy.run_path(str(SCRIPTS / "check-deployment-provenance"))
+WORKTREE = worktree_reader(ROOT)
+
+
+def run(*command):
+    return subprocess.run(command, cwd=ROOT, capture_output=True, check=False)
+
+
+def git(*args):
+    result = run("git", "--no-replace-objects", *args)
+    require(result.returncode == 0, result.stderr.decode(errors="replace").strip() or "Git command failed")
+    return result.stdout
+
+
+def resolve(ref):
+    return git("rev-parse", "--verify", "--end-of-options", f"{ref}^{{commit}}").decode().strip()
+
+
+def tree_mode(sha, path):
+    row = git("ls-tree", "--full-tree", sha, "--", path)
+    return row.split(b" ", 1)[0]
+
+
+def committed(sha):
+    def read(path):
+        require(tree_mode(sha, path) in (b"100644", b"100755"),
+                f"{sha}:{path}: expected a regular Git blob")
+        return git("show", f"{sha}:{path}").decode("utf-8")
+
+    return read
+
+
+def ancestor(base, head):
+    result = run("git", "--no-replace-objects", "merge-base", "--is-ancestor", base, head)
+    require(result.returncode == 0, f"{base} must be an ancestor of {head}; fetch complete history")
+
+
+def verify(read):
+    values = registry(read)
+    entries = {name: changelog(read, name, value) for name, value in values.items()}
+    changes = metadata_changes(read, values)
+    require(not changes, f"version metadata differs in {', '.join(changes)}; run scripts/validate-release-versions sync")
+    return values, entries
+
+
+def check_progress(read, values, entries):
+    prior = registry(read)
+    previous_entries = {name: changelog(read, name, old) for name, old in prior.items()}
+    for name, old in prior.items():
+        require(version(values[name]) >= version(old), f"{name}: version regressed from {old} to {values[name]}")
+        new_entries = entries[name].keys() - previous_entries[name].keys()
+        expected = {values[name]} if values[name] != old else set()
+        require(new_entries == expected, f"{name}: expected only new changelog versions {sorted(expected)}")
+    preserve_history(previous_entries, entries)
+
+
+def preserve_history(previous, current):
+    for name, entries in previous.items():
+        for number, status in entries.items():
+            require(current[name].get(number) == status,
+                    f"{name}: historical changelog heading for {number} changed or disappeared")
+
+
+def verify_tag(tag, value):
+    require(tag == f"v{value}", f"product tag must be v{value}, got {tag!r}")
+
+
+def checked_publications(paths, prior, prior_product):
+    records = {}
+    for variant in BACKENDS:
+        require(paths[variant] is not None, f"missing trusted {variant} publication provenance manifest")
+        try:
+            manifest = PROVENANCE["validate"](paths[variant])
+        except (OSError, ValueError, TypeError, RuntimeError) as error:
+            raise ValueError(f"{variant} publication provenance: {error}") from error
+        require(manifest["variant"] == variant, f"expected {variant} provenance variant")
+        require(manifest.get("product_release") == prior_product,
+                f"{variant}: provenance must identify prior product release {prior_product!r}")
+        for name, record in manifest["components"].items():
+            value = record["version"]
+            tag = f"marreq-{name}-v{value}"
+            require(version(value) >= version(prior[name]) if prior_product is None else value == prior[name],
+                    f"{name}: publication {value} conflicts with prior registry version {prior[name]}")
+            require(record.get("source_tag") == tag,
+                    f"{name}: missing publication source tag {tag}")
+            require(resolve(f"refs/tags/{tag}") == record["source_sha"],
+                    f"{name}: {tag} disagrees with the retained publication SHA")
+            # Shared frontend/MCP records may refer to identical contract bytes
+            # under different local filenames in each deployment variant.
+            identity = {field: record[field] for field in ("version", "source_sha", "source_tag", "image", "digest")}
+            identity["contract_sha256"] = record["contract"]["sha256"]
+            require(name not in records or records[name] == identity,
+                    f"{name}: conflicting publication evidence across variants")
+            records[name] = identity
+    return records
+
+
+def check_existing_tags(previous, values, records, head):
+    for tag in git("for-each-ref", "--format=%(refname:strip=2)", "refs/tags").decode().splitlines():
+        product = re.fullmatch(rf"v({VERSION})", tag)
+        if product and version(product[1]) > version(previous):
+            require(tag == f"v{values['marreq']}" and resolve(f"refs/tags/{tag}") == head,
+                    f"product tag {tag} is already reserved or newer than the supplied baseline")
+        component = re.fullmatch(rf"marreq-({'|'.join(COMPONENTS)})-v({VERSION})", tag)
+        if component:
+            name, value = component.groups()
+            require(version(value) <= version(records[name]["version"]),
+                    f"{name}: {tag} is newer than the supplied publication baseline")
+
+
+def artifact_inputs(base, head, name, reports):
+    if base not in reports:
+        result = run(sys.executable, str(SCRIPTS / "detect-release-impact"),
+                     "--base", base, "--head", head, "--format", "json")
+        require(result.returncode == 0, result.stderr.decode(errors="replace").strip() or "release impact failed")
+        reports[base] = json.loads(result.stdout)["artifacts"]
+    return [path for path in reports[base].get(name, []) if not version_only(base, head, path)]
+
+
+def version_only(base, head, path):
+    if path not in METADATA or tree_mode(base, path) != tree_mode(head, path):
+        return False
+    neutral = dict.fromkeys(COMPONENTS, "0.0.0")
+    try:
+        before = update_metadata(path, committed(base)(path), neutral)
+        after = update_metadata(path, committed(head)(path), neutral)
+    except ValueError:
+        # Unknown historical package layouts retain their original impact.
+        return False
+    return before == after
+
+
+def validate_candidate(args, head, values, entries):
+    verify_tag(args.tag, values["marreq"])
+    require(re.fullmatch(PROVENANCE["GIT_SHA"], args.previous),
+            "--previous needs the full SHA of the trusted prior product or bootstrap commit")
+    previous = resolve(args.previous)
+    ancestor(previous, head)
+    previous_read = committed(previous)
+    prior, prior_entries = verify(previous_read)
+    # A candidate can contain several internally prepared version entries since
+    # the last publication. Each existing heading still has to survive.
+    preserve_history(prior_entries, entries)
+    require(version(values["marreq"]) > version(prior["marreq"]),
+            f"product version must advance beyond {prior['marreq']}")
+    require(entries["marreq"][values["marreq"]] != "Bootstrap", "candidate needs a dated product release entry")
+
+    prior_product = prior["marreq"]
+    if prior_entries["marreq"][prior_product] == "Bootstrap":
+        parent = resolve(f"{previous}^1")
+        require(not tree_mode(parent, "versions.toml"),
+                "--previous must be the commit introducing the bootstrap registry")
+        prior_product = None
+    else:
+        require(resolve(f"refs/tags/v{prior_product}") == previous, "prior product tag does not match --previous")
+
+    paths = {variant: getattr(args, f"{variant}_provenance") for variant in BACKENDS}
+    records = checked_publications(paths, prior, prior_product)
+    check_existing_tags(prior["marreq"], values, records, head)
+    result = {}
+    reports = {}
+    for name, record in records.items():
+        old = record["version"]
+        base = record["source_sha"]
+        ancestor(base, previous if prior_product else head)
+        impact = artifact_inputs(base, head, name, reports)
+        relation = version(values[name]) > version(old)
+        require(version(values[name]) >= version(old), f"{name}: candidate regresses below published {old}")
+        if impact:
+            require(relation, f"{name}: advance {old} for changed inputs: {', '.join(map(repr, impact))}")
+            require(entries[name].get(values[name]) not in (None, "Bootstrap"),
+                    f"{name}: new artifact requires a dated changelog entry")
+        else:
+            require(not relation, f"{name}: no changed artifact inputs since {base}; retain {old}")
+        result[name] = {"action": "build" if impact else "reuse", "baseline": record, "changed_inputs": impact}
+    return result
+
+
+def sync(check):
+    values = registry(WORKTREE)
+    changes = metadata_changes(WORKTREE, values)
+    if check:
+        require(not changes, f"out of sync: {', '.join(changes)}; run scripts/validate-release-versions sync")
+    else:
+        # Prepare and check all inputs before replacing any file. Each replacement
+        # is atomic and interrupted synchronization can be rerun.
+        for path, updated in changes.items():
+            target = ROOT / path
+            with NamedTemporaryFile(dir=target.parent, delete=False) as temporary:
+                pending = Path(temporary.name)
+                try:
+                    temporary.write(updated.encode("utf-8"))
+                    temporary.close()
+                    pending.chmod(target.stat().st_mode & 0o777)
+                    pending.replace(target)
+                finally:
+                    pending.unlink(missing_ok=True)
+    return {"versions": values, "updated_paths": list(changes)}
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--format", choices=("text", "json"), default="text")
+    modes = parser.add_subparsers(dest="mode", required=True)
+    check = modes.add_parser("check", help="check registry, package metadata and changelogs")
+    check.add_argument("--head", help="read files from this commit instead of the worktree")
+    check.add_argument("--base", help="compare version and changelog history with this ancestor")
+    synchronize = modes.add_parser("sync", help="synchronize package version fields")
+    synchronize.add_argument("--check", action="store_true", help="verify synchronization without writing")
+    tag = modes.add_parser("tag", help="check proposed product tag spelling")
+    tag.add_argument("tag")
+    tag.add_argument("--head")
+    release = modes.add_parser("release", help="validate committed release against trusted publication evidence")
+    release.add_argument("--head", required=True)
+    release.add_argument("--tag", required=True)
+    release.add_argument("--previous", required=True)
+    for variant in BACKENDS:
+        release.add_argument(f"--{variant}-provenance", type=Path)
+    args = parser.parse_args()
+
+    try:
+        if args.mode == "sync":
+            report = sync(args.check)
+        else:
+            head = resolve(args.head) if args.head else None
+            read = committed(head) if head else WORKTREE
+            values, entries = verify(read)
+            report = {"versions": values}
+            if args.mode == "check" and args.base:
+                base = resolve(args.base)
+                ancestor(base, head or resolve("HEAD"))
+                if tree_mode(base, "versions.toml"):
+                    check_progress(committed(base), values, entries)
+                else:
+                    require(all(history == {values[name]: "Bootstrap"} for name, history in entries.items()),
+                            "registry introduction requires one explicit Bootstrap entry per changelog")
+                    report["bootstrap"] = True
+            if args.mode == "tag":
+                verify_tag(args.tag, values["marreq"])
+            if args.mode == "release":
+                report["head"] = head
+                report["components"] = validate_candidate(args, head, values, entries)
+    except (ValueError, OSError, RuntimeError) as error:
+        report = {"status": "invalid", "error": str(error)}
+        if args.format == "json":
+            print(json.dumps(report, sort_keys=True))
+        else:
+            print(f"Release versions: {error}", file=sys.stderr)
+        return 2
+
+    report["status"] = "ok"
+    if args.format == "json":
+        print(json.dumps(report, indent=2, sort_keys=True))
+    else:
+        print("Release versions validated" if args.mode != "sync" or args.check else
+              "Synchronized: " + (", ".join(report["updated_paths"]) or "already up to date"))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

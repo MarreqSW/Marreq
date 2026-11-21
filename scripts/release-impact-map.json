@@ -2,6 +2,19 @@
   "schema_version": 1,
   "rules": [
     {
+      "paths": [
+        "versions\\.toml",
+        "changelogs/(marreq|server|cloud|frontend|mcp)\\.md",
+        "scripts/(validate-release-versions|release_versions\\.py|test-release-versions\\.py)"
+      ],
+      "checks": [
+        "release_pipeline"
+      ],
+      "infrastructure": [
+        "release"
+      ]
+    },
+    {
       "paths": ["marreq-cloud/tests/api_contract_inventory\\.rs"],
       "checks": ["rust", "api_contracts"]
     },

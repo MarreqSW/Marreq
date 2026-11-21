@@ -28,6 +28,12 @@ jobs:
         run: |
           python3 scripts/test-release-impact.py
           python3 scripts/test-deployment-provenance.py
+      - name: Test release version validation
+        run: python3 scripts/test-release-versions.py
+      - name: Validate release registry and version history
+        run: |
+          scripts/validate-release-versions --format json check --base HEAD^1 --head HEAD
+          scripts/validate-release-versions sync --check
       - name: Validate the map and classify the PR
         run: scripts/detect-release-impact --base HEAD^1 --head HEAD --format json > "$RUNNER_TEMP/release-impact.json"
       - uses: actions/upload-artifact@v7

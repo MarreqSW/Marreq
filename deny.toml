@@ -34,4 +34,8 @@ ignore = [
     # operation runs through it. Drop this once openidconnect moves to a newer
     # RustCrypto release.
     { id = "RUSTSEC-2026-0387", reason = "crypto-bigint 0.5 pinned by elliptic-curve 0.13 via openidconnect (public-key verification only); no compatible fix yet" },
+    # Temporary: chrono is unmaintained (all versions).
+    # No fixed release is available.
+    # TODO: Remove after migration tracked in Marreq #444.
+    { id = "RUSTSEC-2026-0543", reason = "chrono is unmaintained; migration to jiff/time tracked in https://github.com/MarreqSW/Marreq/issues/444" },
 ]

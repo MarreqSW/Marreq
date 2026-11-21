@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, sync::LazyLock};
+use std::{borrow::Cow, collections::BTreeMap, sync::LazyLock};
 
 use anyhow::{Context, Result, ensure};
 use regex::Regex;
@@ -81,7 +81,23 @@ fn has_notes(text: &str) -> bool {
     })
 }
 
+fn normalize_lines(text: &str) -> Cow<'_, str> {
+    // Treat the same separators as the previous validator's splitlines().
+    // In particular, Git's CRLF checkout conversion must preserve history.
+    const SEPARATORS: [char; 9] = [
+        '\r', '\u{000b}', '\u{000c}', '\u{001c}', '\u{001d}', '\u{001e}', '\u{0085}', '\u{2028}',
+        '\u{2029}',
+    ];
+    if text.contains(SEPARATORS) {
+        Cow::Owned(text.replace("\r\n", "\n").replace(SEPARATORS, "\n"))
+    } else {
+        Cow::Borrowed(text)
+    }
+}
+
 fn parse(text: &str, expected: &StableVersion, product: bool) -> Result<History> {
+    let normalized = normalize_lines(text);
+    let text = normalized.as_ref();
     let mut history = History::default();
     let mut current = None;
     let mut start = 0;
@@ -92,12 +108,12 @@ fn parse(text: &str, expected: &StableVersion, product: bool) -> Result<History>
         .scan(0, |offset, line| {
             let start = *offset;
             *offset += line.len();
-            Some((start, line.trim_end_matches(['\r', '\n'])))
+            Some((start, line.trim_end_matches('\n')))
         })
         .filter(|(_, line)| HEADING.is_match(line))
         .chain(std::iter::once((text.len(), "")))
     {
-        let notes = text[start..offset].trim_end_matches(['\r', '\n']);
+        let notes = text[start..offset].trim_end_matches('\n');
         match current {
             Some(Section::Release) => {
                 let (version, date) = previous.as_ref().context("missing release heading")?;
@@ -225,10 +241,11 @@ fn legacy_archive(repo: &Repository, commit: &str) -> Result<Option<String>> {
         return Ok(None);
     }
     let text = repo.committed(commit, "CHANGELOG")?;
+    let text = normalize_lines(&text);
     let (_, notes) = text
         .split_once(&format!("{LEGACY_HEADING}\n"))
         .context("historical CHANGELOG has an unexpected archive layout")?;
-    Ok(Some(notes.trim_end_matches(['\r', '\n']).to_owned()))
+    Ok(Some(notes.trim_end_matches('\n').to_owned()))
 }
 
 // Historical commits on the original registry branch used a central layout.
@@ -252,7 +269,7 @@ pub(crate) fn previous(repo: &Repository, commit: &str, registry: &Registry) -> 
                 .find(|entry| entry.date.is_none())
                 && let Some(notes) = entry.notes.strip_suffix(LEGACY_BOOTSTRAP_LINK)
             {
-                entry.notes = notes.trim_end_matches(['\r', '\n']).to_owned();
+                entry.notes = notes.trim_end_matches('\n').to_owned();
             }
         }
         histories.insert(component, history);

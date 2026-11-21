@@ -42,7 +42,10 @@ pub(super) fn artifact_neutral(
     // Unsupported historical manifest shapes and substantive dependency
     // changes retain their conservative file-level artifact impact.
     Ok(match path {
-        "Cargo.toml" => equal_projection(&before, &after, without_release_member),
+        "Cargo.toml" => matches!(
+            (without_release_member(&before), without_release_member(&after)),
+            (Ok((left, false)), Ok((right, true))) if left == right
+        ),
         "docker/Dockerfile" => docker_projection(&after).as_deref() == Some(&before),
         _ => {
             let registry = Registry::neutral();
@@ -50,20 +53,16 @@ pub(super) fn artifact_neutral(
             let right = sync::update(path, &after, &registry);
             match (left, right) {
                 (Ok(left), Ok(right)) if path == "Cargo.lock" && left != right => {
-                    equal_projection(&left, &right, without_release_lock_entry)
+                    matches!(
+                        (without_release_lock_entry(&left), without_release_lock_entry(&right)),
+                        (Ok((left, old_tool)), Ok((right, new_tool))) if left == right && old_tool != new_tool
+                    )
                 }
                 (Ok(left), Ok(right)) => left == right,
                 _ => false,
             }
         }
     })
-}
-
-fn equal_projection(before: &str, after: &str, project: fn(&str) -> Result<(Value, bool)>) -> bool {
-    match (project(before), project(after)) {
-        (Ok((left, false)), Ok((right, true))) => left == right,
-        _ => false,
-    }
 }
 
 fn without_release_member(text: &str) -> Result<(Value, bool)> {
@@ -83,7 +82,7 @@ fn without_release_member(text: &str) -> Result<(Value, bool)> {
     Ok((doc, removed))
 }
 
-fn without_release_lock_entry(text: &str) -> Result<(Value, bool)> {
+fn without_release_lock_entry(text: &str) -> Result<(Value, Option<Value>)> {
     let mut doc: Value = toml::from_str(text)?;
     let packages = doc
         .get_mut("package")
@@ -93,13 +92,31 @@ fn without_release_lock_entry(text: &str) -> Result<(Value, bool)> {
         package.get("name").and_then(Value::as_str) == Some(MEMBER_NAME)
             && package.get("source").is_none()
     };
-    let size = packages.len();
-    packages.retain(|package| !is_release(package));
-    let removed = size - packages.len();
-    ensure!(removed <= 1, "repeated local release workspace lock entry");
-    // If another package starts depending on the release tool its own lock
-    // entry will change, so this projection will still report backend impact.
-    Ok((doc, removed == 1))
+    let release = packages
+        .iter()
+        .position(is_release)
+        .map(|index| packages.remove(index));
+    ensure!(
+        !packages.iter().any(is_release),
+        "repeated local release workspace lock entry"
+    );
+    // Release-only changes are neutral only while the release tool is
+    // independent of the rest of the workspace's dependency graphs.
+    for dependency in packages
+        .iter()
+        .filter_map(|package| package.get("dependencies").and_then(Value::as_array))
+        .flatten()
+        .filter_map(Value::as_str)
+    {
+        ensure!(
+            dependency != MEMBER_NAME
+                && !dependency
+                    .strip_prefix(MEMBER_NAME)
+                    .is_some_and(|suffix| suffix.starts_with(' ')),
+            "workspace package depends on the release tool"
+        );
+    }
+    Ok((doc, release))
 }
 
 fn docker_projection(text: &str) -> Option<String> {

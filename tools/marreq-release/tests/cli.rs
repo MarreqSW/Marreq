@@ -173,6 +173,10 @@ fn malformed_or_missing_changelog_entries() {
             "\n## [0.1.0] - Bootstrap\n\n- Duplicate.\n",
             "duplicate version",
         ),
+        (
+            "\r## [0.1.0] - Bootstrap\r\r- Duplicate with CR line endings.\r",
+            "duplicate version",
+        ),
         ("\n## [Unreleased]\n", "duplicate or misplaced"),
         ("\n## [End]\n", "expected an Unreleased heading"),
         (
@@ -225,6 +229,12 @@ fn regressing_product_and_component_versions() {
 fn historical_notes_and_release_dates_are_immutable() {
     let fixture = Fixture::new();
     let first = fixture.prepare(&[]);
+    fixture.write(
+        "CHANGELOG.md",
+        fixture.read("CHANGELOG.md").replace('\n', "\r\n"),
+    );
+    fixture.call(&["check", "--base", &first], None);
+    fixture.git(&["restore", "CHANGELOG.md"]);
     for text in [
         fixture
             .read("CHANGELOG.md")
@@ -649,6 +659,30 @@ fn isolated_workspace_registration_preserves_backend_reuse() {
         report["checks"]["database_migrations"],
         json!(["Cargo.lock", "Cargo.toml", "docker/Dockerfile"])
     );
+
+    fixture.write(
+        "Cargo.lock",
+        fixture.read("Cargo.lock").replace(
+            "name = \"marreq-release\"\nversion = \"0.1.0\"",
+            "name = \"marreq-release\"\nversion = \"0.2.0\"",
+        ),
+    );
+    let tool_update = fixture.commit();
+    assert_eq!(fixture.impact(&head, &tool_update)["artifacts"], json!({}));
+    fixture.write(
+        "Cargo.lock",
+        fixture.read("Cargo.lock").replacen(
+            "dependencies = [\"example\"]",
+            "dependencies = [\"example\", \"marreq-release\"]",
+            1,
+        ),
+    );
+    let shared_entry = fixture.commit();
+    assert_eq!(
+        fixture.impact(&tool_update, &shared_entry)["artifacts"],
+        json!({"server": ["Cargo.lock"], "cloud": ["Cargo.lock"]})
+    );
+    fixture.git(&["reset", "--hard", &head]);
 
     fixture.write(
         "Cargo.lock",

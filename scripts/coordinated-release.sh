@@ -216,6 +216,8 @@ stage() {
     mcp) file=mcp-server/Dockerfile;;
     *) fail "unexpected component $component";;
   esac
+  # Keep BuildKit cache across components in this release. Server and Cloud share
+  # most Rust layers; pruning between builds forces repeated dependency compiles.
   docker buildx build --file "$work/context/$file" --platform linux/amd64 --push \
     --tag "$staging" --metadata-file "$work/$component-build.json" \
     --build-arg "MARREQ_VERSION=$version" --build-arg "MARREQ_GIT_SHA=$source" \
@@ -230,7 +232,6 @@ stage() {
   else
     python3 scripts/test-artifact-image.py "$component" "$image@$digest" "$version" "$source" >&2
   fi
-  docker buildx prune --all --force >&2
   echo "$digest"
 }
 
@@ -286,8 +287,13 @@ publish() {
       fi
       if [[ "$action" == reuse ]]; then verify_image "$digest"; fi
     done
+    # The publisher keeps umask 077 for credentials, journals and evidence.
+    # GNU tar applies that umask by default for non-root extractors, which can
+    # strip group/other read bits from archived files. Preserve archive modes so
+    # Docker COPY leaves scripts such as docker-entrypoint.sh readable to the
+    # non-root runtime user after chmod +x.
     mkdir -p "$work/context"
-    git archive "$head" | tar -x -C "$work/context"
+    git archive "$head" | tar --same-permissions -x -C "$work/context"
     local -a pairs=()
     for entry in "${rows[@]}"; do
       load_entry "$entry"

@@ -65,7 +65,11 @@ Release. See the [release runbook](../../docs/releases.md) for repository setup,
 bootstrap, retained evidence, and recovery.
 
 Run `python3 scripts/test-coordinated-release.py` to exercise the publication
-job against offline GitHub and GHCR fixtures.
+job against offline GitHub and GHCR fixtures. Run
+`python3 scripts/test-release-build-context.py` to reproduce archive extraction
+under `umask 077` and confirm entrypoint permissions. PR `backend-images` builds
+from that same release-style context and starts each backend as the non-root
+runtime user.
 
 ### Dependency Updates (Dependabot)
 

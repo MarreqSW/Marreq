@@ -38,6 +38,7 @@ jobs:
           python3 scripts/test-release-impact.py
           python3 scripts/test-deployment-provenance.py
           python3 scripts/test-coordinated-release.py
+          python3 scripts/test-release-build-context.py
       - name: Validate release registry and version history
         run: |
           cargo run --locked -p marreq-release -- --format json check --base HEAD^1 --head HEAD
@@ -278,21 +279,35 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
-      - name: Remove inactive implementation sources from the build context
+      - name: Extract a release-style build context under umask 077
+        id: context
         env:
           MARREQ_BIN: ${{ matrix.binary }}
         run: |
+          set -euo pipefail
+          umask 077
+          work=${RUNNER_TEMP}/release-workspace
+          context=$work/context
+          mkdir -p "$work/assets" "$context"
+          : > "$work/release.token"
+          chmod 600 "$work/release.token"
+          # Match scripts/coordinated-release.sh extraction so CI catches
+          # entrypoint permission regressions before publication.
+          git archive HEAD | tar --same-permissions -x -C "$context"
           case "$MARREQ_BIN" in
             marreq-server) inactive=marreq-cloud ;;
             marreq-cloud) inactive=marreq-server ;;
             *) exit 1 ;;
           esac
-          rm -rf -- "$inactive/src" "$inactive/Rocket.toml" tools/marreq-contracts/src
+          rm -rf -- "$context/$inactive/src" "$context/$inactive/Rocket.toml" \
+            "$context/tools/marreq-contracts/src"
+          python3 scripts/test-release-build-context.py "$context" --workspace "$work"
+          echo "path=$context" >> "$GITHUB_OUTPUT"
       - name: Build production backend image
         uses: docker/build-push-action@v7
         with:
-          context: .
-          file: docker/Dockerfile
+          context: ${{ steps.context.outputs.path }}
+          file: ${{ steps.context.outputs.path }}/docker/Dockerfile
           load: true
           tags: ${{ matrix.binary }}:ci
           build-args: |
@@ -301,6 +316,21 @@ jobs:
             MARREQ_GIT_SHA=${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.binary }}
           cache-to: type=gha,mode=max,scope=${{ matrix.binary }}
+      - name: Verify entrypoint identity and non-root startup
+        run: |
+          docker image inspect ${{ matrix.binary }}:ci |
+            jq -e --arg title "${{ matrix.binary }}" --arg version "${{ matrix.version }}" --arg source "$GITHUB_SHA" '
+              .[0] | .Architecture == "amd64" and .Os == "linux" and
+              .Config.User != "" and .Config.User != "0" and .Config.User != "root" and
+              .Config.Entrypoint == ["/docker-entrypoint.sh"] and
+              (.Config.Labels | .["org.opencontainers.image.title"] == $title and
+                .["org.opencontainers.image.version"] == $version and
+                .["org.opencontainers.image.revision"] == $source)' >/dev/null
+          docker run --rm --entrypoint sh ${{ matrix.binary }}:ci -ec '
+            test "$(id -u)" != 0
+            test -r /docker-entrypoint.sh
+            test -x /docker-entrypoint.sh
+          '
       - name: Verify explicit migrations and schema startup gate
         run: scripts/test-migration-image.sh ${{ matrix.binary }}:ci ${{ matrix.component }} ${{ matrix.version }} "$GITHUB_SHA"
       - name: Verify runtime excludes contract tooling

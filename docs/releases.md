@@ -248,10 +248,14 @@ Later releases require genuine evidence from the preceding immutable release.
    Server and Cloud compatibility plans must pass the existing contract verifier.
 3. The protected publication job checks version slots and reused artifacts.
    It builds only the selected new components from an archive of the validated
-   commit. Buildx pushes separate run-attempt staging aliases. The publisher
-   checks actual registry digests, pulls by digest, compares OCI source,
-   version and contract-hash labels, and runs disposable runtime identity smoke
-   checks on each newly staged image.
+   commit. Extraction uses GNU tar `--same-permissions` so the publisher's
+   `umask 077` still protects credentials and journals without stripping
+   archived file modes that non-root container entrypoints need. Buildx keeps
+   its cache across the selected component builds in the same release and
+   pushes separate run-attempt staging aliases. The publisher checks actual
+   registry digests, pulls by digest, compares OCI source, version and
+   contract-hash labels, and runs disposable runtime identity smoke checks on
+   each newly staged image.
 4. A private draft GitHub Release stores the product manifest and all evidence.
    The manifest also records the digests for recovery. After verifying the
    uploaded bytes, the publisher assigns exact existing digests to the new

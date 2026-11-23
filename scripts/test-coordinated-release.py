@@ -160,7 +160,9 @@ def fixture_command(tool, args):
                       "org.marreq.contract.sha256": checksum((work / "assets" / row["contract_file"]).read_bytes())[7:]}
             assert component in COMPONENTS
             print(json.dumps([{"Architecture": "amd64", "Os": "linux", "Config": {"Labels": labels}}]))
-        elif args[0] != "pull" and args[:2] != ["buildx", "prune"]:
+        elif args[:2] == ["buildx", "prune"]:
+            raise AssertionError("publication must not prune BuildKit cache between component builds")
+        elif args[0] != "pull":
             raise AssertionError(args)
     else:
         raise AssertionError(tool)
@@ -259,6 +261,8 @@ class Publication(unittest.TestCase):
         state = self.publish("failed to assign the version alias", fault="promotion")
         self.assertEqual(len(state["promotions"]), 1)
         self.assertTrue(state["release"]["draft"])
+        # Two component builds must complete without a destructive BuildKit prune.
+        self.assertCountEqual(state["builds"], [image("server"), image("cloud")])
         self.publish("unexpected GitHub Release", attempt=2, run_id="999")
         state = self.publish("failed to create source tag", attempt=3, fault="source-tag")
         self.assertEqual(state["tags"]["marreq-server-v0.1.2"], HEAD)

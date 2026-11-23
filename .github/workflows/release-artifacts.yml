@@ -82,6 +82,7 @@ jobs:
           python3 scripts/test-release-impact.py
           python3 scripts/test-deployment-provenance.py
           python3 scripts/test-coordinated-release.py
+          python3 scripts/test-release-build-context.py
           python3 scripts/check-migration-policy.py
       - name: Check authoritative package versions
         run: |

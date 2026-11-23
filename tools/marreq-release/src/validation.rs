@@ -280,8 +280,14 @@ mod tests {
 
     #[test]
     fn historical_product_tag_exception_is_pinned_to_its_source_commit() {
-        assert!(is_historical_product_tag(LEGACY_PRODUCT_TAG, LEGACY_PRODUCT_TAG_SHA));
+        assert!(is_historical_product_tag(
+            LEGACY_PRODUCT_TAG,
+            LEGACY_PRODUCT_TAG_SHA
+        ));
         assert!(!is_historical_product_tag("v1.0.1", LEGACY_PRODUCT_TAG_SHA));
-        assert!(!is_historical_product_tag(LEGACY_PRODUCT_TAG, "0000000000000000000000000000000000000000"));
+        assert!(!is_historical_product_tag(
+            LEGACY_PRODUCT_TAG,
+            "0000000000000000000000000000000000000000"
+        ));
     }
 }

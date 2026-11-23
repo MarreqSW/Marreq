@@ -2,6 +2,20 @@
   "schema_version": 1,
   "rules": [
     {
+      "paths": [
+        "versions\\.toml",
+        "(?:(?:marreq-server|marreq-cloud|frontend|mcp-server)/)?CHANGELOG\\.md",
+        "tools/marreq-release/.+",
+        "scripts/validate-release-versions"
+      ],
+      "checks": [
+        "release_pipeline"
+      ],
+      "infrastructure": [
+        "release"
+      ]
+    },
+    {
       "paths": ["marreq-cloud/tests/api_contract_inventory\\.rs"],
       "checks": ["rust", "api_contracts"]
     },
@@ -110,7 +124,7 @@
       "infrastructure": ["build_and_ci"]
     },
     {
-      "paths": ["(marreq-(core|server|cloud)|docker)/README\\.md", "docker/LIGHT\\.md", "\\.github/workflows/README\\.md", "(README|INSTALL|AGENTS)\\.md", "CHANGELOG", "LICENSE", "docs/.+\\.md", "docs/ReqIF/[^/]+\\.(cmof|xsd|pdf)", "docs/assets/[^/]+\\.(png|csv)", "docs/architecture/diagrams/[^/]+\\.mmd", "docs/user-manual/(index\\.html|styles\\.css|build\\.sh|build-links\\.lua|capture_screenshots\\.mjs|generated/[^/]+\\.html|screenshots/[^/]+\\.png)", "\\.github/ISSUE_TEMPLATE/[^/]+\\.yml", "\\.github/dependabot\\.yml", "\\.(gitignore|czrc|eslintrc\\.json)", "vitest\\.config\\.js", "mcp-server/dist/[^/]+\\.js"]
+      "paths": ["(marreq-(core|server|cloud)|docker)/README\\.md", "docker/LIGHT\\.md", "\\.github/workflows/README\\.md", "(README|INSTALL|AGENTS)\\.md", "LICENSE", "docs/.+\\.md", "docs/ReqIF/[^/]+\\.(cmof|xsd|pdf)", "docs/assets/[^/]+\\.(png|csv)", "docs/architecture/diagrams/[^/]+\\.mmd", "docs/user-manual/(index\\.html|styles\\.css|build\\.sh|build-links\\.lua|capture_screenshots\\.mjs|generated/[^/]+\\.html|screenshots/[^/]+\\.png)", "\\.github/ISSUE_TEMPLATE/[^/]+\\.yml", "\\.github/dependabot\\.yml", "\\.(gitignore|czrc|eslintrc\\.json)", "vitest\\.config\\.js", "mcp-server/dist/[^/]+\\.js"]
     }
   ]
 }

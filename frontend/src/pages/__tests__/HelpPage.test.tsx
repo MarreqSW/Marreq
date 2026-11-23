@@ -6,6 +6,7 @@ import HelpPage from '../HelpPage';
 import type { ProjectOutletContext } from '@/types/projectOutlet';
 import * as apiClient from '@/api/client';
 import { resetBuildInfoCache } from '@/hooks/useBuildInfo';
+import { getFrontendBuildConstants } from '@/utils/semverRange';
 
 vi.mock('@/api/client');
 
@@ -25,11 +26,12 @@ vi.mock('react-router-dom', async () => {
   };
 });
 
+const frontendVersion = getFrontendBuildConstants().version;
 const compatibleBuild = {
   backend_version: '0.1.0',
   backend_git_sha: '56c09392abcdef',
   deployment_mode: 'server' as const,
-  frontend_compatibility: { min_version: '0.1.0', max_version: '0.1.99' },
+  frontend_compatibility: { min_version: frontendVersion, max_version: frontendVersion },
 };
 
 describe('HelpPage', () => {

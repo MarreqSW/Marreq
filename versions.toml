@@ -1,0 +1,8 @@
+[marreq]
+version = "0.2.0"
+
+[components]
+server = "0.2.1"
+cloud = "0.1.0"
+frontend = "0.2.2"
+mcp = "0.2.0"

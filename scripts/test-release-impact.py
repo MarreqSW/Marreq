@@ -135,6 +135,9 @@ class ReleaseImpactTest(unittest.TestCase):
         self.assert_impact(".github/workflows/release-artifacts.yml",
                            ("server", "cloud", "frontend", "mcp"),
                            ("release_pipeline", "api_contracts"), ("release",))
+        self.assert_impact("scripts/coordinated-release.sh",
+                           ("server", "cloud", "frontend", "mcp"),
+                           ("release_pipeline", "api_contracts"), ("release",))
 
     def test_multiple_components_rename_and_delete(self):
         old = "marreq-server/src/old.rs"

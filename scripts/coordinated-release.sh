@@ -33,6 +33,13 @@ download() {
   api "releases/assets/$id" -H 'Accept: application/octet-stream' > "$output" || return 1
   echo "${expected#sha256:}  $output" | sha256sum --check --status
 }
+upload() {
+  local id=$1 file=$2
+  curl --fail-with-body --silent --show-error --request POST \
+    --header "Authorization: Bearer $GH_TOKEN" --header 'Content-Type: application/json' \
+    --data-binary "@$assets/$file" \
+    "https://uploads.github.com/repos/$repo/releases/$id/assets?name=$file" >/dev/null
+}
 entries() {
   jq -cer '.selection | to_entries[]' "$plan"
 }
@@ -59,7 +66,7 @@ assert_immutable_policy() {
 }
 
 prepare() {
-  local base previous prior_tag prior entry component action version
+  local previous prior_tag prior entry component action version file expected variant
   local -a flags bundle_args
   mkdir -p "$assets" "$work/prior"
   cli "$work/base.json" release-base --head "$head" --tag "$tag"
@@ -72,10 +79,26 @@ prepare() {
     flags+=(--bootstrap-publication)
   else
     prior=$(api "releases/tags/$prior_tag")
-    jq -e '.draft == false and .prerelease == false and .immutable == true and .author.login == "github-actions[bot]"'       <<< "$prior" >/dev/null || fail "$prior_tag is not a trusted immutable release"
+    jq -e '.draft == false and .prerelease == false and .immutable == true and .author.login == "github-actions[bot]"' \
+      <<< "$prior" >/dev/null || fail "$prior_tag is not a trusted immutable release"
+    download "$(asset_record "$prior" release-manifest.json)" "$work/prior/release-manifest.json" ||
+      fail "$prior_tag is missing its product manifest"
+    jq -e --arg tag "$prior_tag" --arg head "$previous" '
+      .schema_version == 1 and .product.tag == $tag and .product.source_sha == $head and
+      .workflow.path == ".github/workflows/release-artifacts.yml"
+    ' "$work/prior/release-manifest.json" >/dev/null || fail "$prior_tag product manifest has unexpected provenance"
     for file in {server,cloud}-provenance.json {server,cloud,frontend,mcp}-contract.json; do
       download "$(asset_record "$prior" "$file")" "$work/prior/$file" ||
         fail "missing or corrupt prior $file on $prior_tag"
+    done
+    for variant in server cloud; do
+      file="$variant-provenance.json"
+      expected=$(jq -er --arg variant "$variant" --arg file "$file" '
+        .validation.deployment_provenance[$variant] | select(.file == $file) |
+        .sha256 | select(test("^[a-f0-9]{64}$"))
+      ' "$work/prior/release-manifest.json")
+      echo "$expected  $work/prior/$file" | sha256sum --check --status ||
+        fail "$prior_tag product manifest disagrees with $file"
     done
     flags+=(--server-provenance "$work/prior/server-provenance.json" --cloud-provenance "$work/prior/cloud-provenance.json")
   fi
@@ -106,12 +129,19 @@ prepare() {
 registry_digest() {
   local image=$1 ref=$2 scope token status
   local headers body
+  local accept='application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json'
+  accept+=', application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json'
   scope="repository:${image#ghcr.io/}:pull,push"
-  token=$(curl --silent --show-error --fail --user "$GITHUB_ACTOR:$GH_TOKEN"     --get --data-urlencode "scope=$scope" --data-urlencode service=ghcr.io https://ghcr.io/token |
+  token=$(curl --silent --show-error --fail --connect-timeout 15 --max-time 120 \
+    --user "$GITHUB_ACTOR:$GH_TOKEN" --get --data-urlencode "scope=$scope" \
+    --data-urlencode service=ghcr.io https://ghcr.io/token |
     jq -er '(.token // .access_token) | select(type == "string" and length > 0)') || return 1
   headers=$(mktemp "$work/headers.XXXXXX")
   body=$(mktemp "$work/body.XXXXXX")
-  status=$(curl --silent --show-error --header "Authorization: Bearer $token"     --header 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json'     --dump-header "$headers" --output "$body" --write-out '%{http_code}'     "https://ghcr.io/v2/${image#ghcr.io/}/manifests/$ref") || return 1
+  status=$(curl --silent --show-error --connect-timeout 15 --max-time 120 \
+    --header "Authorization: Bearer $token" --header "Accept: $accept" \
+    --dump-header "$headers" --output "$body" --write-out '%{http_code}' \
+    "https://ghcr.io/v2/${image#ghcr.io/}/manifests/$ref") || return 1
   local digest hash
   case "$status" in
     200)
@@ -186,8 +216,13 @@ stage() {
     mcp) file=mcp-server/Dockerfile;;
     *) fail "unexpected component $component";;
   esac
-  docker buildx build --file "$work/context/$file" --platform linux/amd64 --push     --tag "$staging" --metadata-file "$work/$component-build.json"     --build-arg "MARREQ_VERSION=$version" --build-arg "MARREQ_GIT_SHA=$source"     --label "org.marreq.contract.sha256=$contract_hash" "${args[@]}" "$work/context" >&2
-  digest=$(jq -er '."containerimage.digest" | select(test("^sha256:[a-f0-9]{64}$"))' "$work/$component-build.json")
+  docker buildx build --file "$work/context/$file" --platform linux/amd64 --push \
+    --tag "$staging" --metadata-file "$work/$component-build.json" \
+    --build-arg "MARREQ_VERSION=$version" --build-arg "MARREQ_GIT_SHA=$source" \
+    --label "org.marreq.contract.sha256=$contract_hash" "${args[@]}" "$work/context" >&2 ||
+    fail "$component build or staging push failed"
+  digest=$(jq -er '."containerimage.digest" | select(test("^sha256:[a-f0-9]{64}$"))' "$work/$component-build.json") ||
+    fail "Buildx did not report an immutable digest for $component"
   [[ $(registry_digest "$image" "${staging##*:}") == "$digest" ]] || fail "staged $component digest differs from the build result"
   verify_image "$digest" >&2
   if [[ "$component" == server || "$component" == cloud ]]; then
@@ -213,8 +248,8 @@ publish() {
   draft=false
   id=$(jq -r '.id // ""' <<< "$listing")
   if [[ -n "$id" ]]; then
-    jq -e --arg head "$head" --arg draft "$draft_name" '
-      .author.login == "github-actions[bot]" and .target_commitish == $head and .prerelease == false and
+    jq -e --arg draft "$draft_name" '
+      .author.login == "github-actions[bot]" and .prerelease == false and
       (if .draft then .name == $draft else .immutable == true end)' <<< "$listing" >/dev/null ||
       fail "an unexpected GitHub Release already owns $tag"
     draft=$(jq -er '.draft | tostring' <<< "$listing")
@@ -269,7 +304,8 @@ publish() {
     timestamp=$(date -u +%s)
   fi
 
-  "$release" release-assets --plan "$plan" --directory "$assets" --digests "$digests"     --run-id "$GITHUB_RUN_ID" --timestamp "$timestamp" --tag-object "$TAG_OBJECT"
+  "$release" release-assets --plan "$plan" --directory "$assets" --digests "$digests" \
+    --run-id "$GITHUB_RUN_ID" --timestamp "$timestamp" --tag-object "$TAG_OBJECT"
   if [[ -f "$work/remote/release-manifest.json" ]]; then
     cmp "$manifest" "$work/remote/release-manifest.json" || fail "publication journal disagrees with the validated plan"
   fi
@@ -295,7 +331,8 @@ publish() {
     current=$(asset_record "$listing" "$file")
     case "$(jq -r '.state // ""' <<< "$current")" in
       uploaded)
-        download "$current" "$work/remote/$file" && cmp "$assets/$file" "$work/remote/$file" ||
+        download "$current" "$work/remote/$file" || fail "could not verify existing release asset: $file"
+        cmp "$assets/$file" "$work/remote/$file" ||
           fail "existing release asset differs: $file"
         ;;
       ''|starter)
@@ -303,8 +340,8 @@ publish() {
         if [[ "$current" != '{}' ]]; then
           api "releases/assets/$(jq -er .id <<< "$current")" --method DELETE
         fi
-        # No --clobber. A successful upload is frozen for this transaction.
-        gh release upload "$tag" "$assets/$file" --repo "$repo"
+        # The asset endpoint rejects duplicate names. Treat uploaded bytes as frozen.
+        upload "$id" "$file" || fail "failed to retain $file in the draft release"
         ;;
       *) fail "unexpected asset state for $file";;
     esac
@@ -325,7 +362,8 @@ publish() {
     digest=$(jq -er --arg component "$component" '.[$component]' "$digests")
     observed=$(registry_digest "$image" "$version")
     if [[ "$draft" == true && "$action" == build && -z "$observed" ]]; then
-      docker buildx imagetools create --prefer-index=false --tag "$image:$version" "$image@$digest"
+      docker buildx imagetools create --prefer-index=false --tag "$image:$version" "$image@$digest" ||
+        fail "failed to assign the version alias $image:$version"
       observed=$(registry_digest "$image" "$version")
     fi
     [[ "$observed" == "$digest" ]] || fail "$image:$version does not resolve to $digest"
@@ -334,7 +372,9 @@ publish() {
     load_entry "$entry"
     observed=$(remote_source)
     if [[ "$draft" == true && "$action" == build && -z "$observed" ]]; then
-      GH_TOKEN=${MARREQ_SOURCE_TAG_TOKEN:-$GH_TOKEN} api git/refs +        -f "ref=refs/tags/$source_tag" -f "sha=$source" >/dev/null
+      GH_TOKEN=${MARREQ_SOURCE_TAG_TOKEN:-$GH_TOKEN} api git/refs \
+        -f "ref=refs/tags/$source_tag" -f "sha=$source" >/dev/null ||
+        fail "failed to create source tag $source_tag"
       observed=$(remote_source)
     fi
     [[ "$observed" == "$source" ]] || fail "$source_tag does not resolve to $source"

@@ -479,7 +479,7 @@ startup and HTTP smoke checks then exercise those same images.
 | Test files within copied source trees, and Frontend files copied alongside them | Owning image(s) | Relevant validation |
 | Rust integration tests, MCP Vitest config and the released migration ledger | None | Relevant validation |
 | Compose and environment example | None | Deployment validation |
-| Release publishing workflow | All four conservatively | Release infrastructure and API compatibility |
+| Release workflow and its GHCR build script | All four conservatively | Release infrastructure and API compatibility |
 | Standalone documentation | None | None |
 
 The producer OpenAPI is bundled and consumer types are checked for drift in CI.

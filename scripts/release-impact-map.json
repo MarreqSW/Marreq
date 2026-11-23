@@ -7,7 +7,7 @@
         "(?:(?:marreq-server|marreq-cloud|frontend|mcp-server)/)?CHANGELOG\\.md",
         "tools/marreq-release/.+",
         "scripts/validate-release-versions",
-        "scripts/(coordinated-release\\.sh|test-coordinated-release\\.py)"
+        "scripts/test-coordinated-release\\.py"
       ],
       "checks": [
         "release_pipeline"
@@ -100,7 +100,7 @@
       "checks": ["frontend", "mcp"]
     },
     {
-      "paths": ["\\.github/workflows/release-artifacts\\.yml"],
+      "paths": ["\\.github/workflows/release-artifacts\\.yml", "scripts/coordinated-release\\.sh"],
       "artifacts": ["server", "cloud", "frontend", "mcp"],
       "checks": ["release_pipeline", "api_contracts"],
       "infrastructure": ["release"]

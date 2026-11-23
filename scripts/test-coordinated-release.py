@@ -43,46 +43,38 @@ def fixture_command(tool, args):
         return args[args.index(name) + 1]
 
     if tool == "gh":
-        if args[:2] == ["release", "upload"]:
-            file = Path(args[3])
-            assert not any(a["name"] == file.name for a in release["assets"])
-            if fault == "asset" and file.name == "cloud-contract.json":
+        route = next(arg.split("/", 3)[3] for arg in args if arg.startswith("repos/"))
+        if route == "branches/main":
+            print(json.dumps({"protected": fault != "unprotected", "commit": {"sha": OLD if fault == "stale" else HEAD}}))
+        elif route.startswith("git/ref/tags/"):
+            print(json.dumps({"object": {"sha": ANNOTATION, "type": "tag"}}))
+        elif route == "immutable-releases":
+            print(json.dumps({"enabled": fault != "mutable"}))
+        elif route.startswith("releases?"):
+            print(json.dumps([[release] if release else []]))
+        elif route.startswith("releases/assets/"):
+            sys.stdout.buffer.write((state_path.parent / route.rsplit("/", 1)[1]).read_bytes())
+        elif route == "releases":
+            assert release is None
+            state["release"] = dict(id=100, draft=True, immutable=False, prerelease=False, assets=[], tag_name=TAG,
+                                    author={"login": "github-actions[bot]"}, target_commitish=HEAD,
+                                    name=f"Marreq {TAG} (run {os.environ['GITHUB_RUN_ID']})")
+            print(json.dumps(state["release"]))
+        elif route == "releases/100":
+            if "PATCH" in args:
+                assert release["draft"] and len(release["assets"]) == 9
+                release.update(draft=False, immutable=True)
+            print(json.dumps(release))
+        elif route == "git/refs":
+            name = next(arg.removeprefix("ref=refs/tags/") for arg in args if arg.startswith("ref=refs/tags/"))
+            source = args[-1].split("=")[1]
+            assert "+" not in args
+            assert name not in tags
+            if fault == "source-tag" and name.startswith("marreq-cloud-"):
                 sys.exit(1)
-            asset_id = len(release["assets"]) + 1
-            shutil.copyfile(file, state_path.parent / str(asset_id))
-            release["assets"].append(
-                {"name": file.name, "id": asset_id, "state": "uploaded", "digest": checksum(file.read_bytes())}
-            )
+            tags[name] = source
         else:
-            route = next(arg.split("/", 3)[3] for arg in args if arg.startswith("repos/"))
-            if route == "branches/main":
-                print(json.dumps({"protected": fault != "unprotected", "commit": {"sha": OLD if fault == "stale" else HEAD}}))
-            elif route.startswith("git/ref/tags/"):
-                print(json.dumps({"object": {"sha": ANNOTATION, "type": "tag"}}))
-            elif route == "immutable-releases":
-                print(json.dumps({"enabled": fault != "mutable"}))
-            elif route.startswith("releases?"):
-                print(json.dumps([[release] if release else []]))
-            elif route.startswith("releases/assets/"):
-                sys.stdout.buffer.write((state_path.parent / route.rsplit("/", 1)[1]).read_bytes())
-            elif route == "releases":
-                assert release is None
-                state["release"] = dict(id=100, draft=True, immutable=False, prerelease=False, assets=[], tag_name=TAG,
-                                        author={"login": "github-actions[bot]"}, target_commitish=HEAD,
-                                        name=f"Marreq {TAG} (run {os.environ['GITHUB_RUN_ID']})")
-                print(json.dumps(state["release"]))
-            elif route == "releases/100":
-                if "PATCH" in args:
-                    assert release["draft"] and len(release["assets"]) == 9
-                    release.update(draft=False, immutable=True)
-                print(json.dumps(release))
-            elif route == "git/refs":
-                name = next(arg.removeprefix("ref=refs/tags/") for arg in args if arg.startswith("ref=refs/tags/"))
-                source = args[-1].split("=")[1]
-                assert name not in tags
-                tags[name] = source
-            else:
-                raise AssertionError(args)
+            raise AssertionError(args)
     elif tool == "git":
         if args[0] == "ls-remote":
             ref = args[2]
@@ -97,8 +89,21 @@ def fixture_command(tool, args):
             raise AssertionError(args)
     elif tool == "curl":
         url = args[-1]
-        if url.startswith("https://ghcr.io/token"):
+        if url.startswith("https://uploads.github.com/"):
+            file = Path(option("--data-binary").removeprefix("@"))
+            assert f"/releases/{release['id']}/assets?name={file.name}" in url
+            assert not any(a["name"] == file.name for a in release["assets"])
+            if fault == "asset" and file.name == "cloud-contract.json":
+                sys.exit(1)
+            asset_id = len(release["assets"]) + 1
+            shutil.copyfile(file, state_path.parent / str(asset_id))
+            release["assets"].append(
+                {"name": file.name, "id": asset_id, "state": "uploaded", "digest": checksum(file.read_bytes())}
+            )
+        elif url.startswith("https://ghcr.io/token"):
             print('{"token":"offline-token"}')
+        elif fault == "registry-auth":
+            print(403)
         else:
             repository, ref = url.split("/v2/")[1].split("/manifests/")
             repository = "ghcr.io/" + repository
@@ -251,19 +256,21 @@ class Publication(unittest.TestCase):
 
     def test_shared_core_partial_promotion_resumes_without_overwrite(self):
         self.configure(("server", "cloud"))
-        state = self.publish("", fault="promotion")
+        state = self.publish("failed to assign the version alias", fault="promotion")
         self.assertEqual(len(state["promotions"]), 1)
         self.assertTrue(state["release"]["draft"])
         self.publish("unexpected GitHub Release", attempt=2, run_id="999")
-        state = self.publish(attempt=3)
+        state = self.publish("failed to create source tag", attempt=3, fault="source-tag")
+        self.assertEqual(state["tags"]["marreq-server-v0.1.2"], HEAD)
+        state = self.publish(attempt=4)
         self.assertCountEqual(state["builds"], [image("server"), image("cloud")])
         self.assertEqual(len(state["promotions"]), 2)
         self.assertFalse(state["release"]["draft"])
-        self.assertEqual(self.publish(attempt=4), state)
+        self.assertEqual(self.publish(attempt=5), state)
 
     def test_bootstrap_recovers_from_asset_failure(self):
         self.configure(COMPONENTS, bootstrap=True)
-        state = self.publish("", fault="asset")
+        state = self.publish("failed to retain cloud-contract.json", fault="asset")
         self.assertEqual(state["promotions"], [])
         self.assertTrue(state["release"]["draft"])
         state = self.publish(attempt=2)
@@ -271,8 +278,10 @@ class Publication(unittest.TestCase):
         self.assertEqual(len(state["promotions"]), 4)
 
     def test_no_release_on_failed_build_digest_or_origin(self):
-        for fault, expected in (("build", ""), ("missing-digest", ""), ("wrong-sha", "OCI identity"),
-                                ("unprotected", "main protection"), ("stale", "no longer the tip"),
+        for fault, expected in (("build", "build or staging push failed"),
+                                ("missing-digest", "did not report an immutable digest"), ("wrong-sha", "OCI identity"),
+                                ("registry-auth", "Registry returned 403"), ("unprotected", "main protection"),
+                                ("stale", "no longer the tip"),
                                 ("mutable", "enable immutable releases")):
             with self.subTest(fault=fault):
                 self.configure(("mcp",))

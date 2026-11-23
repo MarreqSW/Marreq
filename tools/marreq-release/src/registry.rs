@@ -119,7 +119,12 @@ struct Components {
 
 impl Registry {
     pub fn parse(text: &str) -> Result<Self> {
-        toml::from_str(text).context("versions.toml")
+        let registry: Self = toml::from_str(text).context("versions.toml")?;
+        ensure!(
+            registry.marreq.version.0.major == 0,
+            "Marreq product version must remain 0.x.y until an explicit 1.0 release decision"
+        );
+        Ok(registry)
     }
 
     pub fn product(&self) -> &StableVersion {

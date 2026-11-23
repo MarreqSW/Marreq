@@ -18,6 +18,15 @@ static VERSION_TAG: LazyLock<Regex> = LazyLock::new(|| {
         .expect("version tag regex")
 });
 
+// This tag predates coordinated releases. Keep the exception tied to its
+// audited commit so moving the tag cannot silently bypass release validation.
+const LEGACY_PRODUCT_TAG: &str = "v1.0.0";
+const LEGACY_PRODUCT_TAG_SHA: &str = "14348c644b302229f680ce2f23093f715c029e6b";
+
+fn is_historical_product_tag(tag: &str, sha: &str) -> bool {
+    tag == LEGACY_PRODUCT_TAG && sha == LEGACY_PRODUCT_TAG_SHA
+}
+
 fn verify(repo: &Repository, head: Option<&str>) -> Result<(Registry, Histories)> {
     let registry = Registry::parse(&repo.read(head, "versions.toml")?)?;
     let histories = changelog::read(repo, head, &registry)?;
@@ -94,6 +103,14 @@ fn existing_tags(
 ) -> Result<()> {
     let tags = repo.git(&["for-each-ref", "--format=%(refname:strip=2)", "refs/tags"])?;
     for tag in std::str::from_utf8(&tags)?.lines() {
+        if tag == LEGACY_PRODUCT_TAG {
+            let source_sha = repo.resolve(&format!("refs/tags/{tag}"))?;
+            ensure!(
+                is_historical_product_tag(tag, &source_sha),
+                "historical product tag {tag} has moved from its audited source commit"
+            );
+            continue;
+        }
         if let Some(version) = tag
             .strip_prefix('v')
             .filter(|version| VERSION_TAG.is_match(version))
@@ -255,4 +272,16 @@ pub fn release(
         records,
     )?;
     Ok((current, head, decisions))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{LEGACY_PRODUCT_TAG, LEGACY_PRODUCT_TAG_SHA, is_historical_product_tag};
+
+    #[test]
+    fn historical_product_tag_exception_is_pinned_to_its_source_commit() {
+        assert!(is_historical_product_tag(LEGACY_PRODUCT_TAG, LEGACY_PRODUCT_TAG_SHA));
+        assert!(!is_historical_product_tag("v1.0.1", LEGACY_PRODUCT_TAG_SHA));
+        assert!(!is_historical_product_tag(LEGACY_PRODUCT_TAG, "0000000000000000000000000000000000000000"));
+    }
 }

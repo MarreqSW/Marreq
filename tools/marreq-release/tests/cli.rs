@@ -74,6 +74,17 @@ fn invalid_registry_values_and_schema() {
         fixture.write("versions.toml", invalid);
         fixture.call(&["check"], Some("versions.toml"));
     }
+    for invalid in ["1.0.0", "1.0.1", "2.0.0"] {
+        fixture.write(
+            "versions.toml",
+            original.replacen(
+                "version = \"0.1.0\"",
+                &format!("version = \"{invalid}\""),
+                1,
+            ),
+        );
+        fixture.call(&["check"], Some("product version must remain 0.x.y"));
+    }
 }
 
 #[test]
@@ -447,6 +458,14 @@ fn missing_evidence_stale_tags_and_reserved_product_tag() {
 }
 
 #[test]
+fn historical_product_tag_moved_to_another_commit_is_rejected() {
+    let fixture = Fixture::new();
+    let head = fixture.prepare(&[]);
+    fixture.git(&["tag", "v1.0.0", &fixture.legacy]);
+    fixture.release(&head, Some("historical product tag v1.0.0 has moved"));
+}
+
+#[test]
 fn tampered_publications_contracts_and_source_tags() {
     let fixture = Fixture::new();
     let head = fixture.prepare(&[]);
@@ -519,8 +538,8 @@ fn historic_changelog_layout_can_be_migrated_without_rewriting_the_bootstrap_com
     let archive = "## [0.1.0] - 05/03/2026\n\n### Added\n\n- Historical notes.\n";
     fixture.write("CHANGELOG", format!("{unreleased}{archive}"));
     let pre_registry = fixture.commit();
-    fixture.set_versions(&["marreq"], "1.0.0");
-    let bootstrap = "## [1.0.0] - Bootstrap\n\n- Reserve the historical v1.0.0 tag.\n";
+    fixture.set_versions(&["marreq"], "0.2.0");
+    let bootstrap = "## [0.2.0] - Bootstrap\n\n- Establish the pre-1.0 product floor.\n";
     fixture.write("changelogs/marreq.md", format!(
         "# Marreq changelog\n\n## [Unreleased]\n\n{bootstrap}  Earlier product notes and accumulated unreleased changes are in [CHANGELOG](../CHANGELOG).\n"
     ));
@@ -559,11 +578,11 @@ fn historic_changelog_layout_can_be_migrated_without_rewriting_the_bootstrap_com
     assert_eq!(impact["artifacts"], json!({}));
     assert_eq!(impact["unknown_inputs"], json!([]));
 
-    fixture.set_versions(&["marreq"], "1.0.1");
-    fixture.add_entry(None, "1.0.1");
+    fixture.set_versions(&["marreq"], "0.2.1");
+    fixture.add_entry(None, "0.2.1");
     let head = fixture.commit();
     assert!(
-        build_set(&fixture.release_from(&head, &original_bootstrap, "v1.0.1", None)).is_empty()
+        build_set(&fixture.release_from(&head, &original_bootstrap, "v0.2.1", None)).is_empty()
     );
     let edited = fixture
         .read("CHANGELOG.md")
@@ -576,7 +595,7 @@ fn historic_changelog_layout_can_be_migrated_without_rewriting_the_bootstrap_com
     fixture.release_from(
         &fixture.commit(),
         &original_bootstrap,
-        "v1.0.1",
+        "v0.2.1",
         Some("historical legacy changelog notes"),
     );
 }

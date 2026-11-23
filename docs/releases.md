@@ -7,7 +7,9 @@ identifies the coordinated product release. The four values in `[components]`
 identify independently deployable artifacts. A product release can advance
 without rebuilding any images, for example to consolidate documentation changes.
 This registry accepts stable SemVer (`X.Y.Z`, without leading zeroes, prerelease
-suffixes or build metadata) within npm's safe integer range.
+suffixes or build metadata) within npm's safe integer range. Until Marreq
+explicitly adopts a 1.0 compatibility policy, the coordinated product version
+must remain `0.x.y`; components retain independent SemVer versions.
 
 | Registry key | Development package version | Changelog | Compatibility declaration |
 | --- | --- | --- | --- |
@@ -75,10 +77,13 @@ file mode changes retain their impact.
 ## Historical bootstrap
 
 The audit used `main` at `291c6a5b4c594dc6d754565b1c7d2a9e9dc3ec54`.
-All four deployable package manifests used `0.1.0`. The registry reserves
-`1.0.0` as the product floor based on the existing lightweight `v1.0.0` tag
-at `14348c644b302229f680ce2f23093f715c029e6b`. The release list has no
-coordinated product release at that tag. The canonical root changelog keeps
+All four deployable package manifests used `0.1.0`. The coordinated product
+registry starts at `0.2.0`. The existing lightweight `v1.0.0` tag at
+`14348c644b302229f680ce2f23093f715c029e6b` predates coordinated product
+releases and is not the version floor. The release validator exempts only this
+exact historical tag at its audited commit from product-tag monotonicity;
+retargeting it or introducing other future-version tags is rejected. The
+release list has no coordinated product release at that tag. The canonical root changelog keeps
 the original Unreleased notes and archives the `0.1.0` entry verbatim,
 including its original `05/03/2026` heading. The validator recognizes that
 specific archive section after registry-tracked releases. It can read the

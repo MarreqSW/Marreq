@@ -27,32 +27,32 @@ pub struct Baseline {
     pub contract_sha256: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-struct Manifest {
-    format: String,
-    variant: Component,
-    product_release: Option<StableVersion>,
-    components: BTreeMap<Component, Artifact>,
+pub(crate) struct Manifest {
+    pub format: String,
+    pub variant: Component,
+    pub product_release: Option<StableVersion>,
+    pub components: BTreeMap<Component, Artifact>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
-struct Artifact {
-    service: String,
-    version: StableVersion,
-    source_sha: String,
-    source_tag: Option<String>,
-    image: String,
-    digest: String,
-    contract: ContractReference,
+pub(crate) struct Artifact {
+    pub service: String,
+    pub version: StableVersion,
+    pub source_sha: String,
+    pub source_tag: Option<String>,
+    pub image: String,
+    pub digest: String,
+    pub contract: ContractReference,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Clone)]
 #[serde(deny_unknown_fields)]
-struct ContractReference {
-    file: String,
-    sha256: String,
+pub(crate) struct ContractReference {
+    pub file: String,
+    pub sha256: String,
 }
 
 #[derive(Deserialize)]
@@ -87,8 +87,14 @@ pub(crate) fn source_tag(component: Component, version: &StableVersion) -> Strin
     format!("marreq-{component}-v{version}")
 }
 
-fn validate_contract(root: &Path, artifact: &Artifact, component: Component) -> Result<()> {
-    let name = &artifact.contract.file;
+pub(crate) fn validate_contract(
+    root: &Path,
+    reference: &ContractReference,
+    component: Component,
+    version: &StableVersion,
+    source_sha: &str,
+) -> Result<()> {
+    let name = &reference.file;
     ensure!(
         CONTRACT_PATH.is_match(name) && !name.split('/').any(|part| matches!(part, "." | "..")),
         "invalid contract path"
@@ -103,7 +109,7 @@ fn validate_contract(root: &Path, artifact: &Artifact, component: Component) -> 
     );
     let contents = fs::read(path)?;
     ensure!(
-        hex::encode(Sha256::digest(&contents)) == artifact.contract.sha256,
+        hex::encode(Sha256::digest(&contents)) == reference.sha256,
         "contract checksum mismatch"
     );
     let bundle: Contract = json::decode(&contents)?;
@@ -116,25 +122,31 @@ fn validate_contract(root: &Path, artifact: &Artifact, component: Component) -> 
         bundle.format == "marreq.contract.v2"
             && bundle.component == kind
             && bundle.variant == variant
-            && bundle.version == artifact.version
-            && bundle.source_sha == artifact.source_sha,
+            && &bundle.version == version
+            && bundle.source_sha == source_sha,
         "contract identity mismatch"
     );
     Ok(())
 }
 
-fn validate_manifest(path: &Path, variant: Component) -> Result<Manifest> {
+pub(crate) fn image(component: Component) -> String {
+    let repository = match component {
+        Component::Frontend => "marreq-frontend",
+        Component::Mcp => "marreq-mcp-server",
+        backend => backend.directory(),
+    };
+    format!("ghcr.io/marreqsw/{repository}")
+}
+
+pub(crate) fn digest(value: &str) -> bool {
+    value
+        .strip_prefix("sha256:")
+        .is_some_and(|hex| nonzero_hex(hex, 64))
+}
+
+pub(crate) fn services(variant: Component) -> [(Component, &'static str); 3] {
     use Component::{Cloud, Frontend, Mcp, Server};
-    let manifest: Manifest = json::decode(&fs::read(path)?)?;
-    ensure!(
-        manifest.format == "marreq.deployment-provenance.v1",
-        "unsupported provenance format"
-    );
-    ensure!(
-        manifest.variant == variant,
-        "expected {variant} provenance variant"
-    );
-    let services = match variant {
+    match variant {
         Server => [
             (Server, "marreq-server"),
             (Frontend, "frontend"),
@@ -146,7 +158,20 @@ fn validate_manifest(path: &Path, variant: Component) -> Result<Manifest> {
             (Mcp, "mcp-cloud"),
         ],
         _ => unreachable!("only backend variants have provenance"),
-    };
+    }
+}
+
+fn validate_manifest(path: &Path, variant: Component) -> Result<Manifest> {
+    let manifest: Manifest = json::decode(&fs::read(path)?)?;
+    ensure!(
+        manifest.format == "marreq.deployment-provenance.v1",
+        "unsupported provenance format"
+    );
+    ensure!(
+        manifest.variant == variant,
+        "expected {variant} provenance variant"
+    );
+    let services = services(variant);
     ensure!(
         manifest.components.len() == services.len(),
         "invalid object fields"
@@ -168,22 +193,12 @@ fn validate_manifest(path: &Path, variant: Component) -> Result<Manifest> {
             full_sha(&artifact.source_sha),
             "{component}: invalid source SHA"
         );
-        let repository = if component == Frontend {
-            "marreq-frontend"
-        } else if component == Mcp {
-            "marreq-mcp-server"
-        } else {
-            component.directory()
-        };
         ensure!(
-            artifact.image == format!("ghcr.io/marreqsw/{repository}"),
+            artifact.image == image(component),
             "{component}: invalid image repository"
         );
         ensure!(
-            artifact
-                .digest
-                .strip_prefix("sha256:")
-                .is_some_and(|digest| nonzero_hex(digest, 64)),
+            digest(&artifact.digest),
             "{component}: invalid registry digest"
         );
         ensure!(
@@ -193,7 +208,13 @@ fn validate_manifest(path: &Path, variant: Component) -> Result<Manifest> {
                 .is_none_or(|tag| *tag == source_tag(component, &artifact.version)),
             "{component}: invalid source tag"
         );
-        validate_contract(root, artifact, component)?;
+        validate_contract(
+            root,
+            &artifact.contract,
+            component,
+            &artifact.version,
+            &artifact.source_sha,
+        )?;
     }
     Ok(manifest)
 }

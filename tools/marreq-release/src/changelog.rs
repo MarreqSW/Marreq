@@ -47,6 +47,14 @@ enum Section {
 }
 
 impl History {
+    pub(crate) fn notes(&self, version: &StableVersion) -> Result<&str> {
+        Ok(&self
+            .entries
+            .get(version)
+            .context("missing release notes")?
+            .notes)
+    }
+
     pub(crate) fn is_bootstrap(&self, version: &StableVersion) -> bool {
         self.entries
             .get(version)

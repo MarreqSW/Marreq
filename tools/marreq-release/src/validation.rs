@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, path::Path, sync::LazyLock};
 
-use anyhow::{Result, ensure};
+use anyhow::{Context, Result, ensure};
 use regex::Regex;
 use serde::Serialize;
 
@@ -100,6 +100,8 @@ fn existing_tags(
     current: &StableVersion,
     records: &Records,
     head: &str,
+    resume: Option<&Registry>,
+    floors: &Registry,
 ) -> Result<()> {
     let tags = repo.git(&["for-each-ref", "--format=%(refname:strip=2)", "refs/tags"])?;
     for tag in std::str::from_utf8(&tags)?.lines() {
@@ -126,8 +128,19 @@ fn existing_tags(
                 .strip_prefix(&format!("marreq-{component}-v"))
                 .filter(|version| VERSION_TAG.is_match(version))
             {
+                let version = version.parse::<StableVersion>()?;
+                let floor = records
+                    .get(&component)
+                    .map_or_else(|| floors.component(component), |record| &record.version);
+                let matching_retry = if version > *floor
+                    && resume.is_some_and(|registry| registry.component(component) == &version)
+                {
+                    repo.resolve(&format!("refs/tags/{tag}"))? == head
+                } else {
+                    false
+                };
                 ensure!(
-                    version.parse::<StableVersion>()? <= records[&component].version,
+                    version <= *floor || matching_retry,
                     "{component}: {tag} is newer than the supplied publication baseline"
                 );
             }
@@ -136,17 +149,17 @@ fn existing_tags(
     Ok(())
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
-enum Action {
+pub enum Action {
     Build,
     Reuse,
 }
 
 #[derive(Serialize)]
 pub struct Decision {
-    action: Action,
-    baseline: Baseline,
+    pub(crate) action: Action,
+    pub(crate) baseline: Option<Baseline>,
     changed_inputs: Vec<String>,
 }
 
@@ -208,7 +221,7 @@ fn decisions(
         decisions.insert(
             component,
             Decision {
-                baseline,
+                baseline: Some(baseline),
                 action,
                 changed_inputs,
             },
@@ -217,12 +230,131 @@ fn decisions(
     Ok(decisions)
 }
 
+pub struct Publication {
+    pub bootstrap: bool,
+}
+
+fn product_tags(repo: &Repository) -> Result<Vec<(StableVersion, String)>> {
+    let raw = repo.git(&["for-each-ref", "--format=%(refname:strip=2)", "refs/tags"])?;
+    let mut tags = Vec::new();
+    for tag in std::str::from_utf8(&raw)?.lines() {
+        if let Some(version) = tag.strip_prefix('v').filter(|v| VERSION_TAG.is_match(v)) {
+            if tag == LEGACY_PRODUCT_TAG {
+                ensure!(
+                    is_historical_product_tag(tag, &repo.resolve(&format!("refs/tags/{tag}"))?),
+                    "historical product tag has moved"
+                );
+            } else {
+                tags.push((version.parse()?, tag.to_owned()));
+            }
+        }
+    }
+    Ok(tags)
+}
+
+fn annotated(repo: &Repository, tag: &str, head: &str) -> Result<()> {
+    let bytes = repo
+        .git(&["cat-file", "tag", &format!("refs/tags/{tag}")])
+        .context("product release requires an annotated tag")?;
+    let mut lines = bytes.split(|byte| *byte == b'\n');
+    ensure!(
+        lines.next() == Some(format!("object {head}").as_bytes())
+            && lines.next() == Some(b"type commit")
+            && lines.next() == Some(format!("tag {tag}").as_bytes()),
+        "product annotation must name {tag} and directly target {head}"
+    );
+    Ok(())
+}
+
+pub fn release_base(repo: &Repository, head: &str, tag: &str) -> Result<serde_json::Value> {
+    let head = repo.resolve(head)?;
+    let registry = self::tag(repo, tag, Some(&head))?;
+    annotated(repo, tag, &head)?;
+    match product_tags(repo)?
+        .into_iter()
+        .filter(|(_, name)| name != tag)
+        .max()
+    {
+        Some((version, prior_tag)) => {
+            ensure!(
+                registry.product() > &version,
+                "product version must advance beyond {prior_tag}"
+            );
+            let previous = repo.resolve(&format!("refs/tags/{prior_tag}"))?;
+            repo.ancestor(&previous, &head)?;
+            annotated(repo, &prior_tag, &previous)?;
+            Ok(serde_json::json!({"previous": previous, "tag": prior_tag}))
+        }
+        None => {
+            let history = repo.git(&[
+                "log",
+                "--first-parent",
+                "--diff-filter=A",
+                "--format=%H",
+                &head,
+                "--",
+                "versions.toml",
+            ])?;
+            let previous = std::str::from_utf8(&history)?.trim();
+            ensure!(
+                provenance::full_sha(previous),
+                "expected one registry introduction in complete first-parent history"
+            );
+            Ok(serde_json::json!({"previous": previous, "tag": null}))
+        }
+    }
+}
+
+fn first_publication(
+    repo: &Repository,
+    previous: &str,
+    head: &str,
+    current: &Registry,
+    prior: &Registry,
+    history: &Histories,
+) -> Result<Decisions> {
+    let report = impact::detect(repo, previous, head)?;
+    ensure!(
+        report.unknown_inputs.is_empty(),
+        "Unclassified or unsupported release inputs: {:?}",
+        report.unknown_inputs
+    );
+    COMPONENTS
+        .into_iter()
+        .map(|component| {
+            let version = current.component(component);
+            let floor = prior.component(component);
+            ensure!(
+                version > floor,
+                "{component}: first publication needs a new version above {floor}"
+            );
+            ensure!(
+                history[&Some(component)].dated(version),
+                "{component}: first publication needs a dated changelog entry"
+            );
+            Ok((
+                component,
+                Decision {
+                    action: Action::Build,
+                    baseline: None,
+                    changed_inputs: report
+                        .artifacts
+                        .get(component.name())
+                        .cloned()
+                        .unwrap_or_default(),
+                },
+            ))
+        })
+        .collect()
+}
+
 pub fn release(
     repo: &Repository,
     head: &str,
     tag: &str,
     previous: &str,
     evidence: [Option<&Path>; 2],
+    publication: Option<Publication>,
 ) -> Result<(Registry, String, Decisions)> {
     let head = repo.resolve(head)?;
     let (current, history) = verify(repo, Some(&head))?;
@@ -260,8 +392,44 @@ pub fn release(
         );
         Some(prior.product())
     };
+    if let Some(options) = &publication {
+        let base = release_base(repo, &head, tag)?;
+        ensure!(
+            base["previous"] == previous,
+            "--previous differs from the canonical publication baseline"
+        );
+        ensure!(
+            options.bootstrap == prior_product.is_none(),
+            "use --bootstrap-publication only for the first coordinated release"
+        );
+        if options.bootstrap {
+            ensure!(
+                evidence.iter().all(Option::is_none),
+                "first publication builds fresh artifacts"
+            );
+            existing_tags(
+                repo,
+                prior.product(),
+                current.product(),
+                &Records::new(),
+                &head,
+                Some(&current),
+                &prior,
+            )?;
+            let decisions = first_publication(repo, &previous, &head, &current, &prior, &history)?;
+            return Ok((current, head, decisions));
+        }
+    }
     let records = provenance::publications(repo, evidence, &prior, prior_product)?;
-    existing_tags(repo, prior.product(), current.product(), &records, &head)?;
+    existing_tags(
+        repo,
+        prior.product(),
+        current.product(),
+        &records,
+        &head,
+        publication.map(|_| &current),
+        &prior,
+    )?;
     let decisions = decisions(
         repo,
         &previous,
@@ -272,6 +440,26 @@ pub fn release(
         records,
     )?;
     Ok((current, head, decisions))
+}
+
+pub fn release_notes(
+    repo: &Repository,
+    head: &str,
+    current: &Registry,
+    decisions: &Decisions,
+) -> Result<String> {
+    let histories = changelog::read(repo, Some(head), current)?;
+    let mut notes = histories[&None].notes(current.product())?.trim().to_owned();
+    for component in COMPONENTS {
+        let version = current.component(component);
+        if decisions[&component].action == Action::Build {
+            notes.push_str(&format!(
+                "\n\n## {component} {version}\n\n{}",
+                histories[&Some(component)].notes(version)?.trim()
+            ));
+        }
+    }
+    Ok(notes)
 }
 
 #[cfg(test)]

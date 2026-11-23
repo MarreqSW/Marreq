@@ -1,260 +1,188 @@
-name: Release artifacts
+name: Coordinated Marreq release
 
 on:
   push:
     tags:
-      - 'marreq-server-v*'
-      - 'marreq-frontend-v*'
-      - 'marreq-mcp-v*'
+      - 'v[0-9]+.[0-9]+.[0-9]+'
 
 permissions:
   contents: read
-  packages: write
+
+env:
+  CARGO_INCREMENTAL: '0'
+  CARGO_PROFILE_DEV_DEBUG: '0'
+  CARGO_PROFILE_TEST_DEBUG: '0'
+
+concurrency:
+  group: coordinated-product-release
+  cancel-in-progress: false
 
 jobs:
-  compatibility:
+  source:
+    if: github.repository == 'MarreqSW/Marreq' && github.event.created && !github.event.deleted
     runs-on: ubuntu-latest
+    outputs:
+      head: ${{ steps.source.outputs.head }}
+      tag_object: ${{ steps.source.outputs.tag_object }}
+    steps:
+      - name: Authorize the annotated tag against protected main
+        id: source
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_AFTER: ${{ github.event.after }}
+        run: |
+          [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          tag_object=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$GITHUB_REF_NAME" --jq '.object | select(.type == "tag") | .sha')
+          [[ "$tag_object" =~ ^[a-f0-9]{40}$ ]]
+          annotation=$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_object")
+          head=$(jq -er --arg name "$GITHUB_REF_NAME" 'select(.tag == $name and .object.type == "commit") | .object.sha' <<< "$annotation")
+          [[ "$head" =~ ^[a-f0-9]{40}$ ]]
+          [[ "$EVENT_AFTER" == "$head" || "$EVENT_AFTER" == "$tag_object" ]]
+          gh api "repos/$GITHUB_REPOSITORY/branches/main" |
+            jq -e --arg head "$head" '.protected == true and .commit.sha == $head' >/dev/null
+          echo "head=$head" >> "$GITHUB_OUTPUT"
+          echo "tag_object=$tag_object" >> "$GITHUB_OUTPUT"
+
+  rust:
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.source.outputs.head }}
+          persist-credentials: false
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
         with:
           toolchain: stable
-      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+          components: rustfmt, clippy
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
-          cache: npm
-      - name: Install pinned OpenAPI bundler
-        run: npm ci
-      - name: Install pinned OpenAPI standards engine
-        run: scripts/install-oasdiff.sh
-      - name: Test contract semantics and validate producer document
+      - uses: taiki-e/install-action@1e29709c0ec63babbe8f266397a465f29a825f91 # v2.87.31
+        with:
+          tool: cargo-deny
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: coordinated-release
+          save-if: false
+      - name: Install pinned contract tooling
         run: |
-          cargo test --locked -p marreq-contracts
-          cargo run --locked -p marreq-contracts -- validate --document-only
-      - name: Verify candidate backend routes and serializers
-        if: startsWith(github.ref_name, 'marreq-server-v')
-        run: cargo test --locked -p marreq-cloud --test api_contract_inventory
-      - name: Require immutable deployment-plan revision
+          npm ci
+          scripts/install-oasdiff.sh
+      - name: Format, lint and audit the exact release source
+        run: |
+          cargo fmt --all -- --check
+          cargo clippy --locked --workspace --all-targets -- -D warnings
+          cargo deny check advisories
+          npm audit --omit=dev --audit-level=high
+      - name: Test Rust, contract inventory and release invariants
+        run: |
+          cargo test --locked --workspace
+          python3 scripts/test-release-impact.py
+          python3 scripts/test-deployment-provenance.py
+          python3 scripts/test-coordinated-release.py
+          python3 scripts/test-release-build-context.py
+          python3 scripts/check-migration-policy.py
+      - name: Check authoritative package versions
+        run: |
+          cargo run --locked -p marreq-release -- check
+          cargo run --locked -p marreq-release -- sync --check
+
+  plan:
+    needs: source
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      artifact_id: ${{ steps.plan.outputs.artifact-id }}
+    env:
+      RELEASE_HEAD: ${{ needs.source.outputs.head }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.source.outputs.head }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Install locked consumer dependencies and standards tooling
+        run: |
+          npm ci
+          npm ci --prefix frontend
+          npm ci --prefix mcp-server
+          scripts/install-oasdiff.sh
+          cargo build --locked -p marreq-release -p marreq-contracts
+      - name: Plan publication and verify both selected artifact combinations
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MARREQ_BOOTSTRAP_TAG: ${{ vars.MARREQ_BOOTSTRAP_TAG }}
+          RELEASE_WORK: ${{ runner.temp }}/release-validation
+        run: scripts/coordinated-release.sh plan
+      - name: Audit, test and build the consumers
+        run: |
+          for consumer in frontend mcp-server; do
+            npm audit --prefix "$consumer" --omit=dev --audit-level=high
+            npm test --prefix "$consumer"
+            npm run build --prefix "$consumer"
+          done
+          npx --no-install vitest run marreq-core/tests/js
+          node scripts/generate-api-types.mjs --check
+      - name: Validate the source contracts and exercise both backend variants over HTTP
+        run: |
+          target/debug/marreq-contracts validate
+          scripts/test-api-contracts.sh
+      - uses: actions/upload-artifact@v7
         id: plan
-        env:
-          PLAN_SHA: ${{ vars.MARREQ_RELEASE_CONTRACTS_SHA }}
-        run: |
-          if [[ ! "$PLAN_SHA" =~ ^[a-f0-9]{40}$ ]]; then
-            echo "Set MARREQ_RELEASE_CONTRACTS_SHA to an immutable source revision containing deployment.json and exact retained contract bundles." >&2
-            exit 1
-          fi
-          echo "sha=$PLAN_SHA" >> "$GITHUB_OUTPUT"
-      - uses: actions/checkout@v7
         with:
-          ref: ${{ steps.plan.outputs.sha }}
-          path: .release-contracts
-      - name: Verify exact candidate and unchanged deployment artifacts
-        env:
-          CANDIDATE_TAG: ${{ github.ref_name }}
-          CANDIDATE_SHA: ${{ github.sha }}
-        run: |
-          case "$CANDIDATE_TAG" in
-            marreq-server-v*) component=backend; version=${CANDIDATE_TAG#marreq-server-v} ;;
-            marreq-frontend-v*) component=frontend; version=${CANDIDATE_TAG#marreq-frontend-v} ;;
-            marreq-mcp-v*) component=mcp; version=${CANDIDATE_TAG#marreq-mcp-v} ;;
-            *) echo "unsupported component tag" >&2; exit 1 ;;
-          esac
-          if [[ "$component" == backend ]]; then
-            cargo run --locked -p marreq-contracts -- bundle --component backend --variant server --version "$version" --output /tmp/candidate-contract.json
-          else
-            cargo run --locked -p marreq-contracts -- bundle --component "$component" --version "$version" --output /tmp/candidate-contract.json
-          fi
-          scripts/check-api-compatibility.sh \
-            --manifest .release-contracts/deployment.json \
-            --candidate-component "$component" --candidate-version "$version" \
-            --candidate-source-sha "$CANDIDATE_SHA" \
-            --candidate-bundle /tmp/candidate-contract.json
-      - uses: actions/upload-artifact@v7
-        with:
-          name: candidate-api-contract
-          path: /tmp/candidate-contract.json
+          name: validated-release-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/release-validation/plan.json
+            ${{ runner.temp }}/release-validation/notes.md
+            ${{ runner.temp }}/release-validation/assets/*.json
+          if-no-files-found: error
 
-  backend:
-    needs: compatibility
-    if: startsWith(github.ref_name, 'marreq-server-v')
+  publish:
+    needs: [source, rust, plan]
     runs-on: ubuntu-latest
+    timeout-minutes: 120
+    environment: release-publication
+    permissions:
+      contents: write
+      packages: write
+    env:
+      RELEASE_HEAD: ${{ needs.source.outputs.head }}
+      TAG_OBJECT: ${{ needs.source.outputs.tag_object }}
     steps:
       - uses: actions/checkout@v7
-
-      - name: Extract version and image name
-        id: ver
-        run: |
-          TAG="${GITHUB_REF_NAME#marreq-server-v}"
-          OWNER_LC="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
-          echo "version=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "image=ghcr.io/${OWNER_LC}/marreq-server" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
+        with:
+          ref: ${{ needs.source.outputs.head }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+      - name: Build the release asset assembler
+        run: cargo build --locked -p marreq-release
+      - uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ needs.plan.outputs.artifact_id }}
+          path: ${{ runner.temp }}/release-publication
+          merge-multiple: true
+          digest-mismatch: error
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: candidate-api-contract
-          path: ${{ runner.temp }}/published-artifact
-
-      - name: Build and push backend image
-        id: publish
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: docker/Dockerfile
-          push: true
-          tags: |
-            ${{ steps.ver.outputs.image }}:${{ steps.ver.outputs.version }}
-            ${{ steps.ver.outputs.image }}:latest
-          build-args: |
-            MARREQ_BIN=marreq-server
-            MARREQ_VERSION=${{ steps.ver.outputs.version }}
-            MARREQ_GIT_SHA=${{ github.sha }}
-
-      - name: Retain published digest and contract
+          password: ${{ github.token }}
+      - name: Stage, verify, and finalize the release
         env:
-          VERSION: ${{ steps.ver.outputs.version }}
-          IMAGE: ${{ steps.ver.outputs.image }}
-          DIGEST: ${{ steps.publish.outputs.digest }}
-        run: |
-          cd "$RUNNER_TEMP/published-artifact"
-          "$GITHUB_WORKSPACE/scripts/record-published-artifact" \
-            --component server --version "$VERSION" --source-sha "$GITHUB_SHA" \
-            --source-tag "$GITHUB_REF_NAME" --image "$IMAGE" --digest "$DIGEST" \
-            --contract candidate-contract.json > published.json
-      - uses: actions/upload-artifact@v7
-        with:
-          name: published-server-provenance
-          path: ${{ runner.temp }}/published-artifact/
-          if-no-files-found: error
-
-  frontend:
-    needs: compatibility
-    if: startsWith(github.ref_name, 'marreq-frontend-v')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Extract version and image name
-        id: ver
-        run: |
-          TAG="${GITHUB_REF_NAME#marreq-frontend-v}"
-          OWNER_LC="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
-          echo "version=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "image=ghcr.io/${OWNER_LC}/marreq-frontend" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: candidate-api-contract
-          path: ${{ runner.temp }}/published-artifact
-
-      - name: Build and push frontend image
-        id: publish
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: docker/frontend/Dockerfile
-          push: true
-          tags: |
-            ${{ steps.ver.outputs.image }}:${{ steps.ver.outputs.version }}
-            ${{ steps.ver.outputs.image }}:latest
-          build-args: |
-            MARREQ_VERSION=${{ steps.ver.outputs.version }}
-            MARREQ_GIT_SHA=${{ github.sha }}
-
-      - name: Retain published digest and contract
-        env:
-          VERSION: ${{ steps.ver.outputs.version }}
-          IMAGE: ${{ steps.ver.outputs.image }}
-          DIGEST: ${{ steps.publish.outputs.digest }}
-        run: |
-          cd "$RUNNER_TEMP/published-artifact"
-          "$GITHUB_WORKSPACE/scripts/record-published-artifact" \
-            --component frontend --version "$VERSION" --source-sha "$GITHUB_SHA" \
-            --source-tag "$GITHUB_REF_NAME" --image "$IMAGE" --digest "$DIGEST" \
-            --contract candidate-contract.json > published.json
-      - uses: actions/upload-artifact@v7
-        with:
-          name: published-frontend-provenance
-          path: ${{ runner.temp }}/published-artifact/
-          if-no-files-found: error
-
-  mcp:
-    needs: compatibility
-    if: startsWith(github.ref_name, 'marreq-mcp-v')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Extract version and image name
-        id: ver
-        run: |
-          TAG="${GITHUB_REF_NAME#marreq-mcp-v}"
-          OWNER_LC="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
-          echo "version=${TAG}" >> "$GITHUB_OUTPUT"
-          echo "image=ghcr.io/${OWNER_LC}/marreq-mcp-server" >> "$GITHUB_OUTPUT"
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: actions/download-artifact@v8
-        with:
-          name: candidate-api-contract
-          path: ${{ runner.temp }}/published-artifact
-
-      - name: Build and push MCP image
-        id: publish
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          file: mcp-server/Dockerfile
-          push: true
-          tags: |
-            ${{ steps.ver.outputs.image }}:${{ steps.ver.outputs.version }}
-            ${{ steps.ver.outputs.image }}:latest
-          build-args: |
-            MARREQ_VERSION=${{ steps.ver.outputs.version }}
-            MARREQ_GIT_SHA=${{ github.sha }}
-
-      - name: Retain published digest and contract
-        env:
-          VERSION: ${{ steps.ver.outputs.version }}
-          IMAGE: ${{ steps.ver.outputs.image }}
-          DIGEST: ${{ steps.publish.outputs.digest }}
-        run: |
-          cd "$RUNNER_TEMP/published-artifact"
-          "$GITHUB_WORKSPACE/scripts/record-published-artifact" \
-            --component mcp --version "$VERSION" --source-sha "$GITHUB_SHA" \
-            --source-tag "$GITHUB_REF_NAME" --image "$IMAGE" --digest "$DIGEST" \
-            --contract candidate-contract.json > published.json
-      - uses: actions/upload-artifact@v7
-        with:
-          name: published-mcp-provenance
-          path: ${{ runner.temp }}/published-artifact/
-          if-no-files-found: error
+          GH_TOKEN: ${{ github.token }}
+          MARREQ_RELEASE_POLICY_TOKEN: ${{ secrets.MARREQ_RELEASE_POLICY_TOKEN }}
+          MARREQ_SOURCE_TAG_TOKEN: ${{ secrets.MARREQ_SOURCE_TAG_TOKEN }}
+          RELEASE_WORK: ${{ runner.temp }}/release-publication
+        run: scripts/coordinated-release.sh publish

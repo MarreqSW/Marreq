@@ -1,5 +1,6 @@
 pub mod changelog;
 pub mod impact;
+pub mod publication;
 pub mod registry;
 pub mod sync;
 pub mod validation;

@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::Result;
 use clap::{Parser, Subcommand, ValueEnum};
-use marreq_release::{Repository, impact, sync, validation};
+use marreq_release::{Repository, impact, publication, sync, validation};
 use serde_json::{Value, json};
 
 #[derive(Clone, Copy, ValueEnum)]
@@ -58,6 +58,34 @@ enum Command {
         server_provenance: Option<PathBuf>,
         #[arg(long)]
         cloud_provenance: Option<PathBuf>,
+        /// Require annotation and the canonical prior product tag.
+        #[arg(long)]
+        publication: bool,
+        /// Open fresh component version slots above the historical floors.
+        #[arg(long, requires = "publication")]
+        bootstrap_publication: bool,
+    },
+    /// Resolve the canonical prior product tag or the historical version floors.
+    ReleaseBase {
+        #[arg(long)]
+        head: String,
+        #[arg(long)]
+        tag: String,
+    },
+    /// Prepare compatibility plans, or assemble the manifest and provenance.
+    ReleaseAssets {
+        #[arg(long)]
+        plan: PathBuf,
+        #[arg(long)]
+        directory: PathBuf,
+        #[arg(long)]
+        digests: Option<PathBuf>,
+        #[arg(long, requires = "digests")]
+        run_id: Option<u64>,
+        #[arg(long, requires = "run_id")]
+        timestamp: Option<i64>,
+        #[arg(long, requires = "run_id")]
+        tag_object: Option<String>,
     },
     /// Classify committed changes with the candidate's release impact map.
     Impact {
@@ -111,6 +139,8 @@ fn run(command: Command) -> Result<(Value, String)> {
             previous,
             server_provenance,
             cloud_provenance,
+            publication,
+            bootstrap_publication,
         } => {
             let (versions, head, decisions) = validation::release(
                 &repo,
@@ -118,10 +148,51 @@ fn run(command: Command) -> Result<(Value, String)> {
                 &tag,
                 &previous,
                 [server_provenance.as_deref(), cloud_provenance.as_deref()],
+                publication.then_some(validation::Publication {
+                    bootstrap: bootstrap_publication,
+                }),
             )?;
+            let mut result = json!({"status": "ok", "versions": versions, "head": head, "components": decisions});
+            if publication {
+                result["tag"] = json!(tag);
+                result["previous"] = json!(previous);
+                result["bootstrap"] = json!(bootstrap_publication);
+                result["notes"] = json!(validation::release_notes(
+                    &repo, &head, &versions, &decisions
+                )?);
+                result["selection"] = publication::selection(&head, &versions, &decisions);
+            }
+            Ok((result, message))
+        }
+        Command::ReleaseBase { head, tag } => {
+            let mut result = validation::release_base(&repo, &head, &tag)?;
+            result["status"] = json!("ok");
+            Ok((result, message))
+        }
+        Command::ReleaseAssets {
+            plan,
+            directory,
+            digests,
+            run_id,
+            timestamp,
+            tag_object,
+        } => {
+            let evidence = match digests {
+                Some(digests) => Some(publication::Run {
+                    digests,
+                    id: run_id
+                        .ok_or_else(|| anyhow::anyhow!("--run-id required with --digests"))?,
+                    timestamp: timestamp
+                        .ok_or_else(|| anyhow::anyhow!("--timestamp required with --digests"))?,
+                    tag_object: tag_object
+                        .ok_or_else(|| anyhow::anyhow!("--tag-object required with --digests"))?,
+                }),
+                None => None,
+            };
+            publication::write_assets(&plan, &directory, evidence)?;
             Ok((
-                json!({"status": "ok", "versions": versions, "head": head, "components": decisions}),
-                message,
+                json!({"status": "ok"}),
+                "Release assets validated".to_owned(),
             ))
         }
         Command::Impact { .. } => unreachable!("impact has a separate report format"),

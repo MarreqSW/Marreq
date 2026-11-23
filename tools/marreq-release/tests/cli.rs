@@ -753,3 +753,170 @@ fn unsupported_path_still_emits_an_impact_report() {
     );
     assert_eq!(report["artifacts"], json!({}));
 }
+
+#[test]
+fn publication_requires_annotation_and_fresh_bootstrap_slots() {
+    let fixture = Fixture::new();
+    let tag = "v0.1.1";
+    let head = fixture.prepare(&[]);
+    let base_args = ["release-base", "--head", &head, "--tag", tag];
+    fixture.git(&["tag", tag, &head]);
+    fixture.call(&base_args, Some("requires an annotated tag"));
+    fixture.git(&["tag", "-fa", tag, &fixture.bootstrap, "-m", "other source"]);
+    fixture.call(&base_args, Some("directly target"));
+    fixture.git(&["tag", "-fa", tag, &head, "-m", "candidate"]);
+    assert_eq!(
+        fixture.call(&base_args, None)["previous"],
+        fixture.bootstrap
+    );
+    fixture.call(
+        &[
+            "release",
+            "--publication",
+            "--bootstrap-publication",
+            "--head",
+            &head,
+            "--tag",
+            tag,
+            "--previous",
+            &fixture.bootstrap,
+        ],
+        Some("first publication needs a new version"),
+    );
+    fixture.call(
+        &[
+            "release",
+            "--publication",
+            "--head",
+            &head,
+            "--tag",
+            tag,
+            "--previous",
+            &fixture.bootstrap,
+        ],
+        Some("use --bootstrap-publication"),
+    );
+}
+
+#[test]
+fn bootstrap_assets_become_the_next_selective_release_baseline() {
+    let mut fixture = Fixture::new();
+    let tag = "v0.1.1";
+    let head = fixture.prepare(&[Server, Cloud, Frontend, Mcp]);
+    fixture.git(&["tag", "-a", tag, &head, "-m", "first publication"]);
+    let report = fixture.call(
+        &[
+            "release",
+            "--publication",
+            "--bootstrap-publication",
+            "--head",
+            &head,
+            "--tag",
+            tag,
+            "--previous",
+            &fixture.bootstrap,
+        ],
+        None,
+    );
+    assert_eq!(
+        build_set(&report),
+        BTreeSet::from(["server", "cloud", "frontend", "mcp"])
+    );
+    assert!(report["notes"].as_str().unwrap().contains("## cloud 0.1.1"));
+    let plan = fixture.evidence.join("plan.json");
+    fixture.write_json(&plan, &report);
+    let mut images = json!({});
+    for component in [Server, Cloud, Frontend, Mcp] {
+        fixture.publish(component, &head, NEXT);
+        fs::copy(
+            fixture.evidence.join(format!("{component}.json")),
+            fixture.evidence.join(format!("{component}-contract.json")),
+        )
+        .unwrap();
+        images[component.name()] = json!(format!("sha256:{}", "a".repeat(64)));
+    }
+    let digests = fixture.evidence.join("digests.json");
+    let args = [
+        "release-assets",
+        "--plan",
+        plan.to_str().unwrap(),
+        "--directory",
+        fixture.evidence.to_str().unwrap(),
+        "--digests",
+        digests.to_str().unwrap(),
+        "--run-id",
+        "123",
+        "--timestamp",
+        "1795219200",
+        "--tag-object",
+        &fixture.git(&["rev-parse", tag]),
+    ];
+    fixture.write_json(&digests, &json!({"server": images["server"]}));
+    fixture.call(&args, Some("every component needs a digest"));
+    fixture.write_json(&digests, &images);
+    fixture.call(&args, None);
+    let manifest: Value =
+        serde_json::from_str(&fixture.read(fixture.evidence.join("release-manifest.json")))
+            .unwrap();
+    assert_eq!(manifest["components"].as_object().unwrap().len(), 4);
+    assert_eq!(manifest["components"]["cloud"]["action"], "build");
+    assert_eq!(manifest["workflow"]["run_id"], 123);
+    let newer = "0.1.2";
+    let registry = fixture
+        .read("versions.toml")
+        .replace("version = \"0.1.1\"", "version = \"0.1.2\"")
+        .replace("mcp = \"0.1.1\"", "mcp = \"0.1.2\"");
+    fixture.write("versions.toml", registry);
+    fixture.write("mcp-server/src/server.ts", "new implementation");
+    fixture.add_entry(None, newer);
+    fixture.add_entry(Some(Mcp), newer);
+    fixture.call(&["sync"], None);
+    let candidate = fixture.commit();
+    fixture.git(&["tag", "-a", "v0.1.2", &candidate, "-m", "MCP publication"]);
+    let subsequent = fixture.call(
+        &[
+            "release",
+            "--publication",
+            "--head",
+            &candidate,
+            "--tag",
+            "v0.1.2",
+            "--previous",
+            &head,
+            "--server-provenance",
+            fixture
+                .evidence
+                .join("server-provenance.json")
+                .to_str()
+                .unwrap(),
+            "--cloud-provenance",
+            fixture
+                .evidence
+                .join("cloud-provenance.json")
+                .to_str()
+                .unwrap(),
+        ],
+        None,
+    );
+    assert_eq!(build_set(&subsequent), BTreeSet::from(["mcp"]));
+    assert_eq!(
+        subsequent["selection"]["cloud"]["retained_digest"],
+        images["cloud"]
+    );
+    assert_eq!(subsequent["selection"]["frontend"]["source_sha"], head);
+    assert!(subsequent["selection"]["mcp"]["retained_digest"].is_null());
+    fixture.call(
+        &[
+            "release",
+            "--publication",
+            "--bootstrap-publication",
+            "--head",
+            &candidate,
+            "--tag",
+            "v0.1.2",
+            "--previous",
+            &head,
+        ],
+        Some("use --bootstrap-publication"),
+    );
+}

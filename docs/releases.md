@@ -1,6 +1,6 @@
 # Marreq releases
 
-The database safety prerequisite of #423 uses [controlled migration jobs and coherent recovery bundles](developer/database-migrations.md). Both backend images share the same serialized Diesel runner; startup only validates history. Future release automation must stop progression on backup, restore rehearsal, migration, schema or real application smoke failure. Retained binaries need an explicitly tested expansion compatibility pin; database rollback is never automatic.
+The database safety prerequisite of #423 uses [controlled migration jobs and coherent recovery bundles](developer/database-migrations.md). Both backend images share the same serialized Diesel runner; startup only validates history. Production deployment must stop progression on backup, restore rehearsal, migration, schema or real application smoke failure. Retained binaries need an explicitly tested expansion compatibility pin; database rollback is never automatic.
 
 [`versions.toml`](../versions.toml) is the authoritative registry. `marreq.version`
 identifies the coordinated product release. The four values in `[components]`
@@ -56,8 +56,8 @@ Run the Rust CLI from a Git worktree using Cargo or build it with
 `cargo build --locked -p marreq-release` and invoke `target/debug/marreq-release`
 with the same arguments. `scripts/validate-release-versions` is a shell wrapper
 for existing callers. The validator and impact detector use Rust and Git.
-The separate Python deployment provenance checker and publisher recorder still
-support existing deployment and component publication workflows.
+The existing deployment provenance checker consumes the two variant lockfiles
+attached to every coordinated release.
 
 Synchronization validates all inputs before staging atomic file replacements.
 It changes only mirrored version values and preserves formatting, dependency
@@ -129,40 +129,210 @@ read `Docker-Content-Digest` from a GET of
 list media types accepted. Follow the amd64 child manifest to its config blob
 for OCI labels. Audit digests were taken from explicit version tags.
 
-## Release candidate validation
+## Validate and tag a release
+
+Complete the version and changelog changes on a reviewed PR. After merging,
+fetch all tags and use the current tip of protected `main`. Queue one coordinated
+tag at a time and keep `main` at the candidate until a publication journal exists.
 
 ```sh
+git fetch origin main --tags
+git switch --detach origin/main
+candidate_sha=$(git rev-parse HEAD)
+product_tag=v0.2.1 # use the exact marreq.version from versions.toml
+cargo run --locked -p marreq-release -- check
+cargo run --locked -p marreq-release -- sync --check
 cargo run --locked -p marreq-release -- tag "$product_tag" --head "$candidate_sha"
-cargo run --locked -p marreq-release -- --format json release \
-  --head "$candidate_sha" --tag "$product_tag" --previous "$prior_sha" \
-  --server-provenance "$server_evidence" --cloud-provenance "$cloud_evidence"
+git tag -a "$product_tag" "$candidate_sha" -m "Marreq ${product_tag#v}"
+cargo run --locked -p marreq-release -- --format json release-base \
+  --head "$candidate_sha" --tag "$product_tag"
 ```
 
-The caller supplies complete Git history and canonical tags from a trusted
-checkout and the latest trusted prior coordinated release, or the commit that
-introduced the bootstrap registry for the first release. Both provenance
-manifests use the format described below. They must identify the prior product
-version after a coordinated release, and must omit `product_release` or set it
-to null for bootstrap. Bootstrap publications must meet the registered version
-floors. Shared Frontend and MCP entries must agree across the two manifests.
-Every component requires a matching source tag, an ancestral source SHA,
-digest and retained contract bytes. A newer existing tag invalidates stale
-baselines. The validator consumes evidence supplied by the caller. PR 2 must
-retrieve it from trusted release storage, confirm the referenced registry
-digests and source provenance, and run the compatibility checks for the
-selected artifact combination.
+Use the reported `previous` SHA. For a subsequent release, download the
+prior GitHub Release's variant provenance and contract assets together into
+`prior/`. Run the same planner used by GitHub Actions.
 
-The release command returns exit 0 with the resolved candidate SHA, registry
-versions and each component's `build` or `reuse` decision, baseline and reason
-paths. Exit 2 rejects inconsistent metadata or an unsafe release. The tag check
-only verifies spelling and registry identity. Current bootstrap evidence
-blocks strict release readiness until genuine publication records are available.
-PR 2 still needs an explicit first-publication path for components with no
-trusted historical artifact, using fresh version slots and evidence generated
-by the publisher. It also needs the protected global tag workflow, immutable
-publication and complete GitHub Release manifest. PR 3 owns selective
-digest-pinned deployment, compatibility and migration sequencing, deployment
-verification and recovery.
+```sh
+cargo run --locked -p marreq-release -- --format json release --publication \
+  --head "$candidate_sha" --tag "$product_tag" --previous "$previous_sha" \
+  --server-provenance prior/server-provenance.json \
+  --cloud-provenance prior/cloud-provenance.json
+git push origin "refs/tags/$product_tag"
+```
+
+The planner returns the candidate SHA, versions, changed input paths, and all
+four build or reuse decisions. It requires the annotation and canonical
+prior product tag in publication mode. The standalone `tag` command can run
+before creating the annotation and checks the proposed name against the registry.
+Actions verifies the pushed tag object and the protected branch independently.
+
+### First coordinated publication
+
+The audited historical images above lack trusted retained contracts. For the
+first coordinated release, advance the product version and all four component
+versions above their historical floors and add one dated changelog entry for
+each. With the current floors, examples of fresh slots are Server `0.2.2`,
+Cloud `0.1.1`, Frontend `0.2.3`, and MCP `0.2.1`. Confirm availability and
+compatibility for the actual candidate versions. Run `sync` before committing.
+Create the annotated product tag locally as above. `release-base` reports the
+registry introduction commit as `previous` and a null prior tag.
+
+```sh
+cargo run --locked -p marreq-release -- --format json release --publication \
+  --bootstrap-publication --head "$candidate_sha" --tag "$product_tag" \
+  --previous "$previous_sha"
+```
+
+Set the repository Actions variable `MARREQ_BOOTSTRAP_TAG` to the exact product
+tag before pushing it. This opt-in only works when the canonical tag history
+has no preceding product release. The planner requires a new dated version for
+every component, keeps the historical floor and the audited `v1.0.0` exception,
+and applies the normal impact, compatibility and publication gates. The Cloud
+staging push creates its package if needed. The publisher verifies Cloud's
+version slot once the namespace is readable and before creating a release
+draft or version alias. Clear the variable after the first successful release.
+Later releases require genuine evidence from the preceding immutable release.
+
+### GitHub and GHCR configuration
+
+- Protect `main` with required reviewed PRs and CI, dismiss stale approvals,
+  and restrict direct and force pushes. Require code-owner approval for changes
+  to workflows, the release tooling and its scripts, and the release impact
+  map. Protect those review rules as well. The workflow checks that GitHub
+  reports `main` protected and initially requires the tagged commit to be its
+  tip.
+- Restrict creation of `v*` tags to the release maintainer team. Apply a separate
+  active ruleset that prevents modification and deletion of product tags,
+  including the historical tag. A release maintainer should push only the
+  locally validated annotated tag on the reviewed candidate.
+- Protect the four `marreq-{server,cloud,frontend,mcp}-v*` source tag patterns
+  with a separate no-update/no-delete ruleset. For creation restrictions, grant
+  bypass only to the publisher identity. Where the default Actions token cannot
+  be granted this bypass, configure `MARREQ_SOURCE_TAG_TOKEN` in the publication
+  environment as a dedicated release service account's expiring fine-grained
+  token for this repository with **Contents write**. Grant the account's team
+  bypass on the component-tag creation ruleset only. The workflow uses this
+  credential only for create-ref calls. Component tags point at the coordinated
+  workflow revision, whose trigger matches product tags exclusively.
+- Enable [immutable releases](https://docs.github.com/en/repositories/releasing-projects-on-github/managing-releases-in-a-repository).
+  Create the `release-publication` environment with required reviewers,
+  self-approval disabled and administrator bypass disabled. Restrict it to the
+  product tag pattern. Set `MARREQ_RELEASE_POLICY_TOKEN` there to an expiring
+  fine-grained token scoped to this repository with **Administration read**.
+  The publisher uses it to verify the immutable-release setting before staging
+  and again before finalization. Keep the repository workflow default read-only.
+  Reviewers should confirm the run used the reviewed tag and passed both
+  read-only validation jobs before granting publication.
+- Grant the Marreq repository Actions access to the four canonical GHCR packages
+  in the table below, and permit package creation for Cloud at bootstrap. Limit
+  package writes to the repository's protected publisher. Remove legacy
+  publishers and shared package-write credentials. GHCR lacks conditional tag
+  creation, so the no-overwrite guarantee relies on exclusive package writers
+  together with the workflow's repository-wide concurrency group. Retain all
+  published digests and the package access required for reuse.
+
+### Publication lifecycle
+
+1. The product-tag push workflow verifies the annotation's direct commit
+   target, event identity, and current protected `main`. Read-only jobs validate
+   that exact source and the registry and changelogs, run Rust and consumer tests
+   and builds, validate generated API types and exercise both backend variants
+   over HTTP. They run RustSec and production npm audits using the repository's
+   existing audit thresholds.
+2. The planner resolves the newest preceding canonical product tag. It requires
+   an immutable GitHub Release authored by the publisher and downloads the
+   variant provenance and retained contracts, checking each asset's digest.
+   The planner verifies Git ancestry, component tags, version history and the
+   dependency-aware impact graph. A new component uses its candidate contract.
+   A reused component keeps its prior source and contract bytes. Both complete
+   Server and Cloud compatibility plans must pass the existing contract verifier.
+3. The protected publication job checks version slots and reused artifacts.
+   It builds only the selected new components from an archive of the validated
+   commit. Extraction uses GNU tar `--same-permissions` so the publisher's
+   `umask 077` still protects credentials and journals without stripping
+   archived file modes that non-root container entrypoints need. Buildx keeps
+   its cache across the selected component builds in the same release and
+   pushes separate run-attempt staging aliases. The publisher checks actual
+   registry digests, pulls by digest, compares OCI source, version and
+   contract-hash labels, and runs disposable runtime identity smoke checks on
+   each newly staged image.
+4. A private draft GitHub Release stores the product manifest and all evidence.
+   The manifest also records the digests for recovery. After verifying the
+   uploaded bytes, the publisher assigns exact existing digests to the new
+   version aliases, verifies them, and creates the new source tags. Existing
+   matching aliases and source tags on a retry are read-only. Every reuse keeps
+   its original source tag and digest.
+5. Once both compatibility gates, all digests, source tags and assets are
+   verified, the publisher finalizes the draft as an immutable GitHub Release.
+   Release notes come from the product entry and the newly published
+   components' changelog entries.
+
+| Component | Source tag | Canonical GHCR repository |
+| --- | --- | --- |
+| Server | `marreq-server-vX.Y.Z` | `ghcr.io/marreqsw/marreq-server` |
+| Cloud | `marreq-cloud-vX.Y.Z` | `ghcr.io/marreqsw/marreq-cloud` |
+| Frontend | `marreq-frontend-vX.Y.Z` | `ghcr.io/marreqsw/marreq-frontend` |
+| MCP | `marreq-mcp-vX.Y.Z` | `ghcr.io/marreqsw/marreq-mcp-server` |
+
+### Inspect release evidence
+
+`release-manifest.json` uses schema version 1 and records the product tag
+object and source SHA, UTC journal time as Unix seconds, publisher run ID,
+baseline, and both compatibility and deployment provenance hashes. Its four
+component entries include `build` or `reuse`, version, source tag and commit,
+canonical image, digest-pinned `reference`, and retained contract identity.
+Use the `reference` value as the deployment image reference. The
+`server-provenance.json` and `cloud-provenance.json` lockfiles follow the existing
+deployment schema.
+
+```sh
+gh release download "$product_tag" --repo MarreqSW/Marreq --dir release-evidence
+jq '.components | map_values({version, source_sha, reference, action})' \
+  release-evidence/release-manifest.json
+scripts/check-api-compatibility.sh --manifest release-evidence/server-compatibility.json
+scripts/check-api-compatibility.sh --manifest release-evidence/cloud-compatibility.json
+scripts/check-deployment-provenance --manifest release-evidence/cloud-provenance.json --mode validate
+```
+
+The compatibility verifier names the rejected variant or consumer and the
+incompatible version, route, schema, or policy. Confirm the referenced source
+SHAs and hashes in the selected plan before changing the candidate. Update a
+consumer or producer and its compatibility policy and changelog as needed
+through a reviewed PR. Repeat the checks against both selected combinations.
+
+### Recover a failed publication
+
+Use **Re-run failed jobs** on the original workflow run. Before the manifest
+has been retained, no component version tags or aliases have been created.
+A retry can build to fresh run-attempt staging aliases while the candidate is
+still the protected `main` tip. After the draft manifest exists, the same run
+uses its recorded digests and restores any missing draft assets. A journaled
+candidate can finish after `main` advances if it remains on protected
+`main`'s first-parent history. Keep the validated Actions artifact available
+until completion so the publisher can compare the journal against the original
+plan.
+
+An image push may succeed before a later promotion, source-tag creation or
+finalization fails. Leave the draft, product tag, staged digests and any
+assigned version aliases in place. A retry accepts the exact recorded digest
+and expected tag target, and stops on a missing digest, a conflicting slot,
+a different run ID or changed evidence. Investigate package access, runner and
+registry errors before retrying. If an unexpected image or source tag occupies
+a slot, treat it as a release incident. Preserve the draft, run logs and
+registry records for maintainer review; publication will not overwrite the
+slot. Keep the draft private until the workflow verifies and finalizes it.
+Only retire unneeded staging aliases using registry procedures that preserve
+every referenced digest and its version alias.
+
+If the candidate itself must be replaced before a journal was retained, first
+confirm that no public release, journal, component version alias or component
+source tag was created by its run. The orphan product tag blocks subsequent
+candidates. Have a repository administrator record the abandonment and use the
+ruleset's controlled emergency procedure to remove that unpublished product
+tag. Prepare and merge a corrected candidate and use a new product version.
+Reserve this procedure for unpublished candidates with no committed image
+identity. A journaled candidate requires incident review if it cannot resume.
+
 
 ## Runtime check
 
@@ -186,16 +356,6 @@ Ranges are plain semver strings (`major.minor.patch`), not npm-style range synta
 | `0.1.0` – `0.2.99` | `0.1.0` – `0.2.99` |
 
 Widen or tighten the compatibility declarations when introducing a breaking API or UI contract change. Server and Cloud use the same frontend contract range while versioning their images independently. Validate the selected artifact set using the retained contract checks below.
-
-## Current component-tag publishing
-
-| Tag pattern | Artifact |
-| --- | --- |
-| `marreq-server-vX.Y.Z` | Backend image / binary (version `X.Y.Z`) |
-| `marreq-frontend-vX.Y.Z` | Frontend image (version `X.Y.Z`) |
-| `marreq-mcp-vX.Y.Z` | MCP server image (version `X.Y.Z`) |
-
-Pushing a matching tag runs `.github/workflows/release-artifacts.yml`, which builds and pushes the corresponding Docker image to GHCR (`ghcr.io/<owner>/marreq-server`, `marreq-frontend`, or `marreq-mcp-server`) tagged with the semver and `latest`.
 
 ## Manual Docker builds
 
@@ -246,14 +406,10 @@ verification requires exact release identity.
 
 ### Prepare and retain the evidence
 
-The legacy release jobs capture the digest returned by a successful Buildx
-registry push. The `published-*-provenance` workflow artifact holds the
-published descriptor and the candidate contract from the same successful
-compatibility gate. Retain both outside workflow artifact expiry. The recorder
-validates the digest syntax and contract identity. Its caller must supply the
-digest from the trusted publisher. Workflow records do not provide signed
-attestations. Cloud provenance supports future publication through this same
-interface.
+The coordinated release retains both variant provenance lockfiles and the
+exact selected contracts as immutable GitHub Release assets. The publisher
+checks the digest returned by Buildx against the registry before retaining it
+and compares the contract's byte hash with the OCI image label.
 
 Build a JSON lockfile with `format: "marreq.deployment-provenance.v1"`,
 `variant: "server"` or `"cloud"`, and `components` keyed by the selected
@@ -298,12 +454,6 @@ runtime state. For older images retain only evidence traceable to a trusted
 publication record and verifiable digest. Treat artifacts with missing
 evidence as unavailable until a new verified build exists.
 
-The future orchestrator supplies component versions from `versions.toml`,
-checks source-tag targets, records successful pushes, and assembles the
-deployment manifest from new and retained descriptors. It can use the
-existing contract verifier before deployment and inspect the deployed
-containers after replacement.
-
 ## Component build inputs and release impact (#423)
 
 The backend images share one Dockerfile, one Cargo workspace and one lockfile.
@@ -333,7 +483,7 @@ startup and HTTP smoke checks then exercise those same images.
 | Test files within copied source trees, and Frontend files copied alongside them | Owning image(s) | Relevant validation |
 | Rust integration tests, MCP Vitest config and the released migration ledger | None | Relevant validation |
 | Compose and environment example | None | Deployment validation |
-| Release publishing workflow | All four conservatively | Release infrastructure and API compatibility |
+| Release workflow and its GHCR build script | All four conservatively | Release infrastructure and API compatibility |
 | Standalone documentation | None | None |
 
 The producer OpenAPI is bundled and consumer types are checked for drift in CI.
@@ -428,8 +578,8 @@ A `marreq.deployment-contract.v2` plan names `variant` (`server`/`cloud`) and
 `backend`, `frontend`, `mcp`. Each descriptor contains exactly `file`, `sha256`,
 `version`, `source_sha`. Files must remain inside the plan directory. SHA-256 pins
 **contract bytes, not Docker image provenance**; a trusted orchestrator must bind
-the bundle/source to the actual image digest. This prerequisite does not implement
-that future #423 release/provenance/CD architecture.
+the bundle/source to the actual image digest. The coordinated publisher binds the retained contract to the image digest
+and records both in the product manifest.
 
 ```json
 {
@@ -466,25 +616,10 @@ unsupported semantics and uncertain required operations exit nonzero with JSON
 errors. Version ranges supplement executable contracts and never prove them alone.
 During rolling upgrades, check every old/new combination that may coexist.
 
-Current component-tag publishing is retained. A publication job checks out an
-immutable plan revision from `MARREQ_RELEASE_CONTRACTS_SHA`, exports the exact tagged
-candidate, and verifies its version, source and bundle hash against the plan before
-any image publisher runs. The release gate uses the **actual artifact combination**;
-it does not require the latest checkout's unchanged consumers. The PR gate instead
-checks all calls in current source. No gate requires coverage of unconsumed routes.
-To provision `MARREQ_RELEASE_CONTRACTS_SHA`, export each bundle from its actual
-clean release source, retain the files together, and write `deployment.json` with
-their printed SHA-256 values, versions and source SHAs. Run `verify --manifest`
-locally, commit that plan and its bundles, then set the repository Actions variable
-to that immutable commit SHA before pushing the component tag. For a candidate,
-the plan must reference the exact tagged source-exported bundle. Do not reuse a
-previous plan unchanged or synthesize a manifest from current `main`; missing
-historical evidence deliberately prevents publication. No global release migration
-or production deployment is performed here.
-
-A document-only check is not a release-readiness assertion. Publication also
-requires passing consumer/handler tests and a provisioned immutable plan with
-genuine historical bundles. Missing release evidence must continue to fail closed.
+The coordinated release gate checks both selected deployment plans. It uses the
+candidate bundles for new images and exact retained bundles for reused images.
+PR CI checks calls from the current source tree. Release CI also exercises the
+current source against both backend variants before publication.
 
 Editable contract export requires root `npm ci` for the lockfile-pinned offline
 Redocly bundler. All `docs/developer/openapi/**` modules, the bundler script and
@@ -492,5 +627,3 @@ root npm manifests/lockfile and Docker build/proxy inputs must be committed alon
 inputs before export. The disposable `openapi.yaml` output is ignored and never
 substitutes for these inputs. Retained bundle verification uses self-contained
 JSON with the pinned standards engine; it never resolves editable source refs.
-Frontend/MCP tags do not compile backend route tests in the release gate; backend
-tags verify producer routes/serializers, and PR CI checks all production images.

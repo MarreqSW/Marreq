@@ -6,13 +6,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-24
+
 ### Added
+- A coordinated release publishes independently versioned Server, Cloud, Frontend, and MCP images from one reviewed product tag. This first release establishes fresh artifacts and retains source, digest, and contract evidence for both deployment variants (#423).
+- Versioned HTTP API contracts and automated compatibility checks for Frontend and MCP against both backend variants (#424).
+- A cache administration page with statistics and cache eviction controls (#250).
 - Explicit, serialized PostgreSQL migration commands and a one-shot Compose job shared by Server and Cloud, with migration-history validation and bounded lock acquisition (#423).
 - Production migration preflight requiring a verified database and attachment backup plus an isolated restore rehearsal, reusing the existing backup archive format. Added PostgreSQL concurrency, failure/retry, recovery, and backend image regression tests.
 - An expand/transition/contract migration policy and operator runbook covering write quiescence, compatibility checks, application rollback limits, and manual database recovery.
 - Integration coverage for successful `/api/auth/login` responses, including returned user data, session/CSRF cookies, and password-hash omission from JSON output.
 
+### Fixed
+- Cache statistics derive entry counts from the cache contents, keeping totals accurate after updates and evictions.
+
 ### Changed
+- Frontend can start and serve the SPA while the optional MCP service is unavailable (#436).
 - Server and Cloud startup now validate the prepared schema without applying migrations. Development initialization uses explicit `dev-init`; automatic container seeding is disabled, and production migration progression is blocked while the historical public bootstrap credential remains enabled.
 - Database-only backups now use private temporary files and publish the gzip archive only after successful dump and integrity checks. Released migration files and identities remain unchanged.
 - Project workspace URLs are now `/{project-slug}/...` (for example `/space-project/dashboard`). Owner usernames and group slugs are no longer part of the path; bookmarked `/{namespace}/{slug}/...` URLs redirect to the slug-only form.

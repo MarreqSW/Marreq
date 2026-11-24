@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - A coordinated release publishes independently versioned Server, Cloud, Frontend, and MCP images from one reviewed product tag. This first release establishes fresh artifacts and retains source, digest, and contract evidence for both deployment variants (#423).
+- Project use cases with review workflows, traceability links, flow views, and support in project baselines, search, and MCP (#404–#409).
+- Remote MCP access through delegated OAuth, with scoped project access and revocable connected applications (#262).
+- External sign-in via OpenID Connect and OAuth 2.0, with account provisioning and identity linking.
+- Attachment files in administration backups and project bundles, and ReqIFZ support for exchanging ReqIF data with associated files (#348, #371).
 - Versioned HTTP API contracts and automated compatibility checks for Frontend and MCP against both backend variants (#424).
 - A cache administration page with statistics and cache eviction controls (#250).
 - Explicit, serialized PostgreSQL migration commands and a one-shot Compose job shared by Server and Cloud, with migration-history validation and bounded lock acquisition (#423).

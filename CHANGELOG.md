@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.2.0] - 24/11/2026
+## [Unreleased]
 
 ### Added
 - Explicit, serialized PostgreSQL migration commands and a one-shot Compose job shared by Server and Cloud, with migration-history validation and bounded lock acquisition (#423).
@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project workspace URLs are now `/{project-slug}/...` (for example `/space-project/dashboard`). Owner usernames and group slugs are no longer part of the path; bookmarked `/{namespace}/{slug}/...` URLs redirect to the slug-only form.
 - Repository restructured into a 3-crate Cargo workspace: `marreq-core` (shared library), `marreq-server` (self-hosted binary, admin-managed users), and `marreq-cloud` (hosted SaaS binary, self-registration with email verification and a single bootstrap site administrator). The legacy `backend/` single-crate layout is retired. The Cargo features `--features server` and `--features cloud` are removed; choose the binary with `cargo run -p marreq-server` or `cargo run -p marreq-cloud` instead. Deployment-mode behaviour is now selected at compile time via the chosen binary and queried at runtime through the `marreq_core::deployment::DeploymentMode` trait.
 - Simplified `/api/auth/login` to return the already-authenticated user from the login flow instead of reloading it from the session, removing a redundant repository lookup and internal error path after successful authentication.
+
+## [0.2.0] - Bootstrap
+
+- Establish the pre-1.0 product release baseline; the historical `v1.0.0` Git tag is not a coordinated product release.
 
 ## [0.1.0] - 05/03/2026
 

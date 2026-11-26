@@ -225,6 +225,8 @@ class DeployReleaseTests(unittest.TestCase):
         )
         self.assertEqual(data["services"]["marreq-server"]["environment"]["MARREQ_AUTO_SEED"], "false")
         self.assertNotIn("db", data["services"])
+        self.assertIn("x-marreq-release-comment", data)
+        self.assertNotIn("_comment", data)
 
     def test_changed_services_detection(self):
         ctx = self.ctx()
@@ -455,7 +457,53 @@ class DeployReleaseTests(unittest.TestCase):
                 },
             },
         )
-        self.assertEqual(deploy.rollback(ctx), 0)
+        with mock.patch.object(deploy, "migration_pending", return_value=False), mock.patch.object(
+            deploy, "verify_persistence"
+        ), mock.patch.object(
+            deploy,
+            "service_image_ref",
+            return_value=f"ghcr.io/marreqsw/marreq-server@{DIGEST_OTHER}",
+        ):
+            self.assertEqual(deploy.rollback(ctx), 0)
+
+    def test_unsafe_rollback_dry_run_rejects_schema(self):
+        ctx = self.ctx(tag="v0.2.1", dry_run=True, rollback=True)
+        ctx.previous_dir.mkdir(parents=True)
+        shutil.copy2(
+            self.repo / "docker" / "docker-compose.release.yml",
+            ctx.previous_dir / "docker-compose.release.yml",
+        )
+        write_json(
+            ctx.previous_dir / "installed-state.json",
+            {
+                "product_tag": "v0.2.0",
+                "source_sha": GIT,
+                "components": {
+                    "server": {
+                        "service": "marreq-server",
+                        "version": "0.2.1",
+                        "source_sha": GIT,
+                        "reference": f"ghcr.io/marreqsw/marreq-server@{DIGEST_SERVER}",
+                    },
+                    "frontend": {
+                        "service": "frontend",
+                        "version": "0.2.2",
+                        "source_sha": GIT,
+                        "reference": f"ghcr.io/marreqsw/marreq-frontend@{DIGEST_FRONTEND}",
+                    },
+                    "mcp": {
+                        "service": "mcp-server",
+                        "version": "0.2.0",
+                        "source_sha": GIT,
+                        "reference": f"ghcr.io/marreqsw/marreq-mcp-server@{DIGEST_MCP}",
+                    },
+                },
+            },
+        )
+        with mock.patch.object(deploy, "migration_pending", return_value=True), self.assertRaisesRegex(
+            deploy.DeployError, "refusing application rollback"
+        ):
+            deploy.rollback(ctx)
 
     def test_shell_wrapper_help(self):
         result = subprocess.run(

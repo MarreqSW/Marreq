@@ -94,10 +94,35 @@ SERVER_CID="$("${compose[@]}" ps -q marreq-server)"
 [[ -n "${SERVER_CID}" ]] || { echo "error: marreq-server container not running" >&2; exit 1; }
 
 echo "copying attachment files"
-docker cp "${SERVER_CID}:/var/lib/marreq/attachments/." "${STAGING}/attachments/" 2>/dev/null || {
-  # Empty attachment store is valid.
+# Empty stores are valid, but a failed docker cp must not be reported as success.
+attach_err="$(mktemp)"
+set +e
+docker exec "${SERVER_CID}" sh -c 'test -d /var/lib/marreq/attachments' >/dev/null 2>"${attach_err}"
+attach_dir_status=$?
+set -e
+if [[ ${attach_dir_status} -ne 0 ]]; then
+  echo "error: attachment directory missing inside marreq-server" >&2
+  cat "${attach_err}" >&2 || true
+  rm -f "${attach_err}"
+  exit 1
+fi
+rm -f "${attach_err}"
+# Count entries before copy so an empty store stays distinguishable from copy failure.
+attach_count="$(docker exec "${SERVER_CID}" sh -c 'find /var/lib/marreq/attachments -mindepth 1 | wc -l' | tr -d '[:space:]')"
+if [[ "${attach_count}" == "0" ]]; then
+  echo "attachment store empty; recording empty attachments directory"
   mkdir -p "${STAGING}/attachments"
-}
+else
+  if ! docker cp "${SERVER_CID}:/var/lib/marreq/attachments/." "${STAGING}/attachments/"; then
+    echo "error: attachment copy failed" >&2
+    exit 1
+  fi
+  copied_count="$(find "${STAGING}/attachments" -mindepth 1 | wc -l | tr -d '[:space:]')"
+  if [[ "${copied_count}" -lt 1 ]]; then
+    echo "error: attachment copy produced no files despite non-empty source" >&2
+    exit 1
+  fi
+fi
 
 cat > "${STAGING}/backup-meta.json" <<EOF
 {

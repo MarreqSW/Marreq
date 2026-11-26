@@ -333,6 +333,19 @@ tag. Prepare and merge a corrected candidate and use a new product version.
 Reserve this procedure for unpublished candidates with no committed image
 identity. A journaled candidate requires incident review if it cannot resume.
 
+### Automatic production deployment
+
+After `publish` succeeds, the same workflow runs a `deploy` job against the
+GitHub Environment `production`. It SSHes to the VPS with a restricted
+forced-command identity and runs `scripts/deploy-release.sh` for the product
+tag. Only digest-changed Server/Frontend/MCP services are updated. PostgreSQL
+and Umami are left untouched. Pending migrations fail closed for operator
+recovery; see [continuous deployment](developer/continuous-deployment.md).
+
+Manual redeploy or schema-aware application rollback of an already published
+tag uses **workflow_dispatch** on `release-artifacts.yml` (optional dry-run).
+Component tags never deploy. Do not trigger a new product tag solely to test CD.
+
 
 ## Runtime check
 

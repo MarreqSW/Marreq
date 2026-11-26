@@ -476,8 +476,9 @@ def render_release_override(manifest: dict, existing: dict | None = None) -> str
             services[service] = entry
         entry["image"] = manifest["components"][component]["reference"]
         entry["pull_policy"] = "never"
-        # Compose merge: clear any inherited build from base files when possible.
-        entry["build"] = None
+        # Do not emit build: null — Compose rejects it ("build must be a string").
+        # Omitting build lets the digest-pinned image win under --no-build/--pull never.
+        entry.pop("build", None)
     # Drop legacy invalid top-level keys from earlier generator versions.
     document.pop("_comment", None)
     # Compose only accepts unknown top-level keys under the x- extension namespace.

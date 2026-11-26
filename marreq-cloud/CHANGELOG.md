@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-26
+
+### Changed
+- Update the bundled PostgreSQL migration runner to `diesel_migrations` 2.4.0 and Diesel 2.4.0 (#446).
+
 ## [0.1.1] - 2026-11-24
 
 ### Added

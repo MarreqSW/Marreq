@@ -2,6 +2,22 @@
   "schema_version": 1,
   "rules": [
     {
+      "paths": [
+        "versions\\.toml",
+        "(?:(?:marreq-server|marreq-cloud|frontend|mcp-server)/)?CHANGELOG\\.md",
+        "tools/marreq-release/.+",
+        "scripts/validate-release-versions",
+        "scripts/test-coordinated-release\\.py",
+        "scripts/test-release-build-context\\.py"
+      ],
+      "checks": [
+        "release_pipeline"
+      ],
+      "infrastructure": [
+        "release"
+      ]
+    },
+    {
       "paths": ["marreq-cloud/tests/api_contract_inventory\\.rs"],
       "checks": ["rust", "api_contracts"]
     },
@@ -85,10 +101,15 @@
       "checks": ["frontend", "mcp"]
     },
     {
-      "paths": ["\\.github/workflows/release-artifacts\\.yml"],
+      "paths": ["\\.github/workflows/release-artifacts\\.yml", "scripts/coordinated-release\\.sh"],
       "artifacts": ["server", "cloud", "frontend", "mcp"],
       "checks": ["release_pipeline", "api_contracts"],
       "infrastructure": ["release"]
+    },
+    {
+      "paths": ["\\.github/workflows/deploy-production\\.yml"],
+      "checks": ["deployment", "release_pipeline"],
+      "infrastructure": ["deployment"]
     },
     {
       "paths": ["docker/docker-compose(\\.(ci|dev|light|migrate|prod))?\\.yml", "\\.env\\.example"],
@@ -96,9 +117,9 @@
       "infrastructure": ["deployment"]
     },
     {
-      "paths": ["scripts/(check-deployment-provenance|record-published-artifact|test-deployment-provenance\\.py|test-artifact-image\\.py)"],
+      "paths": ["scripts/(check-deployment-provenance|record-published-artifact|test-deployment-provenance\\.py|test-artifact-image\\.py|deploy-release\\.sh|deploy_release\\.py|production-deploy-entry\\.sh|marreq-production-backup\\.sh|install-production-backup\\.sh|install-production-cd\\.sh|test-deploy-release\\.py)"],
       "checks": ["deployment", "release_pipeline"],
-      "infrastructure": ["release"]
+      "infrastructure": ["release", "deployment"]
     },
     {
       "paths": ["scripts/test-frontend-mcp\\.py", "tests/docker/proxy-upstream\\.cjs"],
@@ -110,7 +131,7 @@
       "infrastructure": ["build_and_ci"]
     },
     {
-      "paths": ["(marreq-(core|server|cloud)|docker)/README\\.md", "docker/LIGHT\\.md", "\\.github/workflows/README\\.md", "(README|INSTALL|AGENTS)\\.md", "CHANGELOG", "LICENSE", "docs/.+\\.md", "docs/ReqIF/[^/]+\\.(cmof|xsd|pdf)", "docs/assets/[^/]+\\.(png|csv)", "docs/architecture/diagrams/[^/]+\\.mmd", "docs/user-manual/(index\\.html|styles\\.css|build\\.sh|build-links\\.lua|capture_screenshots\\.mjs|generated/[^/]+\\.html|screenshots/[^/]+\\.png)", "\\.github/ISSUE_TEMPLATE/[^/]+\\.yml", "\\.github/dependabot\\.yml", "\\.(gitignore|czrc|eslintrc\\.json)", "vitest\\.config\\.js", "mcp-server/dist/[^/]+\\.js"]
+      "paths": ["(marreq-(core|server|cloud)|docker)/README\\.md", "docker/LIGHT\\.md", "\\.github/workflows/README\\.md", "(README|INSTALL|AGENTS)\\.md", "LICENSE", "docs/.+\\.md", "docs/ReqIF/[^/]+\\.(cmof|xsd|pdf)", "docs/assets/[^/]+\\.(png|csv)", "docs/architecture/diagrams/[^/]+\\.mmd", "docs/user-manual/(index\\.html|styles\\.css|build\\.sh|build-links\\.lua|capture_screenshots\\.mjs|generated/[^/]+\\.html|screenshots/[^/]+\\.png)", "\\.github/ISSUE_TEMPLATE/[^/]+\\.yml", "\\.github/dependabot\\.yml", "\\.(gitignore|czrc|eslintrc\\.json)", "vitest\\.config\\.js", "mcp-server/dist/[^/]+\\.js"]
     }
   ]
 }

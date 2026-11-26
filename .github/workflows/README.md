@@ -7,6 +7,7 @@ This directory contains GitHub Actions workflows and supporting files for automa
 - [Overview](#overview)
 - [Workflows](#workflows)
   - [Marreq CI Pipeline](#marreq-ci-pipeline)
+  - [Coordinated Marreq release](#coordinated-marreq-release)
   - [Dependency Updates (Dependabot)](#dependency-updates-dependabot)
 - [Acceptance Criteria](#acceptance-criteria)
   - [1. Code Formatting](#1-code-formatting)
@@ -53,6 +54,27 @@ All checks must pass before a pull request can be merged.
 **Concurrency:** Only one workflow runs per PR at a time (newer runs cancel older ones)
 
 ---
+
+### Coordinated Marreq release
+
+`release-artifacts.yml` runs when a new annotated product tag is pushed.
+The workflow validates the protected source, tests both backends and consumers,
+and checks both selected artifact combinations. The publication environment gates
+GHCR writes, component source tags, and finalization of the immutable GitHub
+Release. After successful publication, the `deploy` job uses the `production`
+environment and a restricted SSH identity to update only changed Compose
+services on the VPS. Manual redeploy/rollback of an already published tag uses
+the separate `deploy-production.yml` workflow. See the
+[release runbook](../../docs/releases.md) and
+[continuous deployment](../../docs/developer/continuous-deployment.md).
+
+Run `python3 scripts/test-coordinated-release.py` to exercise the publication
+job against offline GitHub and GHCR fixtures. Run
+`python3 scripts/test-release-build-context.py` to reproduce archive extraction
+under `umask 077` and confirm entrypoint permissions. Run
+`python3 scripts/test-deploy-release.py` for selective deploy preflight and
+failure-gate coverage. PR `backend-images` builds from that same release-style
+context and starts each backend as the non-root runtime user.
 
 ### Dependency Updates (Dependabot)
 

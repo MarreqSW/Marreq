@@ -256,13 +256,15 @@ backup identity/history/references and restore receipt while holding the migrati
 lock. A no-pending rerun validates history, core projections and the legacy bootstrap credential gate without a new backup.
 Persistent DB volumes are unchanged.
 
-Future #423 orchestration must gate each next step on zero exit: candidate/API
+Future orchestration must gate each next step on zero exit: candidate/API
 compatibility → stop writers → coherent backup → isolated restore and retained
 smoke → serialized migration → schema check → candidate and retained HTTP smoke
 for an overlapping window → selected deployment → cross-service smoke → deployment
 record. Migration-history checks alone do not prove arbitrary schema semantics or
-application health. No production CD, global version registry, automatic database
-rollback or image publication is introduced here.
+application health. Coordinated image publication and selective CD are documented
+in [releases](../releases.md) and [continuous deployment](continuous-deployment.md).
+Automatic database rollback is never introduced; pending migrations fail closed in
+CD on the current production host and require this operator recovery gate.
 
 ## Reproducible validation
 

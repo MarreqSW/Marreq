@@ -81,9 +81,10 @@ never receive production credentials.
 | `DEPLOY_PUBLIC_URL` | variable | `https://app.marreq.com` |
 | `DEPLOY_SSH_PRIVATE_KEY` | secret | Actions-only deploy private key |
 
-The environment uses protected-branch deployment policy. Production deployments
-do not require a second manual approval after `release-publication` succeeds.
-Do not weaken `release-publication` protections.
+The environment uses a custom deployment-branch policy that allows coordinated
+product tags (`v*.*.*`) and `main` (for the manual `deploy-production.yml`
+workflow). Production deployments do not require a second manual approval after
+`release-publication` succeeds. Do not weaken `release-publication` protections.
 
 ### SSH deploy identity
 

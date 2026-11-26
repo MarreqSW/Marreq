@@ -6,6 +6,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-26
+
+### Added
+- Automatically deploy successful coordinated releases to production, selecting only the services whose image digests changed and deploying them by digest (#450, #451).
+- Add manual redeployment and schema-aware application rollback with deployment state retained for recovery (#450, #451).
+- Schedule daily online backups of PostgreSQL and attachments with archive integrity checks and retention (#450, #451).
+
+### Changed
+- Update the shared PostgreSQL migration runner to `diesel_migrations` 2.4.0 from 2.3.2, with Diesel 2.4.0 (#446).
+
 ## [0.2.1] - 2026-11-24
 
 ### Added

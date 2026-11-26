@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-11-26
+
+### Changed
+- Rebuild the Frontend image for the updated coordinated release workflow, which now deploys published images by digest (#450, #451).
+
 ## [0.2.3] - 2026-11-24
 
 ### Added

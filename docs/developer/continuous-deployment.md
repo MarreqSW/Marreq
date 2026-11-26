@@ -170,7 +170,10 @@ never created solely to test a deploy.
 
 ## Manual recovery and redeploy
 
-Use **Actions → Coordinated Marreq release → Run workflow**:
+Use **Actions → Deploy Marreq production → Run workflow**
+(`.github/workflows/deploy-production.yml`). Manual redeploy is intentionally
+separate from the coordinated release workflow so `workflow_dispatch` cannot
+share cache-writing release jobs.
 
 | Input | Meaning |
 | --- | --- |

@@ -4,25 +4,6 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Already published coordinated product tag (vX.Y.Z)
-        required: true
-        type: string
-      action:
-        description: Deploy or schema-aware application rollback
-        required: true
-        type: choice
-        default: deploy
-        options:
-          - deploy
-          - rollback
-      dry_run:
-        description: Validate without mutating production
-        required: true
-        type: boolean
-        default: true
 
 permissions:
   contents: read
@@ -38,55 +19,32 @@ concurrency:
 
 jobs:
   source:
-    if: >-
-      github.repository == 'MarreqSW/Marreq' && (
-        (github.event_name == 'push' && github.event.created && !github.event.deleted) ||
-        github.event_name == 'workflow_dispatch'
-      )
+    if: github.repository == 'MarreqSW/Marreq' && github.event.created && !github.event.deleted
     runs-on: ubuntu-latest
     outputs:
       head: ${{ steps.source.outputs.head }}
       tag_object: ${{ steps.source.outputs.tag_object }}
-      product_tag: ${{ steps.source.outputs.product_tag }}
-      deploy_only: ${{ steps.source.outputs.deploy_only }}
     steps:
       - name: Authorize the annotated tag against protected main
         id: source
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT_AFTER: ${{ github.event.after }}
-          DISPATCH_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || '' }}
         run: |
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-            product_tag="$DISPATCH_TAG"
-            deploy_only=true
-          else
-            product_tag="$GITHUB_REF_NAME"
-            deploy_only=false
-          fi
-          [[ "$product_tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-          tag_object=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$product_tag" --jq '.object | select(.type == "tag") | .sha')
+          [[ "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          tag_object=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$GITHUB_REF_NAME" --jq '.object | select(.type == "tag") | .sha')
           [[ "$tag_object" =~ ^[a-f0-9]{40}$ ]]
           annotation=$(gh api "repos/$GITHUB_REPOSITORY/git/tags/$tag_object")
-          head=$(jq -er --arg name "$product_tag" 'select(.tag == $name and .object.type == "commit") | .object.sha' <<< "$annotation")
+          head=$(jq -er --arg name "$GITHUB_REF_NAME" 'select(.tag == $name and .object.type == "commit") | .object.sha' <<< "$annotation")
           [[ "$head" =~ ^[a-f0-9]{40}$ ]]
-          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
-            [[ "$EVENT_AFTER" == "$head" || "$EVENT_AFTER" == "$tag_object" ]]
-            gh api "repos/$GITHUB_REPOSITORY/branches/main" |
-              jq -e --arg head "$head" '.protected == true and .commit.sha == $head' >/dev/null
-          else
-            # Manual redeploy/rollback: tag must already exist as an immutable published release.
-            gh api "repos/$GITHUB_REPOSITORY/releases/tags/$product_tag" |
-              jq -e '.draft == false and .prerelease == false' >/dev/null
-          fi
+          [[ "$EVENT_AFTER" == "$head" || "$EVENT_AFTER" == "$tag_object" ]]
+          gh api "repos/$GITHUB_REPOSITORY/branches/main" |
+            jq -e --arg head "$head" '.protected == true and .commit.sha == $head' >/dev/null
           echo "head=$head" >> "$GITHUB_OUTPUT"
           echo "tag_object=$tag_object" >> "$GITHUB_OUTPUT"
-          echo "product_tag=$product_tag" >> "$GITHUB_OUTPUT"
-          echo "deploy_only=$deploy_only" >> "$GITHUB_OUTPUT"
 
   rust:
     needs: source
-    if: needs.source.outputs.deploy_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -134,7 +92,6 @@ jobs:
 
   plan:
     needs: source
-    if: needs.source.outputs.deploy_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     outputs:
@@ -191,7 +148,6 @@ jobs:
 
   publish:
     needs: [source, rust, plan]
-    if: needs.source.outputs.deploy_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 120
     environment: release-publication
@@ -233,16 +189,8 @@ jobs:
         run: scripts/coordinated-release.sh publish
 
   deploy:
-    needs: [source, publish]
-    # Automatic after successful publication, or manual redeploy/rollback of a published tag.
-    if: >-
-      always() &&
-      github.repository == 'MarreqSW/Marreq' &&
-      needs.source.result == 'success' &&
-      (
-        (needs.source.outputs.deploy_only != 'true' && needs.publish.result == 'success') ||
-        (needs.source.outputs.deploy_only == 'true' && needs.publish.result == 'skipped')
-      )
+    needs: publish
+    if: github.repository == 'MarreqSW/Marreq'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
@@ -252,14 +200,8 @@ jobs:
     permissions:
       contents: read
     env:
-      PRODUCT_TAG: ${{ needs.source.outputs.product_tag }}
-      DEPLOY_ACTION: ${{ github.event_name == 'workflow_dispatch' && inputs.action || 'deploy' }}
-      DEPLOY_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run || false }}
+      PRODUCT_TAG: ${{ github.ref_name }}
     steps:
-      - name: Authorize production deployment inputs
-        run: |
-          [[ "$PRODUCT_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
-          [[ "$DEPLOY_ACTION" == "deploy" || "$DEPLOY_ACTION" == "rollback" ]]
       - name: Configure strict SSH known_hosts
         env:
           DEPLOY_SSH_KNOWN_HOSTS: ${{ vars.DEPLOY_SSH_KNOWN_HOSTS }}
@@ -284,17 +226,10 @@ jobs:
           DEPLOY_SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
           DEPLOY_PUBLIC_URL: ${{ vars.DEPLOY_PUBLIC_URL }}
         run: |
+          [[ "$PRODUCT_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
           [[ -n "$DEPLOY_SSH_HOST" && -n "$DEPLOY_SSH_USER" ]]
           port="${DEPLOY_SSH_PORT:-22}"
-          if [[ "$DEPLOY_ACTION" == "rollback" ]]; then
-            remote="rollback"
-          else
-            remote="deploy"
-          fi
-          if [[ "$DEPLOY_DRY_RUN" == "true" ]]; then
-            remote="$remote --dry-run"
-          fi
-          remote="$remote $PRODUCT_TAG"
+          remote="deploy $PRODUCT_TAG"
           ssh -F /dev/null \
             -i ~/.ssh/id_ed25519_deploy \
             -o IdentitiesOnly=yes \
@@ -306,5 +241,5 @@ jobs:
             -p "$port" \
             "${DEPLOY_SSH_USER}@${DEPLOY_SSH_HOST}" \
             "$remote"
-          echo "deployment command completed for $PRODUCT_TAG ($DEPLOY_ACTION dry_run=$DEPLOY_DRY_RUN)"
+          echo "deployment command completed for $PRODUCT_TAG"
           echo "public URL: ${DEPLOY_PUBLIC_URL:-unset}"

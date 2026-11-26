@@ -343,8 +343,9 @@ and Umami are left untouched. Pending migrations fail closed for operator
 recovery; see [continuous deployment](developer/continuous-deployment.md).
 
 Manual redeploy or schema-aware application rollback of an already published
-tag uses **workflow_dispatch** on `release-artifacts.yml` (optional dry-run).
-Component tags never deploy. Do not trigger a new product tag solely to test CD.
+tag uses **Deploy Marreq production** (`deploy-production.yml`, optional
+dry-run). Component tags never deploy. Do not trigger a new product tag solely
+to test CD.
 
 
 ## Runtime check

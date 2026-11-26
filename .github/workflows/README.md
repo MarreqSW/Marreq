@@ -63,9 +63,10 @@ and checks both selected artifact combinations. The publication environment gate
 GHCR writes, component source tags, and finalization of the immutable GitHub
 Release. After successful publication, the `deploy` job uses the `production`
 environment and a restricted SSH identity to update only changed Compose
-services on the VPS. Manual redeploy/rollback of an already published tag is
-available via `workflow_dispatch`. See the [release runbook](../../docs/releases.md)
-and [continuous deployment](../../docs/developer/continuous-deployment.md).
+services on the VPS. Manual redeploy/rollback of an already published tag uses
+the separate `deploy-production.yml` workflow. See the
+[release runbook](../../docs/releases.md) and
+[continuous deployment](../../docs/developer/continuous-deployment.md).
 
 Run `python3 scripts/test-coordinated-release.py` to exercise the publication
 job against offline GitHub and GHCR fixtures. Run

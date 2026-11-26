@@ -107,6 +107,11 @@
       "infrastructure": ["release"]
     },
     {
+      "paths": ["\\.github/workflows/deploy-production\\.yml"],
+      "checks": ["deployment", "release_pipeline"],
+      "infrastructure": ["deployment"]
+    },
+    {
       "paths": ["docker/docker-compose(\\.(ci|dev|light|migrate|prod))?\\.yml", "\\.env\\.example"],
       "checks": ["deployment"],
       "infrastructure": ["deployment"]

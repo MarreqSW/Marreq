@@ -39,6 +39,7 @@ jobs:
           python3 scripts/test-deployment-provenance.py
           python3 scripts/test-coordinated-release.py
           python3 scripts/test-release-build-context.py
+          python3 scripts/test-deploy-release.py
       - name: Validate release registry and version history
         run: |
           cargo run --locked -p marreq-release -- --format json check --base HEAD^1 --head HEAD

@@ -83,6 +83,7 @@ jobs:
           python3 scripts/test-deployment-provenance.py
           python3 scripts/test-coordinated-release.py
           python3 scripts/test-release-build-context.py
+          python3 scripts/test-deploy-release.py
           python3 scripts/check-migration-policy.py
       - name: Check authoritative package versions
         run: |
@@ -186,3 +187,59 @@ jobs:
           MARREQ_SOURCE_TAG_TOKEN: ${{ secrets.MARREQ_SOURCE_TAG_TOKEN }}
           RELEASE_WORK: ${{ runner.temp }}/release-publication
         run: scripts/coordinated-release.sh publish
+
+  deploy:
+    needs: publish
+    if: github.repository == 'MarreqSW/Marreq'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    concurrency:
+      group: marreq-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    env:
+      PRODUCT_TAG: ${{ github.ref_name }}
+    steps:
+      - name: Configure strict SSH known_hosts
+        env:
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ vars.DEPLOY_SSH_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          [[ -n "$DEPLOY_SSH_KNOWN_HOSTS" ]]
+          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Install deployment private key
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+        run: |
+          umask 077
+          [[ -n "$DEPLOY_SSH_PRIVATE_KEY" ]]
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519_deploy
+          chmod 600 ~/.ssh/id_ed25519_deploy
+      - name: Deploy via restricted SSH entrypoint
+        env:
+          DEPLOY_SSH_HOST: ${{ vars.DEPLOY_SSH_HOST }}
+          DEPLOY_SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
+          DEPLOY_SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
+          DEPLOY_PUBLIC_URL: ${{ vars.DEPLOY_PUBLIC_URL }}
+        run: |
+          [[ "$PRODUCT_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          [[ -n "$DEPLOY_SSH_HOST" && -n "$DEPLOY_SSH_USER" ]]
+          port="${DEPLOY_SSH_PORT:-22}"
+          remote="deploy $PRODUCT_TAG"
+          ssh -F /dev/null \
+            -i ~/.ssh/id_ed25519_deploy \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o ForwardAgent=no \
+            -o ClearAllForwardings=yes \
+            -p "$port" \
+            "${DEPLOY_SSH_USER}@${DEPLOY_SSH_HOST}" \
+            "$remote"
+          echo "deployment command completed for $PRODUCT_TAG"
+          echo "public URL: ${DEPLOY_PUBLIC_URL:-unset}"

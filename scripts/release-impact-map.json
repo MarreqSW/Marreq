@@ -107,14 +107,19 @@
       "infrastructure": ["release"]
     },
     {
+      "paths": ["\\.github/workflows/deploy-production\\.yml"],
+      "checks": ["deployment", "release_pipeline"],
+      "infrastructure": ["deployment"]
+    },
+    {
       "paths": ["docker/docker-compose(\\.(ci|dev|light|migrate|prod))?\\.yml", "\\.env\\.example"],
       "checks": ["deployment"],
       "infrastructure": ["deployment"]
     },
     {
-      "paths": ["scripts/(check-deployment-provenance|record-published-artifact|test-deployment-provenance\\.py|test-artifact-image\\.py)"],
+      "paths": ["scripts/(check-deployment-provenance|record-published-artifact|test-deployment-provenance\\.py|test-artifact-image\\.py|deploy-release\\.sh|deploy_release\\.py|production-deploy-entry\\.sh|marreq-production-backup\\.sh|install-production-backup\\.sh|install-production-cd\\.sh|test-deploy-release\\.py)"],
       "checks": ["deployment", "release_pipeline"],
-      "infrastructure": ["release"]
+      "infrastructure": ["release", "deployment"]
     },
     {
       "paths": ["scripts/test-frontend-mcp\\.py", "tests/docker/proxy-upstream\\.cjs"],

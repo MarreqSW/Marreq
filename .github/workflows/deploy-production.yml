@@ -1,0 +1,116 @@
+name: Deploy Marreq production
+
+# Manual redeploy/rollback of an already published coordinated product release.
+# Kept separate from release-artifacts.yml so workflow_dispatch cannot participate
+# in cache-writing release jobs (CodeQL cache-poisoning model).
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Already published coordinated product tag (vX.Y.Z)
+        required: true
+        type: string
+      action:
+        description: Deploy or schema-aware application rollback
+        required: true
+        type: choice
+        default: deploy
+        options:
+          - deploy
+          - rollback
+      dry_run:
+        description: Validate without mutating production
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marreq-production
+  cancel-in-progress: false
+
+jobs:
+  authorize:
+    if: github.repository == 'MarreqSW/Marreq'
+    runs-on: ubuntu-latest
+    outputs:
+      product_tag: ${{ steps.check.outputs.product_tag }}
+    steps:
+      - name: Require a published non-draft product release
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PRODUCT_TAG: ${{ inputs.tag }}
+        run: |
+          [[ "$PRODUCT_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          gh api "repos/$GITHUB_REPOSITORY/releases/tags/$PRODUCT_TAG" |
+            jq -e '.draft == false and .prerelease == false' >/dev/null
+          echo "product_tag=$PRODUCT_TAG" >> "$GITHUB_OUTPUT"
+
+  deploy:
+    needs: authorize
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    permissions:
+      contents: read
+    env:
+      PRODUCT_TAG: ${{ needs.authorize.outputs.product_tag }}
+      DEPLOY_ACTION: ${{ inputs.action }}
+      DEPLOY_DRY_RUN: ${{ inputs.dry_run }}
+    steps:
+      - name: Authorize production deployment inputs
+        run: |
+          [[ "$PRODUCT_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]
+          [[ "$DEPLOY_ACTION" == "deploy" || "$DEPLOY_ACTION" == "rollback" ]]
+      - name: Configure strict SSH known_hosts
+        env:
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ vars.DEPLOY_SSH_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          [[ -n "$DEPLOY_SSH_KNOWN_HOSTS" ]]
+          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Install deployment private key
+        env:
+          DEPLOY_SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+        run: |
+          umask 077
+          [[ -n "$DEPLOY_SSH_PRIVATE_KEY" ]]
+          printf '%s\n' "$DEPLOY_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519_deploy
+          chmod 600 ~/.ssh/id_ed25519_deploy
+      - name: Deploy via restricted SSH entrypoint
+        env:
+          DEPLOY_SSH_HOST: ${{ vars.DEPLOY_SSH_HOST }}
+          DEPLOY_SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
+          DEPLOY_SSH_USER: ${{ vars.DEPLOY_SSH_USER }}
+          DEPLOY_PUBLIC_URL: ${{ vars.DEPLOY_PUBLIC_URL }}
+        run: |
+          [[ -n "$DEPLOY_SSH_HOST" && -n "$DEPLOY_SSH_USER" ]]
+          port="${DEPLOY_SSH_PORT:-22}"
+          if [[ "$DEPLOY_ACTION" == "rollback" ]]; then
+            remote="rollback"
+          else
+            remote="deploy"
+          fi
+          if [[ "$DEPLOY_DRY_RUN" == "true" ]]; then
+            remote="$remote --dry-run"
+          fi
+          remote="$remote $PRODUCT_TAG"
+          ssh -F /dev/null \
+            -i ~/.ssh/id_ed25519_deploy \
+            -o IdentitiesOnly=yes \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o ForwardAgent=no \
+            -o ClearAllForwardings=yes \
+            -p "$port" \
+            "${DEPLOY_SSH_USER}@${DEPLOY_SSH_HOST}" \
+            "$remote"
+          echo "deployment command completed for $PRODUCT_TAG ($DEPLOY_ACTION dry_run=$DEPLOY_DRY_RUN)"
+          echo "public URL: ${DEPLOY_PUBLIC_URL:-unset}"
